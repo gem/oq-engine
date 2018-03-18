@@ -433,6 +433,7 @@ producing too small PoEs.'''
         :param dstore: a datastore
         :param iml4: 4D array of IMLs with shape (N, 1, M, P)
         """
+        logging.warn('Disaggregation by source is experimental')
         oq = self.oqparam
         poes_disagg = oq.poes_disagg or (None,)
         pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
@@ -451,8 +452,12 @@ producing too small PoEs.'''
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     poestr = '' if poe is None else 'poe-%s-' % poe
-                    name = 'disagg_by_src/%srlz-0-%s-%s-%s' % (
+                    name = 'disagg_by_src/%s-%s-%s-%s' % (
                         poestr, imt, rec['lons'], rec['lats'])
                     if poes[:, p].sum():  # nonzero contribution
+                        poe_agg = 1 - numpy.prod(1 - poes[:, p])
+                        if poe and abs(1 - poe_agg / poe) > .1:
+                            logging.warn('poe_agg=%s is quite different from '
+                                         'the expected poe=%s', poe_agg, poe)
                         self.datastore[name] = poes[:, p]
-                        self.datastore.set_attrs(name)
+                        self.datastore.set_attrs(name, poe_agg=poe_agg)

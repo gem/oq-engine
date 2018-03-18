@@ -285,6 +285,7 @@ DISPLAY_NAME = {
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
     'disagg-stats': 'Disaggregation Statistics',
+    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
 }
