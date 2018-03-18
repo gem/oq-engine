@@ -452,7 +452,7 @@ producing too small PoEs.'''
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     poestr = '' if poe is None else 'poe-%s-' % poe
-                    name = 'disagg_by_src/%s-%s-%s-%s' % (
+                    name = 'disagg_by_src/%s%s-%s-%s' % (
                         poestr, imt, rec['lons'], rec['lats'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
