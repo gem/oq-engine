@@ -18,11 +18,9 @@
 set -e
 
 checkcmd() {
-    command -v $1 >/dev/null 2>&1 || { echo >&2 "This script requires '$1' but it isn't available. Aborting."; exit 1; }
+    command -v "$1" >/dev/null 2>&1 || { echo >&2 "This script requires '$1' but it isn't available. Aborting."; exit 1; }
 }
 
-CUR=$(pwd)
-BASE=$(cd $(dirname $0)/.. && /bin/pwd)
 COPR_REPO=openquake
 
 checkcmd docker
@@ -31,12 +29,12 @@ while (( "$#" )); do
     case "$1" in
         "-h")
             echo "Usage: $0 [-l] [-r]"
-            echo -e "\nOptions:\n\t-l: test RPM locally\n\t-r <reponame>: use a GEM COPR repo provided by <reponame> (default: openquake)"
+            echo -e "\\nOptions:\\n\\t-l: test RPM locally\\n\\t-r <reponame>: use a GEM COPR repo provided by <reponame> (default: openquake)"
             exit 0
             ;;
         "-r")
             shift
-            if [ ! -z $1 ]; then
+            if [ ! -z "$1" ]; then
                 COPR_REPO=$1
             else
                 echo "ERROR: please provide COPR repo name. Aborting."
@@ -53,14 +51,13 @@ done
 echo "INFO: Test started"
 cd build-rpm/RPMS
 if [ "$LOCAL" == "1" ]; then
-    if [ -f python3-oq-engine*.noarch_64.rpm ]; then
-        if [ -f python3-oq-libs*.x86_64.rpm ]; then
-            docker run --rm -v $(pwd):/io -t openquake/base -c "yum install -q -y epel-release && yum install -d1 -y /io/python3-oq-*.noarch.rpm"
-        else
-            echo "WARNING: python3-oq-libs not found locally. Skipping."
+    if compgen -G "python3-oq-engine*.noarch.rpm"; then
+        if ! compgen -G "python3-oq-libs*.x86_64.rpm"; then
+            echo "WARNING: python3-oq-libs not found locally. Using the one from COPR."
         fi
+        docker run --rm -v "$(pwd)":/io -t openquake/base -c "yum install -q -y epel-release && yum install -d1 -y /io/python3-oq-*.noarch.rpm"
     else
-        echo -e "ERROR: python3-oq-engine not found locally.\nPlease run 'helpers/makerpm.sh' first. Aborting."
+        echo -e "ERROR: python3-oq-engine not found locally.\\nPlease run 'helpers/makerpm.sh' first. Aborting."
     fi
 else
     docker run --rm -t openquake/base -c "yum install -q -y epel-release && curl -sL https://copr.fedoraproject.org/coprs/gem/${COPR_REPO}/repo/epel-7/gem-${COPR_REPO}-epel-7.repo > /etc/yum.repos.d/gem-${COPR_REPO}-epel-7.repo && yum install -d1 -y python3-oq-engine-worker python3-oq-engine-master"
