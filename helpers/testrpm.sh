@@ -55,7 +55,7 @@ if [ "$LOCAL" == "1" ]; then
         if ! compgen -G "python3-oq-libs*.x86_64.rpm"; then
             echo "WARNING: python3-oq-libs not found locally. Using the one from $COPR_REPO"
         fi
-        docker run --rm -v "$(pwd)":/io -t openquake/base -c "yum install -q -y epel-release && yum install -d1 -y /io/python3-oq-*.noarch.rpm"
+        docker run --rm -v "$(pwd)":/io -t openquake/base -c "yum install -q -y epel-release && yum install -d1 -y /io/python3-oq-{engine,libs}*.rpm"
     else
         echo -e "ERROR: python3-oq-engine not found locally.\\nPlease run 'helpers/makerpm.sh' first. Aborting."
     fi
