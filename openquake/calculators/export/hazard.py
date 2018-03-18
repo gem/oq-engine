@@ -820,6 +820,23 @@ def export_disagg_csv(ekey, dstore):
     return fnames
 
 
+@export.add(('disagg_by_src', 'csv'))
+def export_disagg_by_src_csv(ekey, dstore):
+    paths = []
+    source_id = dstore['disagg_by_src/source_id']['source_id']
+    header = ['poe', 'source_id']
+    for name in dstore['disagg_by_src']:
+        if name == 'source_id':
+            continue
+        probs = dstore['disagg_by_src/' + name].value
+        ok = probs > 0
+        data = [header] + sorted(zip(probs[ok], source_id[ok]), reverse=True)
+        path = dstore.export_path(name + '.csv')
+        writers.write_csv(path, data, fmt='%.7e')
+        paths.append(path)
+    return paths
+
+
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
     data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
