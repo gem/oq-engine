@@ -53,16 +53,16 @@ done
 echo "INFO: Test started"
 cd build-rpm/RPMS
 if [ "$LOCAL" == "1" ]; then
-    if [ -f python-oq-engine*.noarch_64.rpm ]; then
-        if [ -f python-oq-libs*.x86_64.rpm ]; then
-            docker run --rm -v $(pwd):/io -t docker.io/centos:7 bash -c "yum install -q -y epel-release && yum install -d1 -y /io/python-oq-engine*.noarch.rpm"
+    if [ -f python3-oq-engine*.noarch_64.rpm ]; then
+        if [ -f python3-oq-libs*.x86_64.rpm ]; then
+            docker run --rm -v $(pwd):/io -t openquake/base -c "yum install -q -y epel-release && yum install -d1 -y /io/python3-oq-*.noarch.rpm"
         else
-            echo "WARNING: python-oq-libs not found locally. Skipping."
+            echo "WARNING: python3-oq-libs not found locally. Skipping."
         fi
     else
-        echo -e "ERROR: python-oq-engine not found locally.\nPlease run 'helpers/makerpm.sh' first. Aborting."
+        echo -e "ERROR: python3-oq-engine not found locally.\nPlease run 'helpers/makerpm.sh' first. Aborting."
     fi
 else
-    docker run --rm -t docker.io/centos:7 bash -c "yum install -q -y epel-release && curl -sL https://copr.fedoraproject.org/coprs/gem/${COPR_REPO}/repo/epel-7/gem-${COPR_REPO}-epel-7.repo > /etc/yum.repos.d/gem-${COPR_REPO}-epel-7.repo && yum install -d1 -y python-oq-engine-worker python-oq-engine-master"
+    docker run --rm -t openquake/base -c "yum install -q -y epel-release && curl -sL https://copr.fedoraproject.org/coprs/gem/${COPR_REPO}/repo/epel-7/gem-${COPR_REPO}-epel-7.repo > /etc/yum.repos.d/gem-${COPR_REPO}-epel-7.repo && yum install -d1 -y python3-oq-engine-worker python3-oq-engine-master"
 fi
 echo "INFO: Test ended"
