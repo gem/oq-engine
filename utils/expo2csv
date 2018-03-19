@@ -20,7 +20,7 @@
 import os
 import csv
 import codecs
-from openquake.baselib import sap, performance
+from openquake.baselib import sap, node, performance
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
@@ -82,6 +82,13 @@ def expo2csv(job_ini):
 
         # save exposure header as xml
         head = nrml.read(oq.inputs['exposure'], stop='assets')
+        if exposure.occupancy_periods and not hasattr(
+                head[0], 'occupancyPeriods')
+            assets = head[0].nodes.pop(-1)  # remove assets node
+            n = node.Node('occupancyPeriods',
+                          text=' '.join(exposure.occupancy_periods))
+            head[0].append(n)  # add occupancyPeriods node
+            head[0].append(assets)  # restore assets node
         xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
         print('Saving %s' % xmlname)
         head[0].assets.text = os.path.basename(csvname)
