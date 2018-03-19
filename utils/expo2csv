@@ -83,7 +83,7 @@ def expo2csv(job_ini):
         # save exposure header as xml
         head = nrml.read(oq.inputs['exposure'], stop='assets')
         if exposure.occupancy_periods and not hasattr(
-                head[0], 'occupancyPeriods')
+                head[0], 'occupancyPeriods'):
             assets = head[0].nodes.pop(-1)  # remove assets node
             n = node.Node('occupancyPeriods',
                           text=' '.join(exposure.occupancy_periods))
