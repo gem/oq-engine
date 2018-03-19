@@ -26,14 +26,23 @@ F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
     'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
     .split())
+FIELDMAP = {
+    'LON': 'lon',
+    'LAT': 'lat',
+    'SVEL': 'vs30',
+    'PGA': ('val', 'PGA'),
+    'PSA03': ('val', 'SA(0.3)'),
+    'PSA10': ('val', 'SA(1.0)'),
+    'PSA30': ('val', 'SA(3.0)'),
+    'STDPGA': ('std', 'PGA'),
+    'STDPSA03': ('std', 'SA(0.3)'),
+    'STDPSA10': ('std', 'SA(1.0)'),
+    'STDPSA30': ('std', 'SA(3.0)'),
+}
 
 
-def get_shakemap_array(grid_file):
-    """
-    :param grid_file: a shakemap file
-    :returns: array with fields lon, lat, vs30, val, std
-    """
-    grid_node = node_from_xml(grid_file)
+def _get_shakemap_array(xml_file):
+    grid_node = node_from_xml(xml_file)
     fields = grid_node.getnodes('grid_field')
     lines = grid_node.grid_data.text.strip().splitlines()
     rows = [line.split() for line in lines]
@@ -42,32 +51,42 @@ def get_shakemap_array(grid_file):
     idx = {f['name']: int(f['index']) - 1 for f in fields
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
-    has_sa = False
     for name in idx:
         i = idx[name]
-        if name.startswith('PSA'):
-            has_sa = True
-        out[name].append([float(row[i]) for row in rows])
-    if has_sa:  # expect SA for 0.3, 1.0 and 3.0
-        dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32), ('SA(1.0)', F32),
-                          ('SA(3.0)', F32)])
-    else:  # expect only PGA
-        dt = numpy.dtype([('PGA', F32)])
+        if name in FIELDMAP:
+            out[name].append([float(row[i]) for row in rows])
+    dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
+                if imt[0] == 'val')
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
-    data['lon'] = F32(out['LON'])
-    data['lat'] = F32(out['LAT'])
-    data['val']['PGA'] = F32(out['PGA'])
-    data['std']['PGA'] = F32(out['STDPGA'])
-    data['vs30'] = F32(out['SVEL'])
-    if has_sa:
-        data['val']['SA(0.3)'] = F32(out['PSA03'])
-        data['val']['SA(1.0)'] = F32(out['PSA10'])
-        data['val']['SA(3.0)'] = F32(out['PSA30'])
-        data['std']['SA(0.3)'] = F32(out.get('STDPSA03', 0))
-        data['std']['SA(1.0)'] = F32(out.get('STDPSA10', 0))
-        data['std']['SA(3.0)'] = F32(out.get('STDPSA30', 0))
+    for name, field in sorted(FIELDMAP.items()):
+        if name not in out:
+            continue
+        if isinstance(field, tuple):
+            # for ('val', IMT) or ('std', IMT)
+            data[field[0]][field[1]] = F32(out[name])
+        else:
+            # for lon, lat, vs30
+            data[field] = F32(out[name])
+    return data
+
+
+def get_shakemap_array(grid_file, uncertainty_file=None):
+    """
+    :param grid_file: a shakemap grid file
+    :param uncertainty_file: a shakemap uncertainty_file file
+    :returns: array with fields lon, lat, vs30, val, std
+    """
+    data = _get_shakemap_array(grid_file)
+    if uncertainty_file:
+        data2 = _get_shakemap_array(uncertainty_file)
+        # sanity check: lons and lats must be the same
+        for coord in ('lon', 'lat'):
+            numpy.testing.assert_equal(data[coord], data2[coord])
+        # copy the stddevs from the uncertainty array
+        for imt in data2['std'].dtype.names:
+            data['std'][imt] = data2['std'][imt]
     return data
 
 
