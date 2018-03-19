@@ -620,9 +620,9 @@ def _get_exposure(fname, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
-        occupancy_periods = ~exposure.occupancyPeriods or ''
+        occupancy_periods = exposure.occupancyPeriods.text
     except AttributeError:
-        occupancy_periods = 'day night transit'
+        occupancy_periods = ''
     try:
         tagNames = exposure.tagNames
     except AttributeError:
