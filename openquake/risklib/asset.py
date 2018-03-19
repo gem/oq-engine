@@ -402,7 +402,11 @@ class AssetCollection(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            lst.append(encode(units[lt]))
+            if lt == 'occupants':
+                unit = 'people'
+            else:
+                unit = units[lt]
+            lst.append(encode(unit))
         return numpy.array(lst)
 
     def assets_by_site(self):
@@ -581,12 +585,10 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
 
-def _get_exposure(fname, ok_cost_types, stop=None):
+def _get_exposure(fname, stop=None):
     """
     :param fname:
         path of the XML file containing the exposure
-    :param ok_cost_types:
-        a set of cost types (as strings)
     :param stop:
         node at which to stop parsing (or None)
     :returns:
@@ -632,22 +634,21 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     cost_types = []
     retrofitted = False
     for ct in conversions.costTypes:
-        if not ok_cost_types or ct['name'] in ok_cost_types:
-            with context(fname, ct):
-                ctname = ct['name']
-                if ctname == 'structural' and 'retrofittedType' in ct.attrib:
-                    if ct['retrofittedType'] != ct['type']:
-                        raise ValueError(
-                            'The retrofittedType %s is different from the type'
-                            '%s' % (ct['retrofittedType'], ct['type']))
-                    if ct['retrofittedUnit'] != ct['unit']:
-                        raise ValueError(
-                            'The retrofittedUnit %s is different from the unit'
-                            '%s' % (ct['retrofittedUnit'], ct['unit']))
-                    retrofitted = True
-                cost_types.append(
-                    (ctname, valid.cost_type_type(ct['type']), ct['unit']))
-    if 'occupants' in ok_cost_types:
+        with context(fname, ct):
+            ctname = ct['name']
+            if ctname == 'structural' and 'retrofittedType' in ct.attrib:
+                if ct['retrofittedType'] != ct['type']:
+                    raise ValueError(
+                        'The retrofittedType %s is different from the type'
+                        '%s' % (ct['retrofittedType'], ct['type']))
+                if ct['retrofittedUnit'] != ct['unit']:
+                    raise ValueError(
+                        'The retrofittedUnit %s is different from the unit'
+                        '%s' % (ct['retrofittedUnit'], ct['unit']))
+                retrofitted = True
+            cost_types.append(
+                (ctname, valid.cost_type_type(ct['type']), ct['unit']))
+    if 'occupants' in cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
@@ -686,7 +687,7 @@ class Exposure(object):
 
     @classmethod
     def read(cls, fname, calculation_mode='', region_constraint='',
-             all_cost_types=(), ignore_missing_costs=(), asset_nodes=False):
+             ignore_missing_costs=(), asset_nodes=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -699,13 +700,11 @@ class Exposure(object):
             param['region'] = wkt.loads(region_constraint)
         else:
             param['region'] = None
-        param['all_cost_types'] = set(all_cost_types)
         param['fname'] = fname
-        param['relevant_cost_types'] = param['all_cost_types'] - set(
-            ['occupants'])
         param['ignore_missing_costs'] = set(ignore_missing_costs)
-        exposure, assets = _get_exposure(
-            param['fname'], param['all_cost_types'])
+        exposure, assets = _get_exposure(param['fname'])
+        param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
+            ['occupants'])
         nodes = assets if assets else exposure._read_csv(
             assets.text, os.path.dirname(param['fname']))
         if asset_nodes:  # this is useful for the GED4ALL import script
@@ -758,7 +757,7 @@ class Exposure(object):
                 elif expected_header - header:
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
-                        (fname, expected_header, header))
+                        (fname, sorted(expected_header), sorted(header)))
         for fname in fnames:
             with open(fname) as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
@@ -820,7 +819,7 @@ class Exposure(object):
                 except KeyError:
                     number = 1
                 else:
-                    if 'occupants' in param['all_cost_types']:
+                    if 'occupants' in self.cost_types['name']:
                         values['occupants_None'] = number
             location = asset_node.location['lon'], asset_node.location['lat']
             if param['region'] and not geometry.Point(*location).within(
