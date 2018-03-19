@@ -4,7 +4,8 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    name="6.05"
+        name="6.05"
+        investigation_time="1.0"
     >
         <sourceGroup
         rup_interdep="indep"
