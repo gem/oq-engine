@@ -174,7 +174,7 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -611,8 +611,6 @@ class Starmap(object):
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
-        elif self.distribute == 'celery_zmq':
-            it = self._iter_celery_zmq()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
@@ -641,14 +639,7 @@ class Starmap(object):
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
 
-    def _iter_celery(self, backurl=None):
-        results = []
-        for piks in self._genargs(backurl):
-            res = safetask.delay(self.task_func, piks)
-            # populating Starmap.task_ids, used in celery_cleanup
-            self.task_ids.append(res.task_id)
-            results.append(res)
-        yield len(results)
+    def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
@@ -656,12 +647,18 @@ class Starmap(object):
                 del app.backend._cache[task_id]
             yield result_dict['result']
 
-    def _iter_celery_zmq(self):
+    def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             logging.info('Using receiver %s', socket.backurl)
-            it = self._iter_celery(socket.backurl)
-            num_results = next(it)
+            results = []
+            for piks in self._genargs(socket.backurl):
+                res = safetask.delay(self.task_func, piks)
+                # populating Starmap.task_ids, used in celery_cleanup
+                self.task_ids.append(res.task_id)
+                results.append(res)
+            num_results = len(results)
             yield num_results
+            it = self.iter_native(results)
             isocket = iter(socket)
             while num_results:
                 res = next(isocket)
