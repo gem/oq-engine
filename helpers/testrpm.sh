@@ -25,26 +25,19 @@ COPR_REPO=openquake-stable
 
 checkcmd docker
 
-while (( "$#" )); do
-    case "$1" in
-        "-h")
-            echo "Usage: $0 [-l] [-r]"
-            echo -e "\\nOptions:\\n\\t-l: test RPM locally\\n\\t-r <reponame>: use a GEM COPR repo provided by <reponame> (default: openquake)"
-            exit 0
-            ;;
-        "-r")
-            shift
-            if [ ! -z "$1" ]; then
-                COPR_REPO=$1
-            else
-                echo "ERROR: please provide COPR repo name. Aborting."
-            fi
-            shift
-            ;;
-        "-l")
-            LOCAL=1
-            shift
-            ;;
+while getopts "r:l" opt; do
+    case ${opt} in
+      \?)
+          echo "Usage: $0 [-l] [-r]"
+          echo -e "\\nOptions:\\n\\t-l: test RPM locally\\n\\t-r <reponame>: use a GEM COPR repo provided by <reponame> (default: openquake)"
+          exit 0
+          ;;
+      r)
+          COPR_REPO=$OPTARG
+          ;;
+      l)
+          LOCAL=1
+          ;;
     esac
 done
 
