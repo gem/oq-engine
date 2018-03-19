@@ -52,7 +52,9 @@ while getopts "r:lc" opt; do
     esac
 done
 shift $((OPTIND -1))
-if [ "$1" ]; then BRANCH="$1"; fi
+if [ "$1" ]; then
+    BRANCH="$1";
+fi
 
 if [ "$CLEAN" == "1" ]; then
     rm -Rf $BASE/build-rpm
