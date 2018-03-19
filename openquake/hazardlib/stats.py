@@ -179,3 +179,24 @@ def apply_stat(f, arraylist, *extra, **kw):
         return new
     else:  # simple array
         return f(arraylist, *extra, **kw)
+
+
+def set_rlzs_stats(dstore, prefix, arrayNR=None):
+    """
+    :param dstore: a DataStore object
+    :param prefix: dataset prefix
+    :param arrayNR: an array of shape (N, R, ...)
+    """
+    if arrayNR is None:
+        # assume the -rlzs array is already stored
+        arrayNR = dstore[prefix + '-rlzs'].value
+    else:
+        # store passed the -rlzs array
+        dstore[prefix + '-rlzs'] = arrayNR
+    R = arrayNR.shape[1]
+    if R > 1:
+        stats = dstore['oqparam'].risk_stats()
+        statnames, statfuncs = zip(*stats)
+        weights = dstore['csm_info'].rlzs['weight']
+        dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
+        dstore.set_attrs(prefix + '-stats', stats=' '.join(statnames))
