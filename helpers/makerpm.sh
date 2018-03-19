@@ -32,7 +32,7 @@ EXTRA=''
 while getopts "r:lc" opt; do
     case ${opt} in
         \?)
-            echo "Usage: $0 [-c] [-l] [BRANCH]"
+            echo "Usage: $0 [-c] [-l] [-r N] [BRANCH]"
             echo -e "\\nOptions:\\n\\t-l: build RPM locally\\n\\t-c: clean build dir before starting a new build\\n\\t-r N: make a stable release"
             exit 0
             ;;
