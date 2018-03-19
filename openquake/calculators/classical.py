@@ -187,7 +187,7 @@ class PSHACalculator(base.HazardCalculator):
             else:
                 totweight += csm.get_weight(weight)
             if csm.has_dupl_sources and not opt:
-                logging.warn('Found %d duplicated sources, use oq info',
+                logging.warn('Found %d duplicated sources',
                              csm.has_dupl_sources)
             for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
