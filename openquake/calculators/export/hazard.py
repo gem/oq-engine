@@ -824,13 +824,14 @@ def export_disagg_csv(ekey, dstore):
 def export_disagg_by_src_csv(ekey, dstore):
     paths = []
     source_id = dstore['disagg_by_src/source_id']['source_id']
-    header = ['poe', 'source_id']
+    header = ['source_id', 'poe']
     for name in dstore['disagg_by_src']:
         if name == 'source_id':
             continue
         probs = dstore['disagg_by_src/' + name].value
         ok = probs > 0
-        data = [header] + sorted(zip(probs[ok], source_id[ok]), reverse=True)
+        data = [header] + sorted(zip(source_id[ok], probs[ok]),
+                                 key=operator.itemgetter(1), reverse=True)
         path = dstore.export_path(name + '.csv')
         writers.write_csv(path, data, fmt='%.7e')
         paths.append(path)
