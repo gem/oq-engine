@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Replaced celery with celery_zmq as distribution mechanism
   * Added a check against duplicated fields in the exposure CSV
   * Implemented event based with mutex sources (experimental)
   * Add an utility to read XML shakemap files in hazardlib
