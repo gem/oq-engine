@@ -748,8 +748,13 @@ class Exposure(object):
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
         for fname in fnames:
             with open(fname) as f:
-                header = set(next(csv.reader(f)))
-                if expected_header - header:
+                fields = next(csv.reader(f))
+                header = set(fields)
+                if len(header) < len(fields):
+                    raise InvalidFile(
+                        '%s: The header %s contains a duplicated field' %
+                        (fname, header))
+                elif expected_header - header:
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
