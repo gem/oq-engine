@@ -29,6 +29,7 @@ from numpy.testing import assert_allclose
 
 from openquake.baselib import general
 from openquake.hazardlib import valid, InvalidFile
+from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
@@ -396,8 +397,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')
 
     def test_get_metadata(self):
-        exp, _assets = readinput._get_exposure(
-            self.exposure, ['structural'], stop='assets')
+        exp, _assets = asset._get_exposure(self.exposure, stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertIsNone(exp.insurance_limit_is_absolute)
         self.assertIsNone(exp.deductible_is_absolute)
