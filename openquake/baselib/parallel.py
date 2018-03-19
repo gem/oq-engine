@@ -174,7 +174,7 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -306,7 +306,11 @@ class Result(object):
             val = self.pik.unpickle()
         if self.tb_str:
             etype = val.__class__
-            raise etype('\n%s%s: %s' % (self.tb_str, etype.__name__, val))
+            msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
+            if issubclass(etype, KeyError):
+                raise RuntimeError(msg)  # nicer message
+            else:
+                raise etype(msg)
         return val
 
 
@@ -607,8 +611,6 @@ class Starmap(object):
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
-        elif self.distribute == 'celery_zmq':
-            it = self._iter_celery_zmq()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
@@ -637,14 +639,7 @@ class Starmap(object):
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
 
-    def _iter_celery(self, backurl=None):
-        results = []
-        for piks in self._genargs(backurl):
-            res = safetask.delay(self.task_func, piks)
-            # populating Starmap.task_ids, used in celery_cleanup
-            self.task_ids.append(res.task_id)
-            results.append(res)
-        yield len(results)
+    def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
@@ -652,11 +647,40 @@ class Starmap(object):
                 del app.backend._cache[task_id]
             yield result_dict['result']
 
-    def _iter_celery_zmq(self):
+    def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             logging.info('Using receiver %s', socket.backurl)
-            it = self._iter_celery(socket.backurl)
-            num_results = next(it)
+            results = []
+            for piks in self._genargs(socket.backurl):
+                res = safetask.delay(self.task_func, piks)
+                # populating Starmap.task_ids, used in celery_cleanup
+                self.task_ids.append(res.task_id)
+                results.append(res)
+            num_results = len(results)
+            yield num_results
+            it = self.iter_native(results)
+            isocket = iter(socket)
+            while num_results:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                err = next(it)
+                if isinstance(err, Exception):  # TaskRevokedError
+                    raise err
+                num_results -= 1
+                yield res
+
+    def _iter_zmq(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
+                           config.zworkers)
+            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
+                num_results = 0
+                for args in self._genargs(socket.backurl):
+                    sender.send((self.task_func, args))
+                    num_results += 1
             yield num_results
             isocket = iter(socket)
             while num_results:
@@ -665,23 +689,8 @@ class Starmap(object):
                     logging.warn('Discarding a result from job %d, since this '
                                  'is job %d', res.mon.calc_id, self.calc_id)
                     continue
-                num_results -= next(it)
+                num_results -= 1
                 yield res
-
-    def _iter_zmq(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
-                           config.zworkers)
-            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                n = 0
-                for args in self._genargs(socket.backurl):
-                    sender.send((self.task_func, args))
-                    n += 1
-            yield n
-            for _ in range(n):
-                obj = socket.zsocket.recv_pyobj()
-                # receive n responses for the n requests sent
-                yield obj
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,

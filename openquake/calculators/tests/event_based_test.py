@@ -29,13 +29,14 @@ from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.extract import extract
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_12, case_13, case_17, case_18)
+    case_8, case_9, case_12, case_13, case_17, case_18, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -300,6 +301,9 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
+        events = extract(self.calc.datastore, 'events')
+        years = numpy.unique(events['year'])
+        numpy.testing.assert_equal(years, [328, 587, 692, 830, 898, 989])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
@@ -315,3 +319,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(str(ctx.exception),
                          'The event based calculator is restricted '
                          'to 256 imts, got 900')
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_mutex(self):
+        self.run_calc(mutex.__file__, 'job.ini')
