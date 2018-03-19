@@ -221,8 +221,12 @@ producing too small PoEs.'''
         R = len(self.rlzs_assoc.realizations)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
-        if R == 1:
-            self.build_disagg_by_src(iml4)
+        if oq.disagg_by_src:
+            if R == 1:
+                self.build_disagg_by_src(iml4)
+            else:
+                logging.warn('disagg_by_src works only with 1 realization, '
+                             'you have %d', R)
 
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}

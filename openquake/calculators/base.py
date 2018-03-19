@@ -358,7 +358,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
-                if oq.disagg_by_src:  # should be restricted to 1 rlz
+                if oq.disagg_by_src:
                     self.csm = self.csm.grp_by_src()
             if self.is_stochastic:
                 # initialize the rupture serial numbers before splitting
