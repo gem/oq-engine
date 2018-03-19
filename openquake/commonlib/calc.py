@@ -43,8 +43,6 @@ F64 = numpy.float64
 
 EVENTS = -2
 NBYTES = -1
-event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
-                        ('sample', U32)])
 
 # ############## utilities for the classical calculator ############### #
 
