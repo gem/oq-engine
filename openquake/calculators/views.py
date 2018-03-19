@@ -421,14 +421,13 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].loss_dt()
-    weights = dstore['csm_info'].rlzs['weight']
-    array = dstore['avg_losses-rlzs'].value  # shape (N, R)
-    if len(weights) == 1:  # one realization
-        mean = array[:, 0]
+    oq = dstore['oqparam']
+    R = dstore['csm_info'].get_num_rlzs()
+    if R == 1:  # one realization
+        mean = dstore['avg_losses-rlzs'][:, 0]
     else:
-        mean = hstats.compute_stats2(array, [hstats.mean_curve], weights)[:, 0]
-    data = numpy.array([tuple(row) for row in mean], dt)
+        mean = dstore['avg_losses-stats'][:, 0]
+    data = numpy.array([tuple(row) for row in mean], oq.loss_dt())
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
