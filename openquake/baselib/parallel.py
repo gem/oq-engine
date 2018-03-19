@@ -677,15 +677,20 @@ class Starmap(object):
             task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
                            config.zworkers)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                n = 0
+                num_results = 0
                 for args in self._genargs(socket.backurl):
                     sender.send((self.task_func, args))
-                    n += 1
-            yield n
-            for _ in range(n):
-                obj = socket.zsocket.recv_pyobj()
-                # receive n responses for the n requests sent
-                yield obj
+                    num_results += 1
+            yield num_results
+            isocket = iter(socket)
+            while num_results:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                num_results -= 1
+                yield res
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
