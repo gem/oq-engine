@@ -25,26 +25,28 @@ from openquake.hazardlib import geo, site
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 F32 = numpy.float32
-SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/grid.xml'
+SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/{}.xml'
 PCTG = 100  # percent of g, the gravity acceleration
 
 
-def get_sitecol_shakemap(shakemap_id_or_fname, sitecol=None, assoc_dist=None):
+def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     """
-    :param shakemap_id_or_fname: shakemap ID or shakemap file
+    :param array_or_id: shakemap ID or full shakemap array
     :param sitecol: SiteCollection used to reduce the shakemap
-    :param assoc_dist: association distance used to reduce the shakemap
+    :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(shakemap_id_or_fname, int):
-        with urlopen(SHAKEMAP_URL.format(shakemap_id_or_fname)) as f1:
-            array = get_shakemap_array(f1)
+    if isinstance(array_or_id, int):
+        with urlopen(SHAKEMAP_URL.format(array_or_id, 'grid')) as f1, \
+             urlopen(SHAKEMAP_URL.format(array_or_id, 'uncertainty')) as f2:
+            array = get_shakemap_array(f1, f2)
     else:
-        array = get_shakemap_array(shakemap_id_or_fname)
+        array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
         return site.SiteCollection.from_shakemap(array), array
 
     # associate the shakemap to the site collection
+    # TODO: forbid IDL crossing
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
     sitecol = sitecol.within_bb(bbox)
@@ -102,7 +104,7 @@ def spatial_length_scale(imt, vs30clustered):
 
 def spatial_correlation_array(dmatrix, imts, correl):
     """
-    :param dmatrix: NxN distance matrix
+    :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
     :param correl: 'no correlation', 'full correlation', 'spatial'
     :returns: array of shape (M, N, N)
@@ -116,12 +118,15 @@ def spatial_correlation_array(dmatrix, imts, correl):
             corr[imti] = numpy.eye(n)
         elif correl == 'spatial':
             b = spatial_length_scale(imt, vs30clustered=True)
-            corr[imti] = numpy.eye(n) + numpy.exp(-3 * dmatrix / b)
+            corr[imti] = numpy.exp(-3 * dmatrix / b)
     return corr
 
 
 def spatial_covariance_array(stddev, imts, corrmatrices):
     """
+    :param stddev: array of shape (N, M)
+    :param imts: M intensity measure types
+    :param corrmatrices: array of shape (M, N, N)
     :returns: an array of shape (M, N, N)
     """
     # this depends on sPGA, sSa03, sSa10, sSa30
@@ -181,14 +186,17 @@ def amplify_gmfs(imts, vs30s, gmfs):
     Amplify the ground shaking depending on the vs30s
     """
     n = len(vs30s)
+
     for i, imt in enumerate(imts):
         if imt == 'PGA':
             T = 0.0
-        elif imt[:2] == 'SA':
+        elif imt[0:2] == 'SA':
             T = float(imt.replace("SA(", "").replace(")", ""))
+
         for iloc in range(n):
             gmfs[i * n + iloc] = amplify_ground_shaking(
                 T, vs30s[iloc], gmfs[i * n + iloc])
+
     return gmfs
 
 
@@ -198,25 +206,42 @@ def amplify_ground_shaking(T, vs30, imls):
     :param vs30: velocity
     :param imls: intensity measure levels
     """
-    if T <= 0.3:
-        interpolator = interpolate.interp1d(
-            [-1, 0.1, 0.2, 0.3, 0.4, 100],
-            [(760 / vs30)**0.35,
-             (760 / vs30)**0.35,
-             (760 / vs30)**0.25,
-             (760 / vs30)**0.10,
-             (760 / vs30)**-0.05,
-             (760 / vs30)**-0.05], kind='linear')
-    else:
-        interpolator = interpolate.interp1d(
-            [-1, 0.1, 0.2, 0.3, 0.4, 100],
-            [(760 / vs30)**0.65,
-             (760 / vs30)**0.65,
-             (760 / vs30)**0.60,
-             (760 / vs30)**0.53,
-             (760 / vs30)**0.45,
-             (760 / vs30)**0.45], kind='linear')
+    interpolator = interpolate.interp1d(
+        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [(760 / vs30)**0.35,
+         (760 / vs30)**0.35,
+         (760 / vs30)**0.25,
+         (760 / vs30)**0.10,
+         (760 / vs30)**-0.05,
+         (760 / vs30)**-0.05],
+        kind='linear'
+    ) if T <= 0.3 else interpolate.interp1d(
+        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [(760 / vs30)**0.65,
+         (760 / vs30)**0.65,
+         (760 / vs30)**0.60,
+         (760 / vs30)**0.53,
+         (760 / vs30)**0.45,
+         (760 / vs30)**0.45],
+        kind='linear'
+    )
     return interpolator(imls) * imls
+
+
+def cholesky(spatial_cov, cross_corr):
+    M = cross_corr.shape[0]
+    LLT = []
+    L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
+    for i in range(M):
+        row = [numpy.dot(L[i], numpy.transpose(L[j])) * cross_corr[i, j]
+               for j in range(M)]
+        n = len(row[0])
+        for j in range(n):
+            singlerow = numpy.zeros(len(row) * n)
+            for i in range(len(row)):
+                singlerow[i * n:(i + 1) * n] = row[i][j]
+            LLT.append(singlerow)
+    return numpy.linalg.cholesky(numpy.array(LLT))
 
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
@@ -229,29 +254,12 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     spatial_corr = spatial_correlation_array(dmatrix, imts, 'spatial')
     spatial_cov = spatial_covariance_array(shakemap['std'], imts, spatial_corr)
     cross_corr = cross_correlation_matrix(imts, 'cross')
-    N = spatial_cov.shape[1]
-    M = cross_corr.shape[0]
-    LLT = []
-    L = numpy.array([numpy.linalg.cholesky(spatial_cov[i])
-                     for i in range(M)])
-    for i in range(M):
-        row = [numpy.dot(L[i], numpy.transpose(L[j])) * cross_corr[i, j]
-               for j in range(M)]
-        n = len(row[0])
-        for j in range(n):
-            singlerow = numpy.zeros(len(row) * n)
-            for i in range(len(row)):
-                singlerow[i * n:(i + 1) * n] = row[i][j]
-            LLT.append(singlerow)
-    LLT = numpy.array(LLT)
-
-    mu = numpy.array(
-        [numpy.ones(num_gmfs) * val[j][imt]
-         for imt in imts for j in range(N)])
-    L = numpy.linalg.cholesky(LLT)
+    M, N = spatial_corr.shape[:2]
+    mu = numpy.array([numpy.ones(num_gmfs) * val[j][imt]
+                      for imt in imts for j in range(N)])
+    L = cholesky(spatial_cov, cross_corr)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                       size=(N * M, num_gmfs), random_state=seed)
-
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
