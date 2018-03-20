@@ -551,7 +551,7 @@ def get_composite_source_model(oqparam, in_memory=True):
         if len(set(srcs)) < len(srcs):
             raise nrml.DuplicatedID(
                 'Found duplicated source IDs: use oq info %s',
-                sm, source_model_lt.filename)
+                sm, oqparam.inputs['job_ini'])
     return csm
 
 
@@ -644,9 +644,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
-        logging.info('Associated %d/%d assets to the hazard sites',
-                     num_assets, tot_assets)
         sitecol = haz_sitecol.complete.filter(mask)
+        logging.info('Associated %d/%d assets to %d sites',
+                     num_assets, tot_assets, len(sitecol))
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
     asset_refs = [exposure.asset_refs[asset.ordinal]
@@ -660,8 +660,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         oqparam.time_event,
         occupancy_periods=hdf5.array_of_vstr(
             sorted(exposure.occupancy_periods)))
-    logging.info('Considering %d assets on %d sites',
-                 len(assetcol), len(sitecol))
     return sitecol, assetcol
 
 
