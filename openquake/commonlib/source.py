@@ -986,7 +986,7 @@ class SourceInfo(object):
         self.source_id = src.source_id.rsplit(':', 1)[0]
         self.source_class = src.__class__.__name__
         self.num_ruptures = src.num_ruptures
-        self.num_sites = getattr(src, 'nsites', 0)
+        self.num_sites = 0  # set later on
         self.calc_time = calc_time
         self.split_time = split_time
         self.num_split = num_split
