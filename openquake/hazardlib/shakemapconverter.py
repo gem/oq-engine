@@ -24,7 +24,7 @@ from openquake.baselib.node import node_from_xml
 
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
+    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
