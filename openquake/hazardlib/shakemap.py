@@ -232,24 +232,22 @@ def cholesky(spatial_cov, cross_corr):
     """
     Decompose the spatial covariance and cross correlation matrices
     """
-    M = cross_corr.shape[0]
-    LLT = []
+    M, N = spatial_cov.shape[:2]
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
+    LLT = []
     for i in range(M):
-        row = [numpy.dot(L[i], numpy.transpose(L[j])) * cross_corr[i, j]
-               for j in range(M)]
-        n = len(row[0])
-        for j in range(n):
-            singlerow = numpy.zeros(len(row) * n)
-            for i in range(len(row)):
-                singlerow[i * n:(i + 1) * n] = row[i][j]
+        row = [numpy.dot(L[i], L[j].T) * cross_corr[i, j] for j in range(M)]
+        for j in range(N):
+            singlerow = numpy.zeros(M * N)
+            for i in range(M):
+                singlerow[i * N:(i + 1) * N] = row[i][j]
             LLT.append(singlerow)
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (M, N, G)
+    :returns: an array of GMFs of shape (N, G) and dtype imt_dt
     """
     imts = shakemap['val'].dtype.names
     val = shakemap['val']
