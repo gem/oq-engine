@@ -84,3 +84,4 @@ class ShakemapTestCase(unittest.TestCase):
         gmfs = to_gmfs(
             shakemap, site_effects=True, trunclevel=3, num_gmfs=2, seed=42)
         aae(gmfs['PGA'].sum(axis=0), [0.0396147, 0.0605817])
+        aae(gmfs['SA(1.0)'].sum(axis=0), [0.3896774, 0.5317907])
