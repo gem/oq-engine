@@ -229,6 +229,9 @@ def amplify_ground_shaking(T, vs30, imls):
 
 
 def cholesky(spatial_cov, cross_corr):
+    """
+    Decompose the spatial covariance and cross correlation matrices
+    """
     M = cross_corr.shape[0]
     LLT = []
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
@@ -246,7 +249,7 @@ def cholesky(spatial_cov, cross_corr):
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (N, G, M)
+    :returns: an array of GMFs of shape (M, N, G)
     """
     imts = shakemap['val'].dtype.names
     val = shakemap['val']
@@ -259,11 +262,15 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
                       for imt in imts for j in range(N)])
     L = cholesky(spatial_cov, cross_corr)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
-                      size=(N * M, num_gmfs), random_state=seed)
+                      size=(M * N, num_gmfs), random_state=seed)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-    return gmfs
+
+    arr = numpy.zeros((N, num_gmfs), val.dtype)
+    for i, imt in enumerate(imts):
+        arr[imt] = gmfs[i * N:(i + 1) * N]
+    return arr
 
 """
 here is an example for Tanzania:
