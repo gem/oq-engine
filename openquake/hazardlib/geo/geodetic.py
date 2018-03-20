@@ -231,6 +231,8 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     """
     m = len(lons)
     assert m == len(lats), (m, len(lats))
+    lons = numpy.radians(lons)
+    lats = numpy.radians(lats)
     cos_lats = numpy.cos(lats)
     result = numpy.zeros((m, m))
     for i in range(len(lons)):
