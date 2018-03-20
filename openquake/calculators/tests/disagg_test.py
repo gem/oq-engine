@@ -141,8 +141,10 @@ producing too small PoEs.''')
         self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
         # = 64 x 3 for mean, quantile-0.15, quantile-0.85
 
+    @attr('qa', 'hazard', 'disagg')
     def test_disagg_by_src(self):
         # this is a case with iml_disagg and disagg_by_src
         self.run_calc(case_master.__file__, 'job1.ini')
-        arr = self.calc.datastore['disagg_by_src/PGA--122.6-38.3'].value
+        arr = self.calc.datastore[
+            'disagg_by_src/iml-0.02-PGA--122.6-38.3'].value
         numpy.testing.assert_almost_equal(arr, [0.67574366, 0.17803075])
