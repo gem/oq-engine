@@ -50,6 +50,11 @@ Consider canceling the operation and accessing directly %s.'''
 savez = numpy.savez_compressed
 
 
+def add_quotes(values):
+    # used to source names in CSV files
+    return ['"%s"' % val for val in values]
+
+
 @export.add(('ruptures', 'xml'))
 def export_ruptures_xml(ekey, dstore):
     """
@@ -823,15 +828,17 @@ def export_disagg_csv(ekey, dstore):
 @export.add(('disagg_by_src', 'csv'))
 def export_disagg_by_src_csv(ekey, dstore):
     paths = []
-    source_id = dstore['disagg_by_src/source_id']['source_id']
-    header = ['source_id', 'poe']
+    srcdata = dstore['disagg_by_src/source_id'].value
+    header = ['source_id', 'source_name', 'poe']
     for name in dstore['disagg_by_src']:
         if name == 'source_id':
             continue
         probs = dstore['disagg_by_src/' + name].value
         ok = probs > 0
-        data = [header] + sorted(zip(source_id[ok], probs[ok]),
-                                 key=operator.itemgetter(1), reverse=True)
+        src = srcdata[ok]
+        data = [header] + sorted(
+            zip(src['source_id'], add_quotes(src['source_name']), probs[ok]),
+            key=operator.itemgetter(1), reverse=True)
         path = dstore.export_path(name + '.csv')
         writers.write_csv(path, data, fmt='%.7e')
         paths.append(path)
