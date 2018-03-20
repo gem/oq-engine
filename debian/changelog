@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented disaggregation by source only for the case
+    of a single realization in the logic tree (experimental)
   * Replaced celery with celery_zmq as distribution mechanism
   * Extended `oq info` to work on source model logic tree files
   * Added a check against duplicated fields in the exposure CSV
