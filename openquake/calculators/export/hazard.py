@@ -840,7 +840,7 @@ def export_disagg_by_src_csv(ekey, dstore):
         data = [header] + sorted(
             zip(src['source_id'], add_quotes(src['source_name']), probs[ok]),
             key=by_poe, reverse=True)
-        path = dstore.export_path(name + '.csv')
+        path = dstore.export_path(name + '_Src.csv')
         writers.write_csv(path, data, fmt='%.7e')
         paths.append(path)
     return paths
