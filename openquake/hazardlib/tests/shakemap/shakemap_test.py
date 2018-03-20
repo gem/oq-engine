@@ -32,7 +32,7 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap)
-        aae(gmf_by_imt, [1.3416874, 5.8730545, 27.2933846, 5.7735696])
+        aae(gmf_by_imt, [0.0047045, 0.0184625, 0.0346171, 0.0175625])
 
     def test_amplify(self):
         res = amplify_ground_shaking(T=3.0, vs30=780, imls=[0.1, 0.2, 0.3])
@@ -69,7 +69,7 @@ class ShakemapTestCase(unittest.TestCase):
 
         # intensity
         val = numpy.array(
-            [(-5.38409665, -3.9383686, -3.55435415, -4.37692394)] * 9, imt_dt)
+            [(5.38409665, 3.9383686, 3.55435415, 4.37692394)] * 9, imt_dt)
 
         shakemap = numpy.zeros(9, shakemap_dt)
         shakemap['lon'] = lons
@@ -79,9 +79,9 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['std'] = std
         gmfs = to_gmfs(
             shakemap, site_effects=False, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.035815, 0.054771])
+        aae(gmfs['PGA'].sum(axis=0), [0.3708301, 0.5671011])
 
         gmfs = to_gmfs(
             shakemap, site_effects=True, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.0396147, 0.0605817])
-        aae(gmfs['SA(1.0)'].sum(axis=0), [0.3896774, 0.5317907])
+        aae(gmfs['PGA'].sum(axis=0), [0.4101717, 0.6240185])
+        aae(gmfs['SA(1.0)'].sum(axis=0), [0.3946015, 0.5385107])
