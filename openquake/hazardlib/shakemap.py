@@ -174,7 +174,7 @@ def cross_correlation_matrix(imts, corr):
                 if corr == 'full correlation':
                     cross_matrix[i, j] = 0.99999
                 if corr == 'cross':
-                    cross_matrix[i, j] = 1 - math.cos((math.pi / 2) - (
+                    cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
                         0.359 + 0.163 * II * math.log(Tmin / 0.189)
                     ) * math.log(Tmax / Tmin))
 
