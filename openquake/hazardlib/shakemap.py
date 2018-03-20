@@ -62,26 +62,6 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
 # PSA10 = spectral acceleration at 1.0 s period, 5% damping (percent-g)
 # PSA30 = spectral acceleration at 3.0 s period, 5% damping (percent-g)
 # STDPGA = the standard deviation of PGA (natural log of percent-g)
-def _to_shaking(shakemap):
-    """
-    :returns: an array of shape (N, M) of logarithmic GMF values
-
-    >>> imts = ['PGA']
-    >>> dt = numpy.dtype([(imt, F32) for imt in imts])
-    >>> arr = numpy.zeros(1, [('val', dt), ('std', dt)])
-    >>> arr['val']['PGA'] = 0.44
-    >>> arr['std']['PGA'] = 0.53
-    >>> _to_shaking(arr)
-    array([[-5.5666008]], dtype=float32)
-    """
-    imts = shakemap['val'].dtype.names
-    val = shakemap['val']
-    std = shakemap['std']
-    arr = numpy.zeros((len(val), len(imts)), F32)
-    for imti, imt_ in enumerate(imts):
-        arr[:, imti] = numpy.log(val[imt_] / PCTG) - std[imt_] ** 2 / 2.
-    return arr
-
 
 def spatial_length_scale(imt, vs30clustered):
     """
@@ -249,14 +229,16 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
     :returns: an array of GMFs of shape (N, G) and dtype imt_dt
     """
-    imts = shakemap['val'].dtype.names
-    val = shakemap['val']
+    std = shakemap['std']
+    imts = std.dtype.names
+    val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
+           for imt in imts}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts, 'spatial')
-    spatial_cov = spatial_covariance_array(shakemap['std'], imts, spatial_corr)
+    spatial_cov = spatial_covariance_array(std, imts, spatial_corr)
     cross_corr = cross_correlation_matrix(imts, 'cross')
     M, N = spatial_corr.shape[:2]
-    mu = numpy.array([numpy.ones(num_gmfs) * val[j][imt]
+    mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in imts for j in range(N)])
     L = cholesky(spatial_cov, cross_corr)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
@@ -265,7 +247,7 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
 
-    arr = numpy.zeros((N, num_gmfs), val.dtype)
+    arr = numpy.zeros((N, num_gmfs), std.dtype)
     for i, imt in enumerate(imts):
         arr[imt] = gmfs[i * N:(i + 1) * N]
     return arr
