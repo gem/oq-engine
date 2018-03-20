@@ -455,9 +455,10 @@ producing too small PoEs.'''
                         ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
-                    poestr = '' if poe is None else 'poe-%s-' % poe
-                    name = 'disagg_by_src/%s%s-%s-%s' % (
-                        poestr, imt, rec['lons'], rec['lats'])
+                    prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
+                              else 'poe-%s' % poe)
+                    name = 'disagg_by_src/%s-%s-%s-%s' % (
+                        prefix, imt, rec['lons'], rec['lats'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
