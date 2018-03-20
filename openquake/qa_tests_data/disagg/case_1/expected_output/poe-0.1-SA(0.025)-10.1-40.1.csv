@@ -1,5 +1,5 @@
-source_id,poe
-2,9.6200666e-02
-4,4.0359680e-03
-1,1.9842379e-04
-3,6.3285004e-05
+source_id,source_name,poe
+3,"simple fault",6.3285004e-05
+1,"point",1.9842379e-04
+4,"complex fault",4.0359680e-03
+2,"area",9.6200666e-02
