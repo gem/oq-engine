@@ -24,18 +24,18 @@ import logging
 import operator
 import numpy
 
+from openquake.baselib import parallel
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.baselib import parallel
 from openquake.calculators import getters
 from openquake.calculators import base, classical
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(poe)srlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
 
 
 def _to_matrix(matrices, num_trts):
@@ -110,22 +110,21 @@ producing too small PoEs.'''
 
     def pre_execute(self):
         oq = self.oqparam
-        if oq.iml_disagg:
-            # read the input data
+        if oq.iml_disagg and not oq.disagg_by_src:
+            # no need to run a PSHACalculator
             base.HazardCalculator.pre_execute(self)
         else:
-            # only the poes_disagg are known, the IMLs are interpolated from
-            # the hazard curves, hence the need to run a PSHACalculator here
+            # we need to run a PSHACalculator
             cl = classical.PSHACalculator(oq, self.monitor('classical'),
                                           calc_id=self.datastore.calc_id)
-            cl.grp_by_src = oq.disagg_by_src
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
 
     def execute(self):
         """Performs the disaggregation"""
-        if self.oqparam.iml_disagg:
+        oq = self.oqparam
+        if oq.iml_disagg:
             curves = [None] * len(self.sitecol)  # no hazard curves are needed
         else:
             curves = [self.get_curves(sid) for sid in self.sitecol.sids]
@@ -218,6 +217,17 @@ producing too small PoEs.'''
         csm = self.csm.filter(src_filter)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
+
+        R = len(self.rlzs_assoc.realizations)
+        iml4 = disagg.make_iml4(
+            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        if oq.disagg_by_src:
+            if R == 1:
+                self.build_disagg_by_src(iml4)
+            else:
+                logging.warn('disagg_by_src works only with 1 realization, '
+                             'you have %d', R)
+
         eps_edges = numpy.linspace(-tl, tl, oq.num_epsilon_bins + 1)
         self.bin_edges = {}
 
@@ -257,9 +267,7 @@ producing too small PoEs.'''
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
         mon = self.monitor('disaggregation')
-        R = len(self.rlzs_assoc.realizations)
-        iml4 = disagg.make_iml4(
-            R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
+        R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
             for r in range(R):
@@ -388,7 +396,8 @@ producing too small PoEs.'''
         lat = self.sitecol.lats[site_id]
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
-            rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
+            rlz='rlz-%d' if isinstance(rlz_id, int) else rlz_id,
+            imt=imt_str, lon=lon, lat=lat)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
@@ -422,3 +431,38 @@ producing too small PoEs.'''
                 logging.warn('poe_agg=%s is quite different from the expected'
                              ' poe=%s; perhaps the number of intensity measure'
                              ' levels is too small?', poe_agg, poe)
+
+    def build_disagg_by_src(self, iml4):
+        """
+        :param dstore: a datastore
+        :param iml4: 4D array of IMLs with shape (N, 1, M, P)
+        """
+        logging.warn('Disaggregation by source is experimental')
+        oq = self.oqparam
+        poes_disagg = oq.poes_disagg or (None,)
+        pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
+        grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
+        G = len(pmap_by_grp)
+        P = len(poes_disagg)
+        for rec in self.sitecol.array:
+            sid = rec['sids']
+            for imti, imt in enumerate(oq.imtls):
+                xs = oq.imtls[imt]
+                poes = numpy.zeros((G, P))
+                for g, grp_id in enumerate(grp_ids):
+                    pmap = pmap_by_grp['grp-%02d' % grp_id]
+                    if sid in pmap:
+                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
+                for p, poe in enumerate(poes_disagg):
+                    prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
+                              else 'poe-%s' % poe)
+                    name = 'disagg_by_src/%s-%s-%s-%s' % (
+                        prefix, imt, rec['lons'], rec['lats'])
+                    if poes[:, p].sum():  # nonzero contribution
+                        poe_agg = 1 - numpy.prod(1 - poes[:, p])
+                        if poe and abs(1 - poe_agg / poe) > .1:
+                            logging.warn('poe_agg=%s is quite different from '
+                                         'the expected poe=%s', poe_agg, poe)
+                        self.datastore[name] = poes[:, p]
+                        self.datastore.set_attrs(name, poe_agg=poe_agg)
