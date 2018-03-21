@@ -198,7 +198,7 @@ class AreaSource(ParametricSeismicSource):
             pt = PointSource(
                 # Generate a new ID and name
                 source_id='%s:%s' % (self.source_id, i),
-                name='%s:%s' % (self.name, i),
+                name=self.name,
                 tectonic_region_type=self.tectonic_region_type,
                 mfd=new_mfd,
                 rupture_mesh_spacing=self.rupture_mesh_spacing,
