@@ -649,7 +649,8 @@ def get_result(db, result_id):
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
-    return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
+    return (job.id, job.status, job.user_name,
+            os.path.dirname(job.ds_calc_dir), job.ds_key)
 
 
 def get_results(db, job_id):
