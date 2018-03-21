@@ -267,7 +267,7 @@ def get_mesh(oqparam):
         # the mesh will be extracted from the exposure later
         return
     elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat, param.depth)
+        coords = [(param['lon'], param['lat'], 0)
                   for param in get_site_model(oqparam)]
         mesh = geo.Mesh.from_coords(sorted(coords))
         mesh.from_site_model = True
@@ -325,7 +325,7 @@ def get_site_collection(oqparam, mesh=None):
         sm = get_site_model(oqparam)
         if getattr(mesh, 'from_site_model', False):
             return site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, sm)
+                mesh.lons, mesh.lats, None, sm)
         # associate the site parameters to the mesh
         site_model_params = geo.utils.GeographicObjects(
             sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
