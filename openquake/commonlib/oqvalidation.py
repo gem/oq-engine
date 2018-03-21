@@ -33,6 +33,7 @@ from openquake.risklib.riskmodels import get_risk_files
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
 F32 = numpy.float32
+F64 = numpy.float64
 
 
 class OqParam(valid.ParamSet):

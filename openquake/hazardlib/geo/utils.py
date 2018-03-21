@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+import logging
 import operator
 import collections
 try:
@@ -35,6 +36,10 @@ from openquake.hazardlib.geo.geodetic import (
 from openquake.baselib.slots import with_slots
 
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+
+
+class SiteAssociationError(Exception):
+    """Raised when there are no sites close enough"""
 
 
 class GeographicObjects(object):
@@ -79,6 +84,35 @@ class GeographicObjects(object):
             zeros = numpy.zeros_like(self.lons)
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         return self.objects[idx], min_dist
+
+    def assoc(self, sitecol, assoc_dist, mode='error'):
+        """
+        :param: a (filtered) site collection
+        :param assoc_dist: the maximum distance for association
+        :param mode: 'strict', 'error', 'warn' or 'ignore'
+        :returns: a dictionary site_id -> array of associated objects
+        """
+        dic = {}
+        for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+            obj, distance = self.get_closest(lon, lat)
+            if assoc_dist is None:
+                dic[sid] = obj  # associate all
+            elif distance <= assoc_dist:
+                dic[sid] = obj  # associate within
+            elif mode == 'warn':
+                dic[sid] = obj  # associate outside
+                logging.warn('Association to %s km from site (%s %s)',
+                             distance, lon, lat)
+            elif mode == 'ignore':
+                pass  # do not associate
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
+        if not dic and mode == 'error':
+            raise SiteAssociationError(
+                'No sites could be associated within %s km' % assoc_dist)
+        return dic
 
 
 def clean_points(points):
@@ -479,4 +513,3 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
-
