@@ -664,8 +664,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         exposure.tagcol,
         exposure.cost_calculator,
         oqparam.time_event,
-        occupancy_periods=hdf5.array_of_vstr(
-            sorted(exposure.occupancy_periods)))
+        occupancy_periods=exposure.occupancy_periods)
     return sitecol, assetcol
 
 
