@@ -23,6 +23,7 @@ import numpy
 from shapely import geometry
 from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
 
@@ -144,6 +145,23 @@ class SiteCollection(object):
     ])
 
     @classmethod
+    def from_shakemap(cls, shakemap_array):
+        """
+        Build a site collection from a shakemap array
+        """
+        self = object.__new__(cls)
+        self.indices = None
+        n = len(shakemap_array)
+        self.array = arr = numpy.zeros(n, self.dtype)
+        arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
+        arr['lons'] = shakemap_array['lon']
+        arr['lats'] = shakemap_array['lat']
+        arr['depths'] = numpy.zeros(n)
+        arr['vs30'] = shakemap_array['vs30']
+        arr.flags.writeable = False
+        return self
+
+    @classmethod
     def from_points(cls, lons, lats, depths, sitemodel):
         """
         Build the site collection from
@@ -181,15 +199,14 @@ class SiteCollection(object):
         arr.flags.writeable = False
         return self
 
-    @classmethod
-    def filtered(cls, indices, array):
+    def filtered(self, indices):
         """
         :returns: a filtered SiteCollection instance
         """
-        self = object.__new__(cls)
-        self.indices = indices
-        self.array = array
-        return self
+        new = object.__new__(self.__class__)
+        new.indices = numpy.uint32(sorted(indices))
+        new.array = self.array
+        return new
 
     def __init__(self, sites):
         """
@@ -305,7 +322,7 @@ class SiteCollection(object):
             indices, = mask.nonzero()
         else:
             indices = self.indices.take(mask.nonzero()[0])
-        return SiteCollection.filtered(indices, self.array)
+        return self.filtered(indices)
 
     def within(self, region):
         """
@@ -315,6 +332,20 @@ class SiteCollection(object):
         mask = numpy.array([
             geometry.Point(rec['lons'], rec['lats']).within(region)
             for rec in self.array])
+        return self.complete.filter(mask)
+
+    def within_bbox(self, bbox):
+        """
+        :param bbox: a quartet (min_lon, min_lat, max_lon, max_lat)
+        :returns: a filtered SiteCollection within the bounding box
+        """
+        min_lon, min_lat, max_lon, max_lat = bbox
+        if cross_idl(min_lon, max_lon):
+            raise ValueError('Crossing the International Date Line is '
+                             'not supported yet')
+        mask = numpy.array([min_lon < rec['lons'] < max_lon and
+                            min_lat < rec['lats'] < max_lat
+                            for rec in self.array])
         return self.complete.filter(mask)
 
     def __getstate__(self):
