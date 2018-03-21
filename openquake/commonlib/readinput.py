@@ -41,7 +41,6 @@ from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 
-
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
 TWO16 = 2 ** 16  # 65,536
@@ -54,10 +53,6 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
     ('ses', U32), ('sample', U32)])
-
-
-class AssetSiteAssociationError(Exception):
-    """Raised when there are no hazard sites close enough to any asset"""
 
 
 class DuplicatedPoint(Exception):
@@ -640,7 +635,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 # keep the assets, otherwise discard them
                 assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
-            raise AssetSiteAssociationError(
+            raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % asset_hazard_distance)
         mask = numpy.array(
