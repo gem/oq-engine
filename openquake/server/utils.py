@@ -64,8 +64,12 @@ def get_acl_on(request):
     """
     Returns `true` if ACL should be honorated, returns otherwise `false`.
     """
-    return (False if request.user.is_superuser or not settings.ACL_ON
-            else True)
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        if not request.user.is_superuser and settings.ACL_ON:
+            acl_on = True
+    else:
+        acl_on = False
+    return acl_on
 
 
 def user_has_permission(request, owner):
