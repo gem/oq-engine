@@ -349,13 +349,19 @@ class AssetCollection(object):
     D, I = len('deductible-'), len('insurance_limit-')
 
     def __init__(self, asset_refs, assets_by_site, tagcol, cost_calculator,
-                 time_event, occupancy_periods=''):
+                 time_event, occupancy_periods):
         self.tagcol = tagcol
         self.cost_calculator = cost_calculator
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
+        if self.occupancy_periods and not occupancy_periods:
+            logging.warn('Missing <occupancyPeriods>%s</occupancyPeriods> '
+                         'in the exposure', self.occupancy_periods)
+        elif self.occupancy_periods.strip() != occupancy_periods.strip():
+            raise ValueError('Expected %s, got %s' %
+                             (occupancy_periods, self.occupancy_periods))
         self.asset_refs = asset_refs
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
@@ -473,7 +479,7 @@ class AssetCollection(object):
     def __toh5__(self):
         # NB: the loss types do not contain spaces, so we can store them
         # together as a single space-separated string
-        op = ' '.join(map(decode, self.occupancy_periods))
+        op = decode(self.occupancy_periods)
         attrs = {'time_event': self.time_event or 'None',
                  'occupancy_periods': op,
                  'loss_types': ' '.join(self.loss_types),
@@ -488,9 +494,9 @@ class AssetCollection(object):
             tagcol=self.tagcol, asset_refs=self.asset_refs), attrs
 
     def __fromh5__(self, dic, attrs):
-        for name in ('occupancy_periods', 'loss_types', 'deduc', 'i_lim',
-                     'retro'):
+        for name in ('loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, [decode(x) for x in attrs[name].split()])
+        self.occupancy_periods = attrs['occupancy_periods']
         self.time_event = attrs['time_event']
         self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
@@ -531,7 +537,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     occupancy_periods = []
     for name in sorted(first_asset.values):
         if name.startswith('occupants_'):
-            occupancy_periods.append(name.split('_', 1)[1])
+            period = name.split('_', 1)[1]
+            if period != 'None':
+                occupancy_periods.append(period)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     deductibles = ['deductible-%s' % name for name in deductible_d]
@@ -579,7 +587,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     # `insurance_limits` ("s" suffix)
                     value = getattr(asset, name + 's')[lt]
                 record[field] = value
-    return assetcol, occupancy_periods
+    return assetcol, ' '.join(occupancy_periods)
 
 # ########################### exposure ############################ #
 
@@ -672,7 +680,7 @@ def _get_exposure(fname, stop=None):
     asset_refs = []
     exp = Exposure(
         exposure['id'], exposure['category'],
-        description.text, cost_types, occupancy_periods.split(),
+        description.text, cost_types, occupancy_periods,
         insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, TagCollection(tagnames))
     return exp, exposure.assets
@@ -737,7 +745,8 @@ class Exposure(object):
             fields.append(name)
         if 'per_area' in self.cost_types['type']:
             fields.append('area')
-        fields.extend(self.occupancy_periods)
+        if self.occupancy_periods:
+            fields.extend(self.occupancy_periods.split())
         fields.extend(self.tagcol.tagnames)
         return set(fields)
 
@@ -761,6 +770,7 @@ class Exposure(object):
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
+        occupancy_periods = self.occupancy_periods.split()
         for fname in fnames:
             with open(fname) as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
@@ -779,7 +789,7 @@ class Exposure(object):
                             a = dict(type=cost, value=dic[cost])
                             costs.append(Node('cost', a))
                         occupancies = Node('occupancies')
-                        for period in self.occupancy_periods:
+                        for period in occupancy_periods:
                             a = dict(occupants=dic[period], period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
