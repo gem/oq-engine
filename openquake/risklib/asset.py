@@ -353,9 +353,8 @@ class AssetCollection(object):
         self.tagcol = tagcol
         self.cost_calculator = cost_calculator
         self.time_event = time_event
-        self.occupancy_periods = occupancy_periods
         self.tot_sites = len(assets_by_site)
-        self.array = self.build_asset_array(
+        self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, tagcol.tagnames, time_event)
         self.asset_refs = asset_refs
         fields = self.array.dtype.names
@@ -505,78 +504,82 @@ class AssetCollection(object):
     def __repr__(self):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
-    @staticmethod
-    def build_asset_array(assets_by_site, tagnames=(), time_event=None):
-        """
-        :param assets_by_site: a list of lists of assets
-        :param tagnames: a list of tag names
-        :param time_event: a time event string (or None)
-        :returns: an array `assetcol`
-        """
-        for assets in assets_by_site:
-            if len(assets):
-                first_asset = assets[0]
-                break
-        else:  # no break
-            raise ValueError('There are no assets!')
-        candidate_loss_types = list(first_asset.values)
-        loss_types = []
-        the_occupants = 'occupants_%s' % time_event
-        for candidate in sorted(candidate_loss_types):
-            if candidate.startswith('occupants'):
-                if candidate == the_occupants:
-                    loss_types.append('occupants')
-                # discard occupants for different time periods
-            else:
-                loss_types.append('value-' + candidate)
-        deductible_d = first_asset.deductibles or {}
-        limit_d = first_asset.insurance_limits or {}
-        deductibles = ['deductible-%s' % name for name in deductible_d]
-        limits = ['insurance_limit-%s' % name for name in limit_d]
-        retro = ['retrofitted'] if first_asset._retrofitted else []
-        float_fields = loss_types + deductibles + limits + retro
-        int_fields = [(str(name), U16) for name in tagnames]
-        tagi = {str(name): i for i, name in enumerate(tagnames)}
-        asset_dt = numpy.dtype(
-            [('lon', F32), ('lat', F32), ('site_id', U32),
-             ('number', F32), ('area', F32)] + [
-                 (str(name), float) for name in float_fields] + int_fields)
-        num_assets = sum(len(assets) for assets in assets_by_site)
-        assetcol = numpy.zeros(num_assets, asset_dt)
-        asset_ordinal = 0
-        fields = set(asset_dt.fields)
-        for sid, assets_ in enumerate(assets_by_site):
-            for asset in assets_:
-                asset.ordinal = asset_ordinal
-                record = assetcol[asset_ordinal]
-                asset_ordinal += 1
-                for field in fields:
-                    if field == 'number':
-                        value = asset.number
-                    elif field == 'area':
-                        value = asset.area
-                    elif field == 'site_id':
-                        value = sid
-                    elif field == 'lon':
-                        value = asset.location[0]
-                    elif field == 'lat':
-                        value = asset.location[1]
-                    elif field == 'occupants':
-                        value = asset.values[the_occupants]
-                    elif field == 'retrofitted':
-                        value = asset._retrofitted
-                    elif field in tagnames:
-                        value = asset.tagidxs[tagi[field]]
-                    else:
-                        try:
-                            name, lt = field.split('-')
-                        except ValueError:  # no - in field
-                            name, lt = 'value', field
-                        # the line below retrieve one of `deductibles` or
-                        # `insurance_limits` ("s" suffix)
-                        value = getattr(asset, name + 's')[lt]
-                    record[field] = value
-        return assetcol
+
+def build_asset_array(assets_by_site, tagnames=(), time_event=None):
+    """
+    :param assets_by_site: a list of lists of assets
+    :param tagnames: a list of tag names
+    :param time_event: a time event string (or None)
+    :returns: an array `assetcol`
+    """
+    for assets in assets_by_site:
+        if len(assets):
+            first_asset = assets[0]
+            break
+    else:  # no break
+        raise ValueError('There are no assets!')
+    candidate_loss_types = list(first_asset.values)
+    loss_types = []
+    the_occupants = 'occupants_%s' % time_event
+    for candidate in sorted(candidate_loss_types):
+        if candidate.startswith('occupants'):
+            if candidate == the_occupants:
+                loss_types.append('occupants')
+            # discard occupants for different time periods
+        else:
+            loss_types.append('value-' + candidate)
+    occupancy_periods = []
+    for name in sorted(first_asset.values):
+        if name.startswith('occupants_'):
+            occupancy_periods.append(name.split('_', 1)[1])
+    deductible_d = first_asset.deductibles or {}
+    limit_d = first_asset.insurance_limits or {}
+    deductibles = ['deductible-%s' % name for name in deductible_d]
+    limits = ['insurance_limit-%s' % name for name in limit_d]
+    retro = ['retrofitted'] if first_asset._retrofitted else []
+    float_fields = loss_types + deductibles + limits + retro
+    int_fields = [(str(name), U16) for name in tagnames]
+    tagi = {str(name): i for i, name in enumerate(tagnames)}
+    asset_dt = numpy.dtype(
+        [('lon', F32), ('lat', F32), ('site_id', U32),
+         ('number', F32), ('area', F32)] + [
+             (str(name), float) for name in float_fields] + int_fields)
+    num_assets = sum(len(assets) for assets in assets_by_site)
+    assetcol = numpy.zeros(num_assets, asset_dt)
+    asset_ordinal = 0
+    fields = set(asset_dt.fields)
+    for sid, assets_ in enumerate(assets_by_site):
+        for asset in assets_:
+            asset.ordinal = asset_ordinal
+            record = assetcol[asset_ordinal]
+            asset_ordinal += 1
+            for field in fields:
+                if field == 'number':
+                    value = asset.number
+                elif field == 'area':
+                    value = asset.area
+                elif field == 'site_id':
+                    value = sid
+                elif field == 'lon':
+                    value = asset.location[0]
+                elif field == 'lat':
+                    value = asset.location[1]
+                elif field == 'occupants':
+                    value = asset.values[the_occupants]
+                elif field == 'retrofitted':
+                    value = asset._retrofitted
+                elif field in tagnames:
+                    value = asset.tagidxs[tagi[field]]
+                else:
+                    try:
+                        name, lt = field.split('-')
+                    except ValueError:  # no - in field
+                        name, lt = 'value', field
+                    # the line below retrieve one of `deductibles` or
+                    # `insurance_limits` ("s" suffix)
+                    value = getattr(asset, name + 's')[lt]
+                record[field] = value
+    return assetcol, occupancy_periods
 
 # ########################### exposure ############################ #
 
@@ -620,7 +623,7 @@ def _get_exposure(fname, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
-        occupancy_periods = exposure.occupancyPeriods.text
+        occupancy_periods = exposure.occupancyPeriods.text or ''
     except AttributeError:
         occupancy_periods = ''
     try:
