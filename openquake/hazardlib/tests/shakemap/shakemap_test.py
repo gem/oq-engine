@@ -55,7 +55,7 @@ class ShakemapTestCase(unittest.TestCase):
 
         # spatial covariance
         std = numpy.array([(0.5, 0.52, 0.64, 0.73)] * 9, imt_dt)  # 9 sites
-        scov = spatial_covariance_array(std, imts, sca)
+        scov = spatial_covariance_array([std[n] for n in imt_dt.names], sca)
         aae(scov.sum(), 13.166200147)
 
         # cross correlation

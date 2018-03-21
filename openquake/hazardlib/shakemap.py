@@ -97,7 +97,7 @@ def spatial_correlation_array(dmatrix, imts, correl):
     return corr
 
 
-def spatial_covariance_array(stddev, imts, corrmatrices):
+def spatial_covariance_array(stddev, corrmatrices):
     """
     :param stddev: array of shape N and dtype imt_dt
     :param imts: M intensity measure types
@@ -107,8 +107,7 @@ def spatial_covariance_array(stddev, imts, corrmatrices):
     # this depends on sPGA, sSa03, sSa10, sSa30
     M, N = corrmatrices.shape[:2]
     matrices = []
-    for i, im in enumerate(imts):
-        std = stddev[str(im)]
+    for i, std in enumerate(stddev):
         covmatrix = numpy.zeros((N, N))
         for j in range(N):
             for k in range(N):
@@ -218,7 +217,8 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
            for imt in std.dtype.names}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts, 'spatial')
-    spatial_cov = spatial_covariance_array(std, imts, spatial_corr)
+    stddev = [std[imt] for imt in std.dtype.names]
+    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
     cross_corr = cross_correlation_matrix(imts, 'cross')
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
