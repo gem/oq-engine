@@ -191,12 +191,17 @@ class SiteCollection(object):
         arr['lons'] = numpy.array(lons)
         arr['lats'] = numpy.array(lats)
         arr['depths'] = numpy.array(depths)
-        if sitemodel is not None:
+        if sitemodel is None:
+            pass
+        elif hasattr(sitemodel, 'reference_vs30_value'):  # oqparam
             arr['vs30'] = sitemodel.reference_vs30_value
             arr['vs30measured'] = sitemodel.reference_vs30_type == 'measured'
             arr['z1pt0'] = sitemodel.reference_depth_to_1pt0km_per_sec
             arr['z2pt5'] = sitemodel.reference_depth_to_2pt5km_per_sec
             arr['backarc'] = sitemodel.reference_backarc
+        elif 'vs30' in sitemodel.dtype.names:  # site params
+            for name in sitemodel.dtype.names[2:]:  # except lon, lat
+                arr[name] = sitemodel[name]
         return self
 
     def filtered(self, indices):
