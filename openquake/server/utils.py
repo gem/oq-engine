@@ -30,33 +30,43 @@ if settings.LOCKDOWN:
     from django.contrib.auth.models import User
 
 
-def get_user_data(request):
+def get_user(request):
+
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        user = request.user.username
+    else:
+        user = (settings.DEFAULT_USER if
+                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+
+    return user
+
+
+def get_valid_users(request):
     """
     Returns a dictionary with `name`, `group_members` and `acl_on` keys.
     `name` is the real username if authentication support is enabled and user
     is authenticated, otherwise it is None.
     """
-    acl_on = settings.ACL_ON
-    group_members = []
+    users = []
+    users.append(get_user(request))
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
-            name = request.user.username
-            groups = request.user.groups.values_list('name', flat=True)
-            if groups:
-                group_members = list(User.objects.filter(groups__name=groups)
-                                     .values_list('username', flat=True))
-        if request.user.is_superuser:
-            acl_on = False
-    else:
-        name = (settings.DEFAULT_USER if
-                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+            if request.user.is_superuser or not settings.ACL_ON:
+                users = User.objects.all().values_list('username', flat=True)
+            else:
+                groups = request.user.groups.values_list('name', flat=True)
+                if groups:
+                    users = list(User.objects.filter(groups__name=groups)
+                                 .values_list('username', flat=True))
+                else:
+                    users = list(request.user.username)
 
-    return {'name': name, 'group_members': group_members, 'acl_on': acl_on}
+    return users
 
 
 def oq_server_context_processor(request):
     """
-    A custom context processor which allows injection of additional
+   A custom context processor which allows injection of additional
     context variables.
     """
 

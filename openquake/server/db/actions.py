@@ -547,12 +547,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
-    if user_acl_on:
-        users_filter = "user_name IN (?X)"
-    else:
-        users_filter = 1
+    users_filter = "user_name IN (?X)"
 
     jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
               ' ORDER BY id DESC LIMIT %d'
