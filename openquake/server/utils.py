@@ -31,7 +31,10 @@ if settings.LOCKDOWN:
 
 
 def get_user(request):
-
+    """
+    Returns the users from `request` if authentication is enabled, otherwise
+    returns the default user (from settings, or as reported by the OS).
+    """
     if settings.LOCKDOWN and hasattr(request, 'user'):
         user = request.user.username
     else:
@@ -42,31 +45,41 @@ def get_user(request):
 
 
 def get_valid_users(request):
-    """
-    Returns a dictionary with `name`, `group_members` and `acl_on` keys.
-    `name` is the real username if authentication support is enabled and user
-    is authenticated, otherwise it is None.
+    """"
+    Returns a list of `users` based on groups membership.
+    Returns a list made of a single user when it is not member of any group.
     """
     users = []
     users.append(get_user(request))
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
-            if request.user.is_superuser or not settings.ACL_ON:
-                users = User.objects.all().values_list('username', flat=True)
-            else:
-                groups = request.user.groups.values_list('name', flat=True)
-                if groups:
-                    users = list(User.objects.filter(groups__name=groups)
-                                 .values_list('username', flat=True))
-                else:
-                    users = list(request.user.username)
-
+            groups = request.user.groups.values_list('name', flat=True)
+            if groups:
+                users = list(User.objects.filter(groups__name=groups)
+                             .values_list('username', flat=True))
     return users
+
+
+def get_acl_on(request):
+    """
+    Returns `true` if ACL should be honorated, returns otherwise `false`.
+    """
+    return (False if request.user.is_superuser or not settings.ACL_ON
+            else True)
+
+
+def user_has_permission(request, owner):
+    """
+    Returns `true` if user coming from the request has the permission
+    to view a resource, returns `false` otherwise.
+    """
+    return (True if owner in get_valid_users(request)
+            or not get_acl_on(request) else False)
 
 
 def oq_server_context_processor(request):
     """
-   A custom context processor which allows injection of additional
+    A custom context processor which allows injection of additional
     context variables.
     """
 
