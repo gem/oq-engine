@@ -160,11 +160,11 @@ def amplify_gmfs(imts, vs30s, gmfs):
     return gmfs
 
 
-def amplify_ground_shaking(T, vs30, imls):
+def amplify_ground_shaking(T, vs30, gmvs):
     """
     :param T: period
     :param vs30: velocity
-    :param imls: intensity measure levels
+    :param gmvs: ground motion values for the current site
     """
     interpolator = interpolate.interp1d(
         [-1, 0.1, 0.2, 0.3, 0.4, 100],
@@ -174,7 +174,6 @@ def amplify_ground_shaking(T, vs30, imls):
          (760 / vs30)**0.10,
          (760 / vs30)**-0.05,
          (760 / vs30)**-0.05],
-        kind='linear'
     ) if T <= 0.3 else interpolate.interp1d(
         [-1, 0.1, 0.2, 0.3, 0.4, 100],
         [(760 / vs30)**0.65,
@@ -183,9 +182,8 @@ def amplify_ground_shaking(T, vs30, imls):
          (760 / vs30)**0.53,
          (760 / vs30)**0.45,
          (760 / vs30)**0.45],
-        kind='linear'
     )
-    return interpolator(imls) * imls
+    return interpolator(gmvs) * gmvs
 
 
 def cholesky(spatial_cov, cross_corr):
