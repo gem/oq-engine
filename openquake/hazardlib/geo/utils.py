@@ -96,16 +96,19 @@ class GeographicObjects(object):
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
-                dic[sid] = obj
+                dic[sid] = obj  # associate all
             elif distance <= assoc_dist:
-                dic[sid] = obj
+                dic[sid] = obj  # associate within
+            elif mode == 'warn':
+                dic[sid] = obj  # associate outside
+                logging.warn('Association to %s km from site (%s %s)',
+                             assoc_dist, lon, lat)
+            elif mode == 'ignore':
+                pass  # do not associate
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-            elif mode == 'warn':
-                logging.warn('There is nothing closer than %s km '
-                             'to site (%s %s)', assoc_dist, lon, lat)
         if not dic and mode == 'error':
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
