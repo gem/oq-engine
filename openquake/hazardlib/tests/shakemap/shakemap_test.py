@@ -1,7 +1,7 @@
 import os.path
 import unittest
 import numpy
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, imt
 from openquake.hazardlib.shakemap import (
     get_shakemap_array, get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
@@ -9,8 +9,8 @@ from openquake.hazardlib.shakemap import (
 
 aae = numpy.testing.assert_almost_equal
 F64 = numpy.float64
-imts = ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
-imt_dt = numpy.dtype([(imt, float) for imt in imts])
+imts = [imt.from_string(x) for x in ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']]
+imt_dt = numpy.dtype([(str(imt), float) for imt in imts])
 shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
                            ('std', imt_dt), ('vs30', float)])
 CDIR = os.path.dirname(__file__)
@@ -19,7 +19,7 @@ CDIR = os.path.dirname(__file__)
 def mean_gmf(shakemap):
     gmfs = to_gmfs(
         shakemap, site_effects=True, trunclevel=3, num_gmfs=10, seed=42)
-    return [gmfs[imt].mean() for imt in imts]
+    return [gmfs[str(imt)].mean() for imt in imts]
 
 
 class ShakemapTestCase(unittest.TestCase):
