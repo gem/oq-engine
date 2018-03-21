@@ -21,7 +21,7 @@ import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
 
-from openquake.hazardlib import geo, site
+from openquake.hazardlib import geo, site, imt
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 F32 = numpy.float32
@@ -69,16 +69,11 @@ def spatial_length_scale(imt, vs30clustered):
     :param vs30clustered: boolean
     :returns: the `b` parameter in the correlation matrix
     """
-    if imt == 'PGA':
-        T = 0.0
-    elif imt[:2] == 'SA':
-        T = float(imt.replace("SA(", "").replace(")", ""))
-
+    T = imt.period
     if T < 1:
         b = 40.7 - 15.0 * T if vs30clustered else 8.5 + 17.2 * T
     elif T >= 1:
         b = 22.0 + 3.7 * T
-
     return b
 
 
@@ -91,13 +86,13 @@ def spatial_correlation_array(dmatrix, imts, correl):
     """
     n = len(dmatrix)
     corr = numpy.zeros((len(imts), n, n))
-    for imti, imt in enumerate(imts):
+    for imti, im in enumerate(imts):
         if correl == 'no correlation':
             corr[imti] = numpy.zeros((n, n))
         if correl == 'full correlation':
             corr[imti] = numpy.eye(n)
         elif correl == 'spatial':
-            b = spatial_length_scale(imt, vs30clustered=True)
+            b = spatial_length_scale(im, vs30clustered=True)
             corr[imti] = numpy.exp(-3 * dmatrix / b)
     return corr
 
@@ -112,8 +107,8 @@ def spatial_covariance_array(stddev, imts, corrmatrices):
     # this depends on sPGA, sSa03, sSa10, sSa30
     M, N = corrmatrices.shape[:2]
     matrices = []
-    for i, imt in enumerate(imts):
-        std = stddev[imt]
+    for i, im in enumerate(imts):
+        std = stddev[str(im)]
         covmatrix = numpy.zeros((N, N))
         for j in range(N):
             for k in range(N):
@@ -126,17 +121,11 @@ def cross_correlation_matrix(imts, corr):
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
     cross_matrix = numpy.zeros((M, M))
-    for i in range(M):
-        if imts[i] == 'PGA':
-            T1 = 0.05
-        elif imts[i][0:2] == 'SA':
-            T1 = float(imts[i].replace("SA(", "").replace(")", ""))
+    for i, im in enumerate(imts):
+        T1 = im.period or 0.05
 
         for j in range(M):
-            if imts[j] == 'PGA':
-                T2 = 0.05
-            elif imts[j][0:2] == 'SA':
-                T2 = float(imts[j].replace("SA(", "").replace(")", ""))
+            T2 = imts[j].period or 0.05
 
             if i == j:
                 cross_matrix[i, j] = 1
@@ -166,16 +155,10 @@ def amplify_gmfs(imts, vs30s, gmfs):
     Amplify the ground shaking depending on the vs30s
     """
     n = len(vs30s)
-
     for i, imt in enumerate(imts):
-        if imt == 'PGA':
-            T = 0.0
-        elif imt[0:2] == 'SA':
-            T = float(imt.replace("SA(", "").replace(")", ""))
-
         for iloc in range(n):
             gmfs[i * n + iloc] = amplify_ground_shaking(
-                T, vs30s[iloc], gmfs[i * n + iloc])
+                imt.period, vs30s[iloc], gmfs[i * n + iloc])
 
     return gmfs
 
@@ -230,16 +213,16 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     :returns: an array of GMFs of shape (N, G) and dtype imt_dt
     """
     std = shakemap['std']
-    imts = std.dtype.names
+    imts = [imt.from_string(name) for name in std.dtype.names]
     val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
-           for imt in imts}
+           for imt in std.dtype.names}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts, 'spatial')
     spatial_cov = spatial_covariance_array(std, imts, spatial_corr)
     cross_corr = cross_correlation_matrix(imts, 'cross')
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
-                      for imt in imts for j in range(N)])
+                      for imt in std.dtype.names for j in range(N)])
     L = cholesky(spatial_cov, cross_corr)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
@@ -248,8 +231,8 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
 
     arr = numpy.zeros((N, num_gmfs), std.dtype)
-    for i, imt in enumerate(imts):
-        arr[imt] = gmfs[i * N:(i + 1) * N]
+    for i, im in enumerate(std.dtype.names):
+        arr[im] = gmfs[i * N:(i + 1) * N]
     return arr
 
 """
