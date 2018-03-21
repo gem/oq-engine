@@ -87,6 +87,15 @@ class TestGeodeticDistance(unittest.TestCase):
                                                 [[0, 0], [0, 0]])
         assert_aeq(dist, [[111.195, 0], [111.195, 0]], decimal=4)
 
+    def test_distance_matrix(self):
+        lons = numpy.array([84., 84., 84., 85.5, 85.5, 85.5])
+        lats = numpy.array([26., 27.5, 29., 26., 27.5, 29.])
+        dmatrix = geodetic.distance_matrix(lons, lats)
+        assert_aeq(numpy.linalg.eigvalsh(dmatrix),
+                   [-550.60045439, -244.54774768, -155.3191062, -116.54457903,
+                    -82.64354555, 1149.65543285])
+        # NB: the sum of the eigenvalues must be zero up to numeric errors
+
 
 class TestAzimuth(unittest.TestCase):
     def test_LAX_to_JFK(self):
@@ -418,7 +427,8 @@ class NPointsTowardsTest(unittest.TestCase):
         )
         expected_lons = [0, 0, 0, 0, 0, 0, 0]
         expected_lats = [0, 0, 0, 0, 0, 0, 0]
-        expected_depths = [0, 0.8333333, 1.6666667, 2.5, 3.3333333, 4.1666667, 5]
+        expected_depths = [0, 0.8333333, 1.6666667, 2.5, 3.3333333,
+                           4.1666667, 5]
         numpy.testing.assert_almost_equal(lons, expected_lons)
         numpy.testing.assert_almost_equal(lats, expected_lats)
         numpy.testing.assert_almost_equal(depths, expected_depths)
