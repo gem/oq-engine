@@ -615,10 +615,11 @@ def get_result(request, result_id):
     # If the result for the requested ID doesn't exist, OR
     # the job which it is related too is not complete,
     # throw back a 404.
-    # FIXME no auth
     try:
-        job_id, job_status, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
+        if not utils.user_has_permission(request, job_user):
+            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
