@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+import logging
 import operator
 import collections
 try:
@@ -88,16 +89,22 @@ class GeographicObjects(object):
         """
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict', 'error' or 'ignore'
+        :param mode: 'strict', 'error', 'warn' or 'ignore'
         :returns: a dictionary site_id -> array of associated objects
         """
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
-                dic[sid] = obj
+                dic[sid] = obj  # associate all
             elif distance <= assoc_dist:
-                dic[sid] = obj
+                dic[sid] = obj  # associate within
+            elif mode == 'warn':
+                dic[sid] = obj  # associate outside
+                logging.warn('Association to %s km from site (%s %s)',
+                             distance, lon, lat)
+            elif mode == 'ignore':
+                pass  # do not associate
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
