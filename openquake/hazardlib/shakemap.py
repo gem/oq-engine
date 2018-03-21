@@ -99,8 +99,7 @@ def spatial_correlation_array(dmatrix, imts, correl):
 
 def spatial_covariance_array(stddev, corrmatrices):
     """
-    :param stddev: array of shape N and dtype imt_dt
-    :param imts: M intensity measure types
+    :param stddev: array of shape (M, N)
     :param corrmatrices: array of shape (M, N, N)
     :returns: an array of shape (M, N, N)
     """
@@ -125,18 +124,12 @@ def cross_correlation_matrix(imts, corr):
 
         for j in range(M):
             T2 = imts[j].period or 0.05
-
             if i == j:
                 cross_matrix[i, j] = 1
             else:
                 Tmax = max([T1, T2])
                 Tmin = min([T1, T2])
-
-                if Tmin < 0.189:
-                    II = 1
-                else:
-                    II = 0
-
+                II = 1 if Tmin < 0.189 else 0
                 if corr == 'no correlation':
                     cross_matrix[i, j] = 0
                 if corr == 'full correlation':
@@ -154,11 +147,10 @@ def amplify_gmfs(imts, vs30s, gmfs):
     Amplify the ground shaking depending on the vs30s
     """
     n = len(vs30s)
-    for i, imt in enumerate(imts):
+    for i, im in enumerate(imts):
         for iloc in range(n):
             gmfs[i * n + iloc] = amplify_ground_shaking(
-                imt.period, vs30s[iloc], gmfs[i * n + iloc])
-
+                im.period, vs30s[iloc], gmfs[i * n + iloc])
     return gmfs
 
 
