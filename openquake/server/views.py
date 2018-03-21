@@ -316,10 +316,9 @@ def calc_list(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user = utils.get_user_data(request)
-    allowed_users = user['group_members'] or [user['name']]
+    valid_users = utils.get_valid_users(request)
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           allowed_users, user['acl_on'], id)
+                           valid_users, id)
 
     response_data = []
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
@@ -363,10 +362,9 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    user = utils.get_user_data(request)
+    valid_users = utils.get_valid_users(request)
     info = logs.dbcmd('calc_info', calc_id)
-    allowed_users = user['group_members'] or [user['name']]
-    if user['acl_on'] and info['user_name'] not in allowed_users:
+    if info['user_name'] not in valid_users:
         message = {'error': ('User %s has no permission to abort job %s' %
                              (info['user_name'], job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
@@ -394,7 +392,7 @@ def calc_remove(request, calc_id):
     """
     Remove the calculation id
     """
-    user = utils.get_user_data(request)['name']
+    user = utils.get_user(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
@@ -482,9 +480,9 @@ def run_calc(request):
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
-    user = utils.get_user_data(request)
+    user = utils.get_user(request)
     try:
-        job_id, pid = submit_job(inifiles[0], user['name'], hazard_job_id)
+        job_id, pid = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -540,14 +538,13 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user = utils.get_user_data(request)
+    valid_users = utils.get_valid_users(request)
 
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        allowed_users = user['group_members'] or [user['name']]
-        if user['acl_on'] and info['user_name'] not in allowed_users:
+        if info['user_name'] not in valid_users:
             return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -672,9 +669,9 @@ def extract(request, calc_id, what):
     Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
     only calculations owned by the current user can be retrieved.
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(calc_id), username)
+    # FIXME
+    user = utils.get_user(request)
+    job = logs.dbcmd('get_job', int(calc_id), user)
     if job is None:
         return HttpResponseNotFound()
 
@@ -717,9 +714,9 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(job_id), username)
+    # FIXME
+    user = utils.get_user(request)
+    job = logs.dbcmd('get_job', int(job_id), user)
     if job is None:
         return HttpResponseNotFound()
 
@@ -737,9 +734,9 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(job_id), username)
+    # FIXME
+    user = utils.get_user(request)
+    job = logs.dbcmd('get_job', int(job_id), user)
     if job is None:
         return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
