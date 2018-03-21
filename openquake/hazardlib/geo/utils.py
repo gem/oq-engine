@@ -102,7 +102,7 @@ class GeographicObjects(object):
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
                 logging.warn('Association to %s km from site (%s %s)',
-                             assoc_dist, lon, lat)
+                             distance, lon, lat)
             elif mode == 'ignore':
                 pass  # do not associate
             elif mode == 'strict':
