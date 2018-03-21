@@ -36,7 +36,11 @@ def get_user(request):
     returns the default user (from settings, or as reported by the OS).
     """
     if settings.LOCKDOWN and hasattr(request, 'user'):
-        user = request.user.username
+        if request.user.is_authenticated():
+            user = request.user.username
+        else:
+            # Should never happens
+            user = ''
     else:
         user = (settings.DEFAULT_USER if
                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
@@ -57,6 +61,9 @@ def get_valid_users(request):
             if groups:
                 users = list(User.objects.filter(groups__name=groups)
                              .values_list('username', flat=True))
+        else:
+            # Should never happens
+            users = []
     return users
 
 
