@@ -99,7 +99,7 @@ def spatial_correlation_array(dmatrix, imts, correl):
 
 def spatial_covariance_array(stddev, imts, corrmatrices):
     """
-    :param stddev: array of shape (N, M)
+    :param stddev: array of shape N and dtype imt_dt
     :param imts: M intensity measure types
     :param corrmatrices: array of shape (M, N, N)
     :returns: an array of shape (M, N, N)
