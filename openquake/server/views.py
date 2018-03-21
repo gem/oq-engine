@@ -296,9 +296,10 @@ def calc_info(request, calc_id):
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
-    # FIXME no auth
     try:
         info = logs.dbcmd('calc_info', calc_id)
+        if not utils.user_has_permission(request, info['user_name']):
+            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
