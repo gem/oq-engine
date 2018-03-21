@@ -273,6 +273,16 @@ def get_mesh(oqparam):
         mesh.from_site_model = True
         return mesh
 
+site_model_dt = numpy.dtype([
+    ('lon', numpy.float64),
+    ('lat', numpy.float64),
+    ('vs30', numpy.float64),
+    ('vs30measured', numpy.bool),
+    ('z1pt0', numpy.float64),
+    ('z2pt5', numpy.float64),
+    ('backarc', numpy.bool),
+])
+
 
 def get_site_model(oqparam):
     """
@@ -283,21 +293,12 @@ def get_site_model(oqparam):
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
-    dtype = numpy.dtype([
-        ('lon', numpy.float64),
-        ('lat', numpy.float64),
-        ('vs30', numpy.float64),
-        ('measured', numpy.bool),
-        ('z1pt0', numpy.float64),
-        ('z2pt5', numpy.float64),
-        ('backarc', numpy.bool),
-    ])
     nodes = nrml.read(oqparam.inputs['site_model']).siteModel
     params = sorted(valid.site_param(**node.attrib) for node in nodes)
-    array = numpy.zeros(len(params), dtype)
+    array = numpy.zeros(len(params), site_model_dt)
     for i, param in enumerate(params):
         rec = array[i]
-        for name in dtype.names:
+        for name in site_model_dt.names:
             rec[name] = getattr(param, name)
     return array
 
@@ -321,32 +322,20 @@ def get_site_collection(oqparam, mesh=None):
     elif mesh is None:
         return
     if oqparam.inputs.get('site_model'):
-        sitecol = []
+        sm = get_site_model(oqparam)
         if getattr(mesh, 'from_site_model', False):
-            for param in get_site_model(oqparam):
-                pt = geo.Point(param['lon'], param['lat'], param['depth'])
-                sitecol.append(site.Site(
-                    pt, param['vs30'], param['measured'],
-                    param['z1pt0'], param['z2pt5'], param['backarc']))
-            return site.SiteCollection(sitecol)
-        # read the parameters directly from their file
+            return site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths, sm)
+        # associate the site parameters to the mesh
         site_model_params = geo.utils.GeographicObjects(
-            get_site_model(oqparam), operator.itemgetter('lon'),
-            operator.itemgetter('lat'))
-        for pt in mesh:
-            # attach the closest site model params to each site
-            param, dist = site_model_params.get_closest(
-                pt.longitude, pt.latitude)
-            if dist >= oqparam.max_site_model_distance:
-                logging.warn('The site parameter associated to %s came from a '
-                             'distance of %d km!' % (pt, dist))
-            sitecol.append(
-                site.Site(pt, param['vs30'], param['measured'],
-                          param['z1pt0'], param['z2pt5'], param['backarc']))
-        if len(sitecol) == 1 and oqparam.hazard_maps:
-            logging.warn('There is a single site, hazard_maps=true '
-                         'has little sense')
-        return site.SiteCollection(sitecol)
+            sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
+        sitecol = site.SiteCollection.from_points(mesh.lons, mesh.lats)
+        dic = site_model_params.assoc(
+            sitecol, oqparam.max_site_model_distance, 'warn')
+        for sid in dic:
+            for name in site_model_dt.names[2:]:  # all names except lon, lat
+                sitecol.array[sid][name] = dic[sid][name]
+        return sitecol
 
     # else use the default site params
     return site.SiteCollection.from_points(
