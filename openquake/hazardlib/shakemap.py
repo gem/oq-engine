@@ -77,11 +77,13 @@ def spatial_length_scale(imt, vs30clustered):
     return b
 
 
-def spatial_correlation_array(dmatrix, imts, correl):
+def spatial_correlation_array(dmatrix, imts, correl='spatial',
+                              vs30clustered=True):
     """
     :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
     :param correl: 'no correlation', 'full correlation', 'spatial'
+    :param vs30clustered: flag, True by default
     :returns: array of shape (M, N, N)
     """
     n = len(dmatrix)
@@ -92,7 +94,7 @@ def spatial_correlation_array(dmatrix, imts, correl):
         if correl == 'full correlation':
             corr[imti] = numpy.eye(n)
         elif correl == 'spatial':
-            b = spatial_length_scale(im, vs30clustered=True)
+            b = spatial_length_scale(im, vs30clustered)
             corr[imti] = numpy.exp(-3 * dmatrix / b)
     return corr
 
@@ -115,7 +117,11 @@ def spatial_covariance_array(stddev, corrmatrices):
     return numpy.array(matrices)
 
 
-def cross_correlation_matrix(imts, corr):
+def cross_correlation_matrix(imts, corr='cross'):
+    """
+    :param imts: M intensity measure types
+    :param corr: 'no correlation', 'full correlation' or 'cross'
+    """
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
     cross_matrix = numpy.zeros((M, M))
@@ -208,10 +214,10 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
            for imt in std.dtype.names}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts, 'spatial')
+    spatial_corr = spatial_correlation_array(dmatrix, imts)
     stddev = [std[imt] for imt in std.dtype.names]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    cross_corr = cross_correlation_matrix(imts, 'cross')
+    cross_corr = cross_correlation_matrix(imts)
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in std.dtype.names for j in range(N)])
