@@ -5,6 +5,7 @@
 
 # GEM Mirror
 
+http://cdn.ftp.openquake.org/wheelhouse/macos/py/pytz-2016.7-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/setuptools-28.8.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py35/pkgconfig-1.1.0-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/macos/py/mock-1.3.0-py2.py3-none-any.whl
