@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `oq show` for multiuser with parent calculations
   * Fixed `get_spherical_bounding_box` for griddedSurfaces
   * Implemented disaggregation by source only for the case
     of a single realization in the logic tree (experimental)
