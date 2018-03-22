@@ -39,7 +39,7 @@ def get_user(request):
         if request.user.is_authenticated():
             user = request.user.username
         else:
-            # This may happens with crafted requests
+            # This may happen with crafted requests
             user = ''
     else:
         user = (settings.DEFAULT_USER if
@@ -61,7 +61,7 @@ def get_valid_users(request):
                 users = list(User.objects.filter(groups__name=groups)
                              .values_list('username', flat=True))
         else:
-            # This may happens with crafted requests
+            # This may happen with crafted requests
             users = []
     return users
 
