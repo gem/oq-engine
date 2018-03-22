@@ -33,7 +33,7 @@ from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
 from openquake.baselib.general import group_array
-from openquake.hazardlib import valid, stats as hstats
+from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
@@ -605,13 +605,13 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task')
-def view_task(token, dstore):
+@view.add('task_classical')
+def view_task_classical(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task:0  # the fastest task
-     $ oq show task:-1  # the slowest task
+     $ oq show task_classical:0  # the fastest task
+     $ oq show task_classical:-1  # the slowest task
     """
     data = dstore['task_info/classical'].value
     data.sort(order='duration')
