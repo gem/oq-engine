@@ -42,7 +42,8 @@ except ImportError:
     from urllib import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
-    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
+    HttpResponseForbidden)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -299,7 +300,7 @@ def calc_info(request, calc_id):
     try:
         info = logs.dbcmd('calc_info', calc_id)
         if not utils.user_has_permission(request, info['user_name']):
-            return HttpResponseNotFound()
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
@@ -364,10 +365,9 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    info = logs.dbcmd('calc_info', calc_id)
-    if not utils.user_has_permission(request, info['user_name']):
+    if not utils.user_has_permission(request, job.user_name):
         message = {'error': ('User %s has no permission to abort job %s' %
-                             (info['user_name'], job.id))}
+                             (job.user_name, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
@@ -393,6 +393,7 @@ def calc_remove(request, calc_id):
     """
     Remove the calculation id
     """
+    # Only the owner can remove a job
     user = utils.get_user(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
@@ -544,7 +545,7 @@ def calc_results(request, calc_id):
     try:
         info = logs.dbcmd('calc_info', calc_id)
         if not utils.user_has_permission(request, info['user_name']):
-            return HttpResponseNotFound()
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
@@ -619,7 +620,7 @@ def get_result(request, result_id):
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user):
-            return HttpResponseNotFound()
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -671,8 +672,10 @@ def extract(request, calc_id, what):
     only calculations owned by the current user can be retrieved.
     """
     job = logs.dbcmd('get_job', int(calc_id))
-    if job is None or not utils.user_has_permission(request, job.user_name):
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -714,8 +717,10 @@ def get_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not utils.user_has_permission(request, job.user_name):
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
@@ -732,8 +737,10 @@ def get_oqparam(request, job_id):
     Return the calculation parameters as a JSON
     """
     job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not utils.user_has_permission(request, job.user_name):
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
