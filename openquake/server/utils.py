@@ -42,8 +42,7 @@ def get_user(request):
             # This may happen with crafted requests
             user = ''
     else:
-        user = (settings.DEFAULT_USER if
-                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+        user = getattr(settings, 'DEFAULT_USER', getpass.getuser())
 
     return user
 
@@ -68,7 +67,7 @@ def get_valid_users(request):
 
 def get_acl_on(request):
     """
-    Returns `true` if ACL should be honorated, returns otherwise `false`.
+    Returns `True` if ACL should be honorated, returns otherwise `False`.
     """
     acl_on = settings.ACL_ON
     if settings.LOCKDOWN and hasattr(request, 'user'):
@@ -80,7 +79,7 @@ def get_acl_on(request):
 
 def user_has_permission(request, owner):
     """
-    Returns `true` if user coming from the request has the permission
+    Returns `True` if user coming from the request has the permission
     to view a resource, returns `false` otherwise.
     """
     return owner in get_valid_users(request) or not get_acl_on(request)
