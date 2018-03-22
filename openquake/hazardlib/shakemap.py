@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
+from urllib.error import HTTPError
 import math
 import numpy
 from scipy.stats import truncnorm
@@ -29,6 +30,26 @@ SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/{}.xml'
 PCTG = 100  # percent of g, the gravity acceleration
 
 
+class DownloadFailed(Exception):
+    """Raised by shakemap.download"""
+
+
+def download(shakemap_id, shakemap_url=SHAKEMAP_URL):
+    """
+    :param shakemap_id: USGS Shakemap ID
+    :returns: an array with the shakemap
+    """
+    fs = []
+    for kind in ('grid', 'uncertainty'):
+        url = shakemap_url.format(shakemap_id, kind)
+        try:
+            fs.append(urlopen(url))
+        except HTTPError as exc:  # not found
+            raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
+    with fs[0] as f0, fs[1] as f1:
+        return get_shakemap_array(f0, f1)
+
+
 def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     """
     :param array_or_id: shakemap ID or full shakemap array
@@ -37,9 +58,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, int):
-        with urlopen(SHAKEMAP_URL.format(array_or_id, 'grid')) as f1, \
-             urlopen(SHAKEMAP_URL.format(array_or_id, 'uncertainty')) as f2:
-            array = get_shakemap_array(f1, f2)
+        array = download(array_or_id)
     else:
         array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
