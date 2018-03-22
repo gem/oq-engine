@@ -508,10 +508,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         a :class:`openquake.server.dbapi.Db` instance
     :param request_get_dict:
         a dictionary
-    :param user_name:
-        user name
+    :param allowed_users:
+        a list of users
     :param user_acl_on:
-        if True, returns only the calculations owned by the user
+        if True, returns only the calculations owned by the user or the group
     :param id:
         if given, extract only the specified calculation
     :returns:
