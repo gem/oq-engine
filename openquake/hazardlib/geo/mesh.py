@@ -319,7 +319,7 @@ class Mesh(object):
         """
         # create a projection centered in the center of points collection
         proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons.flatten(), self.lats.flatten())
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
         )
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
@@ -500,8 +500,8 @@ class RectangularMesh(Mesh):
             return super(RectangularMesh, self)._get_proj_enclosing_polygon()
 
         proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons.flatten(),
-                                                  self.lats.flatten())
+            *geo_utils.get_spherical_bounding_box(self.lons,
+                                                  self.lats)
         )
         mesh2d = numpy.array(proj(self.lons.transpose(),
                                   self.lats.transpose())).transpose()
