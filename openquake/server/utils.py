@@ -39,7 +39,7 @@ def get_user(request):
         if request.user.is_authenticated():
             user = request.user.username
         else:
-            # Should never happens
+            # This may happens with crafted requests
             user = ''
     else:
         user = (settings.DEFAULT_USER if
@@ -53,8 +53,7 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
-    users = []
-    users.append(get_user(request))
+    users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
             groups = request.user.groups.values_list('name', flat=True)
@@ -62,7 +61,7 @@ def get_valid_users(request):
                 users = list(User.objects.filter(groups__name=groups)
                              .values_list('username', flat=True))
         else:
-            # Should never happens
+            # This may happens with crafted requests
             users = []
     return users
 
@@ -84,8 +83,7 @@ def user_has_permission(request, owner):
     Returns `true` if user coming from the request has the permission
     to view a resource, returns `false` otherwise.
     """
-    return (True if owner in get_valid_users(request)
-            or not get_acl_on(request) else False)
+    return owner in get_valid_users(request) or not get_acl_on(request)
 
 
 def oq_server_context_processor(request):
