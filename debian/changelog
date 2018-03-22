@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `get_spherical_bounding_box` for griddedSurfaces
   * Implemented disaggregation by source only for the case
     of a single realization in the logic tree (experimental)
   * Replaced celery with celery_zmq as distribution mechanism
