@@ -30,7 +30,6 @@ import numpy
 from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node
-from openquake.baselib import hdf5
 from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source.rupture import EBRupture
