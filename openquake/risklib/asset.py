@@ -355,7 +355,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, tagcol.tagnames, time_event)
+            assets_by_site, tagcol.tagnames)
         if self.occupancy_periods and not occupancy_periods:
             logging.warn('Missing <occupancyPeriods>%s</occupancyPeriods> '
                          'in the exposure', self.occupancy_periods)
@@ -365,7 +365,7 @@ class AssetCollection(object):
         self.asset_refs = asset_refs
         fields = self.array.dtype.names
         self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
-        if 'occupants' in fields:
+        if any(field.startswith('occupants_') for field in fields):
             self.loss_types.append('occupants')
         self.loss_types.sort()
         self.deduc = [n for n in fields if n.startswith('deductible-')]
@@ -458,8 +458,9 @@ class AssetCollection(object):
         a = self.array[aid]
         values = {lt: a['value-' + lt] for lt in self.loss_types
                   if lt != 'occupants'}
-        if 'occupants' in self.array.dtype.names:
-            values['occupants_' + str(self.time_event)] = a['occupants']
+        for name in self.array.dtype.names:
+            if name.startswith('occupants_'):
+                values[name] = a[name]
         return Asset(
             aid,
             [a[decode(name)] for name in self.tagnames],
@@ -511,7 +512,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, tagnames=(), time_event=None):
+def build_asset_array(assets_by_site, tagnames=()):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
@@ -524,22 +525,17 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             break
     else:  # no break
         raise ValueError('There are no assets!')
-    candidate_loss_types = list(first_asset.values)
     loss_types = []
-    the_occupants = 'occupants_%s' % time_event
-    for candidate in sorted(candidate_loss_types):
-        if candidate.startswith('occupants'):
-            if candidate == the_occupants:
-                loss_types.append('occupants')
-            # discard occupants for different time periods
-        else:
-            loss_types.append('value-' + candidate)
     occupancy_periods = []
     for name in sorted(first_asset.values):
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
             if period != 'None':
                 occupancy_periods.append(period)
+            loss_types.append(name)
+            # discard occupants for different time periods
+        else:
+            loss_types.append('value-' + name)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
     deductibles = ['deductible-%s' % name for name in deductible_d]
@@ -572,8 +568,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.location[0]
                 elif field == 'lat':
                     value = asset.location[1]
-                elif field == 'occupants':
-                    value = asset.values[the_occupants]
+                elif field.startswith('occupants_'):
+                    value = asset.values[field]
                 elif field == 'retrofitted':
                     value = asset._retrofitted
                 elif field in tagnames:
