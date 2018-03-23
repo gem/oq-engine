@@ -16,7 +16,7 @@
 
 ### Python dependencies
 
-Python 2.7, Python 3.5 or Python 3.6.
+Python 3.5 or Python 3.6.
 
 See [setup.py](../setup.py) for a complete list of the Python dependencies.
 
