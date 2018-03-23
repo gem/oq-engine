@@ -69,11 +69,6 @@ install_requires = [
     'PyYAML',
 ]
 
-if sys.version < '3':
-    install_requires.append(
-        'futures >=2.1, <3.1'
-    )
-
 extras_require = {
     'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
