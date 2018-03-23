@@ -101,10 +101,6 @@ class Mesh(object):
     DIST_TOLERANCE = 0.005
 
     def __init__(self, lons, lats, depths=None):
-        assert (isinstance(lons, numpy.ndarray) and
-                isinstance(lats, numpy.ndarray) and
-                (depths is None or isinstance(depths, numpy.ndarray))
-                ), (type(lons), type(lats), type(depths))
         assert ((lons.shape == lats.shape) and
                 (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
@@ -121,8 +117,13 @@ class Mesh(object):
         :params coords: list of coordinates
         :returns: a :class:`Mesh` instance
         """
-        lons, lats, depths = zip(*coords)
-        return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
+        if len(coords[0]) == 2:  # 2D coordinates
+            lons, lats = zip(*sorted(coords))
+            depths = None
+        else:  # 3D coordinates
+            lons, lats, depths = zip(*sorted(coords))
+            depths = numpy.array(depths)
+        return cls(numpy.array(lons), numpy.array(lats), depths)
 
     @classmethod
     def from_points_list(cls, points):
