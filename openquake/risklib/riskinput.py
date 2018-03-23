@@ -57,6 +57,9 @@ def read_composite_risk_model(dstore):
                 rf = rf.build(rmdict.limit_states,
                               oqparam.continuous_fragility_discretization,
                               oqparam.steps_per_interval)
+            else:
+                # rf is a vulnerability function
+                rf.init()
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
                 retrodict[taxo][lt[:-12]] = rf
