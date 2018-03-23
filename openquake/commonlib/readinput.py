@@ -220,7 +220,7 @@ def get_mesh(oqparam):
     """
     global pmap
     if oqparam.sites:
-        return geo.Mesh.from_coords(sorted(oqparam.sites))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').readlines()
         has_header = csv_data[0].startswith('site_id')
@@ -257,8 +257,7 @@ def get_mesh(oqparam):
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         try:
             mesh = geo.Polygon(points).discretize(oqparam.region_grid_spacing)
-            lons, lats = zip(*sorted(zip(mesh.lons, mesh.lats)))
-            return geo.Mesh(numpy.array(lons), numpy.array(lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except:
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
@@ -269,7 +268,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param['lon'], param['lat'], 0)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(sorted(coords))
+        mesh = geo.Mesh.from_coords(coords)
         mesh.from_site_model = True
         return mesh
 
@@ -610,8 +609,7 @@ def get_exposure(oqparam):
 
 def _get_mesh_assets_by_site(oqparam, exposure):
     assets_by_loc = groupby(exposure, key=lambda a: a.location)
-    lons, lats = zip(*sorted(assets_by_loc))
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    mesh = geo.Mesh.from_coords(list(assets_by_loc))
     assets_by_site = [
         assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
     return mesh, assets_by_site
