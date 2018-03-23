@@ -658,8 +658,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             for sid in all_sids]
         num_assets = sum(len(assets) for assets in assets_by_site)
         sitecol = haz_sitecol.complete.filter(mask)
-        logging.info('Associated %d/%d assets to %d sites',
-                     num_assets, tot_assets, len(sitecol))
+        logging.info('Associated %d assets to %d sites',
+                     num_assets, len(sitecol))
+        if num_assets < tot_assets:
+            logging.warn(
+                'Discarded %d assets outside the asset_hazard_distance of '
+                '%d km', tot_assets - num_assets, asset_hazard_distance)
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
     asset_refs = [exposure.asset_refs[asset.ordinal]
