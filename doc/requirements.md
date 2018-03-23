@@ -3,7 +3,6 @@
 ### Main dependencies
  
 * Python - Implementation language
-* concurrent.futures - Standard package for concurrence in Python
 * Django - Used by the API server and the WebUI
 * HDF5 - Used for storing and managing data
 * numpy and scipy - Fundamental packages for scientific computing with Python
