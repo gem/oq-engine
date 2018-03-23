@@ -175,6 +175,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             # save the used concurrent_tasks
             self.oqparam.concurrent_tasks = ct
         self.save_params(**kw)
+        Starmap.init()
         try:
             if pre_execute:
                 self.pre_execute()
@@ -197,6 +198,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
+            Starmap.shutdown()
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -314,7 +316,7 @@ class HazardCalculator(BaseCalculator):
             workers, None otherwise
         """
         read_access = (
-            config.distribution.oq_distribute in ('no', 'futures') or
+            config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
         if self.oqparam.hazard_calculation_id and read_access:
             self.datastore.parent.close()  # make sure it is closed
