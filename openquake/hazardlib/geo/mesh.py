@@ -110,15 +110,17 @@ class Mesh(object):
         self.depths = depths
 
     @classmethod
-    def from_coords(cls, coords):
+    def from_coords(cls, coords, sort=True):
         """
         Create a mesh object from a list of 3D coordinates (by sorting them)
 
         :params coords: list of coordinates
+        :param sort: flag (default True)
         :returns: a :class:`Mesh` instance
         """
         coords = list(coords)
-        coords.sort()
+        if sort:
+            coords.sort()
         if len(coords[0]) == 2:  # 2D coordinates
             lons, lats = zip(*coords)
             depths = None
