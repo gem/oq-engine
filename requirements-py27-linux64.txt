@@ -22,7 +22,6 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.11-py2.py3-none-a
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py27/futures-3.0.5-py2-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/Django-1.8.17-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.9.1-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py27/pyshp-1.2.3-cp27-none-any.whl

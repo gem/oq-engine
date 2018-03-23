@@ -316,7 +316,7 @@ class HazardCalculator(BaseCalculator):
             workers, None otherwise
         """
         read_access = (
-            config.distribution.oq_distribute in ('no', 'futures') or
+            config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
         if self.oqparam.hazard_calculation_id and read_access:
             self.datastore.parent.close()  # make sure it is closed
