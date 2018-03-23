@@ -57,7 +57,10 @@ def importcalc(calc_url, username, password):
 
     datadir = datastore.get_datadir()
     session = login(host, username, password)
-    json = session.get('%s/status' % calc_url).json()
+    status = session.get('%s/status' % calc_url)
+    if 'Log in to an existing account' in status.text:
+        sys.exit('Could not login!')
+    json = status.json()
     if json["parent_id"]:
         sys.exit('The job has a parent (#%(parent_id)d) and cannot be '
                  'downloaded' % json)
