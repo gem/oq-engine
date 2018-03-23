@@ -45,6 +45,9 @@ get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 
 
@@ -609,11 +612,13 @@ class RiskCalculator(HazardCalculator):
             self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         assets_by_site = self.assetcol.assets_by_site()
+        riskinputs = []
         with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = []
-            sid_weight_pairs = [
-                (sid, len(assets))
-                for sid, assets in enumerate(assets_by_site)]
+            if kind == 'poe':
+                indices = None
+            else:
+                indices = self.datastore['gmf_data/indices'].value
+            sid_weight_pairs = get_sid_weight_pairs(assets_by_site, indices)
             blocks = general.split_in_blocks(
                 sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             dstore = self.can_read_parent() or self.datastore
@@ -662,10 +667,16 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-U16 = numpy.uint16
-U32 = numpy.uint32
-U64 = numpy.uint64
-F32 = numpy.float32
+def get_sid_weight_pairs(assets_by_site, indices):
+    lst = []
+    for sid, assets in enumerate(assets_by_site):
+        if indices is None:
+            weight = len(assets)
+        else:
+            num_events = sum(stop - start for start, stop in indices[sid])
+            weight = len(assets) * num_events
+        lst.append((sid, weight))
+    return lst
 
 
 def get_gmv_data(sids, gmfs):
