@@ -320,6 +320,7 @@ def get_site_collection(oqparam, mesh=None):
         with datastore.read(oqparam.hazard_calculation_id) as dstore:
             return dstore['sitecol'].complete
     elif mesh is None:
+        # the mesh will be extracted from the exposure later
         return
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
@@ -624,6 +625,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     """
     exposure = get_exposure(oqparam)
     mesh, assets_by_site = _get_mesh_assets_by_site(oqparam, exposure)
+    if (haz_sitecol is None and oqparam.region_grid_spacing and not
+            oqparam.region):
+        # extract the region from the exposure
+        haz_mesh = mesh.get_convex_hull().discretize(
+            oqparam.region_grid_spacing)
+        haz_sitecol = site.SiteCollection.from_points(
+            haz_mesh.lons, haz_mesh.lats)
     if haz_sitecol:
         tot_assets = sum(len(assets) for assets in assets_by_site)
         all_sids = haz_sitecol.complete.sids
@@ -636,10 +644,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         assets_by_sid = AccumDict(accum=[])
         for assets in assets_by_site:
             lon, lat = assets[0].location
-            site, distance = siteobjects.get_closest(lon, lat)
-            if site.sid in sids and distance <= asset_hazard_distance:
+            obj, distance = siteobjects.get_closest(lon, lat)
+            if obj.sid in sids and distance <= asset_hazard_distance:
                 # keep the assets, otherwise discard them
-                assets_by_sid += {site.sid: list(assets)}
+                assets_by_sid += {obj.sid: list(assets)}
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
