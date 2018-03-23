@@ -20,6 +20,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
+if sys.version_info < (3,5):
+    sys.exit('Sorry, Python < 3.5 is not supported')
 
 def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
