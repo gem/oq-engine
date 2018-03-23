@@ -674,7 +674,7 @@ def get_sid_weight_pairs(assets_by_site, indices):
             weight = len(assets)
         else:
             num_events = sum(stop - start for start, stop in indices[sid])
-            weight = len(assets) * num_events
+            weight = len(assets) * (num_events or 1)
         lst.append((sid, weight))
     return lst
 
