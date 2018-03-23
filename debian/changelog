@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the engine automatically associate the exposure to a grid if
+    `region_grid_spacing` is given and the sites are not specified otherwise
   * Fixed `oq show` for multiuser with parent calculations
   * Fixed `get_spherical_bounding_box` for griddedSurfaces
   * Implemented disaggregation by source only for the case
