@@ -117,11 +117,13 @@ class Mesh(object):
         :params coords: list of coordinates
         :returns: a :class:`Mesh` instance
         """
+        coords = list(coords)
+        coords.sort()
         if len(coords[0]) == 2:  # 2D coordinates
-            lons, lats = zip(*sorted(coords))
+            lons, lats = zip(*coords)
             depths = None
         else:  # 3D coordinates
-            lons, lats, depths = zip(*sorted(coords))
+            lons, lats, depths = zip(*coords)
             depths = numpy.array(depths)
         return cls(numpy.array(lons), numpy.array(lats), depths)
 
