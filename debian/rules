@@ -11,6 +11,7 @@ export DISTUTILS_DEBUG=1
 export DH_VERBOSE=1
 export DH_OPTIONS=-v
 export PREFIX=/opt/openquake
+export PATH:=/opt/openquake/bin:$(PATH)
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
@@ -38,8 +39,6 @@ else
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
-override_dh_auto_clean:
-	/opt/openquake/bin/python3 setup.py clean -a
 
 override_dh_auto_install:
 	/opt/openquake/bin/python3 setup.py install --force --install-layout=deb --root=$(PWD)/debian/python3-oq-engine --prefix=$(PREFIX) --no-compile -O0
