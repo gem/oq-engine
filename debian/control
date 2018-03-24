@@ -4,6 +4,7 @@ Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
 Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, python-setuptools, oq-python3.5, zip
 Standards-Version: 3.9.3
+X-Python3-Version: >= 3.5
 Homepage: http://github.com/gem/oq-engine
 
 Package: python3-oq-engine
