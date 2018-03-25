@@ -380,7 +380,7 @@ class IterResult(object):
     """
     task_data_dt = numpy.dtype(
         [('taskno', numpy.uint32), ('weight', numpy.float32),
-         ('duration', numpy.float32)])
+         ('duration', numpy.float32), ('received', numpy.float32)])
 
     def __init__(self, iresults, taskname, num_tasks,
                  progress=logging.info, sent=0):
@@ -445,7 +445,7 @@ class IterResult(object):
     def save_task_data(self, mon):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
-            tup = (mon.task_no, mon.weight, duration)
+            tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
         mon.flush()
