@@ -1,12 +1,17 @@
 The \glsdesc{acr:oqe} output of a disaggregation analysis corresponds to the
 combination of a hazard curve and a multidimensional matrix containing the
-results of the disaggregation.
+results of the disaggregation. If the disaggregation calculation is configured
+to produce results including disaggregation by source, then the list of outputs
+would display the following:
 
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
 \textcolor{red}{3 | Disaggregation Outputs}
-\textcolor{black}{4 | Realizations}
+\textcolor{black}{4 | Disaggregation by Source}
+\textcolor{black}{5 | Full Report}
+\textcolor{black}{6 | Hazard Curves}
+\textcolor{black}{7 | Seismic Source Groups}
 \end{Verbatim}
 %\input{oqum/hazard/verbatim/output_disaggregation}
 
