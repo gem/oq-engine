@@ -175,6 +175,7 @@ from openquake.baselib.general import (
 cpu_count = multiprocessing.cpu_count()
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
+    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
 if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
