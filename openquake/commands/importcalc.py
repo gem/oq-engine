@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import logging
 from openquake.baselib import sap, datastore, general
@@ -23,7 +24,7 @@ from openquake.engine import engine
 from openquake.server import dbserver
 from requests import Session
 
-CHUNKSIZE = 1024**2  # 1 MB
+CHUNKSIZE = 5*1024**2  # 5 MB
 
 
 # NB: it is really difficult to test this automatically, so it is only
@@ -39,17 +40,15 @@ def login(host, username, password):
 
 
 @sap.Script
-def importcalc(calc_url, username, password):
+def importcalc(host, calc_id, username, password):
     """
     Import a remote calculation into the local database
     """
     logging.basicConfig(level=logging.INFO)
-    assert '/v1/calc' in calc_url, calc_url
-    assert not calc_url.endswith('/')
-    # for instance https://oq1.wilson.openquake.org/v1/calc/17740
-    prefix, calc_id = calc_url.rsplit('/', 1)
-    host = prefix[:-8]  # strip /v1/calc
-    calc_id = int(calc_id)
+    host_end = host.split('//')[1]
+    if '/' in host_end:
+        sys.exit('Wrong host ending with /%s' % host_end.split('/')[1])
+    calc_url = '/'.join([host, 'v1/calc', str(calc_id)])
     dbserver.ensure_on()
     job = logs.dbcmd('get_job', calc_id)
     if job is not None:
@@ -59,7 +58,7 @@ def importcalc(calc_url, username, password):
     session = login(host, username, password)
     status = session.get('%s/status' % calc_url)
     if 'Log in to an existing account' in status.text:
-        sys.exit('Could not login!')
+        sys.exit('Could not login or wrong URL %s' % host)
     json = status.json()
     if json["parent_id"]:
         sys.exit('The job has a parent (#%(parent_id)d) and cannot be '
@@ -82,6 +81,7 @@ def importcalc(calc_url, username, password):
         engine.expose_outputs(dstore)
     logging.info('Imported calculation %d successfully', calc_id)
 
-importcalc.arg('calc_url', 'calculation URL')
+importcalc.arg('host', 'remote host (ex. https://oq1.wilson.openquake.org/)')
+importcalc.arg('calc_id', 'calculation ID', type=int)
 importcalc.arg('username', 'user name')
 importcalc.arg('password', 'user password')
