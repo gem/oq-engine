@@ -25,7 +25,7 @@ import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib import nrml, sourceconverter, valid
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
@@ -558,6 +558,7 @@ def build_source_group(source_group):
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
     if source_group.srcs_weights:
+        valid.weights(source_group.srcs_weights)  # sum to 1
         attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
