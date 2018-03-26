@@ -67,5 +67,5 @@ optional arguments:
                         directory
   -e , --exports        Comma-separated string specifing the export formats,
                         in order of priority
-  -l {debug, info, warn, error, critical}, --log-level {debug, info, warn, error, critical}
-                        Defaults to "info"
+  -l {debug, info, warn, error, critical}, --log-level {debug, info, warn, 
+                        error, critical} Defaults to "info"
