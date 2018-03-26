@@ -53,6 +53,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
+            import pdb; pdb.set_trace()
             # make sure we saved the data transfer information in job_info
             keys = {decode(key) for key in dict(
                 self.calc.datastore['job_info'])}
