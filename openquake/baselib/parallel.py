@@ -378,10 +378,11 @@ class IterResult(object):
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
-    def __init__(self, iresults, taskname, num_tasks, sent,
+    def __init__(self, iresults, taskname, argnames, num_tasks, sent,
                  progress=logging.info):
         self.iresults = iresults
         self.name = taskname
+        self.argnames = ' '.join(argnames)
         self.num_tasks = num_tasks
         self.sent = sent
         self.progress = progress
@@ -391,14 +392,15 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        nargs = len(sent[0])
-        self.task_data_dt = numpy.dtype(
-            [('taskno', numpy.uint32), ('weight', numpy.float32),
-             ('duration', numpy.float32),
-             ('sent', (numpy.int64, nargs)), ('received', numpy.int64)])
-        totsent = sum(s.sum() for s in sent)
-        self.progress('Sent %s of data in %s task(s)',
-                      humansize(totsent), num_tasks)
+        if sent:  # can be empty if Starmap was applied to the empty list
+            nargs = len(sent[0])
+            self.task_data_dt = numpy.dtype(
+                [('taskno', numpy.uint32), ('weight', numpy.float32),
+                 ('duration', numpy.float32),
+                 ('sent', (numpy.int64, nargs)), ('received', numpy.int64)])
+            totsent = sum(s.sum() for s in sent)
+            self.progress('Sent %s of data in %s task(s)',
+                          humansize(totsent), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -430,7 +432,7 @@ class IterResult(object):
                 raise ValueError(result)
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_data(result.mon)
+                self.save_task_info(result.mon)
             yield val
 
         if self.received:
@@ -439,13 +441,14 @@ class IterResult(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(tot), humansize(max_per_task))
 
-    def save_task_data(self, mon):
+    def save_task_info(self, mon):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             sent = self.sent[mon.task_no - 1]
             tup = (mon.task_no, mon.weight, duration, sent, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
-            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
+            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
+                         argnames=self.argnames)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -617,7 +620,8 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        return IterResult(it, self.name, num_tasks, self.sent, self.progress)
+        return IterResult(it, self.name, self.argnames, num_tasks,
+                          self.sent, self.progress)
 
     def reduce(self, agg=operator.add, acc=None):
         """
