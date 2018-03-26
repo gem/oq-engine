@@ -282,9 +282,9 @@ class EbriskCalculator(base.RiskCalculator):
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
         monitor = self.monitor(taskname)
         for grp_id in grp_ids:
+            ruptures = self.ruptures_by_grp.get(grp_id, [])
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
-            ruptures = self.ruptures_by_grp.get(grp_id, [])
             num_ruptures[grp_id] = len(ruptures)
             from_parent = hasattr(ruptures, 'split')
             if from_parent:  # read the ruptures from the parent datastore
