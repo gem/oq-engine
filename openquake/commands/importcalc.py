@@ -45,9 +45,8 @@ def importcalc(host, calc_id, username, password):
     Import a remote calculation into the local database
     """
     logging.basicConfig(level=logging.INFO)
-    host_end = host.split('//')[1]
-    if '/' in host_end:
-        sys.exit('Wrong host ending with /%s' % host_end.split('/')[1])
+    if '/' in host.split('//', 1)[1]:
+        sys.exit('Wrong host ending with /%s' % host.rsplit('/', 1)[1])
     calc_url = '/'.join([host, 'v1/calc', str(calc_id)])
     dbserver.ensure_on()
     job = logs.dbcmd('get_job', calc_id)
