@@ -10,7 +10,14 @@ id | name
 \end{Verbatim}
 %\input{oqum/hazard/verbatim/output_disaggregation}
 
-Running \texttt{-{}-export-output} to export the disaggregation results will produce individual files for each IMT, probability of exceedence and logic tree realisation. In the following inset we show an example of the nrml file used to represent the different disaggregation matrices (highlighted in red) produced by
-\gls{acr:oqe}:
+Running \texttt{-{}-export-output} to export the disaggregation results will
+produce individual files for each IMT, probability of exceedence and logic tree
+realisation. In Listing~\ref{lst:output_hazard_map_xml}) we show an example of
+the nrml file used to represent the different disaggregation matrices (highlighted
+in red) produced by\gls{acr:oqe}:
 
-\input{oqum/hazard/verbatim/output_disaggregation_matrix}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_disaggregation_matrix}
+  \caption{Example of different disaggregation matrices produced by oq-engine}
+  \label{lst:output_uhs}
+\end{listing}
