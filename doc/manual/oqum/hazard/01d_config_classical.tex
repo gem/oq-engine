@@ -156,9 +156,6 @@ The file containing the site model has the following structure:
   \caption{Example site model input file}
   \label{lst:input_site_model}
 \end{listing}
-\begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-
-\end{minted}
 
 If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
 
@@ -192,12 +189,12 @@ calculation. This can be input directly in terms of kilometres (as above).
 There may be cases, however, in which it may be appropriate to have a
 different maximum source to site distance depending on the tectonic region
 type. This may be used, for example, to eliminate the impact of small, very
-far-field sources with very low activity rates in stable tectonic regions (in
-which case maximum distance is reduced), or conversely it may be raised to
-allow certain source types to contribute to the hazard at greater distances
-(such as in the case of large subduction interface events). An example
-configuration for a maximum distance in Active Shallow Crust of 200 km, and in
-Stable Continental Crust of 150 km, is shown below:
+far-field sources in regions of high attenuation (in which case maximum distance
+is reduced), or conversely it may be raised to allow certain source types to
+contribute to the hazard at greater distances (such as in the case when the
+region has lower attenuation). An example configuration for a maximum distance
+in Active Shallow Crust of 150 km, and in Stable Continental Crust of 200 km,
+is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 maximum_distance = {'Active Shallow Crust': 150.0,
