@@ -57,7 +57,7 @@ def importcalc(host, calc_id, username, password):
     session = login(host, username, password)
     status = session.get('%s/status' % calc_url)
     if 'Log in to an existing account' in status.text:
-        sys.exit('Could not login or wrong URL %s' % host)
+        sys.exit('Could not login')
     json = status.json()
     if json["parent_id"]:
         sys.exit('The job has a parent (#%(parent_id)d) and cannot be '
