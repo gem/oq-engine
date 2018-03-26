@@ -47,12 +47,12 @@ disagg_outputs =
     \item \Verb+poes_disagg+: mandatory; disaggregation is performed for the intensity
     measure levels corresponding to the probability of exceedance value(s) provided
     here. The computations use the \texttt{investigation\_time} and the
-    \texttt{intensity_measure_types_and_levels} defined in the
+    \texttt{intensity\_measure\_types\_and\_levels} defined in the
     ``Calculation configuration'' section   (see page~\pageref{sec:calculation_configuration}).
     Alternatively, the intensity measure level(s) to be disaggregated can be directly defined
     by specifying \texttt{iml\_disagg} (further described below). Note that a
     disaggregation computation requires either \texttt{poes\_disagg} or
-    \texttt{iml\_disagg}to be defined, but both cannot be defined at the same time.
+    \texttt{iml\_disagg} to be defined, but both cannot be defined at the same time.
 
     \item \Verb+mag_bin_width+: mandatory; specifies the width of every magnitude
      histogram bin of the disaggregation matrix computed
@@ -93,8 +93,8 @@ iml_disagg = 0.1
 
 Either \texttt{poes\_disagg} or \texttt{iml\_disagg} needs
 to be defined, but both cannot be defined at the same time. If
- \texttt{iml\_disagg} is specified, the user should delete the
- \texttt{intensity\_measure\_types\_and\_levels} defined in the
+ \texttt{iml\_disagg} is specified, the user should not include
+ \texttt{intensity\_measure\_types\_and\_levels} in the
 ``Calculation configuration'' section (see page~\pageref{sec:calculation_configuration})
 since it is explicitly given here.
 
