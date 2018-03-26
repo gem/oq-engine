@@ -378,28 +378,27 @@ class IterResult(object):
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
-    task_data_dt = numpy.dtype(
-        [('taskno', numpy.uint32), ('weight', numpy.float32),
-         ('duration', numpy.float32),
-         ('sent', numpy.float32), ('received', numpy.float32)])
-
-    def __init__(self, iresults, taskname, num_tasks,
-                 progress=logging.info, sent=()):
+    def __init__(self, iresults, taskname, num_tasks, sent,
+                 progress=logging.info):
         self.iresults = iresults
         self.name = taskname
         self.num_tasks = num_tasks
-        self.progress = progress
         self.sent = sent
+        self.progress = progress
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        if sent:
-            totsent = sum(sent, AccumDict())
-            self.progress('Sent %s of data in %s task(s)',
-                          humansize(sum(totsent.values())), num_tasks)
+        nargs = len(sent[0])
+        self.task_data_dt = numpy.dtype(
+            [('taskno', numpy.uint32), ('weight', numpy.float32),
+             ('duration', numpy.float32),
+             ('sent', (numpy.int64, nargs)), ('received', numpy.int64)])
+        totsent = sum(s.sum() for s in sent)
+        self.progress('Sent %s of data in %s task(s)',
+                      humansize(totsent), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -447,9 +446,8 @@ class IterResult(object):
     def save_task_data(self, mon):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
-            sent = sum(self.sent[-1], AccumDict()) if self.sent else {}
-            tup = (mon.task_no, mon.weight, duration,
-                   sum(sent.values()), self.received[-1])
+            sent = self.sent[mon.task_no - 1]
+            tup = (mon.task_no, mon.weight, duration, sent, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
         mon.flush()
@@ -498,7 +496,7 @@ def init_workers():
     return os.getpid()
 
 
-def _wakeup(sec):
+def _wakeup(sec, mon):
     """Waiting function, used to wake up the process pool"""
     time.sleep(sec)
     return os.getpid()
@@ -513,7 +511,8 @@ class Starmap(object):
     def init(cls, poolsize=None):
         if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            self = cls(_wakeup, [(.2,) for _ in range(cls.pool._processes)])
+            m = Monitor('wakeup')
+            self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
             cls.pids = list(self)
 
     @classmethod
@@ -601,8 +600,9 @@ class Starmap(object):
                 self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
-                self.sent.append(
-                    {a: len(p) for a, p in zip(self.argnames, args)})
+                self.sent.append(numpy.array([len(p) for p in args]))
+            else:
+                self.sent.append(numpy.zeros(len(args)))
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
@@ -621,7 +621,7 @@ class Starmap(object):
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
+        return IterResult(it, self.name, num_tasks, self.sent, self.progress)
 
     def reduce(self, agg=operator.add, acc=None):
         """
