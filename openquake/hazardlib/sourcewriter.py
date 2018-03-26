@@ -25,7 +25,7 @@ import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter, valid
+from openquake.hazardlib import nrml, sourceconverter
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
 
