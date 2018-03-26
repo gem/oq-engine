@@ -34,7 +34,7 @@ NO_SHARED_DIR = celery and not config.directory.shared_dir
 def manage_shared_dir_error(func, self):
     """
     When the shared_dir is not configured, expect an error, unless
-    the distribution mechanism is set to futures.
+    the distribution mechanism is set to processpool.
     """
     if NO_SHARED_DIR:
         with self.assertRaises(ValueError) as ctx:

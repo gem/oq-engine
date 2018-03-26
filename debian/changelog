@@ -1,4 +1,17 @@
+  [Daniele Viganò]
+  * Removed support for Python 2 in `setup.py`
+  * Removed files containing Python 2 dependencies
+  * Added support for WebUI groups/permissions on the
+    export outputs and datastore API endpoints
+
   [Michele Simionato]
+  * Fixed `oq show` for multiuser with parent calculations
+  * Fixed `get_spherical_bounding_box` for griddedSurfaces
+  * Implemented disaggregation by source only for the case
+    of a single realization in the logic tree (experimental)
+  * Replaced celery with celery_zmq as distribution mechanism
+  * Extended `oq info` to work on source model logic tree files
+  * Added a check against duplicated fields in the exposure CSV
   * Implemented event based with mutex sources (experimental)
   * Add an utility to read XML shakemap files in hazardlib
   * Added a check on IMTs for GMFs read from CSV
