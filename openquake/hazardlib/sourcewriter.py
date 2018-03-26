@@ -434,6 +434,9 @@ def build_rupture_node(rupt, probs_occur):
     :param rupt: a hazardlib rupture object
     :param probs_occur: a list of floats with sum 1
     """
+    s = sum(probs_occur)
+    if abs(s - 1) > 1E-12:
+        raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
     rupt_nodes = [Node('magnitude', {}, rupt.mag),
@@ -558,7 +561,6 @@ def build_source_group(source_group):
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
     if source_group.srcs_weights:
-        valid.weights(source_group.srcs_weights)  # sum to 1
         attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
