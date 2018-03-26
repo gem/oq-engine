@@ -328,9 +328,13 @@ def view_job_info(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = dict(dstore.hdf5['job_info'])
-    rows = [(k, _humansize(v)) for k, v in sorted(job_info.items())]
-    return rst_table(rows)
+    data = [['task', 'sent', 'received']]
+    for task in dstore['task_info']:
+        if task not in ('task_sources', 'source_data'):
+            sent = dstore['task_info/' + task]['sent'].sum()
+            recv = dstore['task_info/' + task]['received'].sum()
+            data.append((task, humansize(sent), humansize(recv)))
+    return rst_table(data)
 
 
 @view.add('avglosses_data_transfer')
