@@ -331,9 +331,13 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         if task not in ('task_sources', 'source_data'):
-            sent = dstore['task_info/' + task]['sent'].sum()
-            recv = dstore['task_info/' + task]['received'].sum()
-            data.append((task, humansize(sent), humansize(recv)))
+            dset = dstore['task_info/' + task]
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset['sent'].sum(axis=0)
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 

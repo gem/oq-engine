@@ -21,6 +21,7 @@ from nose.plugins.attrib import attr
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
@@ -53,12 +54,10 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            import pdb; pdb.set_trace()
-            # make sure we saved the data transfer information in job_info
-            keys = {decode(key) for key in dict(
-                self.calc.datastore['job_info'])}
-            self.assertIn('classical.received', keys)
-            self.assertIn('classical.sent', keys)
+            info = view('job_info', self.calc.datastore)
+            self.assertIn('task', info)
+            self.assertIn('sent', info)
+            self.assertIn('received', info)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
