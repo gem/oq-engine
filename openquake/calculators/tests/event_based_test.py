@@ -322,4 +322,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_mutex(self):
-        self.run_calc(mutex.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
+        [fname] = out['ruptures', 'xml']
+        self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
