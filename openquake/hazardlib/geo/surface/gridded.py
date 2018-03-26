@@ -82,6 +82,13 @@ class GriddedSurface(BaseSurface):
         """
         return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
 
+    def get_surface_boundaries(self):
+        """
+        :returns: (min_max lons, min_max lats)
+        """
+        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
+        return [[min_lon, max_lon]], [[min_lat, max_lat]]
+
     def get_min_distance(self, mesh):
         """
         Compute and return the minimum distance from the surface to each point
@@ -161,9 +168,9 @@ class GriddedSurface(BaseSurface):
         The actual definition of the strike might depend on surface geometry.
 
         :returns:
-            Float value, the azimuth (in degrees) of the surface top edge
+            numpy.nan, not applicable to this kind of surface
         """
-        raise NotImplementedError
+        return np.nan
 
     def get_dip(self):
         """
@@ -172,10 +179,9 @@ class GriddedSurface(BaseSurface):
         The actual definition of the dip might depend on surface geometry.
 
         :returns:
-            Float value, the inclination (in degrees) of the surface with
-            respect to the Earth surface
+            numpy.nan, not applicable to this kind of surface
         """
-        raise NotImplementedError
+        return np.nan
 
     def get_width(self):
         """
