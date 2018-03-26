@@ -19,7 +19,7 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 F32 = numpy.float32
@@ -67,10 +67,4 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
-        self.datastore['bcr-rlzs'] = bcr_data
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        if len(weights) > 1:
-            snames, sfuncs = zip(*self.oqparam.risk_stats())
-            bcr_stats = numpy.zeros((self.A, len(sfuncs)), bcr_dt)
-            bcr_stats = compute_stats2(bcr_data, sfuncs, weights)
-            self.datastore['bcr-stats'] = bcr_stats
+        stats.set_rlzs_stats(self.datastore, 'bcr', bcr_data)

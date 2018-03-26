@@ -78,8 +78,8 @@ The parallelization algorithm used by `Starmap` will depend on the
 environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
-`OQ_DISTRIBUTE` not set or set to "futures":
-  use multiprocessing via the concurrent.futures interface
+`OQ_DISTRIBUTE` not set or set to "processpool":
+  use multiprocessing
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
@@ -173,16 +173,19 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
 cpu_count = multiprocessing.cpu_count()
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq',  'celery_zmq'):
+OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+if OQ_DISTRIBUTE == 'futures':  # legacy name
+    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
+    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'futures'
+    :returns: the value of OQ_DISTRIBUTE or 'processpool'
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
     read_access = getattr(task, 'read_access', True)
     if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
@@ -365,12 +368,12 @@ if OQ_DISTRIBUTE.startswith('celery'):
 
 class IterResult(object):
     """
-    :param futures:
-        an iterator over futures
+    :param iresults:
+        an iterator over Result objects
     :param taskname:
         the name of the task
     :param num_tasks:
-        the total number of expected futures
+        the total number of expected tasks
     :param progress:
         a logging function for the progress report
     :param sent:
@@ -505,14 +508,14 @@ class Starmap(object):
 
     @classmethod
     def init(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures' and not hasattr(cls, 'pool'):
+        if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             self = cls(_wakeup, [(.2,) for _ in range(cls.pool._processes)])
             cls.pids = list(self)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
+        if OQ_DISTRIBUTE == 'processpool' and hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -607,12 +610,10 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute == 'futures':
+        elif self.distribute == 'processpool':
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
-        elif self.distribute == 'celery_zmq':
-            it = self._iter_celery_zmq()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
@@ -641,14 +642,7 @@ class Starmap(object):
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
 
-    def _iter_celery(self, backurl=None):
-        results = []
-        for piks in self._genargs(backurl):
-            res = safetask.delay(self.task_func, piks)
-            # populating Starmap.task_ids, used in celery_cleanup
-            self.task_ids.append(res.task_id)
-            results.append(res)
-        yield len(results)
+    def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
             if CELERY_RESULT_BACKEND.startswith('rpc:'):
@@ -656,12 +650,18 @@ class Starmap(object):
                 del app.backend._cache[task_id]
             yield result_dict['result']
 
-    def _iter_celery_zmq(self):
+    def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             logging.info('Using receiver %s', socket.backurl)
-            it = self._iter_celery(socket.backurl)
-            num_results = next(it)
+            results = []
+            for piks in self._genargs(socket.backurl):
+                res = safetask.delay(self.task_func, piks)
+                # populating Starmap.task_ids, used in celery_cleanup
+                self.task_ids.append(res.task_id)
+                results.append(res)
+            num_results = len(results)
             yield num_results
+            it = self.iter_native(results)
             isocket = iter(socket)
             while num_results:
                 res = next(isocket)
@@ -680,15 +680,20 @@ class Starmap(object):
             task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
                            config.zworkers)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                n = 0
+                num_results = 0
                 for args in self._genargs(socket.backurl):
                     sender.send((self.task_func, args))
-                    n += 1
-            yield n
-            for _ in range(n):
-                obj = socket.zsocket.recv_pyobj()
-                # receive n responses for the n requests sent
-                yield obj
+                    num_results += 1
+            yield num_results
+            isocket = iter(socket)
+            while num_results:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                num_results -= 1
+                yield res
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,

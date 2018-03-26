@@ -22,7 +22,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
@@ -38,7 +38,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
 
-
+grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
+                             ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
@@ -187,7 +188,7 @@ class PSHACalculator(base.HazardCalculator):
             else:
                 totweight += csm.get_weight(weight)
             if csm.has_dupl_sources and not opt:
-                logging.warn('Found %d duplicated sources, use oq info',
+                logging.warn('Found %d duplicated sources',
                              csm.has_dupl_sources)
             for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
@@ -213,17 +214,26 @@ class PSHACalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         grp_trt = self.csm.info.grp_by("trt")
-        grp_name = self.csm.info.grp_by("name")
+        grp_source = self.csm.info.grp_by("name")
+        if self.oqparam.disagg_by_src:
+            src_name = {src.src_group_id: src.name
+                        for src in self.csm.get_sources()}
+        data = []
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(key, trt=grp_trt[grp_id],
-                                             name=str(grp_name[grp_id]))
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+                    if self.oqparam.disagg_by_src:
+                        data.append(
+                            (grp_id, grp_source[grp_id], src_name[grp_id]))
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
+                if self.oqparam.disagg_by_src:
+                    self.datastore['disagg_by_src/source_id'] = numpy.array(
+                        sorted(data), grp_source_dt)
 
 
 def fix_ones(pmap):
