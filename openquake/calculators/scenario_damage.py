@@ -42,7 +42,7 @@ def dist_by_asset(data, multi_stat_dt, number):
             mean, stddev = data[n, r, l]
             out_lt[n, r] = (mean, stddev)
             # sanity check on the sum over all damage states
-            if abs(mean.sum() / number[n] - 1) > 1E-5:
+            if abs(mean.sum() / number[n] - 1) > 1E-3:
                 logging.warn(
                     'Asset #%d, rlz=%d, expected %s, got %s for %s damage',
                     n, r, mean.sum(), number[n], lt)
