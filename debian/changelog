@@ -1,6 +1,7 @@
   [Michele Simionato]
-  * `oq show job_info` now shows the received data while the calculation is
-    progressing
+  * Added a check on probs_occur summing up to 1 in the SourceWriter
+  * `oq show job_info` now shows the received data amount while the
+    calculation is progressing
 
   [Daniele Viganò]
   * Removed support for Python 2 in `setup.py`
