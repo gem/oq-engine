@@ -24,7 +24,7 @@ from openquake.engine import engine
 from openquake.server import dbserver
 from requests import Session
 
-CHUNKSIZE = 5*1024**2  # 5 MB
+CHUNKSIZE = 4*1024**2  # 4 MB
 
 
 # NB: it is really difficult to test this automatically, so it is only
