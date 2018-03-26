@@ -39,7 +39,6 @@ else
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
-
 override_dh_auto_install:
 	/opt/openquake/bin/python3 setup.py install --force --install-layout=deb --root=$(PWD)/debian/python3-oq-engine --prefix=$(PREFIX) --no-compile -O0
 
