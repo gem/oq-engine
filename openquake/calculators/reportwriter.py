@@ -120,8 +120,6 @@ class ReportWriter(object):
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
-        if 'job_info' in ds:
-            self.add('job_info')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
@@ -137,6 +135,7 @@ class ReportWriter(object):
             if 'classical' in ds['task_info']:
                 self.add('task_classical:0')
                 self.add('task_classical:-1')
+            self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
