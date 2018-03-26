@@ -28,8 +28,9 @@ of multiple site should be separated with a comma.
 
 \textbf{Disaggregation parameters}
 
-The parameters of the disaggregation are shown in the following example and
-a description is provided below.
+The disaggregation parameters need to be added to the the standard
+configuration file. They are shown in the following example and a description
+of each parameter is provided below.
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [disaggregation]
@@ -43,60 +44,62 @@ disagg_outputs =
 
 \begin{itemize}
 
-    \item \Verb+poes\_disagg+: mandatory; disaggregation is performed for the intensity
+    \item \Verb+poes_disagg+: mandatory; disaggregation is performed for the intensity
     measure levels corresponding to the probability of exceedance value(s) provided
     here. The computations use the \texttt{investigation\_time} and the
-    \texttt{intensity\_measure\_types\_and\_levels} defined in the
+    \texttt{intensity_measure_types_and_levels} defined in the
     ``Calculation configuration'' section   (see page~\pageref{sec:calculation_configuration}).
     Alternatively, the intensity measure level(s) to be disaggregated can be directly defined
-    by the user by specifying \texttt{iml\_disagg} (further described below). Note that the
-    disaggregation requires either \texttt{poes\_disagg} or \texttt{iml\_disagg}to be defined,
-    but both cannot be defined at the same time.
+    by specifying \texttt{iml\_disagg} (further described below). Note that a
+    disaggregation computation requires either \texttt{poes\_disagg} or
+    \texttt{iml\_disagg}to be defined, but both cannot be defined at the same time.
 
-    \item \Verb+mag\_bin\_width+: mandatory; specifies the width of one magnitude
-     histogram bin of the disaggregation matrix to be computed
+    \item \Verb+mag_bin_width+: mandatory; specifies the width of every magnitude
+     histogram bin of the disaggregation matrix computed
 
-    \item \Verb+distance\_bin\_width+: specifies the width of one distance
-    histogram bin of the disaggregation matrix to be computed (km)
+    \item \Verb+distance_bin_width+: specifies the width of every distance
+    histogram bin of the disaggregation matrix computed (km)
 
-    \item \Verb+coordinate\_bin\_width+: specifies the width of the longitude-latitude
-    histogram bins of the disaggregation matrix to be computed (decimal degrees)
+    \item \Verb+coordinate_bin_width+: specifies the width of every longitude-latitude
+    histogram bin of the disaggregation matrix computed (decimal degrees)
 
-    \item \Verb+num\_epsilon\_bins+: mandatory; specifies the number of of epsilon
-    histogram bins of the disaggregation matrix within the specified \texttt{truncation\_level}
-    (which is defined in the ``Calculation configuration'' section,
-    see page~\pageref{sec:calculation_configuration})
+    \item \Verb+num_epsilon_bins+: mandatory; specifies the number of epsilon
+    histogram bins of the disaggregation matrix. The width of the epsilon bins
+    depends on the \texttt{truncation\_level} defined in the
+    ``Calculation configuration'' section (page~\pageref{sec:calculation_configuration})
 
-    \item \Verb+disagg\_outputs+: optional; specifies the type(s) of disaggregation
+    \item \Verb+disagg_outputs+: optional; specifies the type(s) of disaggregation
     to be computed. The options are: \texttt{Mag}, \texttt{Dist}, \texttt{Lon\_Lat},
-    \texttt{Lon\_Lat\_TRT}, \texttt{Mag\_Dist},v\texttt{Mag\_Dist\_Eps},
+    \texttt{Lon\_Lat\_TRT}, \texttt{Mag\_Dist}, \texttt{Mag\_Dist\_Eps},
     \texttt{Mag\_Lon\_Lat}, \texttt{TRT}. If none are specified, then all are
     computed. More details of the disaggregation output are given in the
     ``Outputs from Hazard Disaggregation'' section,
-    see page~\pageref{sec:output_hazard_disaggregation})
+    see page~\pageref{subsec:output_hazard_disaggregation})
 
-    \item \Verb+disagg\_by\_src+: optional; if set to true, the contributions of
-    each source are computed; currently only works if the logic tree is trivial
+    \item \Verb+disagg_by_src+: optional; if set to true, disaggregation by source is
+    computed. This option currently works only if the logic tree is trivial
     (i.e. there is only one realization).
 
 \end{itemize}
 
-The user also has the option to perform disaggregation by directly specifying the
-intensity measure level to be disaggregated. An example is shown below:
+As mentioned above, the user also has the option to perform disaggregation by
+directly specifying the intensity measure level to be disaggregated, rather than
+specifying the probability of exceedance. An example is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [disaggregation]
 iml_disagg = 0.1
 \end{minted}
 
-As noted above, either \texttt{poes\_disagg} or \texttt{iml\_disagg} needs
-to be defined, but both cannot be defined at the same time. When
+Either \texttt{poes\_disagg} or \texttt{iml\_disagg} needs
+to be defined, but both cannot be defined at the same time. If
  \texttt{iml\_disagg} is specified, the user should delete the
  \texttt{intensity\_measure\_types\_and\_levels} defined in the
 ``Calculation configuration'' section (see page~\pageref{sec:calculation_configuration})
 since it is explicitly given here.
 
 \textbf{Statistical Disaggregation Outputs}
+
  When there is more than 1 logic tree realization, the disaggregation is
  computed for each realization. Additionally, if \texttt{mean\_hazard\_curves}
  is set to true, or \texttt{quantile\_hazard\_curves} are specified (see
