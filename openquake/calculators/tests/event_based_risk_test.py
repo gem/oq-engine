@@ -24,7 +24,6 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.baselib.python3compat import decode
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -265,6 +264,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         sitecol = self.calc.datastore['sitecol']
         assetcol = self.calc.datastore['assetcol']
         self.assertEqual(len(sitecol), 27)
+        self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
     @attr('qa', 'risk', 'event_based_risk')
