@@ -333,7 +333,7 @@ def view_job_info(token, dstore):
         if task not in ('task_sources', 'source_data'):
             dset = dstore['task_info/' + task]
             argnames = dset.attrs['argnames'].split()
-            totsent = dset['sent'].sum(axis=0)
+            totsent = dset.attrs['sent']
             sent = ['%s=%s' % (a, humansize(s))
                     for s, a in sorted(zip(totsent, argnames), reverse=True)]
             recv = dset['received'].sum()
