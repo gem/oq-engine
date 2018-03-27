@@ -1,5 +1,11 @@
 # FAQ
 
+### Python 2.7 compatibility 
+
+Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
+
+***
+
 ### Different installation methods
 
 The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/overview.md)**.
@@ -22,8 +28,8 @@ A 64bit operating system **is required**. Please refer to each OS specific page 
 ### Unsupported operating systems
 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
-- **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
-- **Ubuntu 16.04** (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
+- Ubuntu 14.04 (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
+- Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 

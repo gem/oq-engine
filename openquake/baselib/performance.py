@@ -165,18 +165,6 @@ class Monitor(object):
         if self.autoflush:
             self.flush()
 
-    def save_info(self, dic):
-        """
-        Save (name, value) information in the associated hdf5path
-        """
-        if self.hdf5path:
-            if 'hostname' not in dic:
-                dic['hostname'] = socket.gethostname()
-            data = numpy.array(
-                _pairs(dic.items()),
-                [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])
-            hdf5.extend3(self.hdf5path, 'job_info', data)
-
     def flush(self):
         """
         Save the measurements on the performance file (or on stdout)
