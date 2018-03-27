@@ -7,7 +7,7 @@ Simple plots for the recurrence model
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hmtk.plotting.seismicity.catalogue_plots import \
-    (get_completeness_adjusted_table, _save_image)
+    (get_completeness_adjusted_table, _save_image, DEFAULT_SIZE)
 from openquake.hmtk.seismicity.occurrence.utils import get_completeness_counts
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
@@ -61,7 +61,8 @@ def _check_completeness_table(completeness, catalogue):
 
 
 def plot_recurrence_model(input_model, catalogue, completeness, dmag,
-                          figure_size=(10, 8), filename=None, filetype='png', dpi=300):
+                          figure_size=DEFAULT_SIZE, filename=None,
+                          filetype='png',  dpi=300, ax=None):
     """
     Plot a calculated recurrence model over an observed catalogue, adjusted for
     time-varying completeness
@@ -81,6 +82,11 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     cum_obs_rates = np.array([np.sum(obs_rates[i:])
                               for i in range(len(obs_rates))])
     # Create plot
+    if ax is None:
+        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+    else:
+        fig = ax.get_figure()
+
     plt.figure(figsize=figure_size)
     plt.semilogy(cent_mag, obs_rates, 'bo')
     plt.semilogy(annual_rates[:, 0], annual_rates[:, 1], 'b-')
@@ -94,7 +100,7 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
                 'Observed Cumulative Rate',
                 'Model Cumulative Rate'], fontsize=14)
     plt.tick_params(labelsize=12)
-    _save_image(filename, filetype, dpi)
+    _save_image(fig, filename, filetype, dpi)
 
 
 def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,

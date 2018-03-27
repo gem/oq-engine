@@ -74,8 +74,9 @@ def _get_catalogue_bin_limits(catalogue, dmag):
 
 
 def plot_depth_histogram(
-        catalogue, bin_width, normalisation=False,
-        bootstrap=None, filename=None, filetype='png', dpi=300, ax=None):
+        catalogue, bin_width,
+        normalisation=False, bootstrap=None, filename=None,
+        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
     """
     Creates a histogram of the depths in the catalogue
 
@@ -90,11 +91,11 @@ def plot_depth_histogram(
         To sample depth uncertainty choose number of samples
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
     # Create depth range
-    if len(catalogue.data['depth']) == 0:
+    if not catalogue.data['depth']:
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + bin_width,
@@ -119,9 +120,9 @@ def plot_depth_histogram(
 
 
 def plot_magnitude_depth_density(
-        catalogue, mag_int, depth_int, logscale=False,
-        normalisation=False, bootstrap=None, filename=None, filetype='png',
-        dpi=300, ax=None):
+        catalogue, mag_int, depth_int,
+        logscale=False, normalisation=False, bootstrap=None, filename=None,
+        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
     """
     Creates a density plot of the magnitude and depth distribution
 
@@ -139,7 +140,7 @@ def plot_magnitude_depth_density(
     :param int bootstrap:
         To sample magnitude and depth uncertainties choose number of samples
     """
-    if len(catalogue.data['depth']) == 0:
+    if not catalogue.data['depth']:
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + depth_int,
@@ -156,7 +157,7 @@ def plot_magnitude_depth_density(
     else:
         normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
@@ -180,8 +181,8 @@ def plot_magnitude_depth_density(
 
 
 def plot_magnitude_time_scatter(
-        catalogue, plot_error=False, filename=None,
-        filetype='png', dpi=300, fmt_string='o', ax=None):
+        catalogue, plot_error=False, fmt_string='o', filename=None,
+        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
     """
     Creates a simple scatter plot of magnitude with time
 
@@ -194,7 +195,7 @@ def plot_magnitude_time_scatter(
         Symbology of plot
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
@@ -221,9 +222,9 @@ def plot_magnitude_time_scatter(
 
 
 def plot_magnitude_time_density(
-        catalogue, mag_int, time_int,
+        catalogue, mag_int, time_int, completeness=None,
         normalisation=False, logscale=True, bootstrap=None, filename=None,
-        filetype='png', dpi=300, completeness=None, ax=None):
+        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
     """
     Creates a plot of magnitude-time density
 
@@ -240,12 +241,12 @@ def plot_magnitude_time_density(
         To sample magnitude and depth uncertainties choose number of samples
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
     # Create the magnitude bins
-    if isinstance(mag_int, np.ndarray) or isinstance(mag_int, list):
+    if isinstance(mag_int, (np.ndarray, list)):
         mag_bins = mag_int
     else:
         mag_bins = np.arange(
@@ -253,7 +254,7 @@ def plot_magnitude_time_density(
             np.max(catalogue.data['magnitude']) + mag_int / 2.,
             mag_int)
     # Creates the time bins
-    if isinstance(time_int, np.ndarray) or isinstance(time_int, list):
+    if isinstance(time_int, (np.ndarray, list)):
         time_bins = time_int
     else:
         time_bins = np.arange(
@@ -359,8 +360,8 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
 
 
 def plot_observed_recurrence(
-        catalogue, completeness, dmag, end_year=None, figure_size=DEFAULT_SIZE,
-        filename=None, filetype='png', dpi=300, ax=None):
+        catalogue, completeness, dmag, end_year=None, filename=None,
+        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
     """
     Plots the observed recurrence taking into account the completeness
     """
@@ -380,7 +381,7 @@ def plot_observed_recurrence(
                               for i in range(len(obs_rates))])
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=DEFAULT_SIZE)
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
