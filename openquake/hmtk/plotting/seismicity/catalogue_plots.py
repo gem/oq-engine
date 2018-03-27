@@ -12,9 +12,6 @@ from matplotlib.colors import LogNorm, Normalize
 
 from openquake.hmtk.seismicity.occurrence.utils import get_completeness_counts
 
-# Default the figure size
-DEFAULT_SIZE = (8., 6.)
-
 
 def build_filename(filename, filetype='png', resolution=300):
     """
@@ -76,7 +73,7 @@ def _get_catalogue_bin_limits(catalogue, dmag):
 def plot_depth_histogram(
         catalogue, bin_width,
         normalisation=False, bootstrap=None, filename=None,
-        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a histogram of the depths in the catalogue
 
@@ -107,12 +104,12 @@ def plot_depth_histogram(
            depth_hist,
            width=0.95 * bin_width,
            edgecolor='k')
-    ax.set_xlabel('Depth (km)', fontsize='large')
+    ax.set_xlabel('Depth (km)')
     if normalisation:
-        ax.set_ylabel('Probability Mass Function', fontsize='large')
+        ax.set_ylabel('Probability Mass Function')
     else:
         ax.set_ylabel('Count')
-    ax.set_title('Depth Histogram', fontsize='large')
+    ax.set_title('Depth Histogram')
 
     _save_image(fig, filename, filetype, dpi)
 
@@ -122,7 +119,7 @@ def plot_depth_histogram(
 def plot_magnitude_depth_density(
         catalogue, mag_int, depth_int,
         logscale=False, normalisation=False, bootstrap=None, filename=None,
-        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a density plot of the magnitude and depth distribution
 
@@ -151,29 +148,30 @@ def plot_magnitude_depth_density(
                                                                 normalisation,
                                                                 bootstrap)
     vmin_val = np.min(mag_depth_dist[mag_depth_dist > 0.])
-    # Create plot
-    if logscale:
-        normaliser = LogNorm(vmin=vmin_val, vmax=np.max(mag_depth_dist))
-    else:
-        normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
+
     if ax is None:
         fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
+    if logscale:
+        normaliser = LogNorm(vmin=vmin_val, vmax=np.max(mag_depth_dist))
+    else:
+        normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
+
     im = ax.pcolor(mag_bins[:-1],
                    depth_bins[:-1],
                    mag_depth_dist.T,
                    norm=normaliser)
-    ax.set_xlabel('Magnitude', fontsize='large')
-    ax.set_ylabel('Depth (km)', fontsize='large')
+    ax.set_xlabel('Magnitude')
+    ax.set_ylabel('Depth (km)')
     ax.set_xlim(mag_bins[0], mag_bins[-1])
     ax.set_ylim(depth_bins[0], depth_bins[-1])
     fig.colorbar(im, ax=ax)
     if normalisation:
-        ax.set_title('Magnitude-Depth Density', fontsize='large')
+        ax.set_title('Magnitude-Depth Density')
     else:
-        ax.set_title('Magnitude-Depth Count', fontsize='large')
+        ax.set_title('Magnitude-Depth Count')
 
     _save_image(fig, filename, filetype, dpi)
 
@@ -182,7 +180,7 @@ def plot_magnitude_depth_density(
 
 def plot_magnitude_time_scatter(
         catalogue, plot_error=False, fmt_string='o', filename=None,
-        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a simple scatter plot of magnitude with time
 
@@ -200,7 +198,7 @@ def plot_magnitude_time_scatter(
         fig = ax.get_figure()
 
     dtime = catalogue.get_decimal_time()
-    if len(catalogue.data['sigmaMagnitude']) == 0:
+    if not catalogue.data['sigmaMagnitude']:
         print('Magnitude Error is missing - neglecting error bars!')
         plot_error = False
 
@@ -212,9 +210,9 @@ def plot_magnitude_time_scatter(
                     fmt=fmt_string)
     else:
         ax.plot(dtime, catalogue.data['magnitude'], fmt_string)
-    ax.set_xlabel('Year', fontsize='large')
-    ax.set_ylabel('Magnitude', fontsize='large')
-    ax.set_title('Magnitude-Time Plot', fontsize='large')
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Magnitude')
+    ax.set_title('Magnitude-Time Plot')
 
     _save_image(fig, filename, filetype, dpi)
 
@@ -224,7 +222,7 @@ def plot_magnitude_time_scatter(
 def plot_magnitude_time_density(
         catalogue, mag_int, time_int, completeness=None,
         normalisation=False, logscale=True, bootstrap=None, filename=None,
-        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a plot of magnitude-time density
 
@@ -282,8 +280,8 @@ def plot_magnitude_time_density(
                    mag_bins[:-1],
                    mag_time_dist.T,
                    norm=norm_data)
-    ax.set_xlabel('Time (year)', fontsize='large')
-    ax.set_ylabel('Magnitude', fontsize='large')
+    ax.set_xlabel('Time (year)')
+    ax.set_ylabel('Magnitude')
     ax.set_xlim(time_bins[0], time_bins[-1])
     # Fix the title
     if normalisation:
@@ -301,6 +299,9 @@ def plot_magnitude_time_density(
 
 
 def _plot_completeness(ax, comw, start_time, end_time):
+    '''
+    Adds completeness intervals to a plot
+    '''
     comw = np.array(comw)
     comp = np.column_stack([np.hstack([end_time, comw[:, 0], start_time]),
                             np.hstack([comw[0, 1], comw[:, 1], comw[-1, 1]])])
@@ -361,7 +362,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
 
 def plot_observed_recurrence(
         catalogue, completeness, dmag, end_year=None, filename=None,
-        figure_size=DEFAULT_SIZE, filetype='png', dpi=300, ax=None):
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Plots the observed recurrence taking into account the completeness
     """
@@ -388,8 +389,7 @@ def plot_observed_recurrence(
     ax.semilogy(cent_mag, obs_rates, 'bo', label="Incremental")
     ax.semilogy(cent_mag, cum_obs_rates, 'rs', label="Cumulative")
     ax.set_xlim([cent_mag[0] - 0.1, cent_mag[-1] + 0.1])
-    ax.set_xlabel('Magnitude', fontsize=16)
-    ax.set_ylabel('Annual Rate', fontsize=16)
-    ax.legend(fontsize=14)
-    ax.tick_params(labelsize=12)
+    ax.set_xlabel('Magnitude')
+    ax.set_ylabel('Annual Rate')
+    ax.legend()
     _save_image(fig, filename, filetype, dpi)
