@@ -32,7 +32,7 @@ def plot_assets(calc_id=-1):
     fig = p.figure()
     ax = fig.add_subplot(111)
     ax.grid(True)
-    p.scatter(sitecol.lons, sitecol.lats, marker='+')
+    p.scatter(sitecol.lons, sitecol.lats, marker='o', color='red')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.')
     p.show()
 
