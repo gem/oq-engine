@@ -631,7 +631,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             oqparam.region_grid_spacing)
         haz_sitecol = site.SiteCollection.from_points(
             haz_mesh.lons, haz_mesh.lats, sitemodel=oqparam)
-        assert haz_sitecol.vs30.sum()
     if haz_sitecol:
         tot_assets = sum(len(assets) for assets in assets_by_site)
         all_sids = haz_sitecol.complete.sids
