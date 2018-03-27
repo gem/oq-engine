@@ -263,7 +263,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_miriam.__file__, 'job2.ini')
         sitecol = self.calc.datastore['sitecol']
         assetcol = self.calc.datastore['assetcol']
-        self.assertEqual(len(sitecol), 27)
+        self.assertEqual(len(sitecol), 15)
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
