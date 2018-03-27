@@ -14,26 +14,15 @@ from openquake.hazardlib.mfd.youngs_coppersmith_1985 import\
     YoungsCoppersmith1985MFD
 
 
-def _check_recurrence_model_type(input_model):
-    """
-    Ensure model is a known type
-    """
-    valid_model = False
-    for model in [TruncatedGRMFD, EvenlyDiscretizedMFD,
-                  YoungsCoppersmith1985MFD]:
-        valid_model = isinstance(input_model, model)
-        if valid_model:
-            break
-    if not valid_model:
-        raise ValueError('Recurrence model not recognised')
-
-
 def _get_recurrence_model(input_model):
     """
     Returns the annual and cumulative recurrence rates predicted by the
     recurrence model
     """
-    _check_recurrence_model_type(input_model)
+    if not isinstance(input_model, (TruncatedGRMFD,
+                                    EvenlyDiscretizedMFD,
+                                    YoungsCoppersmith1985MFD)):
+        raise ValueError('Recurrence model not recognised')
     # Get model annual occurrence rates
     annual_rates = input_model.get_annual_occurrence_rates()
     annual_rates = np.array([[val[0], val[1]] for val in annual_rates])
