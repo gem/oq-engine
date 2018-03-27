@@ -19,8 +19,6 @@
 """
 Classes for serializing various NRML XML artifacts.
 """
-
-import json
 import operator
 from collections import OrderedDict
 
