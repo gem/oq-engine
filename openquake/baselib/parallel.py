@@ -393,12 +393,11 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        if sent.any():  # can be empty if Starmap was applied to the empty list
-            self.task_data_dt = numpy.dtype(
-                [('taskno', numpy.uint32), ('weight', numpy.float32),
-                 ('duration', numpy.float32), ('received', numpy.int64)])
-            self.progress('Sent %s of data in %s task(s)',
-                          humansize(sent.sum()), num_tasks)
+        self.task_data_dt = numpy.dtype(
+            [('taskno', numpy.uint32), ('weight', numpy.float32),
+             ('duration', numpy.float32), ('received', numpy.int64)])
+        self.progress('Sent %s of data in %s task(s)',
+                      humansize(sent.sum()), num_tasks)
 
     def _log_percent(self):
         yield 0
