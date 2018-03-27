@@ -602,7 +602,7 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        logging.info('There are %d realizations', self.R)
+        logging.info('Found %d realization(s)', self.R)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -628,7 +628,9 @@ class RiskCalculator(HazardCalculator):
         dstore = self.can_read_parent() or self.datastore
         sid_weight = []
         for sid, assets in enumerate(assets_by_site):
-            if indices is None:
+            if len(assets) == 0:
+                continue
+            elif indices is None:
                 weight = len(assets)
             else:
                 num_gmfs = sum(stop - start for start, stop in indices[sid])
@@ -657,7 +659,9 @@ class RiskCalculator(HazardCalculator):
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            yield riskinput.RiskInput(getter, reduced_assets, reduced_eps)
+            ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
+            ri.weight = weight
+            yield ri
 
     def execute(self):
         """
