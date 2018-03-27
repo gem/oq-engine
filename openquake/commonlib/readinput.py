@@ -633,7 +633,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         haz_sitecol = site.SiteCollection.from_points(
             haz_mesh.lons, haz_mesh.lats, sitemodel=oqparam)
         haz_distance = oqparam.region_grid_spacing
-        logging.info('Using asset_hazard_distance=%d km', haz_distance)
+        if haz_distance != oqparam.asset_hazard_distance:
+            logging.info('Using asset_hazard_distance=%d km instead of %d km',
+                         haz_distance, oqparam.asset_hazard_distance)
     else:
         haz_distance = oqparam.asset_hazard_distance
     if haz_sitecol:
