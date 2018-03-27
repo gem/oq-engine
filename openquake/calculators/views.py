@@ -626,6 +626,24 @@ def view_task_classical(token, dstore):
     return res + rst_table(st, header='variable mean stddev min max n'.split())
 
 
+@view.add('task_risk')
+def view_task_risk(token, dstore):
+    """
+    Display info about a given risk task. Here are a few examples of usage::
+
+     $ oq show task_risk:0  # the fastest task
+     $ oq show task_risk:-1  # the slowest task
+    """
+    [key] = dstore['task_info']
+    data = dstore['task_info/' + key].value
+    data.sort(order='duration')
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
+    res = 'taskno=%d, weight=%d, duration=%d s' % (
+        taskno, rec['weight'], rec['duration'])
+    return res
+
+
 @view.add('hmap')
 def view_hmap(token, dstore):
     """
