@@ -627,8 +627,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     if (haz_sitecol is None and oqparam.region_grid_spacing and not
             oqparam.region):
         # extract the hazard grid from the exposure
-        haz_mesh = mesh.get_convex_hull().discretize(
-            oqparam.region_grid_spacing)
+        haz_mesh = mesh.get_convex_hull().dilate(
+            oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
         haz_sitecol = site.SiteCollection.from_points(
             haz_mesh.lons, haz_mesh.lats, sitemodel=oqparam)
         haz_distance = oqparam.region_grid_spacing
