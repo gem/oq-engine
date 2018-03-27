@@ -78,8 +78,8 @@ The parallelization algorithm used by `Starmap` will depend on the
 environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
-`OQ_DISTRIBUTE` not set or set to "futures":
-  use multiprocessing via the concurrent.futures interface
+`OQ_DISTRIBUTE` not set or set to "processpool":
+  use multiprocessing
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
@@ -173,16 +173,19 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
 cpu_count = multiprocessing.cpu_count()
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-if OQ_DISTRIBUTE not in ('no', 'futures', 'celery', 'zmq'):
+OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+if OQ_DISTRIBUTE == 'futures':  # legacy name
+    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
+    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'futures'
+    :returns: the value of OQ_DISTRIBUTE or 'processpool'
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
     read_access = getattr(task, 'read_access', True)
     if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
@@ -365,37 +368,40 @@ if OQ_DISTRIBUTE.startswith('celery'):
 
 class IterResult(object):
     """
-    :param futures:
-        an iterator over futures
+    :param iresults:
+        an iterator over Result objects
     :param taskname:
         the name of the task
     :param num_tasks:
-        the total number of expected futures
+        the total number of expected tasks
     :param progress:
         a logging function for the progress report
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     """
-    task_data_dt = numpy.dtype(
-        [('taskno', numpy.uint32), ('weight', numpy.float32),
-         ('duration', numpy.float32)])
-
-    def __init__(self, iresults, taskname, num_tasks,
-                 progress=logging.info, sent=0):
+    def __init__(self, iresults, taskname, argnames, num_tasks, sent,
+                 progress=logging.info):
         self.iresults = iresults
         self.name = taskname
+        self.argnames = ' '.join(argnames)
         self.num_tasks = num_tasks
-        self.progress = progress
         self.sent = sent
+        self.progress = progress
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        if sent:
+        if sent:  # can be empty if Starmap was applied to the empty list
+            nargs = len(sent[0])
+            self.task_data_dt = numpy.dtype(
+                [('taskno', numpy.uint32), ('weight', numpy.float32),
+                 ('duration', numpy.float32),
+                 ('sent', (numpy.int64, nargs)), ('received', numpy.int64)])
+            totsent = sum(s.sum() for s in sent)
             self.progress('Sent %s of data in %s task(s)',
-                          humansize(sum(sent.values())), num_tasks)
+                          humansize(totsent), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -427,7 +433,7 @@ class IterResult(object):
                 raise ValueError(result)
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_data(result.mon)
+                self.save_task_info(result.mon)
             yield val
 
         if self.received:
@@ -435,17 +441,15 @@ class IterResult(object):
             max_per_task = max(self.received)
             self.progress('Received %s of data, maximum per task %s',
                           humansize(tot), humansize(max_per_task))
-            received = {'max_per_task': max_per_task, 'tot': tot}
-            tname = self.name
-            dic = {tname: {'sent': self.sent, 'received': received}}
-            result.mon.save_info(dic)
 
-    def save_task_data(self, mon):
+    def save_task_info(self, mon):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
-            tup = (mon.task_no, mon.weight, duration)
+            sent = self.sent[mon.task_no - 1]
+            tup = (mon.task_no, mon.weight, duration, sent, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
-            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
+            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
+                         argnames=self.argnames)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -492,7 +496,7 @@ def init_workers():
     return os.getpid()
 
 
-def _wakeup(sec):
+def _wakeup(sec, mon):
     """Waiting function, used to wake up the process pool"""
     time.sleep(sec)
     return os.getpid()
@@ -505,14 +509,15 @@ class Starmap(object):
 
     @classmethod
     def init(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures' and not hasattr(cls, 'pool'):
+        if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            self = cls(_wakeup, [(.2,) for _ in range(cls.pool._processes)])
+            m = Monitor('wakeup')
+            self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
             cls.pids = list(self)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'futures' and hasattr(cls, 'pool'):
+        if OQ_DISTRIBUTE == 'processpool' and hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -557,7 +562,7 @@ class Starmap(object):
         else:
             self.progress = logging.info
         self.distribute = distribute or oq_distribute(task_func)
-        self.sent = AccumDict()
+        self.sent = []
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
             self.argnames = inspect.getargspec(task_func).args
@@ -595,7 +600,9 @@ class Starmap(object):
                 self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
-                self.sent += {a: len(p) for a, p in zip(self.argnames, args)}
+                self.sent.append(numpy.array([len(p) for p in args]))
+            else:
+                self.sent.append(numpy.zeros(len(args)))
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
@@ -607,14 +614,15 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute == 'futures':
+        elif self.distribute == 'processpool':
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
         num_tasks = next(it)
-        return IterResult(it, self.name, num_tasks, self.progress, self.sent)
+        return IterResult(it, self.name, self.argnames, num_tasks,
+                          self.sent, self.progress)
 
     def reduce(self, agg=operator.add, acc=None):
         """
