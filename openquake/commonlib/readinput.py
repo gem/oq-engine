@@ -661,9 +661,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         logging.info('Associated %d assets to %d sites',
                      num_assets, len(sitecol))
         if num_assets < tot_assets:
-            logging.warn(
-                'Discarded %d assets outside the asset_hazard_distance of '
-                '%d km', tot_assets - num_assets, asset_hazard_distance)
+            msg = ('Discarded %d assets outside the asset_hazard_distance of '
+                   '%d km') % (tot_assets - num_assets, asset_hazard_distance)
+            if oqparam.region_grid_spacing:
+                raise geo.utils.SiteAssociationError(msg)
+            else:
+                logging.warn(msg)
+
     else:  # use the exposure sites as hazard sites
         sitecol = get_site_collection(oqparam, mesh)
     asset_refs = [exposure.asset_refs[asset.ordinal]
