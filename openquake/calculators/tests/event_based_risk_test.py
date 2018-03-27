@@ -246,10 +246,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
-        # check job_info is stored
-        job_info = {decode(k) for k in dict(self.calc.datastore['job_info'])}
-        self.assertIn('build_curves_maps.sent', job_info)
-        self.assertIn('build_curves_maps.received', job_info)
         check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
