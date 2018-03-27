@@ -631,12 +631,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             oqparam.region_grid_spacing)
         haz_sitecol = site.SiteCollection.from_points(
             haz_mesh.lons, haz_mesh.lats, sitemodel=oqparam)
+        haz_distance = oqparam.region_grid_spacing
+        logging.info('Using asset_hazard_distance=%d km', haz_distance)
+    else:
+        haz_distance = oqparam.asset_hazard_distance
     if haz_sitecol:
         tot_assets = sum(len(assets) for assets in assets_by_site)
         all_sids = haz_sitecol.complete.sids
         sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
-        asset_hazard_distance = oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
@@ -644,13 +647,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         for assets in assets_by_site:
             lon, lat = assets[0].location
             obj, distance = siteobjects.get_closest(lon, lat)
-            if obj.sid in sids and distance <= asset_hazard_distance:
+            if obj.sid in sids and distance <= haz_distance:
                 # keep the assets, otherwise discard them
                 assets_by_sid += {obj.sid: list(assets)}
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'asset_hazard_distance of %s km' % asset_hazard_distance)
+                'asset_hazard_distance of %s km' % haz_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
         assets_by_site = [
@@ -662,7 +665,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                      num_assets, len(sitecol))
         if num_assets < tot_assets:
             msg = ('Discarded %d assets outside the asset_hazard_distance of '
-                   '%d km') % (tot_assets - num_assets, asset_hazard_distance)
+                   '%d km') % (tot_assets - num_assets, haz_distance)
             if oqparam.region_grid_spacing:
                 raise geo.utils.SiteAssociationError(msg)
             else:
