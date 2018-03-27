@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     865,392,691        
-date           2018-02-25T06:43:09
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:56:15
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -45,7 +45,7 @@ Composite source model
 ========= ====== ================ ================
 smlt_path weight gsim_logic_tree  num_realizations
 ========= ====== ================ ================
-b1        1.000  trivial(0,1,1,0) 1/1             
+b1        1.000  trivial(0,1,0,1) 1/1             
 ========= ====== ================ ================
 
 Required parameters per tectonic region type
@@ -82,40 +82,24 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 1.000        2
 #tot_weight   6.000
 ============= =====
 
-Informational data
-------------------
-======================= ===============================================================================
-count_ruptures.received tot 1.67 KB, max_per_task 889 B                                                
-count_ruptures.sent     sources 809.11 KB, srcfilter 1.41 KB, param 1.23 KB, monitor 660 B, gsims 245 B
-hazard.input_weight     6.0                                                                            
-hazard.n_imts           1                                                                              
-hazard.n_levels         29                                                                             
-hazard.n_realizations   1                                                                              
-hazard.n_sites          1                                                                              
-hazard.n_sources        4                                                                              
-hazard.output_weight    29.0                                                                           
-hostname                tstation.gem.lan                                                               
-require_epsilons        False                                                                          
-======================= ===============================================================================
-
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========= =========
-source_id source_class              num_ruptures calc_time num_sites num_split
-========= ========================= ============ ========= ========= =========
-21444     CharacteristicFaultSource 1            0.004     2         1        
-1         PointSource               20           3.750E-04 2         1        
-2         PointSource               20           3.390E-04 2         1        
-21445     CharacteristicFaultSource 1            0.0       1         0        
-========= ========================= ============ ========= ========= =========
+========= ========================= ============ ========= ========== ========= =========
+source_id source_class              num_ruptures calc_time split_time num_sites num_split
+========= ========================= ============ ========= ========== ========= =========
+21444     CharacteristicFaultSource 1            0.003     2.146E-06  1         1        
+1         PointSource               20           4.716E-04 4.768E-06  1         1        
+2         PointSource               20           1.078E-04 1.907E-06  1         1        
+21445     CharacteristicFaultSource 1            0.0       1.431E-06  0         0        
+========= ========================= ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.004     2     
-PointSource               7.141E-04 2     
+CharacteristicFaultSource 0.003     2     
+PointSource               5.794E-04 2     
 ========================= ========= ======
 
 Duplicated sources
@@ -126,19 +110,28 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.009 0.004  0.006 0.012 2        
+count_ruptures     0.004 0.003  0.002 0.006 2        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== =========================================================================== ========
+task           sent                                                                        received
+count_ruptures sources=809.11 KB srcfilter=1.41 KB param=1.23 KB monitor=660 B gsims=245 B 799 B   
+============== =========================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.198     0.0       1     
-total count_ruptures           0.018     0.0       2     
-managing sources               0.005     0.0       1     
-store source_info              0.003     0.0       1     
-reading site collection        3.958E-05 0.0       1     
-aggregate curves               3.815E-05 0.0       2     
-saving probability maps        2.503E-05 0.0       1     
+reading composite source model 0.300     0.0       1     
+total count_ruptures           0.008     3.344     2     
+managing sources               0.008     0.0       1     
+store source_info              0.008     0.0       1     
+splitting sources              3.724E-04 0.0       1     
+reading site collection        3.197E-04 0.0       1     
+unpickling count_ruptures      1.628E-04 0.0       2     
+aggregate curves               8.869E-05 0.0       2     
+saving probability maps        5.102E-05 0.0       1     
 ============================== ========= ========= ======
