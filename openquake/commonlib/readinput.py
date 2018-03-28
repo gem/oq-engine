@@ -222,7 +222,8 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     global pmap, exposure
-    if 'exposure' in oqparam.inputs:
+    if 'exposure' in oqparam.inputs and exposure is None:
+        # read it only once
         exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
