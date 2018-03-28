@@ -208,8 +208,9 @@ reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 investigation_time = 50.
+source_model_file = fake.xml
 """)
-        oqparam = readinput.get_oqparam(source, hc_id=1)
+        oqparam = readinput.get_oqparam(source)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
@@ -249,6 +250,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
         oqparam.max_site_model_distance = 5
