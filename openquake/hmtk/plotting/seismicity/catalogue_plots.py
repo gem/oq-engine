@@ -92,7 +92,7 @@ def plot_depth_histogram(
     else:
         fig = ax.get_figure()
     # Create depth range
-    if not catalogue.data['depth']:
+    if len(catalogue.data['depth']) == 0:  # pylint: disable=len-as-condition
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + bin_width,
@@ -137,7 +137,7 @@ def plot_magnitude_depth_density(
     :param int bootstrap:
         To sample magnitude and depth uncertainties choose number of samples
     """
-    if not catalogue.data['depth']:
+    if len(catalogue.data['depth']) == 0:  # pylint: disable=len-as-condition
         raise ValueError('No depths reported in catalogue!')
     depth_bins = np.arange(0.,
                            np.max(catalogue.data['depth']) + depth_int,
@@ -198,7 +198,8 @@ def plot_magnitude_time_scatter(
         fig = ax.get_figure()
 
     dtime = catalogue.get_decimal_time()
-    if not catalogue.data['sigmaMagnitude']:
+    # pylint: disable=len-as-condition
+    if len(catalogue.data['sigmaMagnitude']) == 0:
         print('Magnitude Error is missing - neglecting error bars!')
         plot_error = False
 
@@ -305,7 +306,7 @@ def _plot_completeness(ax, comw, start_time, end_time):
     comw = np.array(comw)
     comp = np.column_stack([np.hstack([end_time, comw[:, 0], start_time]),
                             np.hstack([comw[0, 1], comw[:, 1], comw[-1, 1]])])
-    ax.step(comp[:-1, 0], comp[1:, 1], ls='--',
+    ax.step(comp[:-1, 0], comp[1:, 1], linestyle='-',
             where="post", linewidth=3, color='brown')
 
 
