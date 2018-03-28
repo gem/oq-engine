@@ -531,6 +531,7 @@ def build_asset_array(assets_by_site, tagnames=()):
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
             if period != 'None':
+                # see scenario_risk test_case_2d
                 occupancy_periods.append(period)
             loss_types.append(name)
             # discard occupants for different time periods
