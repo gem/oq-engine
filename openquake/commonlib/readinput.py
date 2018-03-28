@@ -315,9 +315,6 @@ def get_site_collection(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.hazard_calculation_id:
-        with datastore.read(oqparam.hazard_calculation_id) as dstore:
-            return dstore['sitecol'].complete
     mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
@@ -619,11 +616,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         exposure = get_exposure(oqparam)
     if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
-        haz_mesh = exposure.mesh.get_convex_hull().dilate(
+        exposure.mesh = exposure.mesh.get_convex_hull().dilate(
             oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
-        haz_sitecol = site.SiteCollection.from_points(
-            haz_mesh.lons, haz_mesh.lats, sitemodel=oqparam)
+        haz_sitecol = get_site_collection(oqparam)
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
