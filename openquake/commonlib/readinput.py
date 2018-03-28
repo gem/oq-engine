@@ -222,10 +222,11 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     global pmap, exposure
-    if 'exposure' in oqparam.inputs:
+    if 'exposure' in oqparam.inputs and exposure is None:
+        # read it only once
         exposure = get_exposure(oqparam)
     if oqparam.sites:
-        return geo.Mesh.from_coords(sorted(oqparam.sites))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').readlines()
         has_header = csv_data[0].startswith('site_id')
@@ -245,7 +246,8 @@ def get_mesh(oqparam):
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
-        return geo.Mesh.from_coords(c)
+        # TODO: sort=True below would break a lot of tests :-(
+        return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
@@ -262,8 +264,7 @@ def get_mesh(oqparam):
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         try:
             mesh = geo.Polygon(points).discretize(oqparam.region_grid_spacing)
-            lons, lats = zip(*sorted(zip(mesh.lons, mesh.lats)))
-            return geo.Mesh(numpy.array(lons), numpy.array(lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except:
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
@@ -273,7 +274,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param['lon'], param['lat'], 0)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(sorted(coords))
+        mesh = geo.Mesh.from_coords(coords)
         mesh.from_site_model = True
         return mesh
 
@@ -315,9 +316,6 @@ def get_site_collection(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.hazard_calculation_id:
-        with datastore.read(oqparam.hazard_calculation_id) as dstore:
-            return dstore['sitecol'].complete
     mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
@@ -617,26 +615,39 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
+    if oqparam.region_grid_spacing and not oqparam.region:
+        # extract the hazard grid from the exposure
+        exposure.mesh = exposure.mesh.get_convex_hull().dilate(
+            oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
+        haz_sitecol = get_site_collection(oqparam)
+        haz_distance = oqparam.region_grid_spacing
+        if haz_distance != oqparam.asset_hazard_distance:
+            logging.info('Using asset_hazard_distance=%d km instead of %d km',
+                         haz_distance, oqparam.asset_hazard_distance)
+    else:
+        haz_distance = oqparam.asset_hazard_distance
+
     if haz_sitecol.mesh != exposure.mesh:
-        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         all_sids = haz_sitecol.complete.sids
         sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
-        asset_hazard_distance = oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
         assets_by_sid = AccumDict(accum=[])
+        tot_assets = 0
         for assets in exposure.assets_by_site:
+            tot_assets += len(assets)
             lon, lat = assets[0].location
-            site, distance = siteobjects.get_closest(lon, lat)
-            if site.sid in sids and distance <= asset_hazard_distance:
+            obj, distance = siteobjects.get_closest(lon, lat)
+            if obj.sid in sids and distance <= haz_distance:
                 # keep the assets, otherwise discard them
-                assets_by_sid += {site.sid: list(assets)}
+                assets_by_sid += {obj.sid: list(assets)}
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'asset_hazard_distance of %s km' % asset_hazard_distance)
+                'asset_hazard_distance of %s km' % haz_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
         exposure.assets_by_site = [
@@ -644,8 +655,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
             for sid in all_sids]
         num_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol = haz_sitecol.complete.filter(mask)
-        logging.info('Associated %d/%d assets to %d sites',
-                     num_assets, tot_assets, len(sitecol))
+        logging.info('Associated %d assets to %d sites',
+                     num_assets, len(sitecol))
+        if num_assets < tot_assets:
+            msg = ('Discarded %d assets outside the asset_hazard_distance of '
+                   '%d km') % (tot_assets - num_assets, haz_distance)
+            if oqparam.region_grid_spacing:
+                raise geo.utils.SiteAssociationError(msg)
+            else:
+                logging.warn(msg)
     else:
         sitecol = haz_sitecol
 
