@@ -193,11 +193,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.critical('', exc_info=True)
                 raise
         finally:
+            # cleanup globals
             if ct == 0:  # restore OQ_DISTRIBUTE
                 if oq_distribute is None:  # was not set
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
+            readinput.pmap = None
+            readinput.exposure = None
             Starmap.shutdown()
         return getattr(self, 'exported', {})
 
