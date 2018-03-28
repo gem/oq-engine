@@ -615,6 +615,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     """
     global exposure
     if exposure is None:
+        # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
     tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
     all_sids = haz_sitecol.complete.sids
