@@ -24,7 +24,6 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.baselib.python3compat import decode
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -171,7 +170,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1296)
+        self.assertEqual(nbytes, 1404)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -259,6 +258,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
+
+        # this is a case with exposure and region_grid_spacing
+        self.run_calc(case_miriam.__file__, 'job2.ini')
+        sitecol = self.calc.datastore['sitecol']
+        assetcol = self.calc.datastore['assetcol']
+        self.assertEqual(len(sitecol), 15)
+        self.assertGreater(sitecol.vs30.sum(), 0)
+        self.assertEqual(len(assetcol), 548)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):

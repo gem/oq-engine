@@ -196,11 +196,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.critical('', exc_info=True)
                 raise
         finally:
+            # cleanup globals
             if ct == 0:  # restore OQ_DISTRIBUTE
                 if oq_distribute is None:  # was not set
                     del os.environ['OQ_DISTRIBUTE']
                 else:
                     os.environ['OQ_DISTRIBUTE'] = oq_distribute
+            readinput.pmap = None
+            readinput.exposure = None
             Starmap.shutdown()
         return getattr(self, 'exported', {})
 
@@ -433,6 +436,7 @@ class HazardCalculator(BaseCalculator):
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol)
+            readinput.exposure = None  # reset the global
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -476,9 +480,12 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         with self.monitor('reading site collection', autoflush=True):
-            haz_sitecol = readinput.get_site_collection(oq)
-        if haz_sitecol is not None:
-            logging.info('There are %d hazard site(s)', len(haz_sitecol))
+            if oq.hazard_calculation_id:
+                with datastore.read(oq.hazard_calculation_id) as dstore:
+                    haz_sitecol = dstore['sitecol'].complete
+            else:
+                haz_sitecol = readinput.get_site_collection(oq)
+        logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
