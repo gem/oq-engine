@@ -889,8 +889,7 @@ class Exposure(object):
         :returns: (Mesh instance, assets_by_site list)
         """
         assets_by_loc = general.groupby(self, key=lambda a: a.location)
-        lons, lats = zip(*sorted(assets_by_loc))
-        mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+        mesh = geo.Mesh.from_coords(list(assets_by_loc))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         return mesh, assets_by_site
