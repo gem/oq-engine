@@ -45,6 +45,9 @@ get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 
 
@@ -606,54 +609,66 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        logging.info('There are %d realizations', self.R)
+        logging.info('Found %d realization(s)', self.R)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
-        num_tasks = self.oqparam.concurrent_tasks or 1
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
-        assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = []
-            sid_weight_pairs = [
-                (sid, len(assets))
-                for sid, assets in enumerate(assets_by_site)]
-            blocks = general.split_in_blocks(
-                sid_weight_pairs, num_tasks, weight=operator.itemgetter(1))
-            dstore = self.can_read_parent() or self.datastore
-            for block in blocks:
-                sids = numpy.array([sid for sid, _weight in block])
-                reduced_assets = assets_by_site[sids]
-                # dictionary of epsilons for the reduced assets
-                reduced_eps = {}
-                for assets in reduced_assets:
-                    for ass in assets:
-                        if eps is not None and len(eps):
-                            reduced_eps[ass.ordinal] = eps[ass.ordinal]
-                # build the riskinputs
-                if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = PmapGetter(dstore, sids, self.rlzs_assoc)
-                    getter.num_rlzs = self.R
-                else:  # gmf
-                    getter = GmfDataGetter(dstore, sids, self.R, num_events)
-                if dstore is self.datastore:
-                    # read the hazard data in the controller node
-                    logging.info('Reading hazard')
-                    getter.init()
-                else:
-                    # the datastore must be closed to avoid the HDF5 fork bug
-                    assert dstore.hdf5 == (), '%s is not closed!' % dstore
-                ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
-                if ri.weight > 0:
-                    riskinputs.append(ri)
-            assert riskinputs
-            logging.info('Built %d risk inputs', len(riskinputs))
-            return riskinputs
+            riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
+        assert riskinputs
+        logging.info('Built %d risk inputs', len(riskinputs))
+        return riskinputs
+
+    def _gen_riskinputs(self, kind, eps, num_events):
+        num_tasks = self.oqparam.concurrent_tasks or 1
+        assets_by_site = self.assetcol.assets_by_site()
+        if kind == 'poe':
+            indices = None
+        else:
+            indices = self.datastore['gmf_data/indices'].value
+        dstore = self.can_read_parent() or self.datastore
+        sid_weight = []
+        for sid, assets in enumerate(assets_by_site):
+            if len(assets) == 0:
+                continue
+            elif indices is None:
+                weight = len(assets)
+            else:
+                num_gmfs = sum(stop - start for start, stop in indices[sid])
+                weight = len(assets) * (num_gmfs or 1)
+            sid_weight.append((sid, weight))
+        for block in general.split_in_blocks(
+                sid_weight, num_tasks, weight=operator.itemgetter(1)):
+            sids = numpy.array([sid for sid, _weight in block])
+            reduced_assets = assets_by_site[sids]
+            # dictionary of epsilons for the reduced assets
+            reduced_eps = {}
+            for assets in reduced_assets:
+                for ass in assets:
+                    if eps is not None and len(eps):
+                        reduced_eps[ass.ordinal] = eps[ass.ordinal]
+            # build the riskinputs
+            if kind == 'poe':  # hcurves, shape (R, N)
+                getter = PmapGetter(dstore, sids, self.rlzs_assoc)
+                getter.num_rlzs = self.R
+            else:  # gmf
+                getter = GmfDataGetter(dstore, sids, self.R, num_events)
+            if dstore is self.datastore:
+                # read the hazard data in the controller node
+                logging.info('Reading hazard')
+                getter.init()
+            else:
+                # the datastore must be closed to avoid the HDF5 fork bug
+                assert dstore.hdf5 == (), '%s is not closed!' % dstore
+            ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
+            ri.weight = block.weight
+            yield ri
 
     def execute(self):
         """
@@ -669,12 +684,6 @@ class RiskCalculator(HazardCalculator):
 
     def combine(self, acc, res):
         return acc + res
-
-
-U16 = numpy.uint16
-U32 = numpy.uint32
-U64 = numpy.uint64
-F32 = numpy.float32
 
 
 def get_gmv_data(sids, gmfs):
