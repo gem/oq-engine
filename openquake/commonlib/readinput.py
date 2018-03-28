@@ -617,41 +617,44 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
-    tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-    all_sids = haz_sitecol.complete.sids
-    sids = set(haz_sitecol.sids)
-    # associate the assets to the hazard sites
-    asset_hazard_distance = oqparam.asset_hazard_distance
-    siteobjects = geo.utils.GeographicObjects(
-        Site(sid, lon, lat) for sid, lon, lat in
-        zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
-    assets_by_sid = AccumDict(accum=[])
-    for assets in exposure.assets_by_site:
-        lon, lat = assets[0].location
-        site, distance = siteobjects.get_closest(lon, lat)
-        if site.sid in sids and distance <= asset_hazard_distance:
-            # keep the assets, otherwise discard them
-            assets_by_sid += {site.sid: list(assets)}
-    if not assets_by_sid:
-        raise geo.utils.SiteAssociationError(
-            'Could not associate any site to any assets within the '
-            'asset_hazard_distance of %s km' % asset_hazard_distance)
-    mask = numpy.array(
-        [sid in assets_by_sid for sid in all_sids])
-    assets_by_site = [
-        sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
-        for sid in all_sids]
-    num_assets = sum(len(assets) for assets in assets_by_site)
-    sitecol = haz_sitecol.complete.filter(mask)
-    logging.info('Associated %d/%d assets to %d sites',
-                 num_assets, tot_assets, len(sitecol))
+    if haz_sitecol.mesh != exposure.mesh:
+        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
+        all_sids = haz_sitecol.complete.sids
+        sids = set(haz_sitecol.sids)
+        # associate the assets to the hazard sites
+        asset_hazard_distance = oqparam.asset_hazard_distance
+        siteobjects = geo.utils.GeographicObjects(
+            Site(sid, lon, lat) for sid, lon, lat in
+            zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
+        assets_by_sid = AccumDict(accum=[])
+        for assets in exposure.assets_by_site:
+            lon, lat = assets[0].location
+            site, distance = siteobjects.get_closest(lon, lat)
+            if site.sid in sids and distance <= asset_hazard_distance:
+                # keep the assets, otherwise discard them
+                assets_by_sid += {site.sid: list(assets)}
+        if not assets_by_sid:
+            raise geo.utils.SiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % asset_hazard_distance)
+        mask = numpy.array(
+            [sid in assets_by_sid for sid in all_sids])
+        exposure.assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in all_sids]
+        num_assets = sum(len(assets) for assets in exposure.assets_by_site)
+        sitecol = haz_sitecol.complete.filter(mask)
+        logging.info('Associated %d/%d assets to %d sites',
+                     num_assets, tot_assets, len(sitecol))
+    else:
+        sitecol = haz_sitecol
 
     asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site
+                  for assets in exposure.assets_by_site
                   for asset in assets]
     assetcol = asset.AssetCollection(
         asset_refs,
-        assets_by_site,
+        exposure.assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
         oqparam.time_event,
