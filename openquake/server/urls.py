@@ -35,8 +35,8 @@ urlpatterns = [
         views.web_engine_get_outputs, name="outputs"),
     url(r'^engine/license$', views.license,
         name="license"),
-    # FIXME this two rules are kept for backward compatibility QGIS plugin
-    # while a compatible version is released
+    # FIXME this two rules are kept for backward compatibility with the
+    # QGIS plugin while a compatible version is released
     url(r'^engine_version$', views.get_engine_version),
     url(r'^engine_latest_version$', views.get_engine_latest_version),
 ]
