@@ -608,14 +608,6 @@ def get_exposure(oqparam):
         oqparam.region_constraint, oqparam.ignore_missing_costs)
 
 
-def _get_mesh_assets_by_site(oqparam, exposure):
-    assets_by_loc = groupby(exposure, key=lambda a: a.location)
-    mesh = geo.Mesh.from_coords(list(assets_by_loc))
-    assets_by_site = [
-        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
-    return mesh, assets_by_site
-
-
 def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     """
     :param oqparam: calculation parameters
@@ -623,7 +615,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     :returns: (site collection, asset collection) instances
     """
     exposure = get_exposure(oqparam)
-    mesh, assets_by_site = _get_mesh_assets_by_site(oqparam, exposure)
+    mesh, assets_by_site = exposure.get_mesh_assets_by_site()
     if (haz_sitecol is None and oqparam.region_grid_spacing and not
             oqparam.region):
         # extract the hazard grid from the exposure
