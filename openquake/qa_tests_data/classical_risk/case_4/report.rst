@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     2,439,591,035      
-date           2018-02-25T06:41:50
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:54:38
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -75,22 +75,6 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 4,195        91,021      
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= ================================================================================
-count_ruptures.received tot 7.34 KB, max_per_task 897 B                                                 
-count_ruptures.sent     sources 75.32 KB, srcfilter 8.75 KB, param 4.82 KB, monitor 2.9 KB, gsims 1.9 KB
-hazard.input_weight     9102.1                                                                          
-hazard.n_imts           1                                                                               
-hazard.n_levels         19                                                                              
-hazard.n_realizations   2                                                                               
-hazard.n_sites          6                                                                               
-hazard.n_sources        39                                                                              
-hazard.output_weight    114.0                                                                           
-hostname                tstation.gem.lan                                                                
-require_epsilons        True                                                                            
-======================= ================================================================================
-
 Exposure model
 --------------
 =============== ========
@@ -109,37 +93,37 @@ A        1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-231       AreaSource   4,185        0.064     1,091     279      
-376       AreaSource   2,220        1.748E-04 2         1        
-291       AreaSource   2,350        0.0       1         0        
-45        AreaSource   960          0.0       1         0        
-90        AreaSource   285          0.0       1         0        
-325       AreaSource   3,934        0.0       1         0        
-10        AreaSource   1,920        0.0       1         0        
-28        AreaSource   2,548        0.0       1         0        
-198       AreaSource   760          0.0       1         0        
-166       AreaSource   559          0.0       1         0        
-42        AreaSource   1,755        0.0       1         0        
-395       AreaSource   2,720        0.0       1         0        
-2         AreaSource   5,446        0.0       1         0        
-208       AreaSource   760          0.0       1         0        
-161       AreaSource   552          0.0       1         0        
-132       AreaSource   4,131        0.0       1         0        
-257       AreaSource   2,850        0.0       1         0        
-288       AreaSource   2,430        0.0       1         0        
-68        AreaSource   1,899        0.0       1         0        
-89        AreaSource   810          0.0       1         0        
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= =========
+source_id source_class num_ruptures calc_time split_time num_sites num_split
+========= ============ ============ ========= ========== ========= =========
+231       AreaSource   4,185        0.056     0.056      1,090     279      
+376       AreaSource   2,220        1.087E-04 0.040      1         1        
+95        AreaSource   1,176        0.0       0.031      0         0        
+325       AreaSource   3,934        0.0       0.051      0         0        
+42        AreaSource   1,755        0.0       0.029      0         0        
+166       AreaSource   559          0.0       0.016      0         0        
+132       AreaSource   4,131        0.0       0.097      0         0        
+90        AreaSource   285          0.0       0.027      0         0        
+161       AreaSource   552          0.0       0.024      0         0        
+135       AreaSource   3,285        0.0       0.103      0         0        
+28        AreaSource   2,548        0.0       0.040      0         0        
+257       AreaSource   2,850        0.0       0.061      0         0        
+125       AreaSource   8,274        0.0       0.211      0         0        
+270       AreaSource   7,837        0.0       0.133      0         0        
+127       AreaSource   2,940        0.0       0.112      0         0        
+8         AreaSource   4,832        0.0       0.272      0         0        
+198       AreaSource   760          0.0       0.030      0         0        
+253       AreaSource   3,058        0.0       0.060      0         0        
+225       AreaSource   520          0.0       0.009      0         0        
+89        AreaSource   810          0.0       0.035      0         0        
+========= ============ ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.064     39    
+AreaSource   0.056     39    
 ============ ========= ======
 
 Duplicated sources
@@ -150,20 +134,29 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.014 0.005  0.003 0.019 9        
+count_ruptures     0.010 0.004  0.003 0.016 9        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ============================================================================ ========
+task           sent                                                                         received
+count_ruptures sources=69.43 KB srcfilter=8.75 KB param=4.82 KB monitor=2.9 KB gsims=1.9 KB 3.22 KB 
+============== ============================================================================ ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.034     0.0       1     
-managing sources               2.986     0.0       1     
-total count_ruptures           0.129     2.316     9     
-store source_info              0.003     0.0       1     
-reading exposure               0.001     0.0       1     
-aggregate curves               1.352E-04 0.0       9     
-saving probability maps        2.646E-05 0.0       1     
-reading site collection        6.437E-06 0.0       1     
+reading composite source model 4.549     0.0       1     
+splitting sources              2.234     3.672     1     
+managing sources               0.671     0.0       1     
+total count_ruptures           0.088     1.711     9     
+reading exposure               0.006     0.0       1     
+store source_info              0.004     0.0       1     
+unpickling count_ruptures      3.211E-04 0.0       9     
+aggregate curves               1.199E-04 0.0       9     
+reading site collection        4.292E-05 0.0       1     
+saving probability maps        2.384E-05 0.0       1     
 ============================== ========= ========= ======

@@ -155,7 +155,6 @@ nav.main-nav ul li.tools {
 }
 
 footer.footer {
-    z-index: 1000;
     background: #bebebe;
     font-size: 12px;
     position: fixed;
