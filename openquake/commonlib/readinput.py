@@ -618,7 +618,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     :param haz_sitecol: a pre-existing site collection, if any
     :returns: (site collection, asset collection) instances
     """
-    exposure = get_exposure(oqparam)
     mesh, assets_by_site = exposure.get_mesh_assets_by_site()
     if haz_sitecol:
         tot_assets = sum(len(assets) for assets in assets_by_site)
