@@ -3,8 +3,8 @@ Ucerf test
 
 ============== ===================
 checksum32     2,080,369,829      
-date           2018-02-25T06:41:57
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:54:47
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 155, num_levels = 6
@@ -160,8 +160,8 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 9.491E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+reading site collection 0.001    0.0       1     
+======================= ======== ========= ======

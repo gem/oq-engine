@@ -27,7 +27,7 @@ from shapely import wkt, geometry
 from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import valid, nrml, geo, InvalidFile
 
 
 class CostCalculator(object):
@@ -892,6 +892,16 @@ class Exposure(object):
                     deductibles, insurance_limits, retrofitted,
                     self.cost_calculator)
         self.assets.append(ass)
+
+    def get_mesh_assets_by_site(self):
+        """
+        :returns: (Mesh instance, assets_by_site list)
+        """
+        assets_by_loc = general.groupby(self, key=lambda a: a.location)
+        mesh = geo.Mesh.from_coords(list(assets_by_loc))
+        assets_by_site = [
+            assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
+        return mesh, assets_by_site
 
     def __iter__(self):
         return iter(self.assets)
