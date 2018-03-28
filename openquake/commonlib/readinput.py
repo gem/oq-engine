@@ -269,8 +269,6 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
-        exposure.mesh, exposure.assets_by_site = (
-            exposure.get_mesh_assets_by_site())
         return exposure.mesh
     elif 'site_model' in oqparam.inputs:
         coords = [(param['lon'], param['lat'], 0)
@@ -606,9 +604,11 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    return asset.Exposure.read(
+    exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region_constraint, oqparam.ignore_missing_costs)
+    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    return exposure
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None):
@@ -617,9 +617,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     :param haz_sitecol: a pre-existing site collection, if any
     :returns: (site collection, asset collection) instances
     """
-    if not hasattr(exposure, 'mesh'):  # not read already
-        exposure.mesh, exposure.assets_by_site = (
-            exposure.get_mesh_assets_by_site())
     if haz_sitecol:
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         all_sids = haz_sitecol.complete.sids
