@@ -269,8 +269,9 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
-        # the mesh will be extracted from the exposure later
-        return
+        exposure.mesh, exposure.assets_by_site = (
+            exposure.get_mesh_assets_by_site())
+        return exposure.mesh
     elif 'site_model' in oqparam.inputs:
         coords = [(param['lon'], param['lat'], 0)
                   for param in get_site_model(oqparam)]
@@ -324,8 +325,6 @@ def get_site_collection(oqparam, mesh=None):
     if mesh is None and oqparam.hazard_calculation_id:
         with datastore.read(oqparam.hazard_calculation_id) as dstore:
             return dstore['sitecol'].complete
-    elif mesh is None:
-        return
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         if getattr(mesh, 'from_site_model', False):
@@ -618,9 +617,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
     :param haz_sitecol: a pre-existing site collection, if any
     :returns: (site collection, asset collection) instances
     """
-    mesh, assets_by_site = exposure.get_mesh_assets_by_site()
+    if not hasattr(exposure, 'mesh'):  # not read already
+        exposure.mesh, exposure.assets_by_site = (
+            exposure.get_mesh_assets_by_site())
     if haz_sitecol:
-        tot_assets = sum(len(assets) for assets in assets_by_site)
+        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         all_sids = haz_sitecol.complete.sids
         sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
@@ -629,7 +630,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             Site(sid, lon, lat) for sid, lon, lat in
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
         assets_by_sid = AccumDict(accum=[])
-        for assets in assets_by_site:
+        for assets in exposure.assets_by_site:
             lon, lat = assets[0].location
             site, distance = siteobjects.get_closest(lon, lat)
             if site.sid in sids and distance <= asset_hazard_distance:
@@ -649,7 +650,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
         logging.info('Associated %d/%d assets to %d sites',
                      num_assets, tot_assets, len(sitecol))
     else:  # use the exposure sites as hazard sites
-        sitecol = get_site_collection(oqparam, mesh)
+        sitecol = get_site_collection(oqparam, exposure.mesh)
     asset_refs = [exposure.asset_refs[asset.ordinal]
                   for assets in assets_by_site
                   for asset in assets]
