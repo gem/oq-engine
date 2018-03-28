@@ -2,9 +2,9 @@ Event Based from NonParametric source
 =====================================
 
 ============== ===================
-checksum32     2,117,452,566      
-date           2018-02-25T06:43:33
-engine_version 2.10.0-git1f7c0c0  
+checksum32     3,617,901,848      
+date           2018-03-26T15:56:46
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -40,11 +40,36 @@ source                  `source_model.xml <source_model.xml>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
+Composite source model
+----------------------
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+====== ================= =========== ======================= =================
+
+Realizations per (TRT, GSIM)
+----------------------------
+
+::
+
+  <RlzsAssoc(size=1, rlzs=1)
+  0,ChiouYoungs2008(): [0]>
+
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.045     0.0       1     
-reading site collection        5.913E-05 0.0       1     
+reading composite source model 0.048     0.0       1     
+splitting sources              3.016E-04 0.0       1     
+reading site collection        6.008E-05 0.0       1     
 ============================== ========= ========= ======
