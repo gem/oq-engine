@@ -49,16 +49,12 @@ def _check_completeness_table(completeness, catalogue):
 
 
 def plot_recurrence_model(
-        input_model, catalogue, completeness, dmag, filename=None,
-        figure_size=None, filetype='png', dpi=300, ax=None):
+        input_model, catalogue, completeness, dmag=0.1, filename=None,
+        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Plot a calculated recurrence model over an observed catalogue, adjusted for
     time-varying completeness
     """
-    if figure_size is None:
-        figure_size = (8, 6)
-    if dmag is None:
-        dmag = 0.1
     annual_rates, cumulative_rates = _get_recurrence_model(input_model)
 
     # Get observed annual recurrence
@@ -72,7 +68,7 @@ def plot_recurrence_model(
                               for i in range(len(obs_rates))])
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=figure_size)
     else:
         fig = ax.get_figure()
 
