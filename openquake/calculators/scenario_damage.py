@@ -45,7 +45,7 @@ def dist_by_asset(data, multi_stat_dt, number):
             if abs(mean.sum() / number[n] - 1) > 1E-3:
                 logging.warn(
                     'Asset #%d, rlz=%d, expected %s, got %s for %s damage',
-                    n, r, mean.sum(), number[n], lt)
+                    n, r, number[n], mean.sum(), lt)
     return out
 
 
