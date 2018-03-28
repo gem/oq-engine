@@ -82,6 +82,13 @@ class GriddedSurface(BaseSurface):
         """
         return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
 
+    def get_surface_boundaries(self):
+        """
+        :returns: (min_max lons, min_max lats)
+        """
+        min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
+        return [[min_lon, max_lon]], [[min_lat, max_lat]]
+
     def get_min_distance(self, mesh):
         """
         Compute and return the minimum distance from the surface to each point
@@ -161,9 +168,9 @@ class GriddedSurface(BaseSurface):
         The actual definition of the strike might depend on surface geometry.
 
         :returns:
-            Float value, the azimuth (in degrees) of the surface top edge
+            numpy.nan, not available for this kind of surface (yet)
         """
-        raise NotImplementedError
+        return np.nan
 
     def get_dip(self):
         """
@@ -172,10 +179,9 @@ class GriddedSurface(BaseSurface):
         The actual definition of the dip might depend on surface geometry.
 
         :returns:
-            Float value, the inclination (in degrees) of the surface with
-            respect to the Earth surface
+            numpy.nan, not available for this kind of surface (yet)
         """
-        raise NotImplementedError
+        return np.nan
 
     def get_width(self):
         """
@@ -209,12 +215,13 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        lon_bar = np.mean(self.mesh.lons)
-        lat_bar = np.mean(self.mesh.lats)
-        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
-                        (self.mesh.lats - lat_bar)**2)
-        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
-                     self.mesh.depths[idx])
+        # the mesh has shape (1, N)
+        lon_bar = np.mean(self.mesh.lons[0])
+        lat_bar = np.mean(self.mesh.lats[0])
+        idx = np.argmin((self.mesh.lons[0] - lon_bar)**2 +
+                        (self.mesh.lats[0] - lat_bar)**2)
+        return Point(self.mesh.lons[0, idx], self.mesh.lats[0, idx],
+                     self.mesh.depths[0, idx])
 
     def get_ry0_distance(self, mesh):
         """
