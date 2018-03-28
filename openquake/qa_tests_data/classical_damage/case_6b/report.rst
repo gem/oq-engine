@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     3,658,576,157      
-date           2018-02-25T06:42:00
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:54:52
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 7, num_levels = 28
@@ -74,22 +74,6 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 1,694        1,694       
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= ===================================================================================
-count_ruptures.received tot 10.44 KB, max_per_task 822 B                                                   
-count_ruptures.sent     sources 13.88 KB, srcfilter 13.32 KB, param 7.87 KB, monitor 4.19 KB, gsims 1.52 KB
-hazard.input_weight     1694.0                                                                             
-hazard.n_imts           1                                                                                  
-hazard.n_levels         28                                                                                 
-hazard.n_realizations   1                                                                                  
-hazard.n_sites          7                                                                                  
-hazard.n_sources        1                                                                                  
-hazard.output_weight    196.0                                                                              
-hostname                tstation.gem.lan                                                                   
-require_epsilons        False                                                                              
-======================= ===================================================================================
-
 Exposure model
 --------------
 =============== ========
@@ -106,18 +90,18 @@ Wood     1.000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========= =========
-source_id source_class      num_ruptures calc_time num_sites num_split
-========= ================= ============ ========= ========= =========
-1         SimpleFaultSource 1,694        0.063     106       15       
-========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========== ========= =========
+source_id source_class      num_ruptures calc_time split_time num_sites num_split
+========= ================= ============ ========= ========== ========= =========
+1         SimpleFaultSource 1,694        0.096     3.402E-04  105       15       
+========= ================= ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.063     1     
+SimpleFaultSource 0.096     1     
 ================= ========= ======
 
 Duplicated sources
@@ -128,20 +112,29 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.009 0.004  0.003 0.018 13       
+count_ruptures     0.009 0.003  0.005 0.015 13       
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== =============================================================================== ========
+task           sent                                                                            received
+count_ruptures sources=13.88 KB srcfilter=13.32 KB param=7.87 KB monitor=4.19 KB gsims=1.52 KB 4.62 KB 
+============== =============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.112     0.0       13    
-managing sources               0.079     0.0       1     
-reading composite source model 0.009     0.0       1     
-store source_info              0.005     0.0       1     
-reading exposure               0.001     0.0       1     
-aggregate curves               2.940E-04 0.0       13    
-saving probability maps        4.172E-05 0.0       1     
-reading site collection        6.199E-06 0.0       1     
+total count_ruptures           0.122     3.445     13    
+managing sources               0.037     0.0       1     
+reading composite source model 0.021     0.0       1     
+reading exposure               0.007     0.0       1     
+store source_info              0.004     0.0       1     
+splitting sources              8.800E-04 0.0       1     
+unpickling count_ruptures      5.307E-04 0.0       13    
+aggregate curves               2.503E-04 0.0       13    
+reading site collection        4.792E-05 0.0       1     
+saving probability maps        3.195E-05 0.0       1     
 ============================== ========= ========= ======

@@ -178,12 +178,13 @@ def calc_hazard_curves(
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]
+    mon = Monitor()
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            it = [classical(group, ss_filter, [gsim], param)]
+            it = [classical(group, ss_filter, [gsim], param, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group, ss_filter, [gsim], param),
+                classical, (group, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
         for res in it:
             for grp_id in res:
