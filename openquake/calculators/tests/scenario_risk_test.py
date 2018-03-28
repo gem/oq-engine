@@ -78,6 +78,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # time_event not specified in job_h.ini but specified in job_r.ini
         out = self.run_calc(case_2d.__file__, 'job_h.ini,job_r.ini',
                             exports='csv')
+        # this is also a case with a single site but an exposure grid,
+        # to test the corner case
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
