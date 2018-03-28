@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Now the engine automatically associate the exposure to a grid if
+  * Now the engine automatically associates the exposure to a grid if
     `region_grid_spacing` is given and the sites are not specified otherwise
   * Extracting the site mesh from the exposure before looking at the site model
   * Added a check on probs_occur summing up to 1 in the SourceWriter
