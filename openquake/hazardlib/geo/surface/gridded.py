@@ -168,7 +168,7 @@ class GriddedSurface(BaseSurface):
         The actual definition of the strike might depend on surface geometry.
 
         :returns:
-            numpy.nan, not applicable to this kind of surface
+            numpy.nan, not available for this kind of surface (yet)
         """
         return np.nan
 
@@ -179,7 +179,7 @@ class GriddedSurface(BaseSurface):
         The actual definition of the dip might depend on surface geometry.
 
         :returns:
-            numpy.nan, not applicable to this kind of surface
+            numpy.nan, not available for this kind of surface (yet)
         """
         return np.nan
 
