@@ -30,7 +30,6 @@ import numpy
 from openquake.baselib.general import AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node
-from openquake.baselib import hdf5
 from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source.rupture import EBRupture
@@ -676,8 +675,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         exposure.tagcol,
         exposure.cost_calculator,
         oqparam.time_event,
-        occupancy_periods=hdf5.array_of_vstr(
-            sorted(exposure.occupancy_periods)))
+        occupancy_periods=exposure.occupancy_periods)
     return sitecol, assetcol
 
 
