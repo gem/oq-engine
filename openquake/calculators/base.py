@@ -477,9 +477,12 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         with self.monitor('reading site collection', autoflush=True):
-            haz_sitecol = readinput.get_site_collection(oq)
-        if haz_sitecol is not None:
-            logging.info('There are %d hazard site(s)', len(haz_sitecol))
+            if oq.hazard_calculation_id:
+                with datastore.read(oq.hazard_calculation_id) as dstore:
+                    haz_sitecol = dstore['sitecol'].complete
+            else:
+                haz_sitecol = readinput.get_site_collection(oq)
+        logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
