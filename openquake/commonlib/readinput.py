@@ -27,7 +27,7 @@ import tempfile
 import collections
 import numpy
 
-from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
+from openquake.baselib.general import AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node
 from openquake.baselib import hdf5
@@ -209,6 +209,9 @@ pmap = None  # set as side effect when the user reads hazard_curves from a file
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
 # this hack is necessary, otherwise we would have to parse the file twice
 
+exposure = None  # set as side effect when the user reads the site mesh
+# this hack is necessary, otherwise we would have to parse the exposure twice
+
 
 def get_mesh(oqparam):
     """
@@ -218,7 +221,9 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap
+    global pmap, exposure
+    if 'exposure' in oqparam.inputs:
+        exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(sorted(oqparam.sites))
     elif 'sites' in oqparam.inputs:
