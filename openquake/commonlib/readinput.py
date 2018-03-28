@@ -27,7 +27,7 @@ import tempfile
 import collections
 import numpy
 
-from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
+from openquake.baselib.general import AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node
 from openquake.baselib import hdf5
@@ -209,6 +209,9 @@ pmap = None  # set as side effect when the user reads hazard_curves from a file
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
 # this hack is necessary, otherwise we would have to parse the file twice
 
+exposure = None  # set as side effect when the user reads the site mesh
+# this hack is necessary, otherwise we would have to parse the exposure twice
+
 
 def get_mesh(oqparam):
     """
@@ -218,7 +221,9 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap
+    global pmap, exposure
+    if 'exposure' in oqparam.inputs:
+        exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
@@ -264,8 +269,7 @@ def get_mesh(oqparam):
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
-        # the mesh will be extracted from the exposure later
-        return
+        return exposure.mesh
     elif 'site_model' in oqparam.inputs:
         coords = [(param['lon'], param['lat'], 0)
                   for param in get_site_model(oqparam)]
@@ -303,25 +307,18 @@ def get_site_model(oqparam):
     return array
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param mesh:
-        a mesh of hazardlib points; if None the mesh is
-        determined by invoking get_mesh
     """
-    if mesh is None:
-        mesh = get_mesh(oqparam)
-    if mesh is None and oqparam.hazard_calculation_id:
+    if oqparam.hazard_calculation_id:
         with datastore.read(oqparam.hazard_calculation_id) as dstore:
             return dstore['sitecol'].complete
-    elif mesh is None:
-        # the mesh will be extracted from the exposure later
-        return
+    mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         if getattr(mesh, 'from_site_model', False):
@@ -603,23 +600,26 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    return asset.Exposure.read(
+    exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region_constraint, oqparam.ignore_missing_costs)
+    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    return exposure
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None):
+def get_sitecol_assetcol(oqparam, haz_sitecol):
     """
     :param oqparam: calculation parameters
-    :param haz_sitecol: a pre-existing site collection, if any
+    :param haz_sitecol: the hazard site collection
     :returns: (site collection, asset collection) instances
     """
-    exposure = get_exposure(oqparam)
-    mesh, assets_by_site = exposure.get_mesh_assets_by_site()
-    if (haz_sitecol is None and oqparam.region_grid_spacing and not
-            oqparam.region):
+    global exposure
+    if exposure is None:
+        # haz_sitecol not extracted from the exposure
+        exposure = get_exposure(oqparam)
+    if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
-        haz_mesh = mesh.get_convex_hull().dilate(
+        haz_mesh = exposure.mesh.get_convex_hull().dilate(
             oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
         haz_sitecol = site.SiteCollection.from_points(
@@ -630,8 +630,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                          haz_distance, oqparam.asset_hazard_distance)
     else:
         haz_distance = oqparam.asset_hazard_distance
-    if haz_sitecol:
-        tot_assets = sum(len(assets) for assets in assets_by_site)
+
+    if haz_sitecol.mesh != exposure.mesh:
         all_sids = haz_sitecol.complete.sids
         sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
@@ -639,7 +639,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
             Site(sid, lon, lat) for sid, lon, lat in
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
         assets_by_sid = AccumDict(accum=[])
-        for assets in assets_by_site:
+        tot_assets = 0
+        for assets in exposure.assets_by_site:
+            tot_assets += len(assets)
             lon, lat = assets[0].location
             obj, distance = siteobjects.get_closest(lon, lat)
             if obj.sid in sids and distance <= haz_distance:
@@ -651,10 +653,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 'asset_hazard_distance of %s km' % haz_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        assets_by_site = [
+        exposure.assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in all_sids]
-        num_assets = sum(len(assets) for assets in assets_by_site)
+        num_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol = haz_sitecol.complete.filter(mask)
         logging.info('Associated %d assets to %d sites',
                      num_assets, len(sitecol))
@@ -665,15 +667,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None):
                 raise geo.utils.SiteAssociationError(msg)
             else:
                 logging.warn(msg)
+    else:
+        sitecol = haz_sitecol
 
-    else:  # use the exposure sites as hazard sites
-        sitecol = get_site_collection(oqparam, mesh)
     asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site
+                  for assets in exposure.assets_by_site
                   for asset in assets]
     assetcol = asset.AssetCollection(
         asset_refs,
-        assets_by_site,
+        exposure.assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
         oqparam.time_event,
