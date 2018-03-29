@@ -96,10 +96,15 @@ class ClassicalDamageCase8TestCase(CalculatorTestCase):
 class ClassicalDamageTestCase(CalculatorTestCase):
     # all the tests here are similar
 
+    @classmethod
+    def setUpClass(cls):
+        cls.duration = numpy.zeros(2)  # hazard, risk
+
     def check(self, case):
         out = self.run_calc(
             case.__file__, 'job_haz.ini,job_risk.ini', exports='csv',
             concurrent_tasks='0')  # avoid the usual fork issue
+        self.__class__.duration += self.duration
         [fname] = out['damages-rlzs', 'csv']
         self.assertEqualFiles('expected/damages.csv', fname)
 
@@ -164,3 +169,7 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7c(self):
         self.check(case_7c)
+
+    @classmethod
+    def tearDownClass(cls):
+        print('duration (hazard, risk) =', cls.duration)
