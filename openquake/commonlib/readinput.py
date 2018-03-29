@@ -314,8 +314,10 @@ def get_site_collection(oqparam):
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         try:
+            # in the future we could have elevation in the site model
             depth = sm['depth']
         except ValueError:
+            # this is the normal case
             depth = None
         if mesh is None:
             # extract the site collection directly from the site model
