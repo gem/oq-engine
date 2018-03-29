@@ -93,6 +93,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
+        dur1 = self.calc._monitor.duration
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
@@ -102,9 +103,13 @@ class CalculatorTestCase(unittest.TestCase):
                 exported = self.calc.run(export_dir=self.edir,
                                          concurrent_tasks=0)
                 result.update(exported)
+            dur2 = self.calc._monitor.duration
+        else:
+            dur2 = 0
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
+        self.duration = numpy.array([dur1, dur2])
         return result
 
     def execute(self, testfile, job_ini):
