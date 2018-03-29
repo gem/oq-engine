@@ -57,6 +57,9 @@ def read_composite_risk_model(dstore):
                 rf = rf.build(rmdict.limit_states,
                               oqparam.continuous_fragility_discretization,
                               oqparam.steps_per_interval)
+            else:
+                # rf is a vulnerability function
+                rf.init()
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
                 retrodict[taxo][lt[:-12]] = rf
@@ -249,20 +252,20 @@ class CompositeRiskModel(collections.Mapping):
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):  # gmf-based calc
-                            data = [(haz['gmv'][:, imti[imt]], haz['eid'])
+                            eids = haz['eid']
+                            data = [(haz['gmv'][:, imti[imt]], eids)
                                     for imt in imt_lt]
                         elif not haz:  # no hazard for this site
+                            eids = []
                             data = [(numpy.zeros(hazard_getter.E),
                                      hazard_getter.eids) for imt in imt_lt]
                         else:  # classical
+                            eids = hazard_getter.eids
                             data = [haz[imti[imt]] for imt in imt_lt]
                         out = riskmodel.get_output(assets, data, epsgetter)
                         out.sid = sid
                         out.rlzi = rlzi
-                        try:
-                            out.eids = haz['eid']
-                        except TypeError:  # curves or zero GMFs
-                            out.eids = hazard_getter.eids
+                        out.eids = eids
                         yield out
 
     def __toh5__(self):
@@ -303,8 +306,6 @@ class RiskInput(object):
         self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.by_site = hazard_getter.__class__.__name__ != 'GmfGetter'
-        self.weight = len(self.aids) if self.by_site else len(
-            hazard_getter.ebruptures)
 
     @property
     def imt_taxonomies(self):
