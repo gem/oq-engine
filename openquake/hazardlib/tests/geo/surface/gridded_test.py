@@ -63,10 +63,10 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_strike(self):
-        self.assertRaises(NotImplementedError, self.surf.get_strike)
+        np.testing.assert_equal(np.nan, self.surf.get_strike())
 
     def test_get_dip(self):
-        self.assertRaises(NotImplementedError, self.surf.get_dip)
+        np.testing.assert_equal(np.nan, self.surf.get_dip())
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
