@@ -838,7 +838,7 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if sum(map(Decimal, value.split())) != 1:
+    if abs(1.-sum(map(float, value.split()))) > 1e-12:
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 

@@ -1,4 +1,23 @@
   [Michele Simionato]
+  * Fixed the export of ruptures with a GriddedSurface geometry
+  * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
+  * Fixed the issue of slow tasks in event_based_risk from precomputed GMFs
+    for sites without events
+  * Now the engine automatically associates the exposure to a grid if
+    `region_grid_spacing` is given and the sites are not specified otherwise
+  * Extracting the site mesh from the exposure before looking at the site model
+  * Added a check on probs_occur summing up to 1 in the SourceWriter
+  * `oq show job_info` now shows the received data amount while the
+    calculation is progressing
+
+  [Daniele Viganò]
+  * Removed support for Python 2 in `setup.py`
+  * Removed files containing Python 2 dependencies
+  * Added support for WebUI groups/permissions on the
+    export outputs and datastore API endpoints
+
+  [Michele Simionato]
+  * Fixed `oq show` for multiuser with parent calculations
   * Fixed `get_spherical_bounding_box` for griddedSurfaces
   * Implemented disaggregation by source only for the case
     of a single realization in the logic tree (experimental)
