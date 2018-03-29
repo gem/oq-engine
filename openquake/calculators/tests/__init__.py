@@ -136,6 +136,9 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
+            expected_dir = os.path.dirname(expected)
+            if not os.path.exists(expected_dir):
+                os.makedirs(expected_dir)
             open(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
