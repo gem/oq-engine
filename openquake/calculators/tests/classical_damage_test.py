@@ -105,64 +105,43 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1a(self):
-        self.run_calc(case_1a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.97179, 0.00488, 0.006703, 0.005186, 0.011442], 6)
+        self.check(case_1a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1b(self):
-        self.run_calc(case_1b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.982802, 0.001031, 0.002865, 0.003263, 0.010039], 6)
+        self.check(case_1b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1c(self):
-        self.run_calc(case_1c.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        expected = [0.97211, 0.00477, 0.00659, 0.00513, 0.0114]
-        aae(damages, expected, 5)
+        self.check(case_1c)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_2a(self):
-        self.run_calc(case_2a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, (0.97087, 0.00451, 0.00844, 0.00526, 0.01092), 5)
+        self.check(case_2a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_2b(self):
-        self.run_calc(case_2b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.97089, 0.0045, 0.00843, 0.00525, 0.01092], 5)
+        self.check(case_2b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_3a(self):
-        self.run_calc(case_3a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.97263, 0.00799, 0.01054, 0.0057, 0.00314], 5)
+        self.check(case_3a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4a(self):
-        self.run_calc(case_4a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.971, 0.00442, 0.00837, 0.00525, 0.01096], 5)
+        self.check(case_4a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4b(self):
-        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.10998, 0.04461, 0.13879, 0.14406, 0.56256], 5)
+        self.check(case_4b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_4c(self):
-        self.run_calc(case_4c.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.10998, 0.04461, 0.13879, 0.14406, 0.56256], 5)
+        self.check(case_4c)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_5a(self):
-        self.run_calc(case_5a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [4.85498, 0.02209, 0.04184, 0.02627, 0.05482], 5)
+        self.check(case_5a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_6a(self):
