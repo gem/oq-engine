@@ -313,10 +313,14 @@ def get_site_collection(oqparam):
     mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
+        try:
+            depth = sm['depth']
+        except ValueError:
+            depth = None
         if mesh is None:
             # extract the site collection directly from the site model
             return site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], sm['depth'], sm)
+                sm['lon'], sm['lat'], depth, sm)
         # associate the site parameters to the mesh
         site_model_params = geo.utils.GeographicObjects(
             sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
