@@ -270,12 +270,7 @@ def get_mesh(oqparam):
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
-    elif 'site_model' in oqparam.inputs:
-        coords = [(param['lon'], param['lat'], 0)
-                  for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(coords)
-        mesh.from_site_model = True
-        return mesh
+
 
 site_model_dt = numpy.dtype([
     ('lon', numpy.float64),
@@ -318,9 +313,10 @@ def get_site_collection(oqparam):
     mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
-        if getattr(mesh, 'from_site_model', False):
+        if mesh is None:
+            # extract the site collection directly from the site model
             return site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, None, sm)
+                sm['lon'], sm['lat'], sm['depth'], sm)
         # associate the site parameters to the mesh
         site_model_params = geo.utils.GeographicObjects(
             sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
