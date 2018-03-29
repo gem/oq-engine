@@ -79,7 +79,22 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
+class ClassicalDamageCase8TestCase(CalculatorTestCase):
+    @attr('qa', 'risk', 'classical_damage')
+    def test_case_8a(self):
+        self.run_calc(
+            case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/damages-rlzs-AkkarBommer2010().csv', f2)
+        self.assertEqualFiles(
+            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
+        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages-stats.csv', f)
+
+
 class ClassicalDamageTestCase(CalculatorTestCase):
+    # all the tests here are similar
 
     def check(self, case):
         out = self.run_calc(
@@ -170,15 +185,3 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7c(self):
         self.check(case_7c)
-
-    @attr('qa', 'risk', 'classical_damage')
-    def test_case_8a(self):
-        self.run_calc(
-            case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
-        f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/damages-rlzs-AkkarBommer2010().csv', f2)
-        self.assertEqualFiles(
-            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
-        [f] = export(('damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages-stats.csv', f)
