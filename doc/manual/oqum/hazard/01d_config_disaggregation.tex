@@ -40,7 +40,6 @@ distance_bin_width = 25.0
 coordinate_bin_width = 1.5
 num_epsilon_bins = 3
 disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
-disagg_by_src = true
 \end{minted}
 
 \begin{itemize}
@@ -77,8 +76,8 @@ disagg_by_src = true
     ``Outputs from Hazard Disaggregation'' section,
     see page~\pageref{subsec:output_hazard_disaggregation})
 
-    \item \Verb+disagg_by_src+: optional; if set to true, disaggregation by source is
-    computed. This option currently works only if the logic tree is trivial
+    \item \Verb+disagg_by_src+: optional; if specified and set to true, disaggregation
+    by source is computed. This option currently only works if the logic tree is trivial
     (i.e. there is only one realization).
 
 \end{itemize}
