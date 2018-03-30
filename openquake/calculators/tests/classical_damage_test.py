@@ -34,23 +34,20 @@ class ClassicalDamageCase1TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_continuous(self):
-        out = self.run_calc(case_1.__file__, 'job_continuous.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_continuous.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_discrete(self):
-        out = self.run_calc(case_1.__file__, 'job_discrete.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_discrete.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_interpolation(self):
-        out = self.run_calc(case_1.__file__, 'job_interpolation.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_1.__file__, 'job_interpolation.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
@@ -59,23 +56,20 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_continuous(self):
-        out = self.run_calc(case_2.__file__, 'job_continuous.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_2.__file__, 'job_continuous.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_discrete(self):
-        out = self.run_calc(case_2.__file__, 'job_discrete.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_2.__file__, 'job_discrete.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_interpolation(self):
-        out = self.run_calc(case_2.__file__, 'job_interpolation.ini',
-                            exports='csv')
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(case_2.__file__, 'job_interpolation.ini')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
@@ -83,7 +77,7 @@ class ClassicalDamageCase8TestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_damage')
     def test_case_8a(self):
         self.run_calc(
-            case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+            case_8a.__file__, 'job_haz.ini,job_risk.ini')
         f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/damages-rlzs-AkkarBommer2010().csv', f2)
@@ -96,16 +90,10 @@ class ClassicalDamageCase8TestCase(CalculatorTestCase):
 class ClassicalDamageTestCase(CalculatorTestCase):
     # all the tests here are similar
 
-    @classmethod
-    def setUpClass(cls):
-        cls.duration = numpy.zeros(2)  # hazard, risk
-
     def check(self, case):
-        out = self.run_calc(
-            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv',
-            concurrent_tasks='0')  # avoid the usual fork issue
-        self.__class__.duration += self.duration
-        [fname] = out['damages-rlzs', 'csv']
+        self.run_calc(  # avoid the usual fork issue
+            case.__file__, 'job_haz.ini,job_risk.ini', concurrent_tasks='0')
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damages.csv', fname)
 
     @attr('qa', 'risk', 'classical_damage')
@@ -169,7 +157,3 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7c(self):
         self.check(case_7c)
-
-    @classmethod
-    def tearDownClass(cls):
-        print('duration (hazard, risk) =', cls.duration)
