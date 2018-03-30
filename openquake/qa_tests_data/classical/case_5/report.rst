@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2018-02-25T06:43:08
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:56:12
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -72,36 +72,20 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 49           49          
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= =========================================================================
-count_ruptures.received max_per_task 822 B, tot 822 B                                            
-count_ruptures.sent     sources 1.15 KB, srcfilter 722 B, param 418 B, monitor 330 B, gsims 120 B
-hazard.input_weight     196.0                                                                    
-hazard.n_imts           1                                                                        
-hazard.n_levels         3                                                                        
-hazard.n_realizations   1                                                                        
-hazard.n_sites          1                                                                        
-hazard.n_sources        1                                                                        
-hazard.output_weight    3.0                                                                      
-hostname                tstation.gem.lan                                                         
-require_epsilons        False                                                                    
-======================= =========================================================================
-
 Slowest sources
 ---------------
-========= ================== ============ ========= ========= =========
-source_id source_class       num_ruptures calc_time num_sites num_split
-========= ================== ============ ========= ========= =========
-1         ComplexFaultSource 49           0.003     2         1        
-========= ================== ============ ========= ========= =========
+========= ================== ============ ========= ========== ========= =========
+source_id source_class       num_ruptures calc_time split_time num_sites num_split
+========= ================== ============ ========= ========== ========= =========
+1         ComplexFaultSource 49           0.005     7.391E-06  1         1        
+========= ================== ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.003     1     
+ComplexFaultSource 0.005     1     
 ================== ========= ======
 
 Duplicated sources
@@ -115,16 +99,25 @@ operation-duration mean  stddev min   max   num_tasks
 count_ruptures     0.007 NaN    0.007 0.007 1        
 ================== ===== ====== ===== ===== =========
 
+Informational data
+------------------
+============== ===================================================================== ========
+task           sent                                                                  received
+count_ruptures sources=1.14 KB srcfilter=722 B param=418 B monitor=330 B gsims=120 B 364 B   
+============== ===================================================================== ========
+
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.144     0.0       1     
-total count_ruptures           0.007     0.0       1     
+reading composite source model 0.215     0.0       1     
+total count_ruptures           0.007     3.320     1     
 managing sources               0.004     0.0       1     
-store source_info              0.003     0.0       1     
-reading site collection        4.101E-05 0.0       1     
-saving probability maps        2.503E-05 0.0       1     
-aggregate curves               1.788E-05 0.0       1     
+store source_info              0.004     0.0       1     
+splitting sources              3.493E-04 0.0       1     
+reading site collection        2.985E-04 0.0       1     
+unpickling count_ruptures      4.840E-05 0.0       1     
+saving probability maps        3.052E-05 0.0       1     
+aggregate curves               2.217E-05 0.0       1     
 ============================== ========= ========= ======
