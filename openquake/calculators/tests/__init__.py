@@ -66,6 +66,10 @@ class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
+    @classmethod
+    def setUpClass(cls):
+        cls.duration = numpy.zeros(2)  # hazard, risk
+
     def get_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
@@ -109,7 +113,7 @@ class CalculatorTestCase(unittest.TestCase):
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
-        self.duration = numpy.array([dur1, dur2])
+        self.__class__.duration += numpy.array([dur1, dur2])
         return result
 
     def execute(self, testfile, job_ini):
@@ -183,3 +187,7 @@ class CalculatorTestCase(unittest.TestCase):
         if self.edir and not issues:
             shutil.rmtree(self.edir)
         return res
+
+    @classmethod
+    def tearDownClass(cls):
+        print('durations =', cls.duration)
