@@ -27,7 +27,7 @@ import platform
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore
+from openquake.baselib import performance, datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -68,7 +68,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.duration = numpy.zeros(2)  # hazard, risk
+        cls.duration = general.AccumDict()
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -97,7 +97,7 @@ class CalculatorTestCase(unittest.TestCase):
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
             result = self.calc.run(export_dir=self.edir)
-        dur1 = self.calc._monitor.duration
+        duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
@@ -107,13 +107,11 @@ class CalculatorTestCase(unittest.TestCase):
                 exported = self.calc.run(export_dir=self.edir,
                                          concurrent_tasks=0)
                 result.update(exported)
-            dur2 = self.calc._monitor.duration
-        else:
-            dur2 = 0
+            duration[inis[1]] = self.calc._monitor.duration
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
-        self.__class__.duration += numpy.array([dur1, dur2])
+        self.__class__.duration += duration
         return result
 
     def execute(self, testfile, job_ini):
