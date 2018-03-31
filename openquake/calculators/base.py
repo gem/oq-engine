@@ -368,14 +368,14 @@ class HazardCalculator(BaseCalculator):
                 self.csm = readinput.get_composite_source_model(oq)
                 if oq.disagg_by_src:
                     self.csm = self.csm.grp_by_src()
-            if self.is_stochastic:
-                # initialize the rupture serial numbers before splitting
-                # and before filtering; in this way the serials are independent
-                # from the site collection; this is ultra-fast
-                self.csm.init_serials()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
                 self.csm.split_all()
+            if self.is_stochastic:
+                # initialize the rupture serial numbers before filtering; in
+                # this way the serials are independent from the site collection
+                # this is ultra-fast
+                self.csm.init_serials()
             f, s = self.csm.get_floating_spinning_factors()
             if f != 1:
                 logging.info('Rupture floating factor=%s', f)
