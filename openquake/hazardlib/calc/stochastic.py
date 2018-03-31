@@ -107,17 +107,18 @@ def set_eids(ebruptures):
     Set event IDs on the given list of ebruptures.
 
     :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the total number of events set
+    :returns: the event IDs
     """
     if not ebruptures:
-        return 0
-    num_events = sum(ebr.multiplicity for ebr in ebruptures)
+        return numpy.zeros(0)
+    all_eids = []
     for ebr in ebruptures:
         assert ebr.multiplicity < TWO32, ebr.multiplicity
         eids = U64(TWO32 * ebr.serial) + numpy.arange(
             ebr.multiplicity, dtype=U64)
         ebr.events['eid'] = eids
-    return num_events
+        all_eids.extend(eids)
+    return numpy.array(all_eids)
 
 
 def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
@@ -144,6 +145,7 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
     rup_mon = monitor('making contexts', measuremem=False)
     # Compute and save stochastic event sets
     num_ruptures = 0
+    eids = 0
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     for src, s_sites in src_filter(group):
         t0 = time.time()
@@ -157,9 +159,11 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
         for ebr in _build_eb_ruptures(
                 src, num_occ_by_rup, cmaker, s_sites, param['seed'], rup_mon):
             eb_ruptures.append(ebr)
+        eids = set_eids(eb_ruptures)
+        src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
-        calc_times.append((src.id, dt))
-    dic = dict(eb_ruptures=eb_ruptures, num_events=set_eids(eb_ruptures),
+        calc_times.append((src_id, src.nsites, eids, dt))
+    dic = dict(eb_ruptures=eb_ruptures, num_events=len(eids),
                calc_times=calc_times, num_ruptures=num_ruptures)
     return dic
 

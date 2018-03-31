@@ -725,7 +725,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         ebruptures.append(
                             EBRupture(rup, indices, evs, serial))
                         serial += 1
-    res.num_events = stochastic.set_eids(ebruptures)
+    res.num_events = len(stochastic.set_eids(ebruptures))
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = {
         src.source_id:
