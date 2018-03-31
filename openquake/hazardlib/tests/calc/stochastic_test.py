@@ -113,7 +113,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             src.serial = rup_serial[start:start + nr]
             start += nr
         group.samples = 1
-        site = Site(geo.Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
+        lonlat = 135.68, 35.68
+        site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         param = dict(ses_per_logic_tree_path=10, seed=42)
         gsims = [SiMidorikawa1999SInter()]
@@ -122,3 +123,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(dic['num_events'], 16)
         self.assertEqual(len(dic['eb_ruptures']), 8)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
+
+        # test export
+        mesh = numpy.array([lonlat], [('lon', float), ('lat', float)])
+        ebr = dic['eb_ruptures'][0]
+        ebr.export(mesh)
