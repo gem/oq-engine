@@ -372,9 +372,9 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Splitting sources')
                 self.csm.split_all()
             if self.is_stochastic:
-                # initialize the rupture serial numbers before filtering;
-                # in this way the serials are independent from the site
-                # collection; this is ultra-fast
+                # initialize the rupture serial numbers before filtering; in
+                # this way the serials are independent from the site collection
+                # this is ultra-fast
                 self.csm.init_serials()
             f, s = self.csm.get_floating_spinning_factors()
             if f != 1:
