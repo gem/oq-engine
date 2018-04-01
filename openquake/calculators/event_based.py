@@ -127,6 +127,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                 info.num_sites += nsites
                 info.calc_time += dt
                 info.num_split += 1
+                info.events += len(eids)
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
