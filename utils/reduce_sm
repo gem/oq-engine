@@ -24,33 +24,6 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
 
-def extract_source(smlt_file, source_ids):
-    """
-    Extract sources from the composite source model
-    """
-    logging.basicConfig(level=logging.INFO)
-    source_ids = set(source_ids.split())
-    for paths in readinput.gen_sm_paths(smlt_file):
-        for path in paths:
-            root = nrml.read(path)
-            model = node.Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
-                    if src_node['id'] in source_ids:
-                        model.nodes = [src_node]
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    for src_node in src_group:
-                        if src_node['id'] in source_ids:
-                            src_group.nodes = [src_node]
-                            model.nodes = [src_group]
-            if model:
-                shutil.copy(path, path + '.bak')
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-                    print('Reduced %s' % path)
-
 
 @sap.Script
 def reduce_sm(calc_id):
@@ -68,28 +41,8 @@ def reduce_sm(calc_id):
         else:
             source_id = info[info['num_ruptures'] > 0]['source_id']
         source_ids = set(s.decode('utf-8') for s in source_id)
-    for paths in readinput.gen_sm_paths(
-            oqparam.inputs['source_model_logic_tree']):
-        for path in paths:
-            root = nrml.read(path)
-            model = node.Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
-                    if src_node['id'] in source_ids:
-                        model.nodes.append(src_node)
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    for src_node in src_group:
-                        if src_node['id'] in source_ids:
-                            src_group.nodes.append(src_node)
-                    if src_group.nodes:
-                        model.nodes.append(src_group)
-            if model:
-                shutil.copy(path, path + '.bak')
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-                    print('Reduced %s' % path)
+    readinput.reduce_source_model(
+            oqparam.inputs['source_model_logic_tree'], source_ids)
 
 reduce_sm.arg('calc_id', 'calculation ID')
 
