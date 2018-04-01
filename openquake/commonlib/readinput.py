@@ -36,7 +36,6 @@ from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
-from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 
@@ -203,6 +202,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     oqparam.validate()
     return oqparam
 
+
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
@@ -276,6 +276,7 @@ def get_mesh(oqparam):
         mesh = geo.Mesh.from_coords(coords)
         mesh.from_site_model = True
         return mesh
+
 
 site_model_dt = numpy.dtype([
     ('lon', numpy.float64),
