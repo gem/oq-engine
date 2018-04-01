@@ -20,6 +20,7 @@ from __future__ import division
 import os
 import csv
 import zlib
+import shutil
 import zipfile
 import logging
 import operator
@@ -944,6 +945,34 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+# used in utils/reduce_sm and utils/extract_source
+def reduce_source_model(smlt_file, source_ids):
+    """
+    Extract sources from the composite source model
+    """
+    for paths in gen_sm_paths(smlt_file):
+        for path in paths:
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
+                    if src_node['id'] in source_ids:
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    for src_node in src_group:
+                        if src_node['id'] in source_ids:
+                            src_group.nodes.append(src_node)
+                    if src_group.nodes:
+                        model.nodes.append(src_group)
+            if model:
+                shutil.copy(path, path + '.bak')
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+                    print('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):
