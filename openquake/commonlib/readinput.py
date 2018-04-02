@@ -19,6 +19,7 @@
 from __future__ import division
 import os
 import csv
+import copy
 import zlib
 import shutil
 import zipfile
@@ -963,16 +964,18 @@ def reduce_source_model(smlt_file, source_ids):
                         model.nodes.append(src_node)
             else:  # nrml/0.5
                 for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
                     for src_node in src_group:
                         if src_node['id'] in source_ids:
-                            src_group.nodes.append(src_node)
-                    if src_group.nodes:
-                        model.nodes.append(src_group)
+                            sg.nodes.append(src_node)
+                    if sg.nodes:
+                        model.nodes.append(sg)
             if model:
                 shutil.copy(path, path + '.bak')
                 with open(path, 'wb') as f:
                     nrml.write([model], f, xmlns=root['xmlns'])
-                    print('Reduced %s' % path)
+                    logging.warn('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):
