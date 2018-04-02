@@ -23,7 +23,10 @@ from openquake.baselib import sap, node
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
-extract_source = sap.Script(readinput.reduce_source_model)
+@sap.Script
+def extract_source(smlt_file, source_ids):
+    return readinput.reduce_source_model(smlt_file, source_ids.split())
+
 extract_source.arg('smlt_file', 'source model logic tree xml file')
 extract_source.arg('source_ids', 'IDs of the sources to extract')
 
