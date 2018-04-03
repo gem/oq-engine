@@ -22,34 +22,60 @@ calculations."""
 import os
 import re
 import sys
+import json
 import signal
 import traceback
-import requests
-
+import platform
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        "Do nothing"
 from openquake.baselib.performance import Monitor
-from openquake.baselib import parallel, config, datastore, __version__
+from openquake.baselib.python3compat import urlopen, Request, decode
+from openquake.baselib import (
+    parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
-GITHUB = 'https://api.github.com/repos/gem/oq-engine'
+OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
-USE_CELERY = os.environ.get('OQ_DISTRIBUTE') == 'celery'
+OQ_DISTRIBUTE = parallel.oq_distribute()
 
-if USE_CELERY:
+if OQ_DISTRIBUTE == 'zmq':
+
+    def set_concurrent_tasks_default():
+        """
+        Set the default for concurrent_tasks based on the available
+        worker pools .
+        """
+        num_workers = 0
+        w = config.zworkers
+        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
+            url = 'tcp://%s:%s' % (host, w.ctrl_port)
+            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                if not general.socket_ready(url):
+                    logs.LOG.warn('%s is not running', host)
+                    continue
+                num_workers += sock.send('get_num_workers')
+        OqParam.concurrent_tasks.default = num_workers * 3
+        logs.LOG.info('Using %d zmq workers', num_workers)
+
+elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
 
     def set_concurrent_tasks_default():
         """
-        Set the default for concurrent_tasks.
-        Returns the number of live celery nodes (i.e. the number of machines).
+        Set the default for concurrent_tasks based on the number of available
+        celery workers.
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 5
+        OqParam.concurrent_tasks.default = num_cores * 3
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
@@ -84,10 +110,9 @@ def expose_outputs(dstore):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    try:
-        rlzs = list(dstore['realizations'])
-    except KeyError:
-        rlzs = []
+    rlzs = dstore['csm_info'].rlzs
+    if len(rlzs) > 1:
+        dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
     if oq.ground_motion_fields and calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
@@ -96,28 +121,26 @@ def expose_outputs(dstore):
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
-    if 'poes' in hdf5 or 'hcurves' in hdf5:
+    if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
         dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-rlzs' in dstore and rlzs:
+    if 'avg_losses-stats' in dstore or (
+            'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
     if 'curves-stats' in dstore:
         logs.LOG.warn('loss curves are exportable with oq export')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
-        if 'loss_curves-rlzs' in dstore:
-            dskeys.add('loss_maps-rlzs')
         if 'loss_curves-stats' in dstore:
-            if len(rlzs) > 1:
-                dskeys.add('loss_maps-stats')
+            dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
-    if 'realizations' in dskeys and len(rlzs) <= 1:
-        dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
+    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
+        dskeys.remove('rup_loss_table')
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
@@ -133,19 +156,11 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
+    parallel.Starmap.shutdown()
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
     else:
         msg = 'Received a signal %d' % signum
-
-    # FIXME this code has been temporary disabled due issues with large
-    # computations and further investigation is need; code is left as reference
-    # for pid in parallel.executor.pids:
-    #     try:
-    #         os.kill(pid, signal.SIGKILL)
-    #     except OSError: # pid not found
-    #         pass
-
     raise MasterKilled(msg)
 
 
@@ -175,7 +190,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :returns:
         a pair (job_id, oqparam)
     """
-    oq = readinput.get_oqparam(cfg_file)
+    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                         username, datastore.get_datadir(),
                         hazard_calculation_id)
@@ -200,11 +215,12 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
+    setproctitle('oq-job-%d' % job_id)
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY:
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default()
-        msg = check_obsolete_version(oqparam)
+        msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
@@ -236,7 +252,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # in such a situation, we simply log the cleanup error without
             # taking further action, so that the real error can propagate
             try:
-                if USE_CELERY:
+                if OQ_DISTRIBUTE.startswith('celery'):
                     celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
             except:
                 # log the finalization error only if there is no real error
@@ -259,20 +275,31 @@ def version_triple(tag):
     return tuple(int(n) for n in groups)
 
 
-def check_obsolete_version(oqparam):
+def check_obsolete_version(calculation_mode='WebUI'):
     """
     Check if there is a newer version of the engine.
 
+    :param calculation_mode:
+         - the calculation mode when called from the engine
+         - an empty string when called from the WebUI
     :returns:
         - a message if the running version of the engine is obsolete
         - the empty string if the engine is updated
         - None if the check could not be performed (i.e. github is down)
     """
+    if os.environ.get('JENKINS_URL') or os.environ.get('TRAVIS'):
+        # avoid flooding our API server with requests from CI systems
+        return
+
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
+               (__version__, calculation_mode, platform.platform())}
     try:
-        json = requests.get(GITHUB + '/releases/latest', timeout=0.5).json()
-        tag_name = json['tag_name']
+        req = Request(OQ_API + '/engine/latest', headers=headers)
+        # NB: a timeout < 1 does not work
+        data = urlopen(req, timeout=1).read()  # bytes
+        tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
-        latest = version_triple(json['tag_name'])
+        latest = version_triple(tag_name)
     except:  # page not available or wrong version tag
         return
     if current < latest:

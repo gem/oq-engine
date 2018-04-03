@@ -31,14 +31,13 @@ from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 GSIM = gsim.get_available_gsims()
-
-disagg_outs = ['_'.join(tup) for tup in sorted(disagg.pmf_map)]
 
 
 def disagg_outputs(value):
@@ -52,7 +51,7 @@ def disagg_outputs(value):
     """
     values = value.replace(',', ' ').split()
     for val in values:
-        if val not in disagg_outs:
+        if val not in disagg.pmf_map:
             raise ValueError('Invalid disagg output: %s' % val)
     return values
 
@@ -70,18 +69,32 @@ def gsim(value, **kwargs):
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
+    minimum_distance = float(kwargs.pop('minimum_distance', 0))
+    if value.endswith('()'):
+        value = value[:-2]  # strip parenthesis
     if value == 'FromFile':
         return FromFile()
-    elif value.endswith('()'):
-        value = value[:-2]  # strip parenthesis
+    elif value.startswith('GMPETable'):
+        gsim_class = GMPETable
+    else:
+        try:
+            gsim_class = GSIM[value]
+        except KeyError:
+            raise ValueError('Unknown GSIM: %s' % value)
     try:
-        gsim_class = GSIM[value]
-    except KeyError:
-        raise ValueError('Unknown GSIM: %s' % value)
-    try:
-        return gsim_class(**kwargs)
+        gs = gsim_class(**kwargs)
     except TypeError:
         raise ValueError('Could not instantiate %s%s' % (value, kwargs))
+    gs.minimum_distance = minimum_distance
+    return gs
+
+
+def logic_tree_path(value):
+    """
+    >>> logic_tree_path('SM2_a3b1')
+    ['SM2', 'a3b1']
+    """
+    return value.split('_')
 
 
 def compose(*validators):
@@ -249,20 +262,23 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange):
+    def __init__(self, minrange, maxrange, name=''):
         self.minrange = minrange
         self.maxrange = maxrange
+        self.name = name
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
         f = float_(value)
         if f > self.maxrange:
-            raise ValueError("'%s' is bigger than the max, '%s'" %
-                             (f, self.maxrange))
+            raise ValueError("%s %s is bigger than the maximum (%s)" %
+                             (self.name, f, self.maxrange))
         if f < self.minrange:
-            raise ValueError("'%s' is smaller than the min, '%s'" %
-                             (f, self.minrange))
+            raise ValueError("%s %s is smaller than the minimum (%s)" %
+                             (self.name, f, self.minrange))
         return f
+
+magnitude = FloatRange(0, 11, 'magnitude')
 
 
 def not_empty(value):
@@ -443,14 +459,18 @@ def coordinates(value):
     >>> coordinates('0 0 0, 0 0 -1')
     Traceback (most recent call last):
     ...
-    ValueError: There are overlapping points in 0 0 0, 0 0 -1
+    ValueError: Found overlapping site #2,  0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    points = list(map(point, value.split(',')))
-    num_distinct = len(set(pnt[:2] for pnt in points))
-    if num_distinct < len(points):
-        raise ValueError("There are overlapping points in %s" % value)
+    points = []
+    pointset = set()
+    for i, line in enumerate(value.split(','), 1):
+        pnt = point(line)
+        if pnt[:2] in pointset:
+            raise ValueError("Found overlapping site #%d, %s" % (i, line))
+        pointset.add(pnt[:2])
+        points.append(pnt)
     return points
 
 
@@ -640,10 +660,10 @@ def check_levels(imls, imt):
     :param imt: the intensity measure type
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
-    >>> check_levels([0.1], 'PGA')
+    >>> check_levels([], 'PGA')
     Traceback (most recent call last):
        ...
-    ValueError: Not enough imls for PGA: [0.1]
+    ValueError: No imls for PGA: []
     >>> check_levels([0.2, 0.1], 'PGA')
     Traceback (most recent call last):
        ...
@@ -653,8 +673,8 @@ def check_levels(imls, imt):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
-    if len(imls) < 2:
-        raise ValueError('Not enough imls for %s: %s' % (imt, imls))
+    if len(imls) < 1:
+        raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
@@ -780,7 +800,13 @@ def maximum_distance(value):
     :returns:
         a IntegrationDistance mapping
     """
-    return IntegrationDistance(floatdict(value))
+    dic = floatdict(value)
+    for trt, magdists in dic.items():
+        if isinstance(magdists, list):  # could be a scalar otherwise
+            magdists.sort()  # make sure the list is sorted by magnitude
+            for mag, dist in magdists:  # validate the magnitudes
+                magnitude(mag)
+    return IntegrationDistance(dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -812,7 +838,7 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if sum(map(Decimal, value.split())) != 1:
+    if abs(1.-sum(map(float, value.split()))) > 1e-12:
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
@@ -977,7 +1003,7 @@ def simple_slice(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 measured vs30 backarc'.split())
+    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
@@ -988,10 +1014,10 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
        <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
        z1pt0="100" z2pt5="5" backarc="False"/>
 
-    into a 7-tuple (z1pt0, z2pt5, measured, vs30, backarc, lon, lat)
+    into a 7-tuple (z1pt0, z2pt5, vs30measured, vs30, backarc, lon, lat)
     """
     return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
-                     measured=vs30_type(vs30Type) == 'measured',
+                     vs30measured=vs30_type(vs30Type) == 'measured',
                      vs30=positivefloat(vs30), lon=longitude(lon),
                      lat=latitude(lat), depth=float_(depth),
                      backarc=boolean(backarc))

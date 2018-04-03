@@ -20,11 +20,13 @@ import os
 import sys
 import mock
 import shutil
+import zipfile
 import tempfile
 import unittest
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
+from openquake.baselib.datastore import read
 from openquake import commonlib
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
@@ -36,13 +38,16 @@ from openquake.commands.engine import run_job
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
+from openquake.commands.zip import zip as zip_cmd
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
-from openquake.qa_tests_data.classical import case_1
+from openquake.calculators.views import view
+from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 from openquake.qa_tests_data.event_based_risk import case_master
+from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -69,15 +74,12 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): [0]>
-=============== ======
-attribute       nbytes
-=============== ======'''
+0,AkkarBommer2010(): [0]>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, path)
+            info(None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -85,25 +87,42 @@ attribute       nbytes
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, '')
+            info(True, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, '')
+            info(None, True, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, '')
+            info(None, None, True, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, '')
+            info(None, None, None, True, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
-    # NB: info --report is tested in the packager
+    def test_extracts(self):
+        with Print.patch() as p:
+            info(None, None, None, None, True, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_job_ini(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        with Print.patch() as p:
+            info(None, None, None, None, None, None, path)
+        # this is a test with multiple same ID sources
+        self.assertIn('multiplicity', str(p))
+
+    def test_report(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        save = 'openquake.calculators.reportwriter.ReportWriter.save'
+        with Print.patch() as p, mock.patch(save, lambda self, fname: None):
+            info(None, None, None, None, None, True, path)
+        self.assertIn('report.rst', str(p))
 
 
 class TidyTestCase(unittest.TestCase):
@@ -194,12 +213,12 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '<SiteCollection with 1 sites>')
+        self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('grp_id source_id source_class num_ruptures calc_time '
-                      'num_sites num_split', str(p))
+        self.assertIn('source_id source_class num_ruptures calc_time '
+                      'split_time num_sites num_split', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -253,7 +272,7 @@ class ReduceTestCase(unittest.TestCase):
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
             reduce(dest, 0.5)
-        self.assertIn('Extracted 50 lines out of 100', str(p))
+        self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
 
@@ -275,8 +294,41 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-        upgrade_nrml(tmpdir, False)
+        upgrade_nrml(tmpdir, False, False)
         shutil.rmtree(tmpdir)
+
+
+class ZipTestCase(unittest.TestCase):
+    """
+    Test for the command oq zip
+    """
+    def test_zip(self):
+        ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['Wcrust_high_rhypo.hdf5',
+                          'Wcrust_low_rhypo.hdf5',
+                          'Wcrust_med_rhypo.hdf5',
+                          'job.ini',
+                          'nbc_asc_logic_tree.xml',
+                          'source_model_logic_tree.xml',
+                          'vancouver_area_source.xml',
+                          'vancouver_school_sites.csv'], names)
+        shutil.rmtree(dtemp)
+
+    def test_zip_gmf_ebrisk(self):
+        # this is a case without gsims and with a gmf file
+        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
+        dtemp = tempfile.mkdtemp()
+        xzip = os.path.join(dtemp, 'x.zip')
+        zip_cmd(ini, xzip)
+        names = sorted(zipfile.ZipFile(xzip).namelist())
+        self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
+                          'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
+                         names)
+        shutil.rmtree(dtemp)
 
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
@@ -325,7 +377,7 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
+                'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
             db('db_version')
             try:
                 db('calc_info', (1,))
@@ -342,5 +394,15 @@ class EngineRunJobTestCase(unittest.TestCase):
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            run_job(job_ini, log_level='error')
+            job_id = run_job(job_ini, log_level='error')
         self.assertIn('id | name', str(p))
+
+        # sanity check on the performance view: make sure that the most
+        # relevant information is stored (it can be lost for instance due
+        # to a wrong refactoring of the safely_call function)
+        with read(job_id) as dstore:
+            perf = view('performance', dstore)
+            self.assertIn('total runtime', perf)
+            self.assertIn('total compute_ruptures', perf)
+            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total build_curves_maps', perf)

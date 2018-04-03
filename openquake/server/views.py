@@ -20,29 +20,39 @@ import shutil
 import json
 import logging
 import os
+import sys
 import inspect
-import getpass
 import tempfile
+import subprocess
+import threading
+import signal
+import zlib
 try:
     import urllib.parse as urlparse
 except ImportError:
     import urlparse
 import re
 import numpy
-
+import psutil
+try:
+    # Python 3
+    from urllib.parse import unquote_plus
+except ImportError:
+    # Python 2
+    from urllib import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
-    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
+    HttpResponseForbidden)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
-from openquake.baselib.parallel import Starmap, safely_call
+from openquake.baselib.python3compat import unicode, pickle, encode
+from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
-from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
@@ -51,7 +61,7 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils, dbapi
+from openquake.server import utils, dbapi
 
 from django.conf import settings
 if settings.LOCKDOWN:
@@ -65,7 +75,6 @@ try:
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
 
-read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -198,6 +207,16 @@ def get_engine_version(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def get_engine_latest_version(request):
+    """
+    Return a string with if new versions have been released.
+    Return 'None' if the version is not available
+    """
+    return HttpResponse(engine.check_obsolete_version())
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def get_available_gsims(request):
     """
     Return a list of strings with the available GSIMs
@@ -239,7 +258,7 @@ def validate_nrml(request):
             'Please provide the "xml_text" parameter')
     xml_file = writetmp(xml_text, suffix='.xml')
     try:
-        nrml.parse(xml_file)
+        nrml.to_python(xml_file)
     except ExpatError as exc:
         return _make_response(error_msg=str(exc),
                               error_line=exc.lineno,
@@ -280,6 +299,8 @@ def calc_info(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
+        if not utils.user_has_permission(request, info['user_name']):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
@@ -287,7 +308,8 @@ def calc_info(request, calc_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc(request, id=None):
+def calc_list(request, id=None):
+    # view associated to the endpoints /v1/calc/list and /v1/calc/:id/status
     """
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
@@ -297,18 +319,27 @@ def calc(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user = utils.get_user_data(request)
-
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           user['name'], user['acl_on'], id)
+                           utils.get_valid_users(request),
+                           utils.get_acl_on(request), id)
 
     response_data = []
-    for hc_id, owner, status, calculation_mode, is_running, desc in calc_data:
+    for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
+         parent_id) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        abortable = False
+        if is_running:
+            try:
+                if (psutil.Process(pid).username() ==
+                        psutil.Process(os.getpid()).username()):
+                    abortable = True
+            except psutil.NoSuchProcess:
+                pass
         response_data.append(
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url,
+                 parent_id=parent_id, abortable=abortable))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -321,11 +352,49 @@ def calc(request, id=None):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
+def calc_abort(request, calc_id):
+    """
+    Abort the given calculation, it is it running
+    """
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        message = {'error': 'Unknown job %s' % calc_id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if job.status not in ('executing', 'running'):
+        message = {'error': 'Job %s is not running' % job.id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    if not utils.user_has_permission(request, job.user_name):
+        message = {'error': ('User %s has no permission to abort job %s' %
+                             (job.user_name, job.id))}
+        return HttpResponse(content=json.dumps(message), content_type=JSON,
+                            status=403)
+
+    if job.pid:  # is a spawned job
+        try:
+            os.kill(job.pid, signal.SIGTERM)
+        except Exception as exc:
+            logging.error(exc)
+        else:
+            logging.warn('Aborting job %d, pid=%d', job.id, job.pid)
+            logs.dbcmd('set_status', job.id, 'aborted')
+        message = {'success': 'Killing job %d' % job.id}
+        return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+    message = {'error': 'PID for job %s not found' % job.id}
+    return HttpResponse(content=json.dumps(message), content_type=JSON)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
     Remove the calculation id
     """
-    user = utils.get_user_data(request)['name']
+    # Only the owner can remove a job
+    user = utils.get_user(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
@@ -402,21 +471,20 @@ def run_calc(request):
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
-    einfo, exctype, monitor = safely_call(_prepare_job, (request, candidates))
-    if exctype:
-        return HttpResponse(json.dumps(einfo.splitlines()),
+    result = safely_call(_prepare_job, (request, candidates))
+    if result.tb_str:
+        return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
-    if not einfo:
+    inifiles = result.get()
+    if not inifiles:
         msg = 'Could not find any file of the form %s' % str(candidates)
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
-    user = utils.get_user_data(request)
+    user = utils.get_user(request)
     try:
-        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
-        # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: Starmap.restart())
+        job_id, pid = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -424,22 +492,40 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='created')
+        response_data = dict(job_id=job_id, status='created', pid=pid)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None,
-               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
+RUNCALC = '''\
+import os, sys
+from openquake.baselib.python3compat import pickle
+from openquake.engine import engine
+if __name__ == '__main__':
+    oqparam = pickle.loads(%(pik)r)
+    engine.run_calc(
+        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+    os.remove(__file__)
+'''
+
+
+def submit_job(job_ini, user_name, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue. Returns the job ID.
+    and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oqparam = engine.job_from_file(job_ini, user_name, hazard_job_id)
-    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
-                          logfile, exports, hazard_job_id)
-    return job_id, fut
+    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
+    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
+    tmp_py = writetmp(code, suffix='.py')
+    # print(code, tmp_py)  # useful when debugging
+    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    popen = subprocess.Popen([sys.executable, tmp_py],
+                             stdin=devnull, stdout=devnull, stderr=devnull)
+    threading.Thread(target=popen.wait).start()
+    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
+    return job_id, popen.pid
 
 
 @require_http_methods(['GET'])
@@ -454,14 +540,12 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user = utils.get_user_data(request)
-
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if user['acl_on'] and info['user_name'] != user['name']:
-            return HttpResponseNotFound()
+        if not utils.user_has_permission(request, info['user_name']):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
@@ -533,8 +617,10 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, job_status, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
+        if not utils.user_has_permission(request, job_user):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -580,31 +666,31 @@ def _array(v):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what, attrs):
+def extract(request, calc_id, what):
     """
-    Wrapper over the `oq extract` command
+    Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
+    only calculations owned by the current user can be retrieved.
     """
-    try:
-        job = logs.dbcmd('get_job', int(calc_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         fd, fname = tempfile.mkstemp(
             prefix=what.replace('/', '-'), suffix='.npz')
         os.close(fd)
-        if attrs:  # extract the attributes only
-            array, attrs = None, ds.get_attrs(what)
-        else:  # extract the full HDF5 object
-            extra = ['%s=%s' % item for item in request.GET.items()]
-            obj = _extract(ds, what, *extra)
-            if inspect.isgenerator(obj):
-                array, attrs = None, {k: _array(v) for k, v in obj}
-            elif hasattr(obj, '__toh5__'):
-                array, attrs = obj.__toh5__()
-            else:  # assume obj is an array
-                array, attrs = obj, {}
+        n = len(request.path_info)
+        query_string = unquote_plus(request.get_full_path()[n:])
+        obj = _extract(ds, what + query_string)
+        if inspect.isgenerator(obj):
+            array, attrs = 0, {k: _array(v) for k, v in obj}
+        elif hasattr(obj, '__toh5__'):
+            array, attrs = obj.__toh5__()
+        else:  # assume obj is an array
+            array, attrs = obj, {}
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
@@ -630,10 +716,11 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
@@ -649,10 +736,12 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    try:
-        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
-    except dbapi.NotFound:
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
     return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
@@ -668,6 +757,34 @@ def web_engine(request, **kwargs):
 def web_engine_get_outputs(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs.html",
                   dict([('calc_id', calc_id)]))
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def on_same_fs(request):
+    """
+    Accept a POST request to check access to a FS available by a client.
+
+    :param request:
+        `django.http.HttpRequest` object, containing mandatory parameters
+        filename and checksum.
+    """
+    filename = request.POST['filename']
+    checksum_in = request.POST['checksum']
+
+    checksum = 0
+    try:
+        data = open(filename, 'rb').read(32)
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
+        if checksum == int(checksum_in):
+            return HttpResponse(content=json.dumps({'success': True}),
+                                content_type=JSON, status=200)
+    except (IOError, ValueError):
+        pass
+
+    return HttpResponse(content=json.dumps({'success': False}),
+                        content_type=JSON, status=200)
 
 
 @require_http_methods(['GET'])

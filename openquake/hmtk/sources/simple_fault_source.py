@@ -120,7 +120,6 @@ class mtkSimpleFaultSource(object):
         self.catalogue = None
 
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
-
         '''
         Checks the seismic depths for physical consistency
         :param float upper_depth:

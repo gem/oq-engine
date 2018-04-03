@@ -87,10 +87,9 @@ class BMaxLikelihood(SeismicityOccurrence):
                                                           completeness)
 
         # Check the configuration
-        if not config['Average Type'] in ['Weighted','Harmonic']:
+        if not config['Average Type'] in ['Weighted', 'Harmonic']:
             raise ValueError('Average type not recognised in bMaxLiklihood!')
         return self._b_ml(catalogue, config, cmag, ctime, ref_mag, dmag)
-
 
     def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag):
         end_year = float(catalogue.end_year)
@@ -117,7 +116,7 @@ class BMaxLikelihood(SeismicityOccurrence):
             temp_rec_table = recurrence_table(catalogue['magnitude'][id1],
                                               dmag,
                                               catalogue['year'][id1],
-                                              end_year-ctime[ival]+1)
+                                              end_year - ctime[ival] + 1)
 
             bval, sigma_b = aki_ml._aki_ml(temp_rec_table[:, 0],
                                            temp_rec_table[:, 1], dmag, m_c)
@@ -149,17 +148,17 @@ class BMaxLikelihood(SeismicityOccurrence):
                                           dmag)
         if not config['reference_magnitude']:
             return bval,\
-                   sigma_b,\
-                   aval,\
-                   sigma_a - aval
+                sigma_b,\
+                aval,\
+                sigma_a - aval
         else:
             rate = 10. ** (aval - bval * config['reference_magnitude'])
-            sigma_rate =  10. ** (sigma_a - 
-                bval * config['reference_magnitude']) - rate
+            sigma_rate = 10. ** (sigma_a -
+                                 bval * config['reference_magnitude']) - rate
             return bval,\
-                   sigma_b,\
-                   rate,\
-                   sigma_rate
+                sigma_b,\
+                rate,\
+                sigma_rate
 
     def _average_parameters(self, gr_params, neq, average_type='Weighted'):
         """
@@ -184,7 +183,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         return bval, sigma_b
 
     def _calculate_a_value(self, bvalue, nvalue, cmag, cyear, magnitude,
-        end_year, dmag):
+                           end_year, dmag):
         """
         Calculates the a-value using the method of Weichert (1980) and 
         McGuire (2004)

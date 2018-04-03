@@ -57,7 +57,7 @@ from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hmtk.models import IncrementalMFD
 from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
-                                          ComplexFaultGeometry)
+                                                    ComplexFaultGeometry)
 from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from openquake.hmtk.faults import mfd
@@ -117,6 +117,7 @@ class RecurrenceBranch(object):
         Magnitudes of MFD
 
     '''
+
     def __init__(self, area, slip, msr, rake, shear_modulus,
                  disp_length_ratio=None, msr_sigma=0., weight=1.0):
         self.branch_id = None
@@ -221,6 +222,7 @@ class mtkActiveFault(object):
         Dictionary of configuration paramters for magnitude freuency
         distribution calculation
     '''
+
     def __init__(self, identifier, name, geometry, slip_rate, rake, trt,
                  aseismic=0.0, msr_sigma=None,
                  neotectonic_fault=None, scale_rel=None, aspect_ratio=None,

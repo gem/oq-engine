@@ -61,6 +61,7 @@ try:
         At present, the scipy.stats.truncnorm.rvs object does not support
         vector inputs for the bounds - this piece of duck punching changes that
         """
+
         def _argcheck(self, a, b):
             self.a = a
             self.b = b
@@ -78,12 +79,12 @@ try:
             output = np.zeros_like(self.a)
             idx = self.a > 0
             if np.any(idx):
-                output[idx] = _norm_isf(q[idx]*self._sb[idx] +
-                                        self._sa[idx]*(-q[idx] + 1.0))
+                output[idx] = _norm_isf(q[idx] * self._sb[idx] +
+                                        self._sa[idx] * (-q[idx] + 1.0))
             idx = np.logical_not(idx)
             if np.any(idx):
-                output[idx] = _norm_ppf(q[idx]*self._nb[idx] +
-                                        self._na[idx]*(-q[idx] + 1.0))
+                output[idx] = _norm_ppf(q[idx] * self._nb[idx] +
+                                        self._na[idx] * (-q[idx] + 1.0))
             return output
 
     hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
@@ -330,13 +331,13 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     '''
     nvals = len(data)
     if bounds:
-        #if bounds[0] or (fabs(bounds[0]) < 1E-12):
+        # if bounds[0] or (fabs(bounds[0]) < 1E-12):
         if bounds[0] is not None:
             lower_bound = (bounds[0] - data) / uncertainties
         else:
             lower_bound = -np.inf * np.ones_like(data)
 
-        #if bounds[1] or (fabs(bounds[1]) < 1E-12):
+        # if bounds[1] or (fabs(bounds[1]) < 1E-12):
         if bounds[1] is not None:
             upper_bound = (bounds[1] - data) / uncertainties
         else:
@@ -346,6 +347,7 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     else:
         sample = np.random.normal(0., 1., nvals)
     return data + uncertainties * sample
+
 
 def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
     """
@@ -528,7 +530,7 @@ def bootstrap_histogram_2D(
             ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
                                                        boundaries[0])
 
-            #temp_hist[:, :, iloc] = np.histogram2d(xsample,
+            # temp_hist[:, :, iloc] = np.histogram2d(xsample,
             #                                       ysample,
             #                                       bins=[xbins, ybins])[0]
             temp_hist[:, :, iloc] = hmtk_histogram_2D(xsample,
@@ -541,24 +543,29 @@ def bootstrap_histogram_2D(
             output = np.sum(temp_hist, axis=2) / float(number_bootstraps)
         return output
 
+
 # Parameters of WGS84 projection (in km)
 WGS84 = {"a": 6378.137, "e": 0.081819191, "1/f": 298.257223563}
 WGS84["e2"] = WGS84["e"] ** 2.
 # Parameters of WGS84 projection (in m)
 WGS84m = {"a": 6378137., "e": 0.081819191, "1/f": 298.2572221}
 WGS84m["e2"] = WGS84m["e"] ** 2.
-TO_Q = lambda lat: (
+
+
+def TO_Q(lat): return (
     (1.0 - WGS84["e2"]) * (
-    (np.sin(lat) / (1.0 -  (WGS84["e2"] * (np.sin(lat) ** 2.))) -
-    ((1. / (2.0 * WGS84["e"])) * np.log((1.0 - WGS84["e"] * np.sin(lat)) /
-    (1.0 + WGS84["e"] * np.sin(lat))))))
-    )
-TO_Qm = lambda lat: (
+        (np.sin(lat) / (1.0 - (WGS84["e2"] * (np.sin(lat) ** 2.))) -
+         ((1. / (2.0 * WGS84["e"])) * np.log((1.0 - WGS84["e"] * np.sin(lat)) /
+                                             (1.0 + WGS84["e"] * np.sin(lat))))))
+)
+
+
+def TO_Qm(lat): return (
     (1.0 - WGS84m["e2"]) * (
-    (np.sin(lat) / (1.0 -  (WGS84m["e2"] * (np.sin(lat) ** 2.))) -
-    ((1. / (2.0 * WGS84m["e"])) * np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
-    (1.0 + WGS84m["e"] * np.sin(lat))))))
-    )
+        (np.sin(lat) / (1.0 - (WGS84m["e2"] * (np.sin(lat) ** 2.))) -
+         ((1. / (2.0 * WGS84m["e"])) * np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
+                                              (1.0 + WGS84m["e"] * np.sin(lat))))))
+)
 
 
 def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
@@ -597,10 +604,10 @@ def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
         (r_q * np.cos(beta0)))
     bval = r_q * np.sqrt(
         2. / (1.0 + (np.sin(beta0) * np.sin(beta)) + (np.cos(beta) *
-        np.cos(beta0) * np.cos(lon - lon0))))
-    easting = f_e + ((bval * dval) * (np.cos(beta) * np.sin(lon - lon0))) 
+                                                      np.cos(beta0) * np.cos(lon - lon0))))
+    easting = f_e + ((bval * dval) * (np.cos(beta) * np.sin(lon - lon0)))
     northing = f_n + (bval / dval) * ((np.cos(beta0) * np.sin(beta)) -
-        (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
+                                      (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
     return easting, northing
 
 

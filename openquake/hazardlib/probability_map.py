@@ -133,7 +133,7 @@ class ProbabilityMap(dict):
     @classmethod
     def from_array(cls, array, sids):
         """
-        :param array: array of shape (N, L, I)
+        :param array: array of shape (N, L) or (N, L, I)
         :param sids: array of N site IDs
         """
         n_sites = len(sids)
@@ -141,6 +141,8 @@ class ProbabilityMap(dict):
         if n_sites != n:
             raise ValueError('Passed %d site IDs, but the array has length %d'
                              % (n_sites, n))
+        if len(array.shape) == 2:  # shape (N, L) -> (N, L, 1)
+            array = array.reshape(array.shape + (1,))
         self = cls(*array.shape[1:])
         for sid, poes in zip(sids, array):
             self[sid] = ProbabilityCurve(poes)
@@ -153,10 +155,10 @@ class ProbabilityMap(dict):
     def setdefault(self, sid, value):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
-        it with an array and returns it.
+        it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
-        :param value: value used to fill the returned array
+        :param value: value used to fill the returned ProbabilityCurve
         """
         try:
             return self[sid]
@@ -236,7 +238,7 @@ class ProbabilityMap(dict):
 
     def convert2(self, imtls, sids):
         """
-        Convert a probability map into a composite array of shape (N, Z)
+        Convert a probability map into a composite array of shape (N,)
         and dtype `imtls.dt`.
 
         :param imtls:
@@ -244,22 +246,19 @@ class ProbabilityMap(dict):
         :param sids:
             the IDs of the sites we are interested in
         :returns:
-            an array of curves of shape (N, Z)
+            an array of curves of shape (N,)
         """
-        if sids is None:
-            sids = numpy.array(sorted(self), F32)
-        curves = numpy.zeros((len(sids), self.shape_z), imtls.dt)
+        assert self.shape_z == 1, self.shape_z
+        curves = numpy.zeros(len(sids), imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
-            for idx in range(self.shape_z):
-                for i, sid in numpy.ndenumerate(sids):
-                    try:
-                        pcurve = self[sid]
-                    except KeyError:
-                        pass  # the poes will be zeros
-                    else:
-                        curves_by_imt[i, idx] = pcurve.array[
-                            imtls.slicedic[imt], idx]
+            for i, sid in numpy.ndenumerate(sids):
+                try:
+                    pcurve = self[sid]
+                except KeyError:
+                    pass  # the poes will be zeros
+                else:
+                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
         return curves
 
     def filter(self, sids):

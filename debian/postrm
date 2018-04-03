@@ -16,7 +16,7 @@ set -e
 # the final step in the removal of this package, after the package's
 # conffiles have been removed.
 
-GEM_DEB_PACKAGE="python-oq-engine"
+GEM_DEB_PACKAGE="python3-oq-engine"
 
 case "$1" in
   remove)

@@ -1,0 +1,3 @@
+asset_ref,taxonomy,lon,lat,structural~mean,structural~stddev
+a2,"tax1",-122.00000,38.00300,3.59500E+01,1.19837E+02
+a1,"tax1",-122.00000,38.11300,3.59500E+02,1.19837E+03

@@ -24,10 +24,12 @@ from openquake.server import views
 
 urlpatterns = [
     url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
-    url(r'^engine_version$', views.get_engine_version),
+    url(r'^v1/engine_version$', views.get_engine_version),
+    url(r'^v1/engine_latest_version$', views.get_engine_latest_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),
+    url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
     url(r'^engine/?$', views.web_engine, name="index"),
     url(r'^engine/(\d+)/outputs$',
         views.web_engine_get_outputs, name="outputs"),
@@ -54,3 +56,8 @@ if settings.LOCKDOWN:
         url(r'^accounts/ajax_login/$', views.ajax_login),
         url(r'^accounts/ajax_logout/$', views.ajax_logout),
     ]
+
+# To enable gunicorn debug without Nginx (to serve static files)
+# uncomment the following lines
+# from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+# urlpatterns += staticfiles_urlpatterns()

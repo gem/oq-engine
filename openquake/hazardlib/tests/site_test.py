@@ -19,10 +19,10 @@ import unittest
 import tempfile
 
 import numpy
+from shapely import wkt
 
 from openquake.baselib import hdf5
-from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 
 assert_eq = numpy.testing.assert_equal
@@ -134,7 +134,6 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured, cll.backarc):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, False)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
@@ -164,7 +163,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
     def test_filter(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.array([True, False, True, False]))
-        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq = numpy.testing.assert_array_equal
         arreq(filtered.vs30, [1.2, 2])
         arreq(filtered.vs30measured, [True, True])
@@ -176,7 +174,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.sids, [0, 2])
 
         filtered = col.filter(numpy.array([False, True, True, True]))
-        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq(filtered.vs30, [55.4, 2, 4])
         arreq(filtered.vs30measured, [False, True, False])
         arreq(filtered.z1pt0, [6, 9, 22])
@@ -221,6 +218,14 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         filtered2 = filtered.filter(numpy.array([True, False, True]))
         arreq(filtered2.indices, [0, 3])
 
+    def test_within_region(self):
+        region = wkt.loads('POLYGON((0 0, 9 0, 9 9, 0 9, 0 0))')
+        col = SiteCollection(self.SITES)
+        reducedcol = col.within(region)
+        # point (10, 20) is out, point (11, 12) is out, point (0, 2)
+        # is on the boundary i.e. out, (1, 1) is in
+        self.assertEqual(len(reducedcol), 1)
+
 
 class SiteCollectionIterTestCase(unittest.TestCase):
 
@@ -262,11 +267,6 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         # test equality of site collections
         sc = SiteCollection([exp_s1, exp_s2])
         self.assertEqual(cll, sc)
-
-        # test nonequality of site collections
-        # (see https://github.com/gem/oq-hazardlib/pull/403)
-        sc._vs30 = numpy.array([numpy.nan, numpy.nan])
-        self.assertNotEqual(cll, sc)
 
 
 class SitePickleTestCase(unittest.TestCase):

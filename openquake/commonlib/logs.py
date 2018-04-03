@@ -23,7 +23,7 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq, config
+from openquake.baselib import zeromq, config, parallel
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -36,6 +36,8 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 
 LOG = logging.getLogger()
 
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
 
 def dbcmd(action, *args):
     """
@@ -44,12 +46,12 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    sock = zeromq.Socket('tcp://%(host)s:%(port)s' % config.dbserver,
+    sock = zeromq.Socket('tcp://%s:%s' % (config.dbserver.host, DBSERVER_PORT),
                          zeromq.zmq.REQ, 'connect')
     with sock:
-        res, etype, _mon = sock.send((action,) + args)
-    if etype:
-        raise etype(res)
+        res = sock.send((action,) + args)
+        if isinstance(res, parallel.Result):
+            return res.get()
     return res
 
 
@@ -151,7 +153,8 @@ def handle(job_id, log_level='info', log_file=None):
         yield
     finally:
         # sanity check to make sure that the logging on file is working
-        if log_file and os.path.getsize(log_file) == 0:
+        if (log_file and log_file != os.devnull and
+                os.path.getsize(log_file) == 0):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)

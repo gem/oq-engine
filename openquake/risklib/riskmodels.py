@@ -17,13 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import re
 import inspect
 import functools
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib import valid
+from openquake.baselib.node import Node
+from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.hazardlib import valid, nrml
+from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import utils, scientific
 
 U32 = numpy.uint32
@@ -31,193 +34,128 @@ F32 = numpy.float32
 registry = CallableDict()
 
 
-class CostCalculator(object):
+F64 = numpy.float64
+
+COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
+
+LOSS_TYPE_KEY = re.compile(
+    '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
+
+
+def get_risk_files(inputs):
     """
-    Return the value of an asset for the given loss type depending
-    on the cost types declared in the exposure, as follows:
-
-        case 1: cost type: aggregated:
-            cost = economic value
-        case 2: cost type: per asset:
-            cost * number (of assets) = economic value
-        case 3: cost type: per area and area type: aggregated:
-            cost * area = economic value
-        case 4: cost type: per area and area type: per asset:
-            cost * area * number = economic value
-
-    The same "formula" applies to retrofitting cost.
+    :param inputs: a dictionary key -> path name
+    :returns: a pair (file_type, {cost_type: path})
     """
-    def __init__(self, cost_types, area_types, units,
-                 deduct_abs=True, limit_abs=True):
-        if set(cost_types) != set(area_types):
-            raise ValueError('cost_types has keys %s, area_types has keys %s'
-                             % (sorted(cost_types), sorted(area_types)))
-        for ct in cost_types.values():
-            assert ct in ('aggregated', 'per_asset', 'per_area'), ct
-        for at in area_types.values():
-            assert at in ('aggregated', 'per_asset'), at
-        self.cost_types = cost_types
-        self.area_types = area_types
-        self.units = units
-        self.deduct_abs = deduct_abs
-        self.limit_abs = limit_abs
-
-    def __call__(self, loss_type, values, area, number):
-        cost = values.get(loss_type)
-        if cost is None:
-            return numpy.nan
-        cost_type = self.cost_types[loss_type]
-        if cost_type == "aggregated":
-            return cost
-        if cost_type == "per_asset":
-            return cost * number
-        if cost_type == "per_area":
-            area_type = self.area_types[loss_type]
-            if area_type == "aggregated":
-                return cost * area
-            elif area_type == "per_asset":
-                return cost * area * number
-        # this should never happen
-        raise RuntimeError('Unable to compute cost')
-
-    def __toh5__(self):
-        loss_types = sorted(self.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr),
-                          ('area_type', hdf5.vstr),
-                          ('unit', hdf5.vstr)])
-        array = numpy.zeros(len(loss_types), dt)
-        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [self.area_types[lt] for lt in loss_types]
-        array['unit'] = [self.units[lt] for lt in loss_types]
-        attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
-                     loss_types=hdf5.array_of_vstr(loss_types))
-        return array, attrs
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
-        self.area_types = dict(zip(self.loss_types, array['area_type']))
-        self.units = dict(zip(self.loss_types, array['unit']))
-
-    def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, vars(self))
-
-costcalculator = CostCalculator(
-    cost_types=dict(structural='per_area'),
-    area_types=dict(structural='per_asset'),
-    units=dict(structural='EUR'))
+    vfs = {}
+    names = set()
+    for key in inputs:
+        if key == 'fragility':
+            # backward compatibily for .ini files with key fragility_file
+            # instead of structural_fragility_file
+            vfs['structural'] = inputs['structural_fragility'] = inputs[key]
+            names.add('fragility')
+            del inputs['fragility']
+            continue
+        match = LOSS_TYPE_KEY.match(key)
+        if match and 'retrofitted' not in key and 'consequence' not in key:
+            vfs[match.group(1)] = inputs[key]
+            names.add(match.group(2))
+    if not names:
+        return None, {}
+    elif len(names) > 1:
+        raise ValueError('Found inconsistent keys %s in the .ini file'
+                         % ', '.join(names))
+    return names.pop(), vfs
 
 
-class Asset(object):
+# ########################### vulnerability ############################## #
+
+def filter_vset(elem):
+    return elem.tag.endswith('discreteVulnerabilitySet')
+
+
+@obj_to_node.add('VulnerabilityFunction')
+def build_vf_node(vf):
     """
-    Describe an Asset as a collection of several values. A value can
-    represent a replacement cost (e.g. structural cost, business
-    interruption cost) or another quantity that can be considered for
-    a risk analysis (e.g. occupants).
-
-    Optionally, a Asset instance can hold also a collection of
-    deductible values and insured limits considered for insured losses
-    calculations.
+    Convert a VulnerabilityFunction object into a Node suitable
+    for XML conversion.
     """
-    def __init__(self,
-                 asset_id,
-                 taxonomy,
-                 number,
-                 location,
-                 values,
-                 area=1,
-                 deductibles=None,
-                 insurance_limits=None,
-                 retrofitteds=None,
-                 calc=costcalculator,
-                 ordinal=None):
-        """
-        :param asset_id:
-            an unique identifier of the assets within the given exposure
-        :param taxonomy:
-            asset taxonomy
-        :param number:
-            number of apartments of number of people in the given asset
-        :param location:
-            geographic location of the asset
-        :param dict values:
-            asset values keyed by loss types
-        :param dict deductible:
-            deductible values (expressed as a percentage relative to
-            the value of the asset) keyed by loss types
-        :param dict insurance_limits:
-            insured limits values (expressed as a percentage relative to
-            the value of the asset) keyed by loss types
-        :param dict retrofitteds:
-            asset retrofitting values keyed by loss types
-        :param calc:
-            cost calculator instance
-        :param ordinal:
-            asset collection ordinal
-        """
-        self.idx = asset_id
-        self.taxonomy = taxonomy
-        self.number = number
-        self.location = location
-        self.values = values
-        self.area = area
-        self.retrofitteds = retrofitteds
-        self.deductibles = deductibles
-        self.insurance_limits = insurance_limits
-        self.calc = calc
-        self.ordinal = ordinal
-        self._cost = {}  # cache for the costs
+    nodes = [Node('imls', {'imt': vf.imt}, vf.imls),
+             Node('meanLRs', {}, vf.mean_loss_ratios),
+             Node('covLRs', {}, vf.covs)]
+    return Node(
+        'vulnerabilityFunction',
+        {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
-    def value(self, loss_type, time_event=None):
-        """
-        :returns: the total asset value for `loss_type`
-        """
-        if loss_type == 'occupants':
-            return self.values['occupants_' + str(time_event)]
-        try:  # extract from the cache
-            val = self._cost[loss_type]
-        except KeyError:  # compute
-            val = self.calc(loss_type, self.values, self.area, self.number)
-            self._cost[loss_type] = val
-        return val
 
-    def deductible(self, loss_type):
-        """
-        :returns: the deductible fraction of the asset cost for `loss_type`
-        """
-        val = self.calc(loss_type, self.deductibles, self.area, self.number)
-        if self.calc.deduct_abs:  # convert to relative value
-            return val / self.calc(loss_type, self.values,
-                                   self.area, self.number)
-        else:
-            return val
-
-    def insurance_limit(self, loss_type):
-        """
-        :returns: the limit fraction of the asset cost for `loss_type`
-        """
-        val = self.calc(loss_type, self.insurance_limits, self.area,
-                        self.number)
-        if self.calc.limit_abs:  # convert to relative value
-            return val / self.calc(loss_type, self.values,
-                                   self.area, self.number)
-        else:
-            return val
-
-    def retrofitted(self, loss_type, time_event=None):
-        """
-        :returns: the asset retrofitted value for `loss_type`
-        """
-        if loss_type == 'occupants':
-            return self.values['occupants_' + str(time_event)]
-        return self.calc(loss_type, self.retrofitteds,
-                         self.area, self.number)
-
-    def __lt__(self, other):
-        return self.idx < other.idx
-
-    def __repr__(self):
-        return '<Asset %s>' % self.idx
+def get_risk_models(oqparam, kind=None):
+    """
+    :param oqparam:
+        an OqParam instance
+    :param kind:
+        vulnerability|vulnerability_retrofitted|fragility|consequence;
+        if None it is extracted from the oqparam.file_type attribute
+    :returns:
+        a dictionary taxonomy -> loss_type -> function
+    """
+    kind = kind or oqparam.file_type
+    rmodels = AccumDict()
+    rmodels.limit_states = []
+    for key in sorted(oqparam.inputs):
+        mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
+        if mo:
+            key_type = mo.group(1)  # the cost_type in the key
+            # can be occupants, structural, nonstructural, ...
+            rmodel = nrml.to_python(oqparam.inputs[key])
+            rmodels[key_type] = rmodel
+            if rmodel.lossCategory is None:  # NRML 0.4
+                continue
+            cost_type = str(rmodel.lossCategory)
+            rmodel_kind = rmodel.__class__.__name__
+            kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+            if not rmodel_kind.lower().startswith(kind_):
+                raise ValueError(
+                    'Error in the file "%s_file=%s": is '
+                    'of kind %s, expected %s' % (
+                        key, oqparam.inputs[key], rmodel_kind,
+                        kind.capitalize() + 'Model'))
+            if cost_type != key_type:
+                raise ValueError(
+                    'Error in the file "%s_file=%s": lossCategory is of type '
+                    '"%s", expected "%s"' % (key, oqparam.inputs[key],
+                                             rmodel.lossCategory, key_type))
+    rdict = AccumDict(accum={})
+    rdict.limit_states = []
+    if kind == 'fragility':
+        limit_states = []
+        for loss_type, fm in sorted(rmodels.items()):
+            # build a copy of the FragilityModel with different IM levels
+            newfm = fm.build(oqparam.continuous_fragility_discretization,
+                             oqparam.steps_per_interval)
+            for (imt, taxo), ffl in newfm.items():
+                if not limit_states:
+                    limit_states.extend(fm.limitStates)
+                # we are rejecting the case of loss types with different
+                # limit states; this may change in the future
+                assert limit_states == fm.limitStates, (
+                    limit_states, fm.limitStates)
+                rdict[taxo][loss_type] = ffl
+                # TODO: see if it is possible to remove the attribute
+                # below, used in classical_damage
+                ffl.steps_per_interval = oqparam.steps_per_interval
+        rdict.limit_states = [str(ls) for ls in limit_states]
+    elif kind == 'consequence':
+        rdict = rmodels
+    else:  # vulnerability
+        cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
+        # only for classical_risk reduce the loss_ratios
+        # to make sure they are strictly increasing
+        for loss_type, rm in rmodels.items():
+            for (imt, taxo), rf in rm.items():
+                rdict[taxo][loss_type] = (
+                    rf.strictly_increasing() if cl_risk else rf)
+    return rdict
 
 
 def get_values(loss_type, assets, time_event=None):
@@ -237,9 +175,10 @@ class RiskModel(object):
     compositemodel = None  # set by get_risk_model
     kind = None  # must be set in subclasses
 
-    def __init__(self, taxonomy, risk_functions):
+    def __init__(self, taxonomy, risk_functions, insured_losses):
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
+        self.insured_losses = insured_losses
 
     @property
     def loss_types(self):
@@ -256,6 +195,17 @@ class RiskModel(object):
         """
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
+
+    def get_output(self, assets, data_by_lt, epsgetter):
+        """
+        :param assets: a list of assets with the same taxonomy
+        :param data_by_lt: hazards for each loss type
+        :param epsgetter: an epsilon getter function
+        :returns: an ArrayWrapper of shape (L, ...)
+        """
+        out = [self(lt, assets, data, epsgetter)
+               for lt, data in zip(self.loss_types, data_by_lt)]
+        return ArrayWrapper(numpy.array(out), dict(assets=assets))
 
     def __toh5__(self):
         risk_functions = {lt: func for lt, func in self.risk_functions.items()}
@@ -310,7 +260,7 @@ class Classical(RiskModel):
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
         :param bool insured_losses:
-            True if insured loss curves should be computed
+            ignored since insured loss curves are not implemented
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
@@ -338,7 +288,7 @@ class Classical(RiskModel):
         :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
-            a :class:`openquake.risklib.scientific.Classical.Output` instance.
+            an array of shape (C, N, 2)
         """
         n = len(assets)
         vf = self.risk_functions[loss_type]
@@ -348,20 +298,20 @@ class Classical(RiskModel):
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
 
-        if self.insured_losses:
-            deductibles = [a.deductible(loss_type) for a in assets]
-            limits = [a.insurance_limit(loss_type) for a in assets]
-            insured_curves = rescale(
-                utils.numpy_map(scientific.insured_loss_curve,
-                                lrcurves, deductibles, limits), values)
-        else:
-            insured_curves = None
-
-        return rescale(lrcurves, values), insured_curves
+        # if in the future we wanted to implement insured_losses the
+        # following lines could be useful
+        # deductibles = [a.deductible(loss_type) for a in assets]
+        # limits = [a.insurance_limit(loss_type) for a in assets]
+        # insured_curves = rescale(
+        # utils.numpy_map(scientific.insured_loss_curve,
+        # lrcurves, deductibles, limits), values)
+        return rescale(lrcurves, values).transpose(2, 0, 1)
+        # transpose array from shape (N, 2, C) -> (C, N, 2)
+        # otherwise .get_output would fail
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ucerf_rupture', 'ucerf_risk', 'gmf_ebrisk')
+              'ucerf_rupture', 'ucerf_hazard', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel.
@@ -370,7 +320,7 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy, vulnerability_functions, loss_curve_resolution,
+            self, taxonomy, vulnerability_functions,
             conditional_loss_poes, insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
@@ -378,7 +328,6 @@ class ProbabilisticEventBased(RiskModel):
         """
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        self.loss_curve_resolution = loss_curve_resolution
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
 
@@ -389,7 +338,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a composite array of E elements with fields 'gmv' and 'eid'
+           a pair (gmvs, eids) with E values each
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -412,7 +361,7 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
-        return loss_ratios, eids
+        return loss_ratios
 
 
 @registry.add('classical_bcr')
@@ -428,6 +377,7 @@ class ClassicalBCR(RiskModel):
                  interest_rate, asset_life_expectancy):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
+        self.insured_losses = False  # not implemented
         self.retro_functions = vulnerability_functions_retro
         self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
@@ -444,6 +394,8 @@ class ClassicalBCR(RiskModel):
         :param _eids: dummy parameter, unused
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
+        if loss_type != 'structural':
+            raise NotImplemented('retrofitted is not defined for ' + loss_type)
         n = len(assets)
         self.assets = assets
         vf = self.risk_functions[loss_type]
@@ -466,9 +418,8 @@ class ClassicalBCR(RiskModel):
             scientific.bcr(
                 eal_original[i], eal_retrofitted[i],
                 self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted(loss_type))
+                asset.value(loss_type), asset.retrofitted())
             for i, asset in enumerate(assets)]
-
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
 
@@ -486,8 +437,9 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = [epsgetter(asset.ordinal, None) for asset in assets]
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
+        gmvs, eids = gmvs_eids
+        epsilons = [epsgetter(asset.ordinal, eids) for asset in assets]
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -507,7 +459,7 @@ class Scenario(RiskModel):
         loss_matrix.fill(numpy.nan)
 
         vf = self.risk_functions[loss_type]
-        means, covs, idxs = vf.interpolate(ground_motion_values)
+        means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
@@ -534,23 +486,23 @@ class Damage(RiskModel):
     def __init__(self, taxonomy, fragility_functions):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
 
-    def __call__(self, loss_type, assets, gmvs, _eps=None):
+    def __call__(self, loss_type, assets, gmvs_eids, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param gmvs: an array of E elements
+        :param gmvs_eids: pairs (gmvs, eids), each one with E elements
         :param _eps: dummy parameter, unused
         :returns: N arrays of E x D elements
 
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        n = len(assets)
         ffs = self.risk_functions[loss_type]
-        damages = numpy.array(
-            [scientific.scenario_damage(ffs, gmv) for gmv in gmvs])
-        return [damages] * n
+        damages = scientific.scenario_damage(ffs, gmvs_eids[0])  # shape (D, E)
+        damages[damages < 1E-7] = 0  # sanity check
+        return [damages.T] * len(assets)
 
 
 @registry.add('classical_damage')
@@ -565,9 +517,11 @@ class ClassicalDamage(Damage):
                  risk_investigation_time):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
+        self.insured_losses = False  # not implemented
         self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
+        assert risk_investigation_time, risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """

@@ -1,13 +1,13 @@
 Scenario Damage QA Test 4
 =========================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5472.hdf5 Fri Sep 22 11:28:55 2017
-checksum32                                    1,284,787,561           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     1,284,787,561      
+date           2018-03-26T15:54:48
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 3, num_imts = 3
+num_sites = 3, num_levels = 60
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      10.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -40,11 +42,11 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -65,8 +67,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
 RM       1.000 NaN    1   1   1         1         
+RC       1.000 NaN    1   1   1         1         
 W        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   3         3         
 ======== ===== ====== === === ========= ==========
@@ -76,7 +78,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
-filtering sites         0.004     0.0       1     
-reading site collection 5.007E-06 0.0       1     
+reading exposure        0.002     0.0       1     
+reading site collection 5.484E-06 0.0       1     
 ======================= ========= ========= ======

@@ -25,7 +25,7 @@
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
 # risk and software design communities.
-# 
+#
 # The software is NOT distributed as part of GEM's OpenQuake suite
 # (https://www.globalquakemodel.org/tools-products) and must be considered as a
 # separate entity. The software provided herein is designed and implemented
@@ -65,6 +65,7 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
     Class to define the temporal variation in completess using simple
     changes in cumulative rates in individual completeness bins
     '''
+
     def completeness(self, catalogue, config, saveplot=False, filetype='png',
                      timeout=120):
         '''
@@ -115,13 +116,13 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
             completeness_table[iloc, 1] = magnitude_bins[iloc]
             print(completeness_table[iloc, :], has_completeness[iloc])
             if config['increment_lock'] and (iloc > 0) and \
-                (completeness_table[iloc, 0] > completeness_table[iloc - 1, 0]):
-                    completeness_table[iloc, 0] = \
-                        completeness_table[iloc - 1, 0]
+                    (completeness_table[iloc, 0] > completeness_table[iloc - 1, 0]):
+                completeness_table[iloc, 0] = \
+                    completeness_table[iloc - 1, 0]
             # Add marker line to indicate completeness point
             marker_line = np.array([
-                    [0., completeness_table[iloc, 0]],
-                    [cumvals[-1], completeness_table[iloc, 0]]])
+                [0., completeness_table[iloc, 0]],
+                [cumvals[-1], completeness_table[iloc, 0]]])
             plt.plot(marker_line[:, 0], marker_line[:, 1], 'r-')
             if saveplot:
                 filename = saveplot + '_' + ('%5.2f' % lower_mag) + (

@@ -69,16 +69,17 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        cls.conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
-        ))
-        groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
+        )
+        groups = nrml.to_python(MIXED_SRC_MODEL, cls.conv)
         ([cls.point], [cls.cmplx], [cls.area, cls.simple],
          [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
+
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -89,8 +90,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     @property
     def _expected_point(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
@@ -110,8 +110,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             location=geo.Point(-122.0, 38.0),
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        point.num_ruptures = point.count_ruptures()
         return point
 
     @property
@@ -120,9 +120,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=6.55, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
 
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
@@ -131,8 +129,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
 
         area = source.AreaSource(
             source_id="1",
@@ -148,8 +145,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypocenter_distribution=hd,
             polygon=polygon,
             area_discretization=2,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        area.num_ruptures = area.count_ruptures()
         return area
 
     @property
@@ -158,9 +155,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=5.0, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
 
         simple = source.SimpleFaultSource(
             source_id="3",
@@ -174,21 +169,19 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             lower_seismogenic_depth=20.0,
             fault_trace=geo.Line(
                 [geo.Point(-121.82290, 37.73010),
-                 geo.Point(-122.03880, 37.87710)]
-            ),
+                 geo.Point(-122.03880, 37.87710)]),
             dip=45.0,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
-            slip_list=numpy.array([[90, 0.7], [135, 0.3]])
-        )
+            slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
+        simple.num_ruptures = simple.count_ruptures()
         return simple
 
     @property
     def _expected_complex(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         edges = [
             geo.Line([
@@ -223,15 +216,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             rupture_aspect_ratio=2.0,
             edges=edges,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        cmplx.num_ruptures = cmplx.count_ruptures()
         return cmplx
 
     @property
     def _expected_char_simple(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
-        )
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0)
 
         fault_trace = geo.Line([geo.Point(-121.82290, 37.73010),
                                 geo.Point(-122.03880, 37.87710)])
@@ -241,8 +233,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
             dip=45.0,
-            mesh_spacing=self.rupture_mesh_spacing
-        )
+            mesh_spacing=self.rupture_mesh_spacing)
 
         char = source.CharacteristicFaultSource(
             source_id="5",
@@ -251,8 +242,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=tgr_mfd,
             surface=surface,
             rake=30.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -261,9 +252,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             min_mag=5.0, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
 
         edges = [
             geo.Line([
@@ -285,11 +274,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 geo.Point(-123.829, 40.347, 0.2038490E+02),
                 geo.Point(-124.137, 41.218, 0.1741390E+02),
                 geo.Point(-124.252, 42.115, 0.1752740E+02),
-            ]),
-        ]
+            ])]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.complex_fault_mesh_spacing
-        )
+            edges, self.complex_fault_mesh_spacing)
 
         char = source.CharacteristicFaultSource(
             source_id="6",
@@ -298,16 +285,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=incr_mfd,
             surface=complex_surface,
             rake=60.0,
-            temporal_occurrence_model=PoissonTOM(50.0),
-        )
+            temporal_occurrence_model=PoissonTOM(50.0))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
     def _expected_char_multi(self):
         tgr_mfd = mfd.TruncatedGRMFD(
-            a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0
-        )
-
+            a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0)
         surfaces = [
             geo.PlanarSurface(
                 mesh_spacing=self.rupture_mesh_spacing,
@@ -325,9 +310,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 top_left=geo.Point(1, 1, 20),
                 top_right=geo.Point(3, 1, 20),
                 bottom_left=geo.Point(1, -1, 80),
-                bottom_right=geo.Point(3, -1, 80)
-            )
-        ]
+                bottom_right=geo.Point(3, -1, 80))]
         multi_surface = geo.MultiSurface(surfaces)
         char = source.CharacteristicFaultSource(
             source_id="7",
@@ -336,8 +319,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             mfd=tgr_mfd,
             surface=multi_surface,
             rake=90.0,
-            temporal_occurrence_model=PoissonTOM(50.0),
-        )
+            temporal_occurrence_model=PoissonTOM(50.0))
+        char.num_ruptures = char.count_ruptures()
         return char
 
     def test_point_to_hazardlib(self):
@@ -362,15 +345,15 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
-        ))
+        )
         with self.assertRaises(nrml.DuplicatedID):
-            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
+            nrml.to_python(DUPLICATE_ID_SRC_MODEL, conv)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -466,7 +449,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 """)
         [area] = nrml.read(area_file).sourceModel
         with self.assertRaises(AttributeError) as ctx:
-            self.parser.converter.convert_node(area)
+            self.conv.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
@@ -527,7 +510,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_groups(simple_file)
+            nrml.to_python(simple_file, self.conv)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -569,8 +552,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
 class AreaToPointsTestCase(unittest.TestCase):
     """
-    Tests for
-    :func:`openquake.engine.input.source.area_to_point_sources`.
+    Tests for splitting area sources
     """
     rupture_mesh_spacing = 1  # km
     area_source_discretization = 1.  # km
@@ -585,8 +567,7 @@ class AreaToPointsTestCase(unittest.TestCase):
         hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
         area = source.AreaSource(
             source_id="1",
             name="source A",
@@ -601,9 +582,8 @@ class AreaToPointsTestCase(unittest.TestCase):
             hypocenter_distribution=hd,
             polygon=polygon,
             area_discretization=10,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
-        actual = list(s.area_to_point_sources(area))
+            temporal_occurrence_model=PoissonTOM(50.))
+        actual = list(area)
         self.assertEqual(len(actual), 96)  # expected 96 points
         self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
 
@@ -612,17 +592,14 @@ class AreaToPointsTestCase(unittest.TestCase):
             min_mag=6.55, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
-                5.080653E-4,
-            ]
-        )
+                5.080653E-4])
         np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
         np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
         npd = pmf.PMF([(0.3, np1), (0.7, np2)])
         hd = pmf.PMF([(0.5, 4.0), (0.5, 8.0)])
         polygon = geo.Polygon(
             [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
-             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
-        )
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)])
         area = source.AreaSource(
             source_id="1",
             name="source A",
@@ -639,7 +616,7 @@ class AreaToPointsTestCase(unittest.TestCase):
             area_discretization=10,
             temporal_occurrence_model=PoissonTOM(50.0),
         )
-        actual = list(s.area_to_point_sources(area))
+        actual = list(area)
         self.assertEqual(len(actual), 96)  # expected 96 points
         assert_allclose(
             actual[0].mfd.occurrence_rates,
@@ -658,14 +635,14 @@ class SourceGroupTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.))
+            area_source_discretization=1.)
         cls.source_collector = {
-            sc.trt: sc for sc in cls.parser.parse_src_groups(MIXED_SRC_MODEL)}
+            sc.trt: sc for sc in nrml.to_python(MIXED_SRC_MODEL, conv)}
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -754,6 +731,13 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
+
+        # check the attributes of the groups are set
+        [grp0, grp1] = csm.src_groups
+        for grp in csm.src_groups:
+            self.assertEqual(grp.src_interdep, 'indep')
+            self.assertEqual(grp.rup_interdep, 'indep')
+
         self.assertEqual(repr(csm.gsim_lt), '''\
 <GsimLogicTree
 Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
@@ -766,7 +750,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
                           'Active Shallow Crust': 'ChiouYoungs2008()'})
         # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b8'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
@@ -797,7 +781,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
                 return 0
             else:
                 return 1
-        assoc = csm.info.get_rlzs_assoc(count_ruptures)
+        csm.info.update_eff_ruptures(count_ruptures)
+        assoc = csm.info.get_rlzs_assoc()
         expected_assoc = """\
 <RlzsAssoc(size=9, rlzs=9)
 0,SadighEtAl1997(): [0]
@@ -813,7 +798,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(len(assoc.realizations), 9)
 
         # removing all src_groups
-        self.assertEqual(csm.info.get_rlzs_assoc(lambda t: 0).realizations, [])
+        csm.info.update_eff_ruptures(lambda t: 0)
+        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
@@ -821,18 +807,20 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         csm = readinput.get_composite_source_model(oq, sitecol)
-        assoc = csm.info.get_rlzs_assoc(lambda tm: 1)
+        csm.info.update_eff_ruptures(lambda tm: 1)
+        assoc = csm.info.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): [0]\n"
-            "1,SadighEtAl1997(): [1 2 3 4]>")
+            "0,SadighEtAl1997(): [0 1 2]\n"
+            "1,SadighEtAl1997(): [3 4]>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(csm.info))
+        self.assertEqual(repr(new), repr(csm.info).
+                         replace('0.20000000000000004', '0.2'))
 
 
 class FilterSourceTestCase(unittest.TestCase):
@@ -894,14 +882,7 @@ xmlns:gml="http://www.opengis.net/gml"
             reference_backarc=False)
         sitecol = site.SiteCollection.from_points(
             [102.32], [-2.9107], [0], mod)
-        parser = nrml.SourceModelParser(s.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            complex_fault_mesh_spacing=1,  # km
-            width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.,  # km
-        ))
-        [[src]] = parser.parse_groups(self.bad_source)
+        [[src]] = nrml.to_python(self.bad_source)
         with self.assertRaises(AttributeError) as ctx, context(src):
             max_dist = 250
             # NB: with a distance of 200 km the error does not happen

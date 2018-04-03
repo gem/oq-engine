@@ -92,7 +92,8 @@ class _IMT(with_metaclass(IMTMeta, tuple)):
         return self[0]
 
     def __lt__(self, other):
-        return str(self) < str(other)
+        return (self[0], self[1] or 0, self[2] or 0) < (
+            other[0], other[1] or 0, other[2] or 0)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
@@ -160,6 +161,26 @@ class CAV(_IMT):
 class RSD(_IMT):
     """
     Relative significant duration, 5-95% of :class:`Arias intensity
+    <IA>`, in seconds.
+    """
+
+
+class RSD595(_IMT):
+    """
+    Alias for RSD
+    """
+
+
+class RSD575(_IMT):
+    """
+    Relative significant duration, 5-75% of :class:`Arias intensity
+    <IA>`, in seconds.
+    """
+
+
+class RSD2080(_IMT):
+    """
+    Relative significant duration, 20-80% of :class:`Arias intensity
     <IA>`, in seconds.
     """
 

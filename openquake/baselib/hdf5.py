@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import logging
 import operator
 import tempfile
 import importlib
@@ -30,7 +31,7 @@ except ImportError:  # with Python 2
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import pickle, decode
+from openquake.baselib.python3compat import decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -153,50 +154,6 @@ class LiteralAttrs(object):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
         nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
         return '<%s %s>' % (self.__class__.__name__, nameval)
-
-
-# the implementation below stores a dataset per each object; it would be nicer
-# to store an array, however I am not able to do that with the current version
-# of h5py; the best I could do is to store an array of variable length ASCII
-# strings, but then I would have to use the ASCII format of pickle, which is
-# the least efficient. The current solution looks like a decent compromise.
-class PickleableSequence(collections.Sequence):
-    """
-    An immutable sequence of pickleable objects that can be serialized
-    in HDF5 format. Here is an example, using the LiteralAttrs class defined
-    in this module, but any pickleable class would do:
-
-    >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
-    >>> with File('/tmp/x.h5', 'w') as f:
-    ...     f['data'] = seq
-    >>> with File('/tmp/x.h5') as f:
-    ...     f['data']
-    (<LiteralAttrs >, <LiteralAttrs >)
-    """
-    def __init__(self, objects):
-        self._objects = tuple(objects)
-
-    def __getitem__(self, i):
-        return self._objects[i]
-
-    def __len__(self):
-        return len(self._objects)
-
-    def __repr__(self):
-        return repr(self._objects)
-
-    def __toh5__(self):
-        dic = {}
-        nbytes = 0
-        for i, obj in enumerate(self._objects):
-            pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-            dic['%06d' % i] = numpy.array(pik)
-            nbytes += len(pik)
-        return dic, dict(nbytes=nbytes)
-
-    def __fromh5__(self, dic, attrs):
-        self._objects = tuple(pickle.loads(dic[k].value) for k in sorted(dic))
-        vars(self).update(attrs)
 
 
 def cls2dotname(cls):
@@ -398,6 +355,45 @@ def save(path, items, **extra):
     """
     with File(path, 'w') as f:
         for key, val in items:
-            f[key] = val
+            try:
+                f[key] = val
+            except ValueError as err:
+                if 'Object header message is too large' in str(err):
+                    logging.error(str(err))
         for k, v in extra.items():
             f.attrs[k] = v
+
+
+class ArrayWrapper(object):
+    """
+    A pickleable and serializable wrapper over an array, HDF5 dataset or group
+    """
+    def __init__(self, array, attrs):
+        vars(self).update(attrs)
+        self.array = array
+
+    def __iter__(self):
+        return iter(self.array)
+
+    def __len__(self):
+        return len(self.array)
+
+    def __getitem__(self, idx):
+        return self.array[idx]
+
+    def __toh5__(self):
+        return (self.array, {k: v for k, v in vars(self).items()
+                             if k != 'array' and not k.startswith('_')})
+
+    def __fromh5__(self, array, attrs):
+        self.__init__(array, attrs)
+
+    @property
+    def dtype(self):
+        """dtype of the underlying array"""
+        return self.array.dtype
+
+    @property
+    def shape(self):
+        """shape of the underlying array"""
+        return self.array.shape

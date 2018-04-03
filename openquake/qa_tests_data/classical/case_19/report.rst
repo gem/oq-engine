@@ -1,20 +1,20 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5540.hdf5 Fri Sep 22 11:29:50 2017
-checksum32                                           1,302,227,115           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,220,765,868      
+date           2018-03-26T15:56:16
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 1, num_imts = 3
+num_sites = 1, num_levels = 78
 
 Parameters
 ----------
 =============================== ===========================================
 calculation_mode                'classical'                                
 number_of_logic_tree_samples    0                                          
-maximum_distance                {'default': [(6, 100), (7, 150), (8, 200)]}
+maximum_distance                {'default': [(6, 100), (7, 150), (9, 200)]}
 investigation_time              50.0                                       
 ses_per_logic_tree_path         1                                          
 truncation_level                3.0                                        
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.2                                        
 area_source_discretization      10.0                                       
 ground_motion_correlation_model None                                       
+minimum_intensity               {}                                         
 random_seed                     23                                         
 master_seed                     0                                          
+ses_seed                        42                                         
 =============================== ===========================================
 
 Input files
@@ -40,11 +42,11 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-========= ====== ============================================================== ====================== ================
-smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
-========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(0,2,1,0,4,4,5) 4/4             
-========= ====== ============================================================== ====================== ================
+========= ====== ====================== ================
+smlt_path weight gsim_logic_tree        num_realizations
+========= ====== ====================== ================
+b1        1.000  complex(4,2,1,5,0,0,4) 4/4             
+========= ====== ====================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -67,43 +69,45 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================ ====== ================= =========== ============ ============
-source_model                 grp_id trt               num_sources eff_ruptures tot_ruptures
-============================ ====== ================= =========== ============ ============
-simple_area_source_model.xml 4      Subduction Inslab 1           7770         7,770       
-============================ ====== ================= =========== ============ ============
-
-Informational data
-------------------
-=========================== ==================================================================================
-count_eff_ruptures.received tot 14.09 KB, max_per_task 3.63 KB                                                
-count_eff_ruptures.sent     sources 76.61 KB, param 5.43 KB, srcfilter 2.81 KB, monitor 1.28 KB, gsims 1.26 KB
-hazard.input_weight         777.0                                                                             
-hazard.n_imts               3                                                                                 
-hazard.n_levels             78                                                                                
-hazard.n_realizations       1280                                                                              
-hazard.n_sites              1                                                                                 
-hazard.n_sources            1                                                                                 
-hazard.output_weight        78.0                                                                              
-hostname                    tstation.gem.lan                                                                  
-require_epsilons            False                                                                             
-=========================== ==================================================================================
+============================ ====== ================= ============ ============
+source_model                 grp_id trt               eff_ruptures tot_ruptures
+============================ ====== ================= ============ ============
+simple_area_source_model.xml 4      Subduction Inslab 7,770        93,219      
+============================ ====== ================= ============ ============
 
 Slowest sources
 ---------------
-====== ========= ============ ============ ========= ========= =========
-grp_id source_id source_class num_ruptures calc_time num_sites num_split
-====== ========= ============ ============ ========= ========= =========
-4      s46       AreaSource   7,770        0.034     1         370      
-====== ========= ============ ============ ========= ========= =========
+========= ================== ============ ========= ========== ========= =========
+source_id source_class       num_ruptures calc_time split_time num_sites num_split
+========= ================== ============ ========= ========== ========= =========
+s46       AreaSource         7,770        0.183     0.069      370       370      
+scr301    AreaSource         17,268       0.0       0.344      0         0        
+sh14      AreaSource         41,952       0.0       0.603      0         0        
+scr293    AreaSource         61,740       0.0       1.421      0         0        
+s40       AreaSource         12,327       0.0       0.095      0         0        
+s13       AreaSource         12,726       0.0       0.105      0         0        
+i20       ComplexFaultSource 9,241        0.0       7.246E-04  0         0        
+sh6       AreaSource         12,900       0.0       0.189      0         0        
+s72       AreaSource         17,871       0.0       0.157      0         0        
+v1        AreaSource         42           0.0       0.002      0         0        
+sh13      AreaSource         41,952       0.0       0.594      0         0        
+scr299    AreaSource         1,572        0.0       0.023      0         0        
+scr304    AreaSource         574          0.0       0.007      0         0        
+i17       ComplexFaultSource 33,383       0.0       0.002      0         0        
+v4        AreaSource         168          0.0       0.004      0         0        
+s34       AreaSource         12,327       0.0       0.096      0         0        
+s70       AreaSource         17,871       0.0       0.152      0         0        
+s35       AreaSource         12,327       0.0       0.096      0         0        
+========= ================== ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.034     1     
-============ ========= ======
+================== ========= ======
+source_class       calc_time counts
+================== ========= ======
+AreaSource         0.183     16    
+ComplexFaultSource 0.0       2     
+================== ========= ======
 
 Duplicated sources
 ------------------
@@ -111,22 +115,30 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.011 8.061E-04 0.010 0.011 4        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.008 0.003  0.003 0.012 34       
+================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== =================================================================================== ========
+task           sent                                                                                received
+count_ruptures sources=111.57 KB param=38.78 KB srcfilter=24.57 KB gsims=12.88 KB monitor=10.96 KB 12.15 KB
+============== =================================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.710     0.0       1     
-managing sources               0.115     0.0       1     
-total count_eff_ruptures       0.044     0.0       4     
-store source_info              0.027     0.0       1     
-prefiltering source model      0.017     0.0       1     
-aggregate curves               4.015E-04 0.0       4     
-reading site collection        3.457E-05 0.0       1     
-saving probability maps        2.360E-05 0.0       1     
+reading composite source model 9.505     0.0       1     
+splitting sources              3.968     0.0       1     
+managing sources               3.803     0.0       1     
+total count_ruptures           0.263     1.941     34    
+store source_info              0.018     0.0       1     
+unpickling count_ruptures      0.002     0.0       34    
+aggregate curves               7.370E-04 0.0       34    
+reading site collection        3.188E-04 0.0       1     
+saving probability maps        3.076E-05 0.0       1     
 ============================== ========= ========= ======

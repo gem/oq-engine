@@ -48,6 +48,6 @@ def assert_xml_equal(a, b):
     content_b = tostring(parse(b).getroot(), nsmap=PARSE_NS_MAP)
     if content_a != content_b:
         # uncomment this to see the differences
-        # warnings.warn(content_a, stacklevel=2)
+        # import warnings; warnings.warn(str(content_a), stacklevel=2)
         raise AssertionError('The files %s and %s are different!' %
                              (path_a, path_b))

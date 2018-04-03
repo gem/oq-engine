@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -56,7 +56,7 @@ import numpy as np
 from collections import OrderedDict
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
 from openquake.hmtk.parsers.strain.strain_csv_parser import (ReadStrainCsv,
-                                                   WriteStrainCsv)
+                                                             WriteStrainCsv)
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'strain_files')
@@ -67,6 +67,7 @@ class TestStrainCsvReader(unittest.TestCase):
     '''
     Test suite for the strain csv reader
     '''
+
     def setUp(self):
         '''
         '''
@@ -140,6 +141,7 @@ class TestStrainCsvWriter(unittest.TestCase):
     '''
     Class to test strain model writer to csv
     '''
+
     def setUp(self):
         '''
         '''
@@ -166,20 +168,19 @@ class TestStrainCsvWriter(unittest.TestCase):
         '''
         self.writer = WriteStrainCsv('some_random_file')
         self.model.seismicity_rate = np.array([[1., 2.],
-                                                [1., 2.],
-                                                [1., 2.]])
+                                               [1., 2.],
+                                               [1., 2.]])
         self.model.target_magnitudes = np.array([5.5, 6.6])
         self.model, output_variables = self.writer.slice_rates_to_data(
             self.model)
 
         self.assertListEqual(output_variables,
-            ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'])
+                             ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'])
         np.testing.assert_array_almost_equal(self.model.data['5.500'],
                                              np.array([1., 1., 1.]))
 
         np.testing.assert_array_almost_equal(self.model.data['6.600'],
                                              np.array([2., 2., 2.]))
-
 
     def test_write_to_file(self):
         '''
@@ -187,16 +188,15 @@ class TestStrainCsvWriter(unittest.TestCase):
         '''
         self.writer = WriteStrainCsv('a_test_file.csv')
         self.model.seismicity_rate = np.array([[1., 2.],
-                                                [1., 2.],
-                                                [1., 2.]])
+                                               [1., 2.],
+                                               [1., 2.]])
         self.model.target_magnitudes = np.array([5.5, 6.6])
-
 
         expected = [['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500',
                      '6.600'], ['30.0', '30.0', '1.0', '1.0', '1.0', '1.0',
-                     '2.0'], ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0',
-                     '2.0'], ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0',
-                     '2.0']]
+                                '2.0'], ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0',
+                                         '2.0'], ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0',
+                                                  '2.0']]
         self.writer.write_file(self.model)
         f = open('a_test_file.csv')
         data = csv.reader(f)

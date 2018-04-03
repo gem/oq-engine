@@ -61,6 +61,7 @@ from openquake.hmtk.seismicity.occurrence.penalized_mle import PenalizedMLE
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
+
 def build_catalogue_from_file(filename):
     """
     Creates a "minimal" catalogue from a raw csv file
@@ -81,6 +82,7 @@ class PenalizedMLETestCase(unittest.TestCase):
     This test verifies (partial) implementation of the Penalized Maximum
     likelihood estimation algorithm
     """
+
     def setUp(self):
         cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
         self.catalogue = build_catalogue_from_file(cat_file)
@@ -122,7 +124,7 @@ class PenalizedMLETestCase(unittest.TestCase):
             np.array([1749. / 20.,
                       391. / 35.,
                       72. / 50.,
-                      13. / 80, 
+                      13. / 80,
                       1. / 100.]))
         # Cumulative rate
         np.testing.assert_array_almost_equal(
@@ -171,7 +173,7 @@ class PenalizedMLETestCase(unittest.TestCase):
         self.assertAlmostEqual(rate, 0.0825, 4)
         self.assertAlmostEqual(sigma_rate, 0.0195, 4)
         self.assertAlmostEqual(rho, 0.0873, 4)
-    
+
     def test_controlled_execution_2(self):
         """
         For a table representing the key properties of a known catalogue

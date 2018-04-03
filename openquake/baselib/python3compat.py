@@ -27,6 +27,12 @@ import sys
 import math
 import importlib
 import subprocess
+try:
+    # Python 3
+    from urllib.request import urlopen, Request
+except ImportError:
+    # Python 2
+    from urllib2 import urlopen, Request
 
 PY3 = sys.version_info[0] >= 3
 PY2 = sys.version_info[0] == 2
@@ -39,7 +45,7 @@ def encode(val):
     :param: a unicode or bytes object
     :returns: bytes
     """
-    if isinstance(val, list):  # encode a list of strings
+    if isinstance(val, (list, tuple)):  # encode a list or tuple of strings
         return [encode(v) for v in val]
     elif isinstance(val, unicode):
         return val.encode('utf-8')

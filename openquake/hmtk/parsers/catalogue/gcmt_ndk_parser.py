@@ -89,6 +89,7 @@ class ParseNDKtoGCMT(object):
     """
     Implements the parser to read a file in ndk format to the GCMT catalogue
     """
+
     def __init__(self, filename):
         """
         :param str filename:
@@ -138,20 +139,20 @@ class ParseNDKtoGCMT(object):
         # Get hypocentre
         ndkstring = raw_data[id0].rstrip('\n')
         gcmt.hypocentre = self._read_hypocentre_from_ndk_string(ndkstring)
-        
+
         # GCMT metadata
         ndkstring = raw_data[id0 + 1].rstrip('\n')
         gcmt = self._get_metadata_from_ndk_string(gcmt, ndkstring)
-        
+
         # Get Centroid
         ndkstring = raw_data[id0 + 2].rstrip('\n')
-        gcmt.centroid = self._read_centroid_from_ndk_string(ndkstring, 
-                                                             gcmt.hypocentre)
+        gcmt.centroid = self._read_centroid_from_ndk_string(ndkstring,
+                                                            gcmt.hypocentre)
 
         # Get Moment Tensor
         ndkstring = raw_data[id0 + 3].rstrip('\n')
         gcmt.moment_tensor = self._get_moment_tensor_from_ndk_string(ndkstring)
-        
+
         # Get principal axes
         ndkstring = raw_data[id0 + 4].rstrip('\n')
         gcmt.principal_axes = self._get_principal_axes_from_ndk_string(
@@ -234,7 +235,7 @@ class ParseNDKtoGCMT(object):
                 gcmt.nodal_planes.nodal_plane_2['dip']
             self.catalogue.data['rake2'][iloc] = \
                 gcmt.nodal_planes.nodal_plane_2['rake']
-             # Principal axes
+            # Principal axes
             self.catalogue.data['eigenvalue_b'][iloc] = \
                 gcmt.principal_axes.b_axis['eigenvalue']
             self.catalogue.data['azimuth_b'][iloc] = \
@@ -361,7 +362,7 @@ class ParseNDKtoGCMT(object):
         axes.b_axis = {'eigenvalue': exponent * float(ndk_string[15:23]),
                        'plunge': float(ndk_string[23:26]),
                        'azimuth': float(ndk_string[26:30])}
-        
+
         axes.p_axis = {'eigenvalue': exponent * float(ndk_string[30:38]),
                        'plunge': float(ndk_string[38:41]),
                        'azimuth': float(ndk_string[41:])}

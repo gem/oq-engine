@@ -27,7 +27,9 @@
                         applyToTectonicRegionType="Stable Shallow Crust">
 
       <logicTreeBranch branchID="b21">
-        <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+        <uncertaintyModel minimum_distance="10">
+          AkkarBommer2010
+        </uncertaintyModel>
         <uncertaintyWeight>0.60</uncertaintyWeight>
       </logicTreeBranch>
       

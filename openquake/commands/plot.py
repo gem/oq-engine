@@ -20,7 +20,7 @@ from __future__ import print_function
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
-from openquake.commonlib import calc
+from openquake.calculators import getters
 
 
 def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
@@ -57,9 +57,10 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 
 
 def get_pmaps(dstore, indices):
-    getter = calc.PmapGetter(dstore)
+    getter = getters.PmapGetter(dstore)
+    getter.init()
     pmaps = getter.get_pmaps(indices)
-    weights = dstore['realizations']['weight']
+    weights = dstore['csm_info'].rlzs['weight']
     mean = compute_pmap_stats(pmaps, [mean_curve], weights)
     return mean, pmaps
 

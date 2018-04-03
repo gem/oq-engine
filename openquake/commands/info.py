@@ -23,6 +23,7 @@ import logging
 import operator
 import collections
 import numpy
+from decorator import FunctionMaker
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
@@ -30,32 +31,32 @@ from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
 from openquake.commonlib import readinput
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
 
-def source_model_info(node):
+def source_model_info(nodes):
     """
-    Extract information about a NRML/0.5 source model
+    Extract information about NRML/0.5 source models. Returns a table
+    with TRTs as rows and source classes as columns.
     """
-    trts = []
-    counters = []
-    src_classes = set()
-    for src_group in node:
-        c = collections.Counter()
-        trts.append(src_group['tectonicRegion'])
-        for src in src_group:
-            tag = src.tag.split('}')[1]
-            c[tag] += 1
-        counters.append(c)
-        src_classes.update(c)
-    dtlist = [('TRT', (bytes, 30))] + [
-        (name, int) for name in sorted(src_classes)]
-    out = numpy.zeros(len(node) + 1, dtlist)
-    for i, c in enumerate(counters):
-        out[i]['TRT'] = trts[i]
-        for name in src_classes:
-            out[i][name] = c[name]
+    c = collections.Counter()
+    for node in nodes:
+        for src_group in node:
+            trt = src_group['tectonicRegion']
+            for src in src_group:
+                src_class = src.tag.split('}')[1]
+                c[trt, src_class] += 1
+    trts, classes = zip(*c)
+    trts = sorted(set(trts))
+    classes = sorted(set(classes))
+    dtlist = [('TRT', (bytes, 30))] + [(name, int) for name in classes]
+    out = numpy.zeros(len(trts) + 1, dtlist)  # +1 for the totals
+    for i, trt in enumerate(trts):
+        out[i]['TRT'] = trt
+        for src_class in classes:
+            out[i][src_class] = c[trt, src_class]
     out[-1]['TRT'] = 'Total'
     for name in out.dtype.names[1:]:
         out[-1][name] = out[name][:-1].sum()
@@ -76,7 +77,7 @@ def print_csm_info(fname):
     print(rlzs_assoc)
     dupl = [(srcs[0]['id'], len(srcs)) for srcs in csm.check_dupl_sources()]
     if dupl:
-        print(rst_table(dupl, ['source_id', 'duplicates']))
+        print(rst_table(dupl, ['source_id', 'multiplicity']))
     tot, pairs = get_pickled_sizes(rlzs_assoc)
     print(rst_table(pairs, ['attribute', 'nbytes']))
 
@@ -100,7 +101,7 @@ def do_build_reports(directory):
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
 @sap.Script
-def info(calculators, gsims, views, exports, report, input_file=''):
+def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -123,6 +124,14 @@ def info(calculators, gsims, views, exports, report, input_file=''):
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
+    if extracts:
+        for key in extract:
+            func = extract[key]
+            if hasattr(func, '__wrapped__'):
+                fm = FunctionMaker(func.__wrapped__)
+            else:
+                fm = FunctionMaker(func)
+            print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
     if os.path.isdir(input_file) and report:
         with Monitor('info', measuremem=True) as mon:
             with mock.patch.object(logging.root, 'info'):  # reduce logging
@@ -136,7 +145,12 @@ def info(calculators, gsims, views, exports, report, input_file=''):
                     '%s is in NRML 0.4 format, please run the following '
                     'command:\noq upgrade_nrml %s' % (
                         input_file, os.path.dirname(input_file) or '.'))
-            print(source_model_info(node[0]))
+            print(source_model_info([node[0]]))
+        elif node[0].tag.endswith('logicTree'):
+            nodes = [nrml.read(sm_path)[0]
+                     for sm_paths in readinput.gen_sm_paths(input_file)
+                     for sm_path in sm_paths]
+            print(source_model_info(nodes))
         else:
             print(node.to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -154,5 +168,6 @@ info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
+info.flg('extracts', 'list available extracts', '-x')
 info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')

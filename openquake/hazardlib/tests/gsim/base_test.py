@@ -74,42 +74,10 @@ class _FakeGSIMTestCase(unittest.TestCase):
         kwargs = default_kwargs
         return self.gsim.get_poes(**kwargs)
 
-    def _disaggregate_poe(self, **kwargs):
-        default_kwargs = dict(
-            sctx=SitesContext(),
-            rctx=RuptureContext(),
-            dctx=DistancesContext(),
-            imt=self.DEFAULT_IMT(),
-            iml=2.0,
-            truncation_level=1.0,
-            n_epsilons=3,
-        )
-        default_kwargs.update(kwargs)
-        kwargs = default_kwargs
-        return self.gsim.disaggregate_poe(**kwargs)
-
     def _assert_value_error(self, func, error, **kwargs):
         with self.assertRaises(ValueError) as ar:
             func(**kwargs)
         self.assertEqual(str(ar.exception), error)
-
-
-class GetPoEsWrongInputTestCase(_FakeGSIMTestCase):
-    def test_wrong_imt(self):
-        err = 'imt must be an instance of IMT subclass'
-        self._assert_value_error(self._get_poes, err, imt='something')
-        self._assert_value_error(self._disaggregate_poe, err, imt='something')
-        err = 'imt PGV is not supported by FakeGSIM'
-        self._assert_value_error(self._get_poes, err, imt=PGV())
-        self._assert_value_error(self._disaggregate_poe, err, imt=PGV())
-
-    def test_wrong_truncation_level(self):
-        err = 'truncation level must be zero, positive number or None'
-        self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
-        self._assert_value_error(self._get_poes, err, truncation_level=-1)
-        err = 'truncation level must be positive'
-        self._assert_value_error(self._disaggregate_poe, err,
-                                 truncation_level=-0.1)
 
 
 class GetPoEsTestCase(_FakeGSIMTestCase):
@@ -196,112 +164,6 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe21, 0.6531376)
         self.assertAlmostEqual(poe22, 0.6034116)
         self.assertAlmostEqual(poe23, 0.5521092)
-
-
-class DisaggregatePoETestCase(_FakeGSIMTestCase):
-    def test_zero_poe(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            self.assertEqual(imt, self.DEFAULT_IMT())
-            self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            return numpy.array([1.4]), [numpy.array([0.4])]
-
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        iml = 1.8
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=5, truncation_level=1)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (1, 5))
-        numpy.testing.assert_equal(poes, 0)
-
-    def test_max_poe(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            self.assertEqual(imt, self.DEFAULT_IMT())
-            self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            return numpy.array([2.9]), [numpy.array([1.1])]
-
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        iml = 1.8
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=6, truncation_level=1)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (1, 6))
-        self.assertAlmostEqual(poes.sum(), 1)
-        numpy.testing.assert_almost_equal(
-            poes, [[0.13745236, 0.17130599, 0.19124164,
-                    0.19124164, 0.17130599, 0.13745236]]
-        )
-
-    def test_middle_of_epsilon_bin(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            self.assertEqual(imt, self.DEFAULT_IMT())
-            self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            mean = numpy.array([9.4])
-            stddev = numpy.array([0.75])
-            get_mean_and_stddevs.call_count += 1
-            return mean, [stddev]
-
-        get_mean_and_stddevs.call_count = 0
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        aaae = numpy.testing.assert_array_almost_equal
-
-        iml = 9.7
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=5, truncation_level=2)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (1, 5))
-        aaae(poes, [[0, 0, 0, 0.24044908, 0.09672034]])
-
-        iml = 8.5
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=5, truncation_level=2)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (1, 5))
-        aaae(poes, [[0, 0.24044908, 0.32566115, 0.24044908, 0.09672034]])
-
-        iml = 9.85
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=5, truncation_level=2)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (1, 5))
-        aaae(poes, [[0, 0, 0, 0.1667716, 0.09672034]])
-
-        self.assertEqual(get_mean_and_stddevs.call_count, 3)
-
-    def test_many_contexts(self):
-        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
-
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
-            mean = numpy.array([3, 4.5, 5, 8])
-            stddev = numpy.array([1, 2, 0.5, 0.9])
-            return mean, [stddev]
-
-        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
-        aaae = numpy.testing.assert_array_almost_equal
-
-        iml = 5.3
-        poes = self._disaggregate_poe(imt=self.DEFAULT_IMT(), iml=iml,
-                                      n_epsilons=5, truncation_level=3)
-        self.assertIsInstance(poes, numpy.ndarray)
-        self.assertEqual(poes.shape, (4, 5))
-        epoes = [[0., 0., 0., 0., 0.00939958],
-                 [0., 0., 0.07051552, 0.23896796, 0.03467403],
-                 [0., 0., 0., 0.23896796, 0.03467403],
-                 [0.03467403, 0.23896796, 0.45271601, 0.23896796, 0.03467403]]
-        aaae(poes, epoes)
 
 
 class TGMPE(GMPE):

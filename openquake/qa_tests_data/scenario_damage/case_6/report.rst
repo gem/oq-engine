@@ -1,13 +1,13 @@
 oq-test03, depth=15km
 =====================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5470.hdf5 Fri Sep 22 11:28:55 2017
-checksum32                                    3,074,586,051           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     3,074,586,051      
+date           2018-03-26T15:54:48
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 1, num_imts = 2
+num_sites = 1, num_levels = 40
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     3                 
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -40,11 +42,11 @@ structural_fragility `fragility_model_test03.xml <fragility_model_test03.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -78,7 +80,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.007     0.0       1     
-filtering sites         0.002     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading exposure        0.002     0.0       1     
+reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======

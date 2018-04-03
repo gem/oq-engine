@@ -48,37 +48,37 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
             self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_doesnt_intersect(self):
-        lons = [-1, -2, -3, -5]
-        lats = [0,  2,  4,  6]
+        lons = numpy.array([-1, -2, -3, -5])
+        lats = numpy.array([0,  2,  4,  6])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
     def test_intersects(self):
-        lons = [0, 0, 1, -1]
-        lats = [0, 1, 0,  1]
+        lons = numpy.array([0, 0, 1, -1])
+        lats = numpy.array([0, 1, 0,  1])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_a_pole(self):
-        lons = [45, 165, -150, 80]
-        lats = [-80, -80, -80, -70]
+        lons = numpy.array([45, 165, -150, 80])
+        lats = numpy.array([-80, -80, -80, -70])
         self.assertEqual(True, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_only_after_being_closed(self):
-        lons = [0, 0, 1, 1]
-        lats = [0, 1, 0, 1]
+        lons = numpy.array([0, 0, 1, 1])
+        lats = numpy.array([0, 1, 0, 1])
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
     def test_intersects_on_international_date_line(self):
-        lons = [178, 178, -178, 170]
+        lons = numpy.array([178, 178, -178, 170])
         lats = [0, 10, 0, 5]
         self.assertEqual(True, self.func(lons, lats))
 
     def test_doesnt_intersect_on_international_date_line(self):
-        lons = [178, 178, 179, -178]
-        lats = [0, 10, 5, 5]
+        lons = numpy.array([178, 178, 179, -178])
+        lats = numpy.array([0, 10, 5, 5])
         self.assertEqual(False, self.func(lons, lats))
 
 
@@ -105,25 +105,25 @@ class GetSphericalBoundingBox(unittest.TestCase):
         self.func = utils.get_spherical_bounding_box
 
     def test_one_point(self):
-        lons = [20]
-        lats = [-40]
+        lons = numpy.array([20])
+        lats = numpy.array([-40])
         self.assertEqual(self.func(lons, lats), (20, 20, -40, -40))
 
     def test_small_extent(self):
-        lons = [10, -10]
-        lats = [50,  60]
+        lons = numpy.array([10, -10])
+        lats = numpy.array([50,  60])
         self.assertEqual(self.func(lons, lats), (-10, 10, 60, 50))
 
     def test_international_date_line(self):
-        lons = [-20, 180, 179, 178]
-        lats = [-1,   -2,   1,   2]
+        lons = numpy.array([-20, 180, 179, 178])
+        lats = numpy.array([-1,   -2,   1,   2])
         self.assertEqual(self.func(lons, lats), (178, -20, 2, -2))
 
     def test_too_wide_longitudinal_extent(self):
         for lons, lats in [([-45, -135, 135, 45], [80] * 4),
                            ([0, 10, -175], [0] * 4)]:
             with self.assertRaises(ValueError) as ae:
-                self.func(lons, lats)
+                self.func(numpy.array(lons), numpy.array(lats))
                 self.assertEqual(str(ae.exception),
                                  'points collection has longitudinal '
                                  'extent wider than 180 deg')
@@ -439,12 +439,3 @@ class GeographicObjectsTest(unittest.TestCase):
     def test_exact_point(self):
         point, dist = self.points.get_closest(0.0, 0.2)
         self.assertEqual(point, Point(0.0, 0.2))
-
-    def test_max_distance(self):
-        point, dist = self.points.get_closest(
-            0.0, 0.21, max_distance=100)  # close
-        self.assertEqual(point, Point(0.0, 0.2))
-        point, dist = self.points.get_closest(
-            0.0, 0.21, max_distance=0.1)  # far
-        self.assertIsNone(point)
-

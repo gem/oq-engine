@@ -3,9 +3,7 @@ The magnitude-frequency distributions currently supported by the
 
 \begin{description}
 
-
 \item[A discrete incremental magnitude-frequency distribution]
-
 It is the simplest distribution supported. It is defined by the minimum value
 of magnitude (representing the mid point of the first bin) and the bin width.
 The distribution itself is simply a sequence of floats describing the annual
@@ -21,8 +19,8 @@ seismic source description in order to define this \gls{acr:mfd}.
 </incrementalMFD>
 \end{minted}
 
-
-The magnitude-frequency distribution obtained with the above parameters is represented in Figure~\ref{fig:evenly_discretized_mfd}.
+The magnitude-frequency distribution obtained with the above parameters is
+represented in Figure~\ref{fig:evenly_discretized_mfd}.
 
 \begin{figure}[!ht]
 \centering
@@ -32,12 +30,12 @@ The magnitude-frequency distribution obtained with the above parameters is repre
 \end{figure}
 
 \item[A double truncated Gutenberg-Richter distribution]
-
 This distribution is described by means of a minimum \texttt{minMag} and
 maximum magnitude \texttt{maxMag} and by the $a$ and $b$ values of the
 Gutenberg-Richter relationship.
 
-The syntax of the xml used to describe this magnitude-frequency distribution is rather compact as demonstrated in the following example:
+The syntax of the xml used to describe this magnitude-frequency distribution
+is rather compact as demonstrated in the following example:
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <truncGutenbergRichterMFD aValue="5.0" bValue="1.0" minMag="5.0"
@@ -56,7 +54,19 @@ distribution.}
 \end{figure}
 
 \item[Hybrid Characteristic earthquake model (\`{a} la \cite{youngs1985})]
-The hybrid characteristic earthquake model, presented by \cite{youngs1985}, distributes seismic moment proportionally between a characteristic model (for larger magnitudes) and an exponential model. The rate of events is dependent on the magnitude of the characteristic earthquake, the b-value and the total moment rate of the system (Figure \ref{fig:yc_gr_mfd}). However, the total moment rate may be defined in one of two ways. If the total moment rate of the source is known, as may be the case for a fault surface with known area and slip rate, then the distribution can be defined from the total moment rate (in N-m) of the source directly. Alternatively, the distribution can be defined from the rate of earthquakes in the characteristic bin, which may be preferable if the distribution is determined from observed seismicity behaviour. The option to define the distribution according to the total moment rate is input as:
+The hybrid characteristic earthquake model, presented by \cite{youngs1985},
+distributes seismic moment proportionally between a characteristic model (for
+larger magnitudes) and an exponential model. The rate of events is dependent
+on the magnitude of the characteristic earthquake, the b-value and the total
+moment rate of the system (Figure \ref{fig:yc_gr_mfd}). However, the total
+moment rate may be defined in one of two ways. If the total moment rate of the
+source is known, as may be the case for a fault surface with known area and
+slip rate, then the distribution can be defined from the total moment rate (in
+N-m) of the source directly. Alternatively, the distribution can be defined
+from the rate of earthquakes in the characteristic bin, which may be
+preferable if the distribution is determined from observed seismicity
+behaviour. The option to define the distribution according to the total moment
+rate is input as:
 
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
@@ -65,14 +75,16 @@ The hybrid characteristic earthquake model, presented by \cite{youngs1985}, dist
 \end{minted}
 
 
-\noindent whereas the option to define the distribution from the rate of the characteristic events is given as:
+\noindent whereas the option to define the distribution from the rate of
+the characteristic events is given as:
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <YoungsCoppersmithMFD minmag="5.0" bValue="1.0" binWidth="0.1"
                       characteristicMag="7.0" characteristicRate="0.005"/>
 \end{minted}
 
-Note that in this distribution the width of the magnitude bin must be defined explicitly in the model.
+Note that in this distribution the width of the magnitude bin must be defined
+explicitly in the model.
 
 \begin{figure}[!ht]
 \centering
@@ -82,7 +94,13 @@ Note that in this distribution the width of the magnitude bin must be defined ex
 \end{figure}
 
 \item[``Arbitrary'' Magnitude Frequency Distribution]
-The arbitrary magnitude frequency distribution is another non-parametric form of MFD, in which the rates are defined explicitly. Here, the magnitude frequency distribution is defined by a list of magnitudes and their corresponding rates of occurrence. There is no bin-width as the rates correspond exactly to the specific magnitude. Unlike the evenly discretised MFD, there is no requirement that the magnitudes be equally spaced. This distribution (illustrated in Figure \ref{fig:arb_mfd}) can be input as:
+The arbitrary magnitude frequency distribution is another non-parametric form
+of MFD, in which the rates are defined explicitly. Here, the magnitude
+frequency distribution is defined by a list of magnitudes and their
+corresponding rates of occurrence. There is no bin-width as the rates
+correspond exactly to the specific magnitude. Unlike the evenly discretised
+MFD, there is no requirement that the magnitudes be equally spaced. This
+distribution (illustrated in Figure \ref{fig:arb_mfd}) can be input as:
 
 \begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
 <arbitraryMFD>
@@ -97,6 +115,5 @@ The arbitrary magnitude frequency distribution is another non-parametric form of
 \caption{``Arbitrary'' magnitude-frequency distribution.}
 \label{fig:arb_mfd}
 \end{figure}
-  
 
 \end{description}

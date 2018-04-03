@@ -1,13 +1,13 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5564.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                           2,254,713,843           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     2,254,713,843      
+date           2018-03-26T15:57:42
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 20, num_imts = 1
+num_sites = 20, num_levels = 8
 
 Parameters
 ----------
@@ -23,9 +23,11 @@ complex_fault_mesh_spacing      15.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
-avg_losses                      False             
+ses_seed                        42                
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -41,11 +43,11 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    trivial(1)      1/1             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -54,13 +56,6 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
-
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
 
 Exposure model
 --------------
@@ -73,10 +68,10 @@ insurance_limit relative
 
 ========================== ===== ====== === === ========= ==========
 taxonomy                   mean  stddev min max num_sites num_assets
+Wood                       1.000 0.0    1   1   8         8         
 Adobe                      1.000 0.0    1   1   3         3         
 Stone-Masonry              1.000 0.0    1   1   4         4         
 Unreinforced-Brick-Masonry 1.000 0.0    1   1   5         5         
-Wood                       1.000 0.0    1   1   8         8         
 *ALL*                      1.000 0.0    1   1   20        20        
 ========================== ===== ====== === === ========= ==========
 
@@ -85,11 +80,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.010     0.0       1     
-filtering sites         0.004     0.0       1     
-saving gmfs             0.003     0.0       1     
-computing gmfs          0.001     0.0       1     
-building riskinputs     8.850E-04 0.0       1     
-building epsilons       5.338E-04 0.0       1     
-reading site collection 5.722E-06 0.0       1     
+building riskinputs     0.092     0.0       1     
+reading exposure        0.019     0.0       1     
+saving gmfs             0.017     0.0       1     
+computing gmfs          0.003     0.0       1     
+building epsilons       0.002     0.0       1     
+reading site collection 4.792E-05 0.0       1     
 ======================= ========= ========= ======

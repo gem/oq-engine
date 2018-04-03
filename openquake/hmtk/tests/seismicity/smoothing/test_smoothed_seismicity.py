@@ -85,11 +85,10 @@ class TestSmoothingUtils(unittest.TestCase):
             simple_array, utils.check_completeness_table(simple_array, None))
         # When invalid data is input
         bad_array = np.array([[1990., 4.0, 23.4],
-                               [1960., 5.0, 2.1]])
+                              [1960., 5.0, 2.1]])
 
         with self.assertRaises(AssertionError) as aer:
             utils.check_completeness_table(bad_array, None)
-
 
     def test_check_completeness_table_list(self):
         '''
@@ -98,13 +97,12 @@ class TestSmoothingUtils(unittest.TestCase):
         # When valid data is input
         simple_list = [1990., 4.0]
         np.testing.assert_array_almost_equal(np.array([simple_list]),
-                             utils.check_completeness_table(simple_list, None))
+                                             utils.check_completeness_table(simple_list, None))
         # When invalid data is input
         bad_list = [1990.]
 
         with self.assertRaises(AssertionError) as aer:
             utils.check_completeness_table(bad_list, None)
-
 
     def test_check_completeness_table_none(self):
         '''
@@ -113,8 +111,7 @@ class TestSmoothingUtils(unittest.TestCase):
         self.catalogue.data['year'] = np.array([1991., 1992., 1990., 2005.])
         self.catalogue.data['magnitude'] = np.array([4.1, 4.5, 4.0, 7.5])
         np.testing.assert_array_almost_equal(np.array([[1990., 4.0]]),
-            utils.check_completeness_table(None, self.catalogue))
-
+                                             utils.check_completeness_table(None, self.catalogue))
 
     def test_get_even_magnitude_completeness(self):
         '''
@@ -139,15 +136,14 @@ class TestSmoothingUtils(unittest.TestCase):
                                    [1900., 4.9],
                                    [1900., 5.0]])
         np.testing.assert_array_almost_equal(expected_table,
-            utils.get_even_magnitude_completeness(comp_table,
-                                                  self.catalogue)[0])
+                                             utils.get_even_magnitude_completeness(comp_table,
+                                                                                   self.catalogue)[0])
 
         # Common case - only one value
         comp_table = np.array([[1990., 4.0]])
         np.testing.assert_array_almost_equal(np.array([[1990., 4.0]]),
-            utils.get_even_magnitude_completeness(comp_table,
-                                                  self.catalogue)[0])
-
+                                             utils.get_even_magnitude_completeness(comp_table,
+                                                                                   self.catalogue)[0])
 
     def test_get_adjustment_factor(self):
         '''
@@ -164,13 +160,13 @@ class TestSmoothingUtils(unittest.TestCase):
 
         tfact = 0.5
         self.assertAlmostEqual(tfact,
-            _get_adjustment(4.2, 1995., comp_table[0, 1], comp_table[:, 0],
-                            tfact))
+                               _get_adjustment(4.2, 1995., comp_table[0, 1], comp_table[:, 0],
+                                               tfact))
 
         # Good case - when event is in a previous completeness period
         self.assertAlmostEqual(tfact,
-            _get_adjustment(4.7, 1985., comp_table[0, 1], comp_table[:, 0],
-                            tfact))
+                               _get_adjustment(4.7, 1985., comp_table[0, 1], comp_table[:, 0],
+                                               tfact))
 
         # Bad case - below minimum completeness in file
         self.assertFalse(_get_adjustment(3.8, 1990., comp_table[0, 1],
@@ -183,12 +179,11 @@ class TestSmoothingUtils(unittest.TestCase):
         # Good case when only one completeness period is needed
         comp_table = np.array([[1960., 4.5]])
         self.assertAlmostEqual(1.0,
-            _get_adjustment(5.0, 1990., comp_table[0, 1], comp_table[:, 0],
-                            tfact))
+                               _get_adjustment(5.0, 1990., comp_table[0, 1], comp_table[:, 0],
+                                               tfact))
         # Bad case when only one completeness period is needed
         self.assertFalse(_get_adjustment(4.0, 1990., comp_table[0, 1],
                                          comp_table[:, 0], tfact))
-
 
     def test_hermann_factor(self):
         '''
@@ -209,7 +204,6 @@ class TestSmoothingUtils(unittest.TestCase):
         ainc = utils.incremental_a_value(1.0, 5.0, 0.1)
         self.assertAlmostEqual(ainc, 99999.6670766, 3)
 
-
     def test_weichert_factor(self):
         '''
         Tests the Weichert adjustment factor to compensate for time varying
@@ -223,21 +217,21 @@ class TestSmoothingUtils(unittest.TestCase):
                                [1850., 6.0],
                                [1850., 7.0]])
         self.assertAlmostEqual(0.0124319686,
-            utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
-                                      end_year)[0])
+                               utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
+                                                         end_year)[0])
 
         # Test 2: Single value of completeness
         comp_table = np.array([[1960., 4.0]])
         self.assertAlmostEqual(1. / (2006. - 1960. + 1.),
-            utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
-                                      end_year)[0])
-
+                               utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
+                                                         end_year)[0])
 
 
 class TestSmoothedSeismicity(unittest.TestCase):
     '''
     Class to test the implementation of the smoothed seismicity algorithm
     '''
+
     def setUp(self):
         self.grid_limits = []
         self.model = None
@@ -290,8 +284,8 @@ class TestSmoothedSeismicity(unittest.TestCase):
         expected_result = np.zeros(100, dtype=int)
         expected_result[[9, 28, 46, 64, 82, 90]] = 1
         np.testing.assert_array_almost_equal(expected_result,
-            self.model.create_2D_grid_simple(lons, lats, years, mags,
-                                             comp_table))
+                                             self.model.create_2D_grid_simple(lons, lats, years, mags,
+                                                                              comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
         # Case 2 - some events outside grid
@@ -300,8 +294,8 @@ class TestSmoothedSeismicity(unittest.TestCase):
         mags = 5.0 * np.ones(7)
         years = 2000. * np.ones(7)
         np.testing.assert_array_almost_equal(expected_result,
-            self.model.create_2D_grid_simple(lons, lats, years, mags,
-                                             comp_table))
+                                             self.model.create_2D_grid_simple(lons, lats, years, mags,
+                                                                              comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
     def test_get_3d_grid(self):
@@ -321,14 +315,13 @@ class TestSmoothedSeismicity(unittest.TestCase):
         self.catalogue.data['magnitude'] = 4.5 * np.ones(12)
         self.catalogue.data['year'] = 1990. * np.ones(12)
 
-
         # Case 1 - one depth layer
         self.grid_limits = Grid.make_from_list(
             [35.0, 40., 0.5, 40.0, 45., 0.5, 0., 40., 40.])
         self.model = SmoothedSeismicity(self.grid_limits, bvalue=1.0)
         [gx, gy] = np.meshgrid(np.arange(35.25, 40., 0.5),
                                np.arange(40.25, 45., 0.5))
-        ngp = np.shape(gx)[0]  * np.shape(gy)[1]
+        ngp = np.shape(gx)[0] * np.shape(gy)[1]
         gx = np.reshape(gx, [ngp, 1])
         gy = np.reshape(gy, [ngp, 1])
         gz = 20. * np.ones(ngp)
@@ -346,7 +339,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
         expected_result = np.vstack([expected_result, expected_result])
         expected_count = np.zeros(200)
         expected_count[[9, 28, 46, 64, 82, 90,
-            109, 128, 146, 164, 182, 190]] = 1.0
+                        109, 128, 146, 164, 182, 190]] = 1.0
         expected_result[:, -1] = expected_count
         expected_result[:, 2] = np.hstack([10. * np.ones(100),
                                            30. * np.ones(100)])
@@ -366,7 +359,6 @@ class TestSmoothedSeismicity(unittest.TestCase):
         return_data = np.genfromtxt(OUTPUT_FILE, delimiter=',', skip_header=1)
         np.testing.assert_array_almost_equal(return_data, self.model.data)
         os.system('rm ' + OUTPUT_FILE)
-
 
     def test_analysis_Frankel_comparison(self):
         '''
@@ -396,7 +388,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
             self.catalogue,
             config,
             completeness_table=comp_table,
-            smoothing_kernel = IsotropicGaussian())
+            smoothing_kernel=IsotropicGaussian())
 
         self.assertTrue(fabs(np.sum(output_data[:, -1]) -
                              np.sum(output_data[:, -2])) < 1.0)

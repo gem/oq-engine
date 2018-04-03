@@ -134,7 +134,7 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                                   latitude[vsel],
                                   longitude[i],
                                   latitude[i]) <= sw_space[i]
-                vsel[vsel] = vsel1
+                vsel[vsel] = vsel1[:, 0]
                 temp_vsel = np.copy(vsel)
                 temp_vsel[i] = False
                 if any(temp_vsel):
