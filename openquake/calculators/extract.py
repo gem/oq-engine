@@ -275,7 +275,7 @@ def _agg(losses, idxs):
     return losses[numpy.array(sorted(idxs))].sum(axis=0)
 
 
-def _filter_agg(assetcol, losses, selected):
+def _filter_agg(assetcol, losses, selected, stats=''):
     # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
     aids_by_tag = assetcol.get_aids_by_tag()
     idxs = set(range(len(assetcol)))
@@ -290,7 +290,7 @@ def _filter_agg(assetcol, losses, selected):
         raise ValueError('Too many * as tag values in %s' % tagnames)
     elif not tagnames:  # return an array of shape (..., R)
         return ArrayWrapper(
-            _agg(losses, idxs), dict(selected=encode(selected)))
+            _agg(losses, idxs), dict(selected=encode(selected), stats=stats))
     else:  # return an array of shape (T, ..., R)
         [tagname] = tagnames
         _tags = list(assetcol.tagcol.gen_tags(tagname))
@@ -304,7 +304,7 @@ def _filter_agg(assetcol, losses, selected):
                 tags.append(tag)
         return ArrayWrapper(
             numpy.array(data),
-            dict(selected=encode(selected), tags=encode(tags)))
+            dict(selected=encode(selected), tags=encode(tags), stats=stats))
 
 
 def get_loss_type_tags(what):
@@ -333,14 +333,17 @@ def extract_agglosses(dstore, what):
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
+        stats = None
         losses = dstore['losses_by_asset'][:, :, l]['mean']
     elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
+        stats = dstore['avg_losses-stats'].attrs['stats']
         losses = dstore['avg_losses-stats'][:, :, l]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
+        stats = None
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
-    return _filter_agg(dstore['assetcol'], losses, tags)
+    return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
 @extract.add('aggdamages')
@@ -378,22 +381,34 @@ def extract_aggcurves(dstore, what):
         losses = dstore['curves-stats'][loss_type]
     else:
         raise KeyError('No curves found in %s' % dstore)
-    curves = _filter_agg(dstore['assetcol'], losses, tags)
-    vars(curves).update(dstore.get_attrs('curves-stats'))
-    return curves
+    stats = dstore['curves-stats'].attrs['stats']
+    return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()
-    losses_by_asset = dstore['losses_by_asset'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        # I am exporting the 'mean' and ignoring the 'stddev'
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
+    if 'losses_by_asset' in dstore:
+        losses_by_asset = dstore['losses_by_asset'].value
+        for rlz in rlzs:
+            # I am exporting the 'mean' and ignoring the 'stddev'
+            losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            yield 'rlz-%03d' % rlz.ordinal, data
+    elif 'avg_losses-stats' in dstore:
+        avg_losses = dstore['avg_losses-stats'].value
+        stats = dstore['avg_losses-stats'].attrs['stats'].split()
+        for s, stat in enumerate(stats):
+            losses = avg_losses[:, s].copy()
+            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            yield stat, data
+    elif 'avg_losses-rlzs' in dstore:  # there is only one realization
+        avg_losses = dstore['avg_losses-rlzs'].value
+        losses = avg_losses[:, 0].copy()
         data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
-        yield 'rlz-%03d' % rlz.ordinal, data
+        yield 'rlz-000', data
 
 
 def _gmf_scenario(data, num_sites, imts):
