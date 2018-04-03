@@ -164,6 +164,7 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
     elif input_file:
         print("No info for '%s'" % input_file)
 
+
 info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
