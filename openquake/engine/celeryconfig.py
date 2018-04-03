@@ -40,11 +40,11 @@ else:
 
     task_serializer = 'pickle'
     result_serializer = 'pickle'
-    accept_content = {'pickle'}
+    accept_content = ['pickle']
 
     # RabbitMQ broker (default)
     broker_url = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
-                 amqp.config
+                 config.amqp
     # Redis broker (works only on Trusty)
     # broker_url = 'redis://%(host)s:6379/0' % amqp
 
