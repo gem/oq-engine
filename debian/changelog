@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Stored in source_info the number of events generated per source
   * Added a script utils/reduce_sm to reduce the source model of a calculation
     by removing all the sources not affecting the hazard
   * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
