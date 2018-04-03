@@ -2,6 +2,7 @@
   * Move to Celery 4. Celery support is removed from Windows.
 
   [Michele Simionato]
+  * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
   * Fixed the export of ruptures with a GriddedSurface geometry
   * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
   * Fixed the issue of slow tasks in event_based_risk from precomputed GMFs
