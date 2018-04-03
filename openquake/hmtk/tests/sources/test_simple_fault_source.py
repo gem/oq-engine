@@ -78,6 +78,7 @@ class TestSimpleFaultSource(unittest.TestCase):
     Test module for the openquake.hmtk.sources.simple_fault_source.mtkSimpleFaultSource
     class
     '''
+
     def setUp(self):
         warnings.simplefilter("ignore")
         self.catalogue = Catalogue()

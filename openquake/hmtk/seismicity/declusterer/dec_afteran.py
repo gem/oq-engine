@@ -64,6 +64,7 @@ class Afteran(BaseCatalogueDecluster):
     Musson, R. (1999), Probabilistic seismic hazard maps for the North
     Balkan Region, Annali Di Geofisica, 42(6), 1109 - 1124
     """
+
     def decluster(self, catalogue, config):
         """
         catalogue_matrix, window_opt=TDW_GARDNERKNOPOFF, time_window=60.):

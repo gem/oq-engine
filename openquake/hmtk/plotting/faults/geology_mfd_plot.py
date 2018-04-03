@@ -11,12 +11,12 @@ from openquake.hmtk.plotting.seismicity.catalogue_plots import _save_image
 #from openquake.hmtk.faults.mfd.anderson_luco_arbitrary import AndersonLucoArbitrary
 #from openquake.hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
 #from openquake.hmtk.faults.mfd.characteristic import Characteristic
-#from openquake.hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
+# from openquake.hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
 #    YoungsCoppersmithCharacteristic)
 #
 #
 #
-#def _get_occurence_array(mmin, bin_width, occurrence):
+# def _get_occurence_array(mmin, bin_width, occurrence):
 #    """
 #    Returns the incremental and cumulative recurrence
 #    """
@@ -50,7 +50,7 @@ def plot_recurrence_models(
                                for iloc in range(0, len(occurrence))])
         if 'AndersonLuco' in config['Model_Name']:
             flt_label = config['Model_Name'] + ' - ' + config['Model_Type'] +\
-                    ' Type'
+                ' Type'
         else:
             flt_label = config['Model_Name']
         flt_color = np.random.uniform(0.1, 1.0, 3)

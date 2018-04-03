@@ -19,8 +19,6 @@
 """
 Classes for serializing various NRML XML artifacts.
 """
-
-import json
 import operator
 from collections import OrderedDict
 
@@ -219,57 +217,6 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             poes_elem.text = ' '.join(map(scientificformat, hc.poes))
 
 
-class HazardCurveGeoJSONWriter(BaseCurveWriter):
-    """
-    Writes hazard curves to GeoJSON. Has the same constructor and interface as
-    :class:`HazardCurveXMLWriter`.
-    """
-
-    def serialize(self, data):
-        """
-        Write the hazard curves to the given as GeoJSON. The GeoJSON format
-        is customized to contain various bits of metadata.
-
-        See :meth:`HazardCurveXMLWriter.serialize` for expected input.
-        """
-        oqmetadata = {}
-        for key, value in self.metadata.items():
-            if key == 'imls':
-                oqmetadata['IMLs'] = value
-            if value is not None:
-                if key == 'imls':
-                    oqmetadata['IMLs'] = list(value)
-                else:
-                    oqmetadata[_ATTR_MAP.get(key)] = scientificformat(value)
-
-        features = []
-        feature_coll = {
-            'type': 'FeatureCollection',
-            'features': features,
-            'oqtype': 'HazardCurve',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': oqmetadata,
-        }
-        for hc in data:
-            poes = list(hc.poes)
-            lon = hc.location.x
-            lat = hc.location.y
-
-            feature = {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Point',
-                    'coordinates': [float(lon), float(lat)],
-                },
-                'properties': {'poEs': list(poes)},
-            }
-            features.append(feature)
-
-        with open(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh, sort_keys=True, indent=4,
-                      separators=(',', ': '))
-
-
 def gen_gmfs(gmf_set):
     """
     Generate GMF nodes from a gmf_set
@@ -360,18 +307,20 @@ class EventBasedGMFXMLWriter(object):
 
 def sub_elems(elem, rup, *names):
     for name in names:
-        et.SubElement(elem, name).text = str(getattr(rup, name))
+        et.SubElement(elem, name).text = '%.7e' % getattr(rup, name)
 
 
-def rupture_to_element(rup, parent):
+def rupture_to_element(rup, parent=None):
     """
     Convert a rupture object into an Element object.
 
     :param rup:
         must have attributes .rupid, .events_by_ses and .seed
     :param parent:
-         parent of the returned element
+         parent of the returned element, or None
     """
+    if parent is None:
+        parent = et.Element('root')
     rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
     for ses in rup.events_by_ses:
@@ -404,6 +353,16 @@ def rupture_to_element(rup, parent):
         # that i and j will be undefined
         mesh_elem.set('rows', str(i + 1))
         mesh_elem.set('cols', str(j + 1))
+    elif rup.is_gridded_surface:
+        # the rup geometry is represented by a mesh of (1, N) points
+        mesh_elem = et.SubElement(rup_elem, 'mesh')
+        for j, _ in enumerate(rup.lons):
+            node_elem = et.SubElement(mesh_elem, 'node')
+            node_elem.set('row', '0')
+            node_elem.set('col', str(j))
+            node_elem.set('lon', str(rup.lons[j]))
+            node_elem.set('lat', str(rup.lats[j]))
+            node_elem.set('depth', str(rup.depths[j]))
     else:
         # rupture is from a multi surface fault source
         if rup.is_multi_surface:
@@ -436,10 +395,9 @@ def rupture_to_element(rup, parent):
                         ('bottomRight', bottom_right)):
 
                     corner_elem = et.SubElement(ps_elem, el_name)
-                    corner_elem.set('lon', str(corner[0]))
-                    corner_elem.set('lat', str(corner[1]))
-                    corner_elem.set('depth', str(corner[2]))
-
+                    corner_elem.set('lon', '%.7f' % corner[0])
+                    corner_elem.set('lat', '%.7f' % corner[1])
+                    corner_elem.set('depth', '%.7f' % corner[2])
         else:
             # rupture is from a point or area source
             # the rupture geometry is represented by four 3D
@@ -458,10 +416,10 @@ def rupture_to_element(rup, parent):
                     ('bottomRight', rup.bottom_right_corner)):
 
                 corner_elem = et.SubElement(ps_elem, el_name)
-                corner_elem.set('lon', str(corner[0]))
-                corner_elem.set('lat', str(corner[1]))
-                corner_elem.set('depth', str(corner[2]))
-    return rup_elem
+                corner_elem.set('lon', '%.7f' % corner[0])
+                corner_elem.set('lat', '%.7f' % corner[1])
+                corner_elem.set('depth', '%.7f' % corner[2])
+    return parent
 
 
 class SESXMLWriter(object):
@@ -618,51 +576,6 @@ class HazardMapXMLWriter(HazardMapWriter):
                 node.set('iml', str(iml))
 
             nrml.write(list(root), fh)
-
-
-class HazardMapGeoJSONWriter(HazardMapWriter):
-    """
-    GeoJSON implementation of a :class:`HazardMapWriter`. Serializes hazard
-    maps as FeatureCollection artifacts with additional hazard map metadata.
-
-    See :class:`HazardMapWriter` for information about constructor parameters.
-    """
-
-    def serialize(self, data):
-        """
-        Serialize hazard map data to GeoJSON.
-
-        See :meth:`HazardMapWriter.serialize` for details about the expected
-        input.
-        """
-        oqmetadata = {}
-        for key, value in self.metadata.items():
-            if value is not None:
-                oqmetadata[_ATTR_MAP.get(key)] = str(value)
-
-        features = []
-        feature_coll = {
-            'type': 'FeatureCollection',
-            'features': features,
-            'oqtype': 'HazardMap',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': oqmetadata,
-        }
-
-        for lon, lat, iml in data:
-            feature = {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Point',
-                    'coordinates': [float(lon), float(lat)],
-                },
-                'properties': {'iml': float(iml)},
-            }
-            features.append(feature)
-
-        with open(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh, sort_keys=True, indent=4,
-                      separators=(',', ': '))
 
 
 class DisaggXMLWriter(object):
@@ -845,6 +758,6 @@ class UHSXMLWriter(BaseCurveWriter):
                 gml_pos = et.SubElement(gml_point, '{%s}pos' % gml_ns)
                 gml_pos.text = '%s %s' % (uhs.location.x, uhs.location.y)
                 imls_elem = et.SubElement(uhs_elem, 'IMLs')
-                imls_elem.text = ' '.join([str(x) for x in uhs.imls])
+                imls_elem.text = ' '.join(['%10.7E' % x for x in uhs.imls])
 
             nrml.write(list(root), fh)

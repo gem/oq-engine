@@ -18,9 +18,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import csv
 import random
 import shutil
-from openquake.hazardlib import valid, nrml
+from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.baselib.python3compat import encode
 from openquake.baselib import sap
 
@@ -40,6 +41,14 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+def _save_csv(fname, lines, header):
+    with open(fname, 'wb') as f:
+        if header:
+            f.write(encode(header))
+        for line in lines:
+            f.write(encode(line))
+
+
 @sap.Script
 def reduce(fname, reduction_factor):
     """
@@ -50,13 +59,18 @@ def reduce(fname, reduction_factor):
     """
     if fname.endswith('.csv'):
         with open(fname) as f:
-            all_lines = f.readlines()
+            line = f.readline()  # read the first line
+            if csv.Sniffer().has_header(line):
+                header = line
+                all_lines = f.readlines()
+            else:
+                header = None
+                f.seek(0)
+                all_lines = f.readlines()
         lines = random_filter(all_lines, reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
-        with open(fname, 'wb') as f:
-            for line in lines:
-                f.write(encode(line))
+        _save_csv(fname, lines, header)
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
     node = nrml.read(fname)
@@ -70,9 +84,13 @@ def reduce(fname, reduction_factor):
         model.nodes = random_filter(model, reduction_factor)
         num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
-        total = len(model)
-        model.nodes = random_filter(model, reduction_factor)
-        num_nodes = len(model)
+        if node['xmlns'] != 'http://openquake.org/xmlns/nrml/0.5':
+            raise InvalidFile('%s: not NRML0.5' % fname)
+        total = sum(len(sg) for sg in model)
+        num_nodes = 0
+        for sg in model:
+            sg.nodes = random_filter(sg, reduction_factor)
+            num_nodes += len(sg)
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
     shutil.copy(fname, fname + '.bak')

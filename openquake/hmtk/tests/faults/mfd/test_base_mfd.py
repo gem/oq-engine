@@ -9,11 +9,13 @@ import unittest
 from math import log10
 from openquake.hmtk.faults.mfd.base import BaseMFDfromSlip, _scale_moment
 
+
 class TestScaleMoment(unittest.TestCase):
     '''
     Tests the small ancillary function openquake.hmtk.fault.mfd.base._scale_moment, which
     converts a moment magnitude into a scalar moment
     '''
+
     def setUp(self):
         '''
         '''

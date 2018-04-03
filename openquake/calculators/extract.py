@@ -26,15 +26,33 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.general import DictArray
-from openquake.commonlib import calc
+from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.general import DictArray, group_array
+from openquake.baselib.python3compat import encode
+from openquake.calculators import getters
+from openquake.commonlib import calc, util
+
+F32 = numpy.float32
+F64 = numpy.float64
+
+
+def barray(iterlines):
+    """
+    Array of bytes
+    """
+    lst = [line.encode('utf-8') for line in iterlines]
+    arr = numpy.array(lst)
+    return arr
 
 
 def extract_(dstore, dspath):
     """
     Extracts an HDF5 path object from the datastore, for instance
-    extract('sitecol', dstore)
+    extract('sitecol', dstore). It is also possibly to extract the
+    attributes, for instance with extract('sitecol.attrs', dstore).
     """
+    if dspath.endswith('.attrs'):
+        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)
@@ -60,58 +78,41 @@ class Extract(collections.OrderedDict):
             return func
         return decorator
 
-    def __call__(self, dstore, key, *extra):
+    def __call__(self, dstore, key):
         try:
             k, v = key.split('/', 1)
         except ValueError:   # no slashes
             k, v = key, ''
         if k in self:
-            return self[k](dstore, v, *extra)
+            return self[k](dstore, v)
         else:
             return extract_(dstore, key)
 
 extract = Extract()
 
 
-class ArrayWrapper(object):
+# used by the QGIS plugin
+@extract.add('realizations')
+def extract_realizations(dstore, dummy):
     """
-    A pickleable wrapper over an HDF5 dataset or group
+    Extract an array of realizations. Use it as /extract/realizations
     """
-    def __init__(self, array, attrs):
-        vars(self).update(attrs)
-        self.array = array
-
-    def __iter__(self):
-        return iter(self.array)
-
-    def __len__(self):
-        return len(self.array)
-
-    def __getitem__(self, idx):
-        return self.array[idx]
-
-    def __toh5__(self):
-        return (self.array, {k: v for k, v in vars(self).items()
-                             if k != 'array' and not k.startswith('_')})
-
-    def __fromh5__(self, array, attrs):
-        self.__init__(array, attrs)
-
-    @property
-    def dtype(self):
-        return self.array.dtype
+    return dstore['csm_info'].rlzs
 
 
 @extract.add('asset_values', cache=True)
 def extract_asset_values(dstore, sid):
     """
+    Extract an array of asset values for the given sid. Use it as
+    /extract/asset_values/0
+
     :returns:
         (aid, loss_type1, ..., loss_typeN) composite array
     """
     if sid:
         return extract(dstore, 'asset_values')[int(sid)]
-    asset_refs = extract(dstore, 'asset_refs')
     assetcol = extract(dstore, 'assetcol')
+    asset_refs = assetcol.asset_refs
     assets_by_site = assetcol.assets_by_site()
     lts = assetcol.loss_types
     time_event = assetcol.time_event
@@ -121,7 +122,7 @@ def extract_asset_values(dstore, sid):
     for assets in assets_by_site:
         vals = numpy.zeros(len(assets), dt)
         for a, asset in enumerate(assets):
-            vals[a]['aref'] = asset_refs[asset.idx]
+            vals[a]['aref'] = asset_refs[a]
             vals[a]['aid'] = asset.ordinal
             for lt in lts:
                 vals[a][lt] = asset.value(lt, time_event)
@@ -129,30 +130,17 @@ def extract_asset_values(dstore, sid):
     return data
 
 
-def convert_to_array(pmap, nsites, imtls):
+@extract.add('asset_tags')
+def extract_asset_tags(dstore, tagname):
     """
-    Convert the probability map into a composite array with header
-    of the form PGA-0.1, PGA-0.2 ...
-
-    :param pmap: probability map
-    :param nsites: total number of sites
-    :param imtls: a DictArray with IMT and levels
-    :returns: a composite array of lenght nsites
+    Extract an array of asset tags for the given tagname. Use it as
+    /extract/asset_tags or /extract/asset_tags/taxonomy
     """
-    lst = []
-    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
-    for imt, imls in imtls.items():
-        for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
-    curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
-        curve = curves[sid]
-        idx = 0
-        for imt, imls in imtls.items():
-            for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
-                idx += 1
-    return curves
+    tagcol = dstore['assetcol/tagcol']
+    if tagname:
+        yield tagname, barray(tagcol.gen_tags(tagname))
+    for tagname in tagcol.tagnames:
+        yield tagname, barray(tagcol.gen_tags(tagname))
 
 
 @extract.add('hazard')
@@ -164,41 +152,328 @@ def extract_hazard(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     yield 'sitecol', sitecol
-    yield 'oqparam', dstore['oqparam']
-    N = len(sitecol)
-    if oq.poes:
-        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in calc.PmapGetter(dstore).items(what):
-        logging.info('extracting hazard/%s', kind)
-        yield 'hcurves-' + kind, convert_to_array(hcurves, N, oq.imtls)
-        if oq.poes and oq.uniform_hazard_spectra:
-            yield 'uhs-' + kind, calc.make_uhs(hcurves, oq.imtls, oq.poes, N)
-        if oq.poes and oq.hazard_maps:
-            hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            yield 'hmaps-' + kind, convert_to_array(hmaps, N, pdic)
+    yield 'oqparam', oq
+    yield 'imtls', oq.imtls
+    yield 'realizations', dstore['csm_info'].rlzs
+    yield 'checksum32', dstore['/'].attrs['checksum32']
+    nsites = len(sitecol)
+    M = len(oq.imtls)
+    P = len(oq.poes)
+    for kind, pmap in getters.PmapGetter(dstore).items(what):
+        for imt in oq.imtls:
+            key = 'hcurves/%s/%s' % (imt, kind)
+            arr = numpy.zeros((nsites, len(oq.imtls[imt])))
+            for sid in pmap:
+                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+        if oq.poes:
+            hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+        for p, poe in enumerate(oq.poes):
+            key = 'hmaps/poe-%s/%s' % (poe, kind)
+            arr = numpy.zeros((nsites, M))
+            idx = [m * P + p for m in range(M)]
+            for sid in pmap:
+                arr[sid] = hmap[sid].array[idx, 0]
+            logging.info('extracting %s', key)
+            yield key, arr
+
+
+def get_mesh(sitecol, complete=True):
+    """
+    :returns:
+        a lon-lat or lon-lat-depth array depending if the site collection
+        is at sea level or not
+    """
+    sc = sitecol.complete if complete else sitecol
+    if sc.at_sea_level():
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+    else:
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
+                                     ('depth', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+        mesh['depth'] = sc.depths
+    return mesh
+
+
+def hazard_items(dic, mesh, *extras, **kw):
+    """
+    :param dic: dictionary of arrays of the same shape
+    :param mesh: a mesh array with lon, lat fields of the same length
+    :param extras: optional triples (field, dtype, values)
+    :param kw: dictionary of parameters (like investigation_time)
+    :returns: a list of pairs (key, value) suitable for storage in .npz format
+    """
+    for item in kw.items():
+        yield item
+    arr = dic[next(iter(dic))]
+    dtlist = [(str(field), arr.dtype) for field in sorted(dic)]
+    for field, dtype, values in extras:
+        dtlist.append((str(field), dtype))
+    array = numpy.zeros(arr.shape, dtlist)
+    for field in dic:
+        array[field] = dic[field]
+    for field, dtype, values in extras:
+        array[field] = values
+    yield 'all', util.compose_arrays(mesh, array)
+
+
+@extract.add('hcurves')
+def extract_hcurves(dstore, what):
+    """
+    Extracts hazard curves. Use it as /extract/hcurves/mean or
+    /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
+    """
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+
+
+@extract.add('hmaps')
+def extract_hmaps(dstore, what):
+    """
+    Extracts hazard maps. Use it as /extract/hmaps/mean or
+    /extract/hmaps/rlz-0, etc
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    mesh = get_mesh(sitecol)
+    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+
+
+@extract.add('uhs')
+def extract_uhs(dstore, what):
+    """
+    Extracts uniform hazard spectra. Use it as /extract/uhs/mean or
+    /extract/uhs/rlz-0, etc
+    """
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    dic = {}
+    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+    return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
+
+
+def _agg(losses, idxs):
+    shp = losses.shape[1:]
+    if not idxs:
+        # no intersection, return a 0-dim matrix
+        return numpy.zeros((0,) + shp, losses.dtype)
+    # numpy.array wants lists, not sets, hence the sorted below
+    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+
+def _filter_agg(assetcol, losses, selected):
+    # losses is an array of shape (A, ..., R) with A=#assets, R=#realizations
+    aids_by_tag = assetcol.get_aids_by_tag()
+    idxs = set(range(len(assetcol)))
+    tagnames = []
+    for tag in selected:
+        tagname, tagvalue = tag.split('=', 1)
+        if tagvalue == '*':
+            tagnames.append(tagname)
+        else:
+            idxs &= aids_by_tag[tag]
+    if len(tagnames) > 1:
+        raise ValueError('Too many * as tag values in %s' % tagnames)
+    elif not tagnames:  # return an array of shape (..., R)
+        return ArrayWrapper(
+            _agg(losses, idxs), dict(selected=encode(selected)))
+    else:  # return an array of shape (T, ..., R)
+        [tagname] = tagnames
+        _tags = list(assetcol.tagcol.gen_tags(tagname))
+        all_idxs = [idxs & aids_by_tag[t] for t in _tags]
+        # NB: using a generator expression for all_idxs caused issues (?)
+        data, tags = [], []
+        for idxs, tag in zip(all_idxs, _tags):
+            agglosses = _agg(losses, idxs)
+            if len(agglosses):
+                data.append(agglosses)
+                tags.append(tag)
+        return ArrayWrapper(
+            numpy.array(data),
+            dict(selected=encode(selected), tags=encode(tags)))
+
+
+def get_loss_type_tags(what):
+    try:
+        loss_type, query_string = what.rsplit('?', 1)
+    except ValueError:  # no question mark
+        loss_type, query_string = what, ''
+    tags = query_string.split('&') if query_string else []
+    return loss_type, tags
 
 
 @extract.add('agglosses')
-def extract_agglosses(dstore, loss_type, *tags):
+def extract_agglosses(dstore, what):
     """
-    Aggregate losses of the given loss type and tags
+    Aggregate losses of the given loss type and tags. Use it as
+    /extract/agglosses/structural?taxonomy=RC&zipcode=20126
+    /extract/agglosses/structural?taxonomy=RC&zipcode=*
+
+    :returns:
+        an array of shape (T, R) if one of the tag names has a `*` value
+        an array of shape (R,), being R the number of realizations
+        an array of length 0 if there is no data for the given tags
     """
+    loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
         raise ValueError('loss_type not passed in agglosses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         losses = dstore['losses_by_asset'][:, :, l]['mean']
-    elif 'avg_losses-rlzs' in dstore:  # event_based_risk
+    elif 'avg_losses-stats' in dstore:  # event_based_risk, classical_risk
+        losses = dstore['avg_losses-stats'][:, :, l]
+    elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)
-    if not tags:
-        return losses.sum(axis=0)
+    return _filter_agg(dstore['assetcol'], losses, tags)
 
-    assetcol = dstore['assetcol']
-    idxs = set(range(len(assetcol)))
-    # find the indices common to all tags
-    for tag in tags:
-        idxs &= set(assetcol.aids_by_tag[tag])
-    # numpy.array wants lists, not sets, hence the sorted below
-    return losses[numpy.array(sorted(idxs))].sum(axis=0)
+
+@extract.add('aggdamages')
+def extract_aggdamages(dstore, what):
+    """
+    Aggregate damages of the given loss type and tags. Use it as
+    /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
+
+    :returns:
+        array of shape (R, D), being R the number of realizations and D
+        the number of damage states or array of length 0 if there is no
+        data for the given tags
+    """
+    loss_type, tags = get_loss_type_tags(what)
+    if 'dmg_by_asset' in dstore:  # scenario_damage
+        losses = dstore['dmg_by_asset'][loss_type]['mean']
+    else:
+        raise KeyError('No damages found in %s' % dstore)
+    return _filter_agg(dstore['assetcol'], losses, tags)
+
+
+@extract.add('aggcurves')
+def extract_aggcurves(dstore, what):
+    """
+    Aggregate loss curves of the given loss type and tags for
+    event based risk calculations. Use it as
+    /extract/aggcurves/structural?taxonomy=RC&zipcode=20126
+
+    :returns:
+        array of shape (S, P), being P the number of return periods
+        and S the number of statistics
+    """
+    loss_type, tags = get_loss_type_tags(what)
+    if 'curves-stats' in dstore:  # event_based_risk
+        losses = dstore['curves-stats'][loss_type]
+    else:
+        raise KeyError('No curves found in %s' % dstore)
+    curves = _filter_agg(dstore['assetcol'], losses, tags)
+    vars(curves).update(dstore.get_attrs('curves-stats'))
+    return curves
+
+
+@extract.add('losses_by_asset')
+def extract_losses_by_asset(dstore, what):
+    loss_dt = dstore['oqparam'].loss_dt()
+    losses_by_asset = dstore['losses_by_asset'].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = util.get_assets(dstore)
+    for rlz in rlzs:
+        # I am exporting the 'mean' and ignoring the 'stddev'
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
+        data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        yield 'rlz-%03d' % rlz.ordinal, data
+
+
+def _gmf_scenario(data, num_sites, imts):
+    # convert data into the composite array expected by QGIS
+    eids = sorted(numpy.unique(data['eid']))
+    eid2idx = {eid: idx for idx, eid in enumerate(eids)}
+    E = len(eid2idx)
+    gmf_dt = numpy.dtype([(imt, (F32, (E,))) for imt in imts])
+    gmfa = numpy.zeros(num_sites, gmf_dt)
+    for rec in data:
+        arr = gmfa[rec['sid']]
+        for imt, gmv in zip(imts, rec['gmv']):
+            arr[imt][eid2idx[rec['eid']]] = gmv
+    return gmfa, E
+
+
+@extract.add('gmf_data')
+def extract_gmf_scenario_npz(dstore, what):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    n = len(mesh)
+    data_by_rlzi = group_array(dstore['gmf_data/data'].value, 'rlzi')
+    for rlzi in data_by_rlzi:
+        gmfa, e = _gmf_scenario(data_by_rlzi[rlzi], n, oq.imtls)
+        logging.info('Exporting array of shape %s for rlz %d',
+                     (n, e), rlzi)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+
+
+def build_damage_dt(dstore, mean_std=True):
+    """
+    :param dstore: a datastore instance
+    :param mean_std: a flag (default True)
+    :returns:
+       a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
+       loss_type -> (ds1, ds2, ...) depending on the flag mean_std
+    """
+    damage_states = ['no_damage'] + list(
+        dstore.get_attr('composite_risk_model', 'limit_states'))
+    dt_list = []
+    for ds in damage_states:
+        ds = str(ds)
+        if mean_std:
+            dt_list.append(('%s_mean' % ds, F32))
+            dt_list.append(('%s_stdv' % ds, F32))
+        else:
+            dt_list.append((ds, F32))
+    damage_dt = numpy.dtype(dt_list)
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
+
+
+def build_damage_array(data, damage_dt):
+    """
+    :param data: an array of length N with fields 'mean' and 'stddev'
+    :param damage_dt: a damage composite data type loss_type -> states
+    :returns: a composite array of length N and dtype damage_dt
+    """
+    L = len(data) if data.shape else 1
+    dmg = numpy.zeros(L, damage_dt)
+    for lt in damage_dt.names:
+        for i, ms in numpy.ndenumerate(data[lt]):
+            if damage_dt[lt].names[0].endswith('_mean'):
+                lst = []
+                for m, s in zip(ms['mean'], ms['stddev']):
+                    lst.append(m)
+                    lst.append(s)
+                dmg[lt][i] = tuple(lst)
+            else:
+                dmg[lt][i] = ms['mean']
+    return dmg
+
+
+@extract.add('dmg_by_asset')
+def extract_dmg_by_asset_npz(dstore, what):
+    damage_dt = build_damage_dt(dstore)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    data = dstore['dmg_by_asset']
+    assets = util.get_assets(dstore)
+    for rlz in rlzs:
+        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
+            assets, dmg_by_asset)

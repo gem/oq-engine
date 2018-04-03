@@ -101,6 +101,7 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
         Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
     '''
+
     def setUp(self, mfd_conf):
         '''
         Input core configuration parameters as specified in the

@@ -19,7 +19,7 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 
@@ -39,12 +39,11 @@ def classical_damage(riskinput, riskmodel, param, monitor):
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     R = riskinput.hazard_getter.num_rlzs
-    with monitor:
-        result = {i: AccumDict() for i in range(R)}
-        for outputs in riskmodel.gen_outputs(riskinput, monitor):
-            for l, out in enumerate(outputs):
-                ordinals = [a.ordinal for a in outputs.assets]
-                result[outputs.r] += dict(zip(ordinals, out))
+    result = {i: AccumDict() for i in range(R)}
+    for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        for l, out in enumerate(outputs):
+            ordinals = [a.ordinal for a in outputs.assets]
+            result[outputs.rlzi] += dict(zip(ordinals, out))
     return result
 
 
@@ -55,18 +54,6 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     """
     core_task = classical_damage
 
-    def check_poes(self, curves_by_rlz):
-        """
-        Raise an error if one PoE = 1, since it would produce a log(0) in
-        :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
-        """
-        for curves in curves_by_rlz:
-            for imt in self.oqparam.imtls:
-                for sid, poes in enumerate(curves[imt]):
-                    if (poes == 1).any():
-                        raise ValueError('Found a PoE=1 for site_id=%d, %s'
-                                         % (sid, imt))
-
     def post_execute(self, result):
         """
         Export the result in CSV format.
@@ -76,13 +63,8 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         """
         damages_dt = numpy.dtype([(ds, numpy.float32)
                                   for ds in self.riskmodel.damage_states])
-        damages = numpy.zeros((self.N, self.R), damages_dt)
+        damages = numpy.zeros((self.A, self.R), damages_dt)
         for r in result:
             for aid, fractions in result[r].items():
                 damages[aid, r] = tuple(fractions)
-        self.datastore['damages-rlzs'] = damages
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        if len(weights) > 1:  # compute stats
-            snames, sfuncs = zip(*self.oqparam.risk_stats())
-            dmg_stats = compute_stats2(damages, sfuncs, weights)
-            self.datastore['damages-stats'] = dmg_stats
+        stats.set_rlzs_stats(self.datastore, 'damages', damages)

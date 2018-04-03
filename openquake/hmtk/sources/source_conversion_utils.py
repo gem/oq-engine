@@ -80,6 +80,7 @@ def render_aspect_ratio(aspect_ratio, use_default=False):
         else:
             raise ValueError('Rupture aspect ratio not defined!')
 
+
 def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
     """
     Returns the magnitude scaling relation in a format readable by
@@ -100,6 +101,7 @@ def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
         else:
             raise ValueError('Magnitude Scaling Relation Not Defined!')
 
+
 def npd_to_pmf(nodal_plane_dist, use_default=False):
     """
     Returns the nodal plane distribution as an instance of the PMF class
@@ -112,6 +114,7 @@ def npd_to_pmf(nodal_plane_dist, use_default=False):
             return PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))])
         else:
             raise ValueError('Nodal Plane distribution not defined')
+
 
 def hdd_to_pmf(hypo_depth_dist, use_default=False):
     """
@@ -129,6 +132,7 @@ def hdd_to_pmf(hypo_depth_dist, use_default=False):
             # Out of options - raise error!
             raise ValueError('Hypocentral depth distribution not defined!')
 
+
 def simple_trace_to_wkt_linestring(trace):
     '''
     Coverts a simple fault trace to well-known text format
@@ -144,6 +148,7 @@ def simple_trace_to_wkt_linestring(trace):
         trace_str += ' %s %s,' % (point.longitude, point.latitude)
     trace_str = trace_str.lstrip(' ')
     return 'LINESTRING (' + trace_str.rstrip(',') + ')'
+
 
 def simple_edge_to_wkt_linestring(edge):
     '''

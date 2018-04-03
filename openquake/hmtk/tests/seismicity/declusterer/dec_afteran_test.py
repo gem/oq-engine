@@ -58,6 +58,7 @@ from openquake.hmtk.seismicity.declusterer.dec_afteran import Afteran
 from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 
+
 class AfteranTestCase(unittest.TestCase):
     """
     Unit tests for the Afteran declustering algorithm class.

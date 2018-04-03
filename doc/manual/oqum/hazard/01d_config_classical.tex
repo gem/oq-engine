@@ -109,9 +109,18 @@ area_source_discretization = 10
 \end{minted}
 
 This section of the configuration file is used to specify the level of
-discretization of the mesh representing faults, the grid used to delineate the area sources and, the magnitude-frequency distribution. Note that the smaller is the mesh spacing (or the bin width) the larger are (1) the precision in the calculation and (2) the computation demand.
+discretization of the mesh representing faults, the grid used to delineate the
+area sources and, the magnitude-frequency distribution. Note that the smaller
+is the mesh spacing (or the bin width) the larger are (1) the precision in the
+calculation and (2) the computation demand.
 
-In cases where the source model may contain a mixture of simple and complex ruptures it is possible to define a different rupture mesh spacing for complex faults only. This may be helpful in models that permit floating ruptures over large subduction sources, in which the nearest source to site distances may be larger than 20 - 30 km, and for which a small mesh spacing would produce a very large number of ruptures. The spacing for complex faults only can be configured by the line:
+In cases where the source model may contain a mixture of simple and complex
+ruptures it is possible to define a different rupture mesh spacing for complex
+faults only. This may be helpful in models that permit floating ruptures over
+large subduction sources, in which the nearest source to site distances may be
+larger than 20 - 30 km, and for which a small mesh spacing would produce a
+very large number of ruptures. The spacing for complex faults only can be
+configured by the line:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=18,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 complex_rupture_mesh_spacing = 10
@@ -131,7 +140,7 @@ In this section the user specifies local soil conditions. The simplest
 solution is to define uniform site conditions (i.e. all the sites have  the
 same characteristics).
 
-Alternatively it is possible to define  spatially variable soil properties in
+Alternatively it is possible to define spatially variable soil properties in
 a separate file; the engine will then assign to each investigation location
 the values of the closest point used to specify site conditions.
 
@@ -142,31 +151,14 @@ site_model_file = site_model.xml
 
 The file containing the site model has the following structure:
 
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_site_model.xml}
+  \caption{Example site model input file}
+  \label{lst:input_site_model}
+\end{listing}
 \begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version="1.0" encoding="utf-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <siteModel>
-        <site lon="10.0" lat="40.0" vs30="800.0" 
-            vs30Type="inferred" z1pt0="19.367196734"
-            z2pt5="0.588625072259" backarc="false"/>
-        <site lon="10.1" lat="40.0" vs30="800.0" 
-            vs30Type="inferred" z1pt0="19.367196734"
-            z2pt5="0.588625072259" backarc="false"/>
-        <site lon="10.2" lat="40.0" vs30="800.0" 
-            vs30Type="inferred" z1pt0="19.367196734"
-            z2pt5="0.588625072259" backarc="false"/>
-        <site lon="10.3" lat="40.0" vs30="800.0" 
-            vs30Type="inferred" z1pt0="19.367196734"
-            z2pt5="0.588625072259" backarc="false"/>
-        <site lon="10.4" lat="40.0" vs30="800.0" 
-            vs30Type="inferred" z1pt0="19.367196734"
-            z2pt5="0.588625072259" backarc="false"/>
-        ...
-    </siteModel>
-</nrml>
+
 \end{minted}
-%\input{oqum/hazard/verbatim/input_site_model}
 
 If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
 
@@ -184,14 +176,77 @@ truncation_level = 3
 maximum_distance = 200.0
 \end{minted}
 
-This section of the \gls{acr:oqe} configuration file specifies the parameters that are relevant for the calculation of hazard. These include the names of the two files containing the Seismic Source System and the Ground Motion System, the duration of the time window used to compute the  hazard, the ground motion intensity measure types and levels for  which the probability of exceedence will be computed, the level of truncation of the Gaussian distribution of the logarithm of ground motion used in the calculation of hazard and the maximum integration distance (i.e. the distance within which sources will contribute to the computation of the hazard).
+This section of the \gls{acr:oqe} configuration file specifies the parameters
+that are relevant for the calculation of hazard. These include the names of
+the two files containing the Seismic Source System and the Ground Motion
+System, the duration of the time window used to compute the  hazard, the
+ground motion intensity measure types and levels for  which the probability of
+exceedence will be computed, the level of truncation of the Gaussian
+distribution of the logarithm of ground motion used in the calculation of
+hazard and the maximum integration distance (i.e. the distance within which
+sources will contribute to the computation of the hazard).
 
-The maximum distance refers to the largest distance between a rupture and the target calculation sites in order for the rupture to be considered in the PSHA calculation. This can be input directly in terms of kilometres (as above). There may be cases, however, in which it may be appropriate to have a different maximum source to site distance depending on the tectonic region type. This may be used, for example, to eliminate the impact of small, very far-field sources with very low activity rates in stable tectonic regions (in which case maximum distance is reduced), or conversely it may be raised to allow certain source types to contribute to the hazard at greater distances (such as in the case of large subduction interface events). An example configuration for a maximum distance in Active Shallow Crust of 200 km, and in Stable Continental Crust of 150 km, is shown below:
+The maximum distance refers to the largest distance between a rupture and the
+target calculation sites in order for the rupture to be considered in the PSHA
+calculation. This can be input directly in terms of kilometres (as above).
+There may be cases, however, in which it may be appropriate to have a
+different maximum source to site distance depending on the tectonic region
+type. This may be used, for example, to eliminate the impact of small, very
+far-field sources with very low activity rates in stable tectonic regions (in
+which case maximum distance is reduced), or conversely it may be raised to
+allow certain source types to contribute to the hazard at greater distances
+(such as in the case of large subduction interface events). An example
+configuration for a maximum distance in Active Shallow Crust of 200 km, and in
+Stable Continental Crust of 150 km, is shown below:
+
 \begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
-maximum_distance = {'Stable Continental Crust': 150.0,
-                    'Active Shallow Crust': 200.0}
+maximum_distance = {'Active Shallow Crust': 150.0,
+                    'Stable Continental Crust': 200.0}
 \end{minted}
 
+An even more advanced approach is to use a maximum distance depending on the
+magnitude (magnitude-distance filter): in that case the user must specify
+the maximum distance per a discrete set of magnitudes. Here is an
+example:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+maximum_distance = {'Active Shallow Crust': [(8, 250), (7, 150), (5, 50)],
+                    'Stable Continental Crust': [(8, 300), (7, 200), (5, 100)]}
+\end{minted}
+
+You should read this example as follows: for Active Shallow Crust
+
+\begin{itemize}
+\item keep sites within 250 km from the rupture if the magnitude is <= 8
+\item keep sites within 150 km from the rupture if the magnitude is <= 7
+\item keep sites within 50 km from the rupture if the magnitude is <= 5
+\end{itemize}
+
+while for Stable Continental Crust
+
+\begin{itemize}
+\item keep sites within 300 km from the rupture if the magnitude is <= 8
+\item keep sites within 200 km from the rupture if the magnitude is <= 7
+\item keep sites within 100 km from the rupture if the magnitude is <= 5
+\end{itemize}
+
+It is also possible to define something like the following:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+maximum_distance = [(8, 250), (7, 150), (5, 50)]
+\end{minted}
+
+In this case the same magnitude-distance filter is used for all tectonic
+region types.
+
+If the magnitude is above the maximum magnitude of the filter
+(in this example 8) we keep the sites within 2000 km of the ruptures, i.e.
+effectively we do not filter.
+
+Notice that the filtering has a big impact on the performance, by
+reducing the maximum distance for small magnitudes one can easily
+speed up the calculations by 2-3 times or more, without losing much
+precision.
 
 \textbf{Output}
 
@@ -207,6 +262,24 @@ poes = 0.1
 \end{minted}
 
 The final section of the configuration file is the one that contains the
-parameters controlling the types of output to be produced. Providing an export directory will tell OpenQuake where to place the output files when the \texttt{-{}-exports} flag is used when running the program. Setting \verb=mean_hazard_curves= to true will result in a specific output containing the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will produce separate files containing the quantile hazard curves at the quantiles listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no quantiles are required). Setting \verb=uniform_hazard_spectra= to true will output the uniform hazard spectra at the same probabilities of exceedence (poes) as those specified by the later option \verb=poes=. The probabilities specified here correspond to the set investigation time. 
+parameters controlling the types of output to be produced. Providing an export
+directory will tell OpenQuake where to place the output files when the
+\texttt{-{}-exports} flag is used when running the program. Setting
+\verb=mean_hazard_curves= to true will result in a specific output containing
+the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will
+produce separate files containing the quantile hazard curves at the quantiles
+listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no
+quantiles are required). Setting \verb=uniform_hazard_spectra= to true will
+output the uniform hazard spectra at the same probabilities of exceedence
+(poes) as those specified by the later option \verb=poes=. The probabilities
+specified here correspond to the set investigation time.
 
-By default, OpenQuake will export only the statistical results, i.e. mean curves and quantiles. If the user requires the complete results for all realizations, there is a specific command for that, `oq export hcurves/all`. Beware that if the logic tree contains a large number of end branches the process of exporting the results from each end branch can add a significant amount of time - possibly longer than the computation time - and result in a large volume of disk spaced being used. In this case it is best to postprocess the data programmatically. Please contact us and we will be happy to give directions on how to do that in Python.
+By default, OpenQuake will export only the statistical results, i.e. mean
+curves and quantiles. If the user requires the complete results for all
+realizations, there is a specific command for that, `oq extract hazard/all`.
+Beware that if the logic tree contains a large number of end branches the
+process of exporting the results from each end branch can add a significant
+amount of time - possibly longer than the computation time - and result in a
+large volume of disk spaced being used. In this case it is best to postprocess
+the data programmatically. Please contact us and we will be happy to give
+directions on how to do that in Python.

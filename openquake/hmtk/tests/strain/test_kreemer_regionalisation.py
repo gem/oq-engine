@@ -88,6 +88,7 @@ class TestKreemerRegionalisation(unittest.TestCase):
     '''
     Class to test the Kreemer Regionalisation
     '''
+
     def setUp(self):
         self.reader = None
         self.model = None

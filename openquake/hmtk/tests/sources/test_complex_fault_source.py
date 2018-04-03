@@ -78,12 +78,13 @@ class TestComplexFaultSource(unittest.TestCase):
     Test module for the openquake.hmtk.sources.complex_fault_source.mtkComplexFaultSource
     class
     '''
+
     def setUp(self):
         warnings.simplefilter("ignore")
         self.catalogue = Catalogue()
         self.fault_source = None
         self.trace_line = [line.Line([point.Point(1.0, 0.0, 1.0),
-                                     point.Point(0.0, 1.0, 0.9)])]
+                                      point.Point(0.0, 1.0, 0.9)])]
         self.trace_line.append(line.Line([point.Point(1.2, 0.0, 40.),
                                           point.Point(1.0, 1.0, 45.),
                                           point.Point(0.0, 1.3, 42.)]))
@@ -194,8 +195,8 @@ class TestComplexFaultSource(unittest.TestCase):
 
         # Test when considering rupture distance
         self.fault_source.select_catalogue(selector0,
-                                                           50.,
-                                                           'rupture')
+                                           50.,
+                                           'rupture')
         np.testing.assert_array_equal(
             self.fault_source.catalogue.data['eventID'],
             np.arange(2, 12, 1))
@@ -217,7 +218,7 @@ class TestComplexFaultSource(unittest.TestCase):
             line.Line([point.Point(11., 10., 0.), point.Point(10., 10., 0.)]),
             line.Line([point.Point(11.5, 10., 21.),
                        point.Point(10.0, 10., 21.)])
-            ]
+        ]
         mfd1 = TruncatedGRMFD(5.0, 8.0, 0.1, 3.0, 1.0)
         self.fault_source = mtkComplexFaultSource(
             '001',

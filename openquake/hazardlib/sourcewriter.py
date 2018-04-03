@@ -434,6 +434,9 @@ def build_rupture_node(rupt, probs_occur):
     :param rupt: a hazardlib rupture object
     :param probs_occur: a list of floats with sum 1
     """
+    s = sum(probs_occur)
+    if abs(s - 1) > 1E-12:
+        raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
     rupt_nodes = [Node('magnitude', {}, rupt.mag),
@@ -564,6 +567,19 @@ def build_source_group(source_group):
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
+@obj_to_node.add('SourceModel')
+def build_source_model_node(source_model):
+    attrs = {}
+    if source_model.name:
+        attrs['name'] = source_model.name
+    if source_model.investigation_time:
+        attrs['investigation_time'] = source_model.investigation_time
+    if source_model.start_time:
+        attrs['start_time'] = source_model.start_time
+    nodes = [obj_to_node(sg) for sg in source_model.src_groups]
+    return Node('sourceModel', attrs, nodes=nodes)
+
+
 # usage: hdf5write(datastore.hdf5, csm)
 @obj_to_node.add('CompositeSourceModel')
 def build_source_model(csm):
@@ -577,13 +593,17 @@ def write_source_model(dest, sources_or_groups, name=None):
     """
     Writes a source model to XML.
 
-    :param str dest:
+    :param dest:
         Destination path
-    :param list sources_or_groups:
-        Source model as list of sources or a list of SourceGroups
-    :param str name:
+    :param sources_or_groups:
+        Source model in different formats
+    :param name:
         Name of the source model (if missing, extracted from the filename)
     """
+    if isinstance(sources_or_groups, nrml.SourceModel):
+        with open(dest, 'wb') as f:
+            nrml.write([obj_to_node(sources_or_groups)], f, '%s')
+        return
     if isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
     else:  # passed a list of sources

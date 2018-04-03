@@ -60,14 +60,14 @@ from openquake.hmtk.seismicity.selector import CatalogueSelector
 from openquake.hmtk.faults.mfd.characteristic import Characteristic
 from openquake.hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
 from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
-                                          ComplexFaultGeometry)
+                                                    ComplexFaultGeometry)
 from openquake.hmtk.faults.fault_models import (_update_slip_rates_with_aseismic,
-                                      RecurrenceBranch,
-                                      mtkActiveFault)
+                                                RecurrenceBranch,
+                                                mtkActiveFault)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'fault_data')
 FAULT_RATE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-                                'recurrence_branches_results.txt'))
+                                             'recurrence_branches_results.txt'))
 
 COLLAPSE_DATA = np.array([
     [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1,
@@ -88,6 +88,7 @@ class TestFaultAncilliaries(unittest.TestCase):
     '''
     Small test of method to test ancillary functions of the fault classes
     '''
+
     def setUp(self):
         '''
         '''
@@ -181,11 +182,11 @@ class TestRecurrenceBranch(unittest.TestCase):
                                              test_model.occurrence_rate)
 
 
-
 class TestmtkActiveFault(unittest.TestCase):
     '''
     Tests the main active fault class openquake.hmtk.faults.fault_model.mtkActiveFault
     '''
+
     def setUp(self):
         '''
         '''
@@ -209,14 +210,13 @@ class TestmtkActiveFault(unittest.TestCase):
                                                 self.dip,
                                                 self.upper_depth,
                                                 self.lower_depth)
-                # Creates a trace ~60 km long made of 3 points
+        # Creates a trace ~60 km long made of 3 points
         upper_edge = Line([x0, x1, x2])
         lower_edge = Line([x0.point_at(40., 20., 130.),
                            x1.point_at(42., 25., 130.),
                            x2.point_at(41., 22., 130.)])
         self.complex_fault = ComplexFaultGeometry([upper_edge, lower_edge],
                                                   2.0)
-
 
     def test_mtk_active_fault_instantiation(self):
         '''
@@ -273,7 +273,6 @@ class TestmtkActiveFault(unittest.TestCase):
         self.assertTrue(isinstance(self.fault.msr[0][0], WC1994))
         self.assertAlmostEqual(self.fault.msr[0][1], 1.0)
 
-
     def test_get_tectonic_regionalisation_missing_case(self):
         '''
          Test case when no region is defined - should raise error
@@ -318,10 +317,10 @@ class TestmtkActiveFault(unittest.TestCase):
         list of multiple config dicts
         '''
         self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
-            [(5., 1.0)], 0., None)
+                                    [(5., 1.0)], 0., None)
         good_config = [{'MFD_spacing': 0.1,
-                       'Maximum_Magnitude': None,
-                       'Minimum_Magnitude': 5.0,
+                        'Maximum_Magnitude': None,
+                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
                         'Model_Weight': 0.7,
                         'Model_Type': 'First',
@@ -378,7 +377,6 @@ class TestmtkActiveFault(unittest.TestCase):
             self.fault.generate_config_set(bad_config)
         self.assertEqual(str(ae.exception),
                          'MFD config weights do not sum to 1.0 for fault 001')
-
 
     def test_generate_branching_index(self):
         '''
@@ -572,17 +570,17 @@ class TestmtkActiveFault(unittest.TestCase):
         mfd_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.7,
-                        'Model_Type': 'First',
-                        'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1,
-                        'Maximum_Magnitude': None,
-                        'Maximum_Magnitude_Uncertainty': None,
-                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExponential',
-                        'Model_Weight': 0.3,
-                        'b_value': [0.8, 0.05]}]
+                       'Model_Name': 'AndersonLucoArbitrary',
+                       'Model_Weight': 0.7,
+                       'Model_Type': 'First',
+                       'b_value': [0.8, 0.05]},
+                      {'MFD_spacing': 0.1,
+                       'Maximum_Magnitude': None,
+                       'Maximum_Magnitude_Uncertainty': None,
+                       'Minimum_Magnitude': 5.0,
+                       'Model_Name': 'YoungsCoppersmithExponential',
+                       'Model_Weight': 0.3,
+                       'b_value': [0.8, 0.05]}]
 
         # Enumerates branches should have four models
         self.fault.generate_recurrence_models(config=mfd_config)
@@ -595,7 +593,6 @@ class TestmtkActiveFault(unittest.TestCase):
             np.testing.assert_array_almost_equal(
                 np.log10(occur.occur_rates),
                 FAULT_RATE_DATA[iloc, :])
-
 
     def test_recurrence_collapse_branches(self):
         '''
@@ -619,17 +616,17 @@ class TestmtkActiveFault(unittest.TestCase):
         mfd_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.7,
-                        'Model_Type': 'First',
-                        'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1,
-                        'Maximum_Magnitude': None,
-                        'Maximum_Magnitude_Uncertainty': None,
-                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExponential',
-                        'Model_Weight': 0.3,
-                        'b_value': [0.8, 0.05]}]
+                       'Model_Name': 'AndersonLucoArbitrary',
+                       'Model_Weight': 0.7,
+                       'Model_Type': 'First',
+                       'b_value': [0.8, 0.05]},
+                      {'MFD_spacing': 0.1,
+                       'Maximum_Magnitude': None,
+                       'Maximum_Magnitude_Uncertainty': None,
+                       'Minimum_Magnitude': 5.0,
+                       'Model_Name': 'YoungsCoppersmithExponential',
+                       'Model_Weight': 0.3,
+                       'b_value': [0.8, 0.05]}]
 
         # Enumerated branches should have four models
         self.fault.generate_recurrence_models(collapse=True,
@@ -644,7 +641,6 @@ class TestmtkActiveFault(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             np.log10(self.fault.mfd[0][0].occur_rates),
             np.log10(expected_rates))
-
 
     def test_generate_fault_source_model_simple(self):
         '''
@@ -680,7 +676,6 @@ class TestmtkActiveFault(unittest.TestCase):
             np.testing.assert_array_almost_equal(model.mfd.occurrence_rates,
                                                  rec_models[iloc].occur_rates)
             self.assertAlmostEqual(weights[iloc], 0.5)
-
 
     def test_generate_fault_source_model_complex(self):
         '''

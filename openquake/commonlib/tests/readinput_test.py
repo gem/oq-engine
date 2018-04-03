@@ -28,9 +28,10 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib import general
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, InvalidFile
+from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
-from openquake.commonlib import readinput, writers
+from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -45,7 +46,7 @@ def getparams(oq):
 
 class ParseConfigTestCase(unittest.TestCase):
 
-    def test_get_oqparam_with_files(self):
+    def test_no_absolute_path(self):
         temp_dir = tempfile.mkdtemp()
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
         job_config = general.writetmp(dir=temp_dir, content="""
@@ -63,6 +64,26 @@ intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_params([job_config])
+        self.assertIn('is an absolute path', str(ctx.exception))
+
+    def test_get_oqparam_with_files(self):
+        temp_dir = tempfile.mkdtemp()
+        site_model_input = general.writetmp(dir=temp_dir, content="foo")
+        job_config = general.writetmp(dir=temp_dir, content="""
+[general]
+calculation_mode = event_based
+[site]
+sites = 0 0
+site_model_file = %s
+maximum_distance=1
+truncation_level=0
+random_seed=0
+intensity_measure_types = PGA
+investigation_time = 50
+export_dir = %s
+        """ % (os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -83,7 +104,7 @@ export_dir = %s
             }
 
             with mock.patch('logging.warn') as warn:
-                params = getparams(readinput.get_oqparam(job_config))
+                params = getparams(readinput.get_oqparam(job_config, hc_id=1))
                 for key in expected_params:
                     self.assertEqual(expected_params[key], params[key])
                 items = sorted(params['inputs'].items())
@@ -92,8 +113,8 @@ export_dir = %s
                 self.assertEqual((job_config, site_model_input), values)
 
                 # checking that warnings work
-                self.assertEqual(warn.call_args[0][0],
-                                 "The parameter 'bar' is unknown, ignoring")
+                self.assertIn('Please remove site_model_file from',
+                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 
@@ -117,17 +138,18 @@ reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
-            """ % (sites_csv, TMP))
+            """ % (os.path.basename(sites_csv), TMP))
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
 
             expected_params = {
                 'export_dir': TMP,
+                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
                 'calculation_mode': 'classical',
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': {'default': 1},
+                'maximum_distance': {'default': 1.0},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -139,10 +161,37 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source, hc_id=1))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
+
+    def test_wrong_sites_csv(self):
+        sites_csv = general.writetmp(
+            'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
+        source = general.writetmp("""
+[general]
+calculation_mode = classical
+[geometry]
+sites_csv = %s
+[misc]
+maximum_distance=1
+truncation_level=3
+random_seed=5
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
+investigation_time = 50.
+export_dir = %s
+""" % (os.path.basename(sites_csv), TMP))
+        oq = readinput.get_oqparam(source, hc_id=1)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_mesh(oq)
+        self.assertIn('expected site_id=0, got 1', str(ctx.exception))
+        os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
         source = general.writetmp("""
@@ -159,11 +208,23 @@ reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 investigation_time = 50.
+source_model_file = fake.xml
 """)
         oqparam = readinput.get_oqparam(source)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
+
+    def test_invalid_magnitude_distance_filter(self):
+        source = general.writetmp("""
+[general]
+maximum_distance=[(200, 8)]
+""")
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam(source)
+        self.assertIn('magnitude 200.0 is bigger than the maximum (11): '
+                      'could not convert to maximum_distance:',
+                      str(ctx.exception))
 
 
 def sitemodel():
@@ -185,20 +246,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
-        expected = [
-            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0,
-                            depth=0.0),
-            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, backarc=True, lon=0.0, lat=0.1,
-                            depth=0.0),
-            valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=200.0, backarc=False, lon=0.0, lat=0.2,
-                            depth=0.0)]
-        self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
+        self.assertEqual(len(readinput.get_site_model(oqparam)), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
         oqparam.max_site_model_distance = 5
@@ -208,10 +260,9 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             readinput.get_site_collection(oqparam)
         # check that the warning was raised
         self.assertEqual(
-            warn.call_args[0][0],
-            'The site parameter associated to '
-            '<Latitude=0.000000, Longitude=2.000000, Depth=0.0000> '
-            'came from a distance of 222 km!')
+            warn.call_args[0],
+            ('Association to %s km from site (%s %s)',
+             222.38985328911747, 2.0, 0.0))
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -337,11 +388,10 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')
 
     def test_get_metadata(self):
-        exp, _assets = readinput._get_exposure(
-            self.exposure, ['structural'], stop='assets')
+        exp, _assets = asset._get_exposure(self.exposure, stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertTrue(exp.insurance_limit_is_absolute)
-        self.assertTrue(exp.deductible_is_absolute)
+        self.assertIsNone(exp.insurance_limit_is_absolute)
+        self.assertIsNone(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
                          [('structural', 'per_asset', 'USD')])
 
@@ -393,22 +443,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
-    def test_no_insured_data(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.calculation_mode = 'scenario_risk'
-        oqparam.all_cost_types = ['structural']
-        oqparam.insured_losses = True
-        oqparam.inputs = {'exposure': self.exposure,
-                          'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
-POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
-        oqparam.time_event = None
-        oqparam.ignore_missing_costs = []
-        with self.assertRaises(KeyError) as ctx:
-            readinput.get_exposure(oqparam)
-        self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
-
     def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
@@ -431,6 +465,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
+        oqparam.ignore_missing_costs = []
         oqparam.region_constraint = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,
@@ -615,7 +650,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
         eids, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
         assert_allclose(eids, range(5))
         self.assertEqual(
-            writers.write_csv(StringIO(), gmfa), '''\
+            writers.write_csv(BytesIO(), gmfa), b'''\
 PGA:float32,PGV:float32
 6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
 1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
@@ -703,13 +738,14 @@ class TestLoadCurvesTestCase(unittest.TestCase):
     </hazardCurves>
 </nrml>
 ''', suffix='.xml')
-        oqparam = mock.Mock()
+        oqparam = object.__new__(oqvalidation.OqParam)
         oqparam.inputs = dict(hazard_curves=fname)
-        sitecol, hcurves = readinput.get_hcurves(oqparam)
+        sitecol = readinput.get_site_collection(oqparam)
         self.assertEqual(len(sitecol), 2)
         self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
+        hcurves = readinput.pmap.convert(oqparam.imtls, 2)
         assert_allclose(hcurves['PGA'], numpy.array(
             [[0.098728, 0.098216, 0.094945, 0.092947],
              [0.98728, 0.98226, 0.94947, 0.92947]]))

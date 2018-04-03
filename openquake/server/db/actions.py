@@ -21,7 +21,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore
+from openquake.baselib import datastore, general
+from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -59,15 +60,17 @@ def reset_is_running(db):
 
 def set_status(db, job_id, status):
     """
-    Set the status 'created', 'executing', 'complete', 'failed'
+    Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
     consistently with `is_running`.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param status: status string
     """
-    assert status in ('created', 'executing', 'complete', 'failed'), status
-    if status in ('created', 'complete', 'failed'):
+    assert status in (
+        'created', 'executing', 'complete', 'aborted', 'failed'
+    ), status
+    if status in ('created', 'complete', 'failed', 'aborted'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
@@ -101,11 +104,27 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                description=description,
                user_name=user_name,
                hazard_calculation_id=hc_id,
-               is_running=0,
+               is_running=1,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     job_id = db('INSERT INTO job (?S) VALUES (?X)',
                 job.keys(), job.values()).lastrowid
     return job_id
+
+
+def import_job(db, calc_id, calc_mode, description, user_name, status,
+               hc_id, datadir):
+    """
+    Insert a calculation inside the database, if calc_id is not taken
+    """
+    job = dict(id=calc_id,
+               calculation_mode=calc_mode,
+               description=description,
+               user_name=user_name,
+               hazard_calculation_id=hc_id,
+               is_running=0,
+               status=status,
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+    db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
 
 
 def delete_uncompleted_calculations(db, user):
@@ -118,25 +137,37 @@ def delete_uncompleted_calculations(db, user):
     db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
 
 
-def get_job_id(db, job_id, username):
+def get_job(db, job_id, username=None):
     """
     If job_id is negative, return the last calculation of the current
     user, otherwise returns the job_id unchanged.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: a job ID (can be negative and can be nonexisting)
-    :param username: an user name
-    :returns: a valid job ID or None if the original job ID was invalid
+    :param username: an user name (if None, ignore it)
+    :returns: a valid job or None if the original job ID was invalid
     """
     job_id = int(job_id)
+
     if job_id > 0:
-        return job_id
-    joblist = db('SELECT id FROM job WHERE user_name=?x '
-                 'ORDER BY id DESC LIMIT ?x', username, - job_id)
+        dic = dict(id=job_id)
+        if username:
+            dic['user_name'] = username
+        try:
+            return db('SELECT * FROM job WHERE ?A', dic, one=True)
+        except NotFound:
+            return
+
+    # else negative job_id
+    if username:
+        joblist = db('SELECT * FROM job WHERE user_name=?x '
+                     'ORDER BY id DESC LIMIT ?x', username, -job_id)
+    else:
+        joblist = db('SELECT * FROM job ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
-        return joblist[-1].id
+        return joblist[-1]
 
 
 def get_calc_id(db, datadir, job_id=None):
@@ -170,17 +201,18 @@ def list_calculations(db, job_type, user_name):
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
               'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
               user_name, job_type)
-
+    out = []
     if len(jobs) == 0:
-        yield 'None'
+        out.append('None')
     else:
-        yield ('job_id |     status |          start_time | '
-               '        description')
+        out.append('job_id |     status |          start_time | '
+                   '        description')
         for job in jobs:
             descr = job.description
             start_time = job.start_time
-            yield ('%6d | %10s | %s | %s' % (
+            out.append('%6d | %10s | %s | %s' % (
                 job.id, job.status, start_time, descr))
+    return out
 
 
 def list_outputs(db, job_id, full=True):
@@ -196,19 +228,21 @@ def list_outputs(db, job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(db, job_id)
+    out = []
     if len(outputs) > 0:
         truncated = False
-        yield '  id | name'
+        out.append('  id | name')
         outs = sorted(outputs, key=operator.attrgetter('display_name'))
         for i, o in enumerate(outs):
             if not full and i >= 10:
-                yield ' ... | %d additional output(s)' % (len(outs) - 10)
+                out.append(' ... | %d additional output(s)' % (len(outs) - 10))
                 truncated = True
                 break
-            yield '%4d | %s' % (o.id, o.display_name)
+            out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
-            yield ('Some outputs where not shown. You can see the full list '
-                   'with the command\n`oq engine --list-outputs`')
+            out.append('Some outputs where not shown. You can see the full '
+                       'list with the command\n`oq engine --list-outputs`')
+    return out
 
 
 def get_outputs(db, job_id):
@@ -223,7 +257,43 @@ def get_outputs(db, job_id):
     return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 
-DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset')
+DISPLAY_NAME = {
+    'gmf_data': 'Ground Motion Fields',
+    'dmg_by_asset': 'Average Asset Damages',
+    # 'damages_by_asset': 'Average Asset Damages',
+    # 'damages_by_event': 'Aggregate Event Damages',
+    'losses_by_asset': 'Average Asset Losses',
+    'losses_by_event': 'Aggregate Event Losses',
+    'damages-rlzs': 'Asset Damage Distribution',
+    'damages-stats': 'Asset Damage Statistics',
+    'avg_losses-rlzs': 'Average Asset Losses',
+    'avg_losses-stats': 'Average Asset Losses Statistics',
+    'loss_curves': 'Asset Loss Curves',
+    'loss_curves-stats': 'Asset Loss Curves Statistics',
+    'loss_maps-rlzs': 'Asset Loss Maps',
+    'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'agg_curves-rlzs': 'Aggregate Loss Curves',
+    'agg_curves-stats': 'Aggregate Loss Curves Statistics',
+    'agg_loss_table': 'Aggregate Loss Table',
+    'agglosses-rlzs': 'Aggregate Asset Losses',
+    'bcr-rlzs': 'Benefit Cost Ratios',
+    'bcr-stats': 'Benefit Cost Ratios Statistics',
+    'sourcegroups': 'Seismic Source Groups',
+    'ruptures': 'Earthquake Ruptures',
+    'hcurves': 'Hazard Curves',
+    'hmaps': 'Hazard Maps',
+    'uhs': 'Uniform Hazard Spectra',
+    'disagg': 'Disaggregation Outputs',
+    'disagg-stats': 'Disaggregation Statistics',
+    'disagg_by_src': 'Disaggregation by Source',
+    'realizations': 'Realizations',
+    'fullreport': 'Full Report',
+}
+
+# sanity check, all display name keys must be exportable
+dic = general.groupby(export, operator.itemgetter(0))
+for key in DISPLAY_NAME:
+    assert key in dic, key
 
 
 def create_outputs(db, job_id, dskeys):
@@ -323,9 +393,11 @@ def get_log(db, job_id):
     :param job_id: a job ID
     """
     logs = db('SELECT * FROM log WHERE job_id=?x ORDER BY id', job_id)
+    out = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
+        out.append('[%s #%d %s] %s' % (time, job_id, log.level, log.message))
+    return out
 
 
 def get_output(db, output_id):
@@ -430,16 +502,16 @@ def calc_info(db, calc_id):
     return response_data
 
 
-def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
+def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param request_get_dict:
         a dictionary
-    :param user_name:
-        user name
+    :param allowed_users:
+        a list of users
     :param user_acl_on:
-        if True, returns only the calculations owned by the user
+        if True, returns only the calculations owned by the user or the group
     :param id:
         if given, extract only the specified calculation
     :returns:
@@ -448,11 +520,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
-
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
-    if user_acl_on:
-        filterdict['user_name'] = user_name
 
     if id is not None:
         filterdict['id'] = id
@@ -480,24 +547,31 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
-              % (time_filter, limit), filterdict)
+    if user_acl_on:
+        users_filter = "user_name IN (?X)"
+    else:
+        users_filter = 1
+
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
+              ' ORDER BY id DESC LIMIT %d'
+              % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description) for job in jobs]
+             job.is_running, job.description, job.pid,
+             job.hazard_calculation_id) for job in jobs]
 
 
-def set_relevant(db, job_id, flag):
+def update_job(db, job_id, dic):
     """
-    Set the `relevant` field of the given calculation record.
+    Update the given calculation record.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         a job ID
-    :param flag:
-        flag for the field job.relevant
+    :param dic:
+        a dictionary of valid field/values for the job table
     """
-    db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+    db('UPDATE job SET ?D WHERE id=?x', dic, job_id)
 
 
 def update_parent_child(db, parent_child):
@@ -556,10 +630,12 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines
+    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
-             job_id)[-1]
-    response_data = log.message.splitlines()
+             job_id)
+    if not log:
+        return []
+    response_data = log[-1].message.splitlines()
     return response_data
 
 
@@ -573,21 +649,8 @@ def get_result(db, result_id):
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
-    return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
-
-
-def get_job(db, job_id, username):
-    """
-    :param db:
-        a :class:`openquake.server.dbapi.Db` instance
-    :param job_id:
-        ID of the current job
-    :param username:
-        user name
-    :returns: the full path to the datastore
-    """
-    calc_id = get_job_id(db, job_id, username) or job_id
-    return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
+    return (job.id, job.status, job.user_name,
+            os.path.dirname(job.ds_calc_dir), job.ds_key)
 
 
 def get_results(db, job_id):

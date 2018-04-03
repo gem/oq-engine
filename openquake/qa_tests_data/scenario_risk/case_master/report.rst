@@ -1,13 +1,13 @@
 scenario risk
 =============
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5565.hdf5 Fri Sep 22 11:30:33 2017
-checksum32                                           3,710,104,175           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     1,697,824,437      
+date           2018-03-26T15:57:43
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 7, num_imts = 4
+num_sites = 7, num_levels = 46
 
 Parameters
 ----------
@@ -23,9 +23,11 @@ complex_fault_mesh_spacing      2.0
 width_of_mfd_bin                None              
 area_source_discretization      None              
 ground_motion_correlation_model 'JB2009'          
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     42                
-avg_losses                      False             
+ses_seed                        42                
+avg_losses                      True              
 =============================== ==================
 
 Input files
@@ -46,11 +48,11 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== ================= =============== ================
-smlt_path weight source_model_file gsim_logic_tree num_realizations
-========= ====== ================= =============== ================
-b_1       1.000  `fake <fake>`_    simple(2)       2/2             
-========= ====== ================= =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b_1       1.000  simple(2)       2/2             
+========= ====== =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,13 +62,6 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=2, rlzs=2)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
-
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
 
 Exposure model
 --------------
@@ -90,11 +85,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.011     0.0       1     
-reading exposure        0.009     0.0       1     
-filtering sites         0.007     0.0       1     
-saving gmfs             0.002     0.0       1     
-building riskinputs     3.645E-04 0.0       1     
-building epsilons       3.440E-04 0.0       1     
-reading site collection 5.007E-06 0.0       1     
+building riskinputs     0.038     0.0       1     
+computing gmfs          0.017     0.0       1     
+reading exposure        0.012     0.0       1     
+saving gmfs             0.008     0.0       1     
+building epsilons       8.004E-04 0.0       1     
+reading site collection 5.007E-05 0.0       1     
 ======================= ========= ========= ======
