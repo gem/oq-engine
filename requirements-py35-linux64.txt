@@ -63,4 +63,4 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/pyparsing-2.2.0-py2.py3
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/cycler-0.10.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py35/staging/matplotlib-2.1.2-cp35-cp35m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py35/staging/pyproj-1.9.5.1-cp35-cp35m-manylinux1_x86_64.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py35/staging/basemap-1.1.0-numpy_1.14-cp35-cp35m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py35/staging/basemap-1.1.0.n14-cp35-cp35m-manylinux1_x86_64.whl
