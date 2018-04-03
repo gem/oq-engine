@@ -114,7 +114,6 @@ class PSHACalculator(base.HazardCalculator):
         for grp in self.csm.src_groups:
             num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
-        zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         return zd
 

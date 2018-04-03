@@ -692,12 +692,11 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     [src] = sources
     res = AccumDict()
-    res.calc_times = AccumDict()
+    res.calc_times = []
     serial = 1
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
-    t0 = time.time()
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
@@ -725,11 +724,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         ebruptures.append(
                             EBRupture(rup, indices, evs, serial))
                         serial += 1
-    res.num_events = stochastic.set_eids(ebruptures)
+    res.num_events = len(stochastic.set_eids(ebruptures))
     res[src.src_group_id] = ebruptures
-    res.calc_times[src.src_group_id] = {
-        src.source_id:
-        numpy.array([src.weight, len(sitecol), time.time() - t0, 1])}
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
