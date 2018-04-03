@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import time
 import operator
 import collections
 import numpy
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, deprecated
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import range, raise_
 from openquake.hazardlib.calc.filters import FarAwayRupture
@@ -42,6 +42,7 @@ event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
                         ('sample', U32)])
 
 
+@deprecated('Use sample_ruptures instead')
 def stochastic_event_set(
         sources,
         sites=None,
