@@ -99,6 +99,7 @@ def reduce(fname, reduction_factor):
         nrml.write([model], f, xmlns=node['xmlns'])
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 
+
 reduce.arg('fname', 'path to the model file')
 reduce.arg('reduction_factor', 'reduction factor in the range 0..1',
            type=valid.probability)

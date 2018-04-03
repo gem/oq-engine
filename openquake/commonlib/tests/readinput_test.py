@@ -70,12 +70,14 @@ export_dir = %s
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
+        source_model_input = general.writetmp(dir=temp_dir)
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [site]
 sites = 0 0
+source_model_file = %s
 site_model_file = %s
 maximum_distance=1
 truncation_level=0
@@ -83,7 +85,8 @@ random_seed=0
 intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
-        """ % (os.path.basename(site_model_input), TMP))
+        """ % (os.path.basename(source_model_input),
+               os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -96,25 +99,26 @@ export_dir = %s
                 'random_seed': 0,
                 'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
-                           'site_model': site_model_input},
+                           'site_model': site_model_input,
+                           'source': [source_model_input],
+                           'source_model': source_model_input},
                 'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
 
-            with mock.patch('logging.warn') as warn:
-                params = getparams(readinput.get_oqparam(job_config, hc_id=1))
-                for key in expected_params:
-                    self.assertEqual(expected_params[key], params[key])
-                items = sorted(params['inputs'].items())
-                keys, values = zip(*items)
-                self.assertEqual(('job_ini', 'site_model'), keys)
-                self.assertEqual((job_config, site_model_input), values)
+            params = getparams(readinput.get_oqparam(job_config))
+            for key in expected_params:
+                self.assertEqual(expected_params[key], params[key])
+            items = sorted(params['inputs'].items())
+            keys, values = zip(*items)
+            self.assertEqual(('job_ini', 'site_model', 'source',
+                              'source_model'), keys)
+            self.assertEqual((job_config, site_model_input,
+                              [source_model_input], source_model_input),
+                             values)
 
-                # checking that warnings work
-                self.assertIn('Please remove site_model_file from',
-                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 
@@ -768,6 +772,11 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
+
+    def test_reduce_source_model(self):
+        case2 = os.path.dirname(case_2.__file__)
+        smlt = os.path.join(case2, 'source_model_logic_tree.xml')
+        readinput.reduce_source_model(smlt, [])
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
