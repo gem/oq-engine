@@ -19,7 +19,9 @@
 from __future__ import division
 import os
 import csv
+import copy
 import zlib
+import shutil
 import zipfile
 import logging
 import operator
@@ -36,7 +38,6 @@ from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
-from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 
@@ -203,6 +204,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     oqparam.validate()
     return oqparam
 
+
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
@@ -270,6 +272,7 @@ def get_mesh(oqparam):
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
+
 
 
 site_model_dt = numpy.dtype([
@@ -946,6 +949,36 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+# used in utils/reduce_sm and utils/extract_source
+def reduce_source_model(smlt_file, source_ids):
+    """
+    Extract sources from the composite source model
+    """
+    for paths in gen_sm_paths(smlt_file):
+        for path in paths:
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
+                    if src_node['id'] in source_ids:
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
+                    for src_node in src_group:
+                        if src_node['id'] in source_ids:
+                            sg.nodes.append(src_node)
+                    if sg.nodes:
+                        model.nodes.append(sg)
+            if model:
+                shutil.copy(path, path + '.bak')
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+                    logging.warn('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):
