@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# bash_test.sh  Copyright (C) 2016-2017 GEM Foundation
+# bash_test.sh  Copyright (C) 2016-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
