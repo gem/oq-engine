@@ -109,7 +109,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         zd = AccumDict()
-        zd.calc_times = []
         zd.eff_ruptures = AccumDict()
         self.grp_trt = self.csm.info.grp_by("trt")
         return zd
@@ -123,7 +122,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
         if hasattr(ruptures_by_grp_id, 'calc_times'):
-            acc.calc_times.extend(ruptures_by_grp_id.calc_times)
+            for srcid, nsites, eids, dt in ruptures_by_grp_id.calc_times:
+                info = self.csm.infos[srcid]
+                info.num_sites += nsites
+                info.calc_time += dt
+                info.num_split += 1
+                info.events += len(eids)
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
