@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -981,6 +981,7 @@ class SourceInfo(object):
         ('split_time', numpy.float32),     # 4
         ('num_sites', numpy.uint32),       # 5
         ('num_split',  numpy.uint32),      # 6
+        ('events', numpy.uint32),          # 7
     ])
 
     def __init__(self, src, calc_time=0, split_time=0, num_split=0):
@@ -991,3 +992,4 @@ class SourceInfo(object):
         self.calc_time = calc_time
         self.split_time = split_time
         self.num_split = num_split
+        self.events = 0  # set in event based
