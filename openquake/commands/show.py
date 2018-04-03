@@ -19,7 +19,6 @@
 from __future__ import print_function
 import io
 import os
-import getpass
 import logging
 import numpy
 
@@ -28,16 +27,19 @@ from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import logs, calc
+from openquake.commonlib import logs
+from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
 
 if config.dbserver.multi_user:
-    # get the datastore of the user who ran the job
     def read(calc_id):
-        job = logs.dbcmd('get_job', calc_id, getpass.getuser())
-        datadir = os.path.dirname(job.ds_calc_dir)
-        return datastore.read(job.id, datadir=datadir)
+        job = logs.dbcmd('get_job', calc_id)
+        if job:
+            return datastore.read(job.ds_calc_dir + '.hdf5')
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 else:  # get the datastore of the current user
     read = datastore.read
 
@@ -48,7 +50,7 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    getter = calc.PmapGetter(dstore)
+    getter = getters.PmapGetter(dstore)
     sitecol = dstore['sitecol']
     pmaps = getter.get_pmaps(sitecol.sids)
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
@@ -66,7 +68,7 @@ def show(what='contents', calc_id=-1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = datastore.read(calc_id)
+                ds = read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except:
@@ -86,7 +88,7 @@ def show(what='contents', calc_id=-1, extra=()):
     # this part is experimental
     if what == 'rlzs' and 'poes' in ds:
         min_value = 0.01  # used in rmsep
-        getter = calc.PmapGetter(ds)
+        getter = getters.PmapGetter(ds)
         sitecol = ds['sitecol']
         pmaps = getter.get_pmaps(sitecol.sids)
         weights = [rlz.weight for rlz in getter.rlzs]
@@ -105,7 +107,7 @@ def show(what='contents', calc_id=-1, extra=()):
     elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.StringIO(), obj.value))
+            print(write_csv(io.BytesIO(), obj.value).decode('utf8'))
         else:
             print(obj)
     else:

@@ -4,40 +4,20 @@ non-trivial logic trees. It should be  noted that the input files that will be
 illustrated are valid not only for a classical PSHA calculation but also for
 event based and  disaggregation analysis.
 
-All the classical PSHA demos illustrating the different source typologies
-(all demos but the ones about Logic Tree definition) share the same GSIM logic
-tree file, which for clarity is provided below.
+All the classical PSHA demos illustrating the different source typologies (all
+demos but the ones about Logic Tree definition) share the same GSIM logic tree
+file, which for clarity is provided below in
+Listing~\ref{lst:input_gmlt_demo}.
 
 Since this logic tree consideres only one tectonic region (i.e. \texttt{Active
 Shallow Crust}) all the seismic sources will belong be considered active
 shallow crust sources.
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-<?xml version="1.0" encoding="UTF-8"?>
-
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <logicTree logicTreeID="lt1">
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet
-               uncertaintyType="gmpeModel"
-               applyToTectonicRegionType="Active Shallow Crust"
-               branchSetID="bs1">
-
-                <logicTreeBranch branchID="b1">
-                     <uncertaintyModel>
-                        BooreAtkinson2008
-                     </uncertaintyModel>
-                     <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>
-</nrml>
-\end{Verbatim}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_gmlt.xml}
+  \caption{GSIM logic tree input file used in the demos}
+  \label{lst:input_gmlt_demo}
+\end{listing}
 
 \subsection{Classical PSHA with different source typologies}
 
@@ -53,63 +33,18 @@ This section discusses the following examples:
     \item SimpleFaultSourceClassicalPSHA
 \end{itemize}
 
-The configuration file (see below) is defined to compute hazard curves for
-several intensity measure types (PGV, PGA and Spectral acceleration at
-different periods), hazard maps and uniform hazard spectra for different
-probabilities of exceedance:
+The configuration file in Listing~\ref{lst:config_classical} is defined to
+compute hazard curves for several intensity measure types (PGV, PGA and
+Spectral acceleration at different periods), hazard maps and uniform hazard
+spectra for different probabilities of exceedance:
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-[general]
-description = ...
-calculation_mode = classical
-random_seed = 23
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/hazard/verbatim/config_classical.ini}
+  \caption{Example configuration file for a classical probabilistic hazard calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/oqum/hazard/verbatim/config_classical.ini}{Download example})}
+  \label{lst:config_classical}
+\end{listing}
 
-[geometry]
-region = ...
-region_grid_spacing = 5.0
-
-[logic_tree]
-number_of_logic_tree_samples = 0
-
-[erf]
-rupture_mesh_spacing = 2
-width_of_mfd_bin = 0.1
-area_source_discretization = 5.0
-
-[site_params]
-reference_vs30_type = measured
-reference_vs30_value = 600.0
-reference_depth_to_2pt5km_per_sec = 5.0
-reference_depth_to_1pt0km_per_sec = 100.0
-
-[calculation]
-source_model_logic_tree_file = source_model_logic_tree.xml
-gsim_logic_tree_file = gmpe_logic_tree.xml
-investigation_time = 50.0
-intensity_measure_types_and_levels =\{
-"PGV": [2, 4, 6 ,8, 10, ...], 
-"PGA": [0.005, 0.007, ...], 
-"SA(0.025)": [...], 
-"SA(0.05)": [...],
-"SA(0.1)": [...], 
-"SA(0.2)": [...], 
-"SA(0.5)": [...], 
-"SA(1.0)": [...],
-"SA(2.0)": [...]\}
-truncation_level = 3
-maximum_distance = 200.0
-
-[output]
-export_dir = ...
-mean_hazard_curves = false
-quantile_hazard_curves =
-hazard_maps = true
-uniform_hazard_spectra = true
-poes = 0.1 0.02
-\end{Verbatim}
-
-Hazard maps for the different demos are shown in Figure~
-\ref{fig:hazard_maps1} and Figure~\ref{fig:hazard_maps2}.
+Hazard maps for the different demos are shown in Figure~\ref{fig:hazard_maps1} and Figure~\ref{fig:hazard_maps2}.
 
 \begin{figure}
 \centering
@@ -155,90 +90,27 @@ used to express epistemic uncertainties in seismic hazard analysis.
 LogicTreeCase1ClassicalPSHA shows an example of logic tree defining two
 alternative source models, with sources belonging to two different tectonic
 region types, and with two alternative GMPEs for each tectonic  region type.
-The source model logic tree is therefore defined in the following way:
+The source model logic tree is therefore defined as shown in
+Listing~\ref{lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA}.
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <logicTree logicTreeID="lt1">
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-
-            <logicTreeBranchSet uncertaintyType="sourceModel"
-                                branchSetID="bs1">
-                <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>
-                      source_model_1.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>
-                       source_model_2.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-
-        </logicTreeBranchingLevel>
-
-    </logicTree>
-</nrml>
-\end{Verbatim}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_sslt_demo_LogicTreeCase1ClassicalPSHA.xml}
+  \caption{Source model logic tree input file used in the LogicTreeCase1ClassicalPSHA demo}
+  \label{lst:input_sslt_demo_LogicTreeCase1ClassicalPSHA}
+\end{listing}
 
 The two source models are defined in two separate files:
 \texttt{source\_\-model\_\-1.xml} and \texttt{source\_\-model\_\-2.xml} each
 one associated to a corresponding weight (0.5 for both).
 
-The GSIM logic tree file contains the following structure:
+The GSIM logic tree file contains the structure as shown in
+Listing~\ref{lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA}.
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-<?xml version="1.0" encoding="UTF-8"?>
-
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <logicTree logicTreeID="lt1">
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel"
-               applyToTectonicRegionType="Active Shallow Crust"
-               branchSetID="bs1">
-                <logicTreeBranch branchID="b11">
-                   <uncertaintyModel>
-                      BooreAtkinson2008
-                   </uncertaintyModel>
-                   <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b12">
-                   <uncertaintyModel>
-                      ChiouYoungs2008
-                   </uncertaintyModel>
-                   <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-            <logicTreeBranchSet uncertaintyType="gmpeModel"
-              applyToTectonicRegionType="Stable Continental Crust"
-              branchSetID="bs2">
-              <logicTreeBranch branchID="b21">
-                <uncertaintyModel>
-                   ToroEtAl2002</uncertaintyModel>
-                <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b22">
-                  <uncertaintyModel>
-                     Campbell2003</uncertaintyModel>
-                  <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>
-</nrml>
-\end{Verbatim}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_gmlt_demo_LogicTreeCase1ClassicalPSHA.xml}
+  \caption{GSIM logic tree input file used in the LogicTreeCase1ClassicalPSHA demo}
+  \label{lst:input_gmlt_demo_LogicTreeCase1ClassicalPSHA}
+\end{listing}
 
 The source model contains sources belonging to Active Shallow Crust and
 Stable Continental Crust, therefore the GSIM logic tree defines two branching
@@ -259,106 +131,14 @@ defines uncertainties for G-R a and b values (three possible pairs for each
 source), maximum magnitude (three values for each source) and uncertainties
 on the GMPEs for each tectonic region type (two GMPE per region type).
 
-To accommodate such a structure the GSIM logic tree is defined in the
-following way:
+To accommodate such a structure the GSIM logic tree is defined as shown in
+Listing~\ref{lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA}.
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <logicTree logicTreeID="lt1">
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="sourceModel"
-                                branchSetID="bs1">
-                <logicTreeBranch branchID="b11">
-                    <uncertaintyModel>
-                     source_model.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                applyToSources="1"
-                                branchSetID="bs21">
-                <logicTreeBranch branchID="b21">
-                    <uncertaintyModel>4.6 1.1</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b22">
-                    <uncertaintyModel>4.5 1.0</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b23">
-                    <uncertaintyModel>4.4 0.9</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl3">
-            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                applyToSources="2"
-                                branchSetID="bs31">
-                <logicTreeBranch branchID="b31">
-                    <uncertaintyModel>3.3 1.0</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b32">
-                    <uncertaintyModel>3.2 0.9</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b33">
-                    <uncertaintyModel>3.1 0.8</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl4">
-            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                applyToSources="1"
-                                branchSetID="bs41">
-                <logicTreeBranch branchID="b41">
-                    <uncertaintyModel>7.0</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b42">
-                    <uncertaintyModel>7.3</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b43">
-                    <uncertaintyModel>7.6</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl5">
-            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                applyToSources="2"
-                                branchSetID="bs51">
-                <logicTreeBranch branchID="b51">
-                    <uncertaintyModel>7.5</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b52">
-                    <uncertaintyModel>7.8</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b53">
-                    <uncertaintyModel>8.0</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>
-</nrml>
-\end{Verbatim}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_gmlt_demo_LogicTreeCase2ClassicalPSHA.xml}
+  \caption{GSIM logic tree input file used in the LogicTreeCase2ClassicalPSHA demo}
+  \label{lst:input_gmlt_demo_LogicTreeCase2ClassicalPSHA}
+\end{listing}
 
 The first branching level defines the source model. For each source, two
 branching levels are created, one defining uncertainties on G-R a and b values
@@ -392,65 +172,14 @@ LogicTreeCase3ClassicalPSHA illustrates an example of logic tree defining
 relative uncertainties on G-R maximum magnitude and b value. A single source
 model is considered containing two sources belonging to different tectonic
 region types and both characterized by a G-R magnitude frequency distribution.
-The source model logic tree is as follows:
+The source model logic tree for this demo is as shown in
+Listing~\ref{lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA}.
 
-\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <logicTree logicTreeID="lt1">
-
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="sourceModel"
-                                branchSetID="bs1">
-                <logicTreeBranch branchID="b11">
-                    <uncertaintyModel>
-                     source_model.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
-            <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                branchSetID="bs21">
-                <logicTreeBranch branchID="b21">
-                    <uncertaintyModel>+0.1</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b22">
-                    <uncertaintyModel>0.0</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b23">
-                    <uncertaintyModel>-0.1</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-        <logicTreeBranchingLevel branchingLevelID="bl3">
-            <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                                branchSetID="bs31">
-                <logicTreeBranch branchID="b31">
-                    <uncertaintyModel>0.0</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b32">
-                    <uncertaintyModel>+0.5</uncertaintyModel>
-                    <uncertaintyWeight>0.333</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch branchID="b33">
-                    <uncertaintyModel>+1.0</uncertaintyModel>
-                    <uncertaintyWeight>0.334</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-
-    </logicTree>
-</nrml>
-\end{Verbatim}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_sslt_demo_LogicTreeCase3ClassicalPSHA.xml}
+  \caption{Source model logic tree input file used in the LogicTreeCase3ClassicalPSHA demos}
+  \label{lst:input_sslt_demo_LogicTreeCase3ClassicalPSHA}
+\end{listing}
 
 After the first branching level defining the source model, two additional
 branching levels are defined, one defining relative uncertainties on b value

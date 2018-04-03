@@ -29,8 +29,7 @@ from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
+from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
@@ -549,46 +548,38 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
 
     def test_zero_integration_distance(self):
         filtered = self.source1.filter_sites_by_distance_to_source(
-            integration_distance=0, sites=self.sitecol
-        )
-        self.assertIsInstance(filtered, FilteredSiteCollection)
+            integration_distance=0, sites=self.sitecol)
         self.assertIsNot(filtered, self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1])
 
         filtered = self.source2.filter_sites_by_distance_to_source(
-            integration_distance=0, sites=self.sitecol
-        )
+            integration_distance=0, sites=self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0, 1])
 
     def test_fifty_km(self):
         filtered = self.source1.filter_sites_by_distance_to_source(
-            integration_distance=50, sites=self.sitecol
-        )
+            integration_distance=50, sites=self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
 
         filtered = self.source2.filter_sites_by_distance_to_source(
-            integration_distance=50, sites=self.sitecol
-        )
+            integration_distance=50, sites=self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
 
     def test_495_km(self):
         filtered = self.source1.filter_sites_by_distance_to_source(
-            integration_distance=495, sites=self.sitecol
-        )
+            integration_distance=495, sites=self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
 
         filtered = self.source2.filter_sites_by_distance_to_source(
-            integration_distance=495, sites=self.sitecol
-        )
+            integration_distance=495, sites=self.sitecol)
         self.assertIs(filtered, self.sitecol)  # nothing filtered
 
     def test_filter_all_out(self):
         self.source1.location.latitude = 13.6
         for int_dist in (0, 1, 10, 100, 1000):
             filtered = self.source1.filter_sites_by_distance_to_source(
-                integration_distance=int_dist, sites=self.sitecol
-            )
+                integration_distance=int_dist, sites=self.sitecol)
             self.assertIs(filtered, None)
 
 
@@ -625,8 +616,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # 495.78630103, 496.89812309], so given that the integration
         # distance is 0 all sites are filtered out
         filtered = filters.filter_sites_by_distance_to_rupture(
-            rup, integration_distance=0, sites=self.sitecol
-        )
+            rup, integration_distance=0, sites=self.sitecol)
         self.assertIs(filtered, None)
 
     def test_495_km(self):
@@ -635,8 +625,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # 496.25926891, 497.37116174] so given that the integration
         # distance is 495 only the first 3 sites are kept
         filtered = filters.filter_sites_by_distance_to_rupture(
-            rup, integration_distance=495, sites=self.sitecol
-        )
+            rup, integration_distance=495, sites=self.sitecol)
         expected_filtered = SiteCollection(self.SITES[:3])
         numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
         numpy.testing.assert_array_equal(

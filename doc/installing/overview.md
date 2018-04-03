@@ -6,7 +6,7 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 
 See the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
-A pre-configured VirtualBox appliance may be also [downloaded](https://storage.globalquakemodel.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
+A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
 
 ## Single user
 
@@ -22,6 +22,14 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 ### Windows
 
 Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
+
+### PyPI
+
+The OpenQuake Engine is also available on **[PyPI](https://pypi.python.org/pypi/openquake.engine)** and can be installed in any Python 3 environment via `pip`:
+
+```
+$ pip install openquake.engine
+```
 
 ## Multi users
 
@@ -40,7 +48,7 @@ Multi-user is not supported on Windows.
 
 ## Cloud
 
-A [Docker container](docker.md) is available.
+A set of [Docker containers](docker.md) is available.
 
 ***
 

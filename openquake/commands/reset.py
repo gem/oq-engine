@@ -19,6 +19,8 @@
 from __future__ import print_function
 import os
 import sys
+import time
+import signal
 from openquake.baselib import sap, config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
@@ -44,17 +46,19 @@ def reset(yes):
                 sys.exit('The oq dbserver must be stopped '
                          'before proceeding')
             else:
-                logs.dbcmd('stop')
+                pid = logs.dbcmd('getpid')
+                os.kill(pid, signal.SIGTERM)
+                time.sleep(.5)  # give time to stop
+                assert dbserver.get_status() == 'not-running'
                 print('dbserver stopped')
-
         try:
             os.remove(dbpath)
-            print('Removed %s'
-                  % dbpath)
+            print('Removed %s' % dbpath)
         except OSError as exc:
             print(exc, file=sys.stderr)
 
     # fast way of removing everything
     purge_all(fast=True)  # datastore of the current user
+
 
 reset.flg('yes', 'confirmation')

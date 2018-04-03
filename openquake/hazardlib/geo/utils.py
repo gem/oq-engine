@@ -20,7 +20,9 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+import logging
 import operator
+import collections
 try:
     import rtree
 except:
@@ -32,6 +34,12 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import (
     EARTH_RADIUS, geodetic_distance, min_idx_dst)
 from openquake.baselib.slots import with_slots
+
+SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+
+
+class SiteAssociationError(Exception):
+    """Raised when there are no sites close enough"""
 
 
 class GeographicObjects(object):
@@ -58,11 +66,10 @@ class GeographicObjects(object):
             for i, (x, y) in enumerate(zip(xs, ys)):
                 self.index.insert(i, (x, y, x, y))
 
-    def get_closest(self, lon, lat, max_distance=None):
+    def get_closest(self, lon, lat):
         """
         Get the closest object to the given longitude and latitude
-        and its distance. If the `max_distance` is given and all objects
-        are farther than the maximum distance, returns (None, None).
+        and its distance.
 
         :param lon: longitude in degrees
         :param lat: latitude in degrees
@@ -76,9 +83,36 @@ class GeographicObjects(object):
         else:
             zeros = numpy.zeros_like(self.lons)
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
-        if max_distance is not None and min_dist > max_distance:
-            return None, None
         return self.objects[idx], min_dist
+
+    def assoc(self, sitecol, assoc_dist, mode='error'):
+        """
+        :param: a (filtered) site collection
+        :param assoc_dist: the maximum distance for association
+        :param mode: 'strict', 'error', 'warn' or 'ignore'
+        :returns: a dictionary site_id -> array of associated objects
+        """
+        dic = {}
+        for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+            obj, distance = self.get_closest(lon, lat)
+            if assoc_dist is None:
+                dic[sid] = obj  # associate all
+            elif distance <= assoc_dist:
+                dic[sid] = obj  # associate within
+            elif mode == 'warn':
+                dic[sid] = obj  # associate outside
+                logging.warn('Association to %s km from site (%s %s)',
+                             distance, lon, lat)
+            elif mode == 'ignore':
+                pass  # do not associate
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
+        if not dic and mode == 'error':
+            raise SiteAssociationError(
+                'No sites could be associated within %s km' % assoc_dist)
+        return dic
 
 
 def clean_points(points):
@@ -173,6 +207,8 @@ def get_spherical_bounding_box(lons, lats):
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
+        if hasattr(lons, 'flatten'):
+            lons = lons.flatten()  # fixes an issue with GriddedSurfaces
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
         if not all((get_longitudinal_extent(west, lon) >= 0
@@ -180,7 +216,7 @@ def get_spherical_bounding_box(lons, lats):
                    for lon in lons):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
-    return west, east, north, south
+    return SphericalBB(west, east, north, south)
 
 
 @with_slots
@@ -479,17 +515,3 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
-
-
-def fix_lons_idl(lons):
-    """
-    Fix a vector of longitudes crossing the International Date Line (if any).
-
-    :returns: the fixed vector and an IDL flag
-    """
-    if cross_idl(lons.min(), lons.max()):
-        new = numpy.array(lons)
-        new[new < 0] += 360
-        return new, True
-    else:
-        return lons, False

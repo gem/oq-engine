@@ -10,12 +10,13 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 
 Note: you have to **restart every celery node** after a configuration change.
 
-### Ubuntu
-On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md).
+### Master node
+The `python3-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
 
-### RedHat
-For **RedHat** and derivates, install `python-oq-engine-master` package on the **master** node. It provides extra functionalities like _RabbitMQ_.
-On the workers install `python-oq-engine-worker`; it adds _celery_ support on top of the standard `python-oq-engine` package.
+On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must be configured and enabled* in the system.
+
+### Worker nodes
+On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python3-oq-engine` package.
 
 ## OpenQuake Engine 'master' node configuration File
 
@@ -50,7 +51,7 @@ multi_user = true
 file = /var/lib/openquake/db.sqlite3
 log = /var/lib/openquake/dbserver.log
 host = w.x.y.z
-port = 1908
+port = 1907
 authkey = changeme
 ```
 
@@ -67,7 +68,7 @@ The required daemons are:
 
 ##### RabbitMQ
 
-A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python-oq-engine`.
+A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python3-oq-engine`.
 
 You can verify that the `openquake` user and vhost exist running:
 
@@ -99,7 +100,10 @@ For more information please refer to https://www.rabbitmq.com/man/rabbitmqctl.1.
 *celery* must run all of the worker nodes. It can be started with
 
 ```bash
+## RHEL
 sudo service openquake-celery start
+## Ubuntu
+sudo supervisorctl start openquake-celery
 ```
 
 The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
@@ -177,10 +181,10 @@ Additionally, access to the RabbitMQ, and DbServer ports should be limited (agai
 The following ports must be open on the **master node**:
 
 * 5672 for RabbitMQ
-* 1908 for DbServer
+* 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
 * 8800 for the API/WebUI (optional)
 
-The **worker nodes** must be able to connect to the master on port 5672, and port 1908.
+The **worker nodes** must be able to connect to the master on port 5672, and port 1907.
 
 
 ## Storage requirements
@@ -191,8 +195,9 @@ On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
 - *RabbitMQ* mnesia dir (usually located under `/var/lib/rabbitmq`)
+- the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
-On large installations we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
+On large installations we strongly suggest to create separate partition for `/home`, *RabbitMQ* (`/var/lib/rabbitmq`) and `/tmp` (or any custom temporary folder set in the `openquake.cfg`.
 
 
 ## Swap partitions

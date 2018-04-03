@@ -56,7 +56,7 @@ from openquake.hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from openquake.hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from openquake.hmtk.faults.fault_models import mtkActiveFault
 from openquake.hmtk.faults.fault_geometries import (SimpleFaultGeometry,
-                                          ComplexFaultGeometry)
+                                                    ComplexFaultGeometry)
 from openquake.hmtk.faults.active_fault_model import mtkActiveFaultModel
 
 
@@ -64,6 +64,7 @@ class TestmtkActiveFaultModel(unittest.TestCase):
     '''
     Tests the basic class to contain a set of active faults
     '''
+
     def setUp(self):
         '''
         '''

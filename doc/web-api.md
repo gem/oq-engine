@@ -21,22 +21,40 @@ Response:
       "calculation_mode": "classical",
       "is_running": true,
       "owner: "michele",
-      "url": "http://localhost:8800/v1/calc/1"},
+      "url": "http://localhost:8800/v1/calc/1",
+      "abortable": true},
      {"description": "Event based calculation",
       "id": 2,
       "status": "complete",
       "calculation_mode": "event_based",
-      "is_running": true,
+      "is_running": false,
       "owner: "armando",
-      "url": "http://localhost:8800/v1/calc/2"},
+      "url": "http://localhost:8800/v1/calc/2",
+      "abortable": false},
      {"description": "ScenarioRisk calculation",
       "id": 3,
       "status": "complete",
       "calculation_mode": "scenario_risk",
       "is_running": false,
       "owner: "armando",
-      "url": "http://localhost:8800/v1/calc/3"}]
+      "url": "http://localhost:8800/v1/calc/3"]
+      "abortable": false,
+      "parent_id": null
+      ]
 
+
+#### POST /v1/calc/:calc_id/abort
+
+Abort the given `calc_id` by sending to the corresponding job a SIGTERM.
+
+Parameters: None
+
+Response:
+
+    {'error': 'Job <id> is not running'}
+    {'error': 'User <user> has no permission to kill job <id>'}
+    {'error': 'PID for job <id> not found in the database'}
+    {'success': 'Killing job <id>'}
 
 #### GET /v1/calc/:calc_id/status
 
@@ -52,6 +70,7 @@ Response:
       "calculation_mode": "classical",
       "is_running": true,
       "owner: "michele",
+      "parent_id": "42",
       "url": "http://localhost:8800/v1/calc/1"}
 
 
@@ -219,6 +238,22 @@ a JSON object, containing:
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
 
 
+#### POST /v1/on_same_fs
+
+Check if a given filename exists and if the first 32 bytes of its content have the same checksum passed as argument of POST.
+
+Parameters:
+
+    * filename: filename (with path) of file to be checked
+    * checksum: expected checksum of first 32 bytes of the file
+
+Response:
+
+a JSON object, containing:
+
+    * success: a boolean indicating that filename is accessible by engine server and that calculated checksum matches passed parameter
+
+
 #### POST /accounts/ajax_login/
 
 Attempt to login, given the parameters `username` and `password`
@@ -229,9 +264,15 @@ Attempt to login, given the parameters `username` and `password`
 Logout
 
 
-#### GET /engine_version
+#### GET /v1/engine_version
 
 Return a string with the OpenQuake engine version
+
+
+#### GET /v1/engine_latest_version
+
+Return a string with if new versions have been released.
+Return 'None' if the version is not available
 
 
 #### GET /v1/available_gsims

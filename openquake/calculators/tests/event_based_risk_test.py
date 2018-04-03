@@ -24,14 +24,13 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.baselib.parallel import Sequential
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
+    case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
     occupants, case_1g, case_7a)
 
 
@@ -45,18 +44,10 @@ def check_total_losses(calc):
     for li, lt in enumerate(loss_dt.names):
         data1[li] += alt['loss'][:, li].sum()
 
-    # check the sums are consistent with the ones coming from losses_by_tag
-    tax_idx = dstore['assetcol'].get_tax_idx()
-    data2 = numpy.zeros(LI, numpy.float32)
-    lbt = dstore['losses_by_tag-rlzs']
-    for li in range(LI):
-        data2[li] += lbt[tax_idx, :, li].sum()
-    numpy.testing.assert_allclose(data1, data2, 1E-6)
-
     # test the asset_loss_table exporter; notice that I need to disable
     # the parallelism to avoid reading bogus data: this is the usual
     # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch('openquake.baselib.parallel.Starmap', Sequential):
+    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
         [fname] = export(('asset_loss_table', 'hdf5'), dstore)
     print('Generating %s' % fname)
     with h5py.File(fname) as f:
@@ -122,6 +113,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
+        # test the rup_loss_table exporter
+        fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
@@ -171,16 +169,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                       exports='csv', concurrent_tasks='4')
 
         # test the number of bytes saved in the rupture records
-        grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
-        grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
-        grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
-        self.assertEqual(grp00, 550)
-        self.assertEqual(grp02, 550)
-        self.assertEqual(grp03, 220)
+        nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
+        self.assertEqual(nbytes, 1404)
 
+        # test postprocessing
+        self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='csv', hazard_calculation_id=str(hc_id))
+                      exports='csv', hazard_calculation_id=str(hc_id),
+                      concurrent_tasks='0')  # avoid hdf5 fork issues
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -222,6 +219,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # extract loss_curves/rlz-1 (with the first asset having zero losses)
+        [fname] = export(('loss_curves/rlz-1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
         if REFERENCE_OS:
@@ -229,10 +231,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
 
-        fnames = export(('losses_by_tag-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'losses_by_tag-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        # extract curves by tag
+        tags = 'taxonomy=tax1&state=01&cresta=0.11'
+        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
+        self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
@@ -242,11 +244,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
-
-        # check job_info is stored
-        job_info = {str(k) for k in dict(self.calc.datastore['job_info'])}
-        self.assertIn('build_curves_maps.sent', job_info)
-        self.assertIn('build_curves_maps.received', job_info)
 
         check_total_losses(self.calc)
 
@@ -262,9 +259,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
 
-    @attr('qa', 'risk', 'case_7a')
+        # this is a case with exposure and region_grid_spacing
+        self.run_calc(case_miriam.__file__, 'job2.ini')
+        sitecol = self.calc.datastore['sitecol']
+        assetcol = self.calc.datastore['assetcol']
+        self.assertEqual(len(sitecol), 15)
+        self.assertGreater(sitecol.vs30.sum(), 0)
+        self.assertEqual(len(assetcol), 548)
+
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
+        # this is also a case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
@@ -295,3 +301,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based_risk')
+    def test_case_6c(self):
+        # case with asset_correlation=1
+        self.run_calc(case_6c.__file__, 'job_h.ini')
+        hc = str(self.calc.datastore.calc_id)
+        out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
+                            hazard_calculation_id=hc, concurrent_tasks='0')
+        [fname] = out['avg_losses-rlzs', 'csv']
+        self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)

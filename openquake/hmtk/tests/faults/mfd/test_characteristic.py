@@ -64,6 +64,7 @@ class TestSimpleCharacteristic(unittest.TestCase):
     characteristic earthquake for a fault
     :class openquake.hmtk.faults.mfd.characteristic.Characteristic
     '''
+
     def setUp(self):
         '''
         '''
@@ -93,7 +94,6 @@ class TestSimpleCharacteristic(unittest.TestCase):
                          'sigma': None,
                          'upper_bound': 2.0}
         self.assertDictEqual(self.model.__dict__, expected_dict)
-
 
     def test_get_mmax(self):
         '''

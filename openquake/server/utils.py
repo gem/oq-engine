@@ -19,31 +19,70 @@
 import getpass
 import requests
 import logging
+import django
 
 from time import sleep
 from django.conf import settings
 from openquake.engine import __version__ as oqversion
 
+if settings.LOCKDOWN:
+    django.setup()
+    from django.contrib.auth.models import User
 
-def get_user_data(request):
-    """
-    Returns the real username if authentication support is enabled and user is
-    authenticated, otherwise it returns "platform" as user for backward
-    compatibility.
-    Returns also if the user is 'superuser' or not.
-    """
 
-    acl_on = settings.ACL_ON
+def get_user(request):
+    """
+    Returns the users from `request` if authentication is enabled, otherwise
+    returns the default user (from settings, or as reported by the OS).
+    """
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
-            name = request.user.username
+            user = request.user.username
+        else:
+            # This may happen with crafted requests
+            user = ''
+    else:
+        user = getattr(settings, 'DEFAULT_USER', getpass.getuser())
+
+    return user
+
+
+def get_valid_users(request):
+    """"
+    Returns a list of `users` based on groups membership.
+    Returns a list made of a single user when it is not member of any group.
+    """
+    users = [get_user(request)]
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        if request.user.is_authenticated():
+            groups = request.user.groups.values_list('name', flat=True)
+            if groups:
+                users = list(User.objects.filter(groups__name=groups)
+                             .values_list('username', flat=True))
+        else:
+            # This may happen with crafted requests
+            users = []
+    return users
+
+
+def get_acl_on(request):
+    """
+    Returns `True` if ACL should be honorated, returns otherwise `False`.
+    """
+    acl_on = settings.ACL_ON
+    if settings.LOCKDOWN and hasattr(request, 'user'):
+        # ACL is always disabled for superusers
         if request.user.is_superuser:
             acl_on = False
-    else:
-        name = (settings.DEFAULT_USER if
-                hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
+    return acl_on
 
-    return {'name': name, 'acl_on': acl_on}
+
+def user_has_permission(request, owner):
+    """
+    Returns `True` if user coming from the request has the permission
+    to view a resource, returns `false` otherwise.
+    """
+    return owner in get_valid_users(request) or not get_acl_on(request)
 
 
 def oq_server_context_processor(request):

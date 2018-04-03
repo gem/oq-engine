@@ -1,13 +1,13 @@
 Event Based from NonParametric source
 =====================================
 
-============================================= ========================
-localhost:/home/michele/oqdata/calc_5550.hdf5 Fri Sep 22 11:29:57 2017
-checksum32                                    2,117,452,566           
-engine_version                                2.6.0-gite59d75a        
-============================================= ========================
+============== ===================
+checksum32     3,617,901,848      
+date           2018-03-26T15:56:46
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 3, num_imts = 1
+num_sites = 3, num_levels = 7
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      5.0
 width_of_mfd_bin                0.3                  
 area_source_discretization      10.0                 
 ground_motion_correlation_model None                 
+minimum_intensity               {}                   
 random_seed                     23                   
 master_seed                     0                    
+ses_seed                        42                   
 =============================== =====================
 
 Input files
@@ -40,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -67,7 +69,7 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.049     0.0       1     
-prefiltering source model      0.002     0.0       1     
-reading site collection        4.220E-05 0.0       1     
+reading composite source model 0.048     0.0       1     
+splitting sources              3.016E-04 0.0       1     
+reading site collection        6.008E-05 0.0       1     
 ============================== ========= ========= ======

@@ -69,8 +69,8 @@ class BaseSourceModelParser(object):
 
     @abc.abstractmethod
     def read_file(self, identifier, mfd_spacing=0.1,
-            simple_mesh_spacing=1.0, complex_mesh_spacing=4.0,
-            area_discretization=10.):
+                  simple_mesh_spacing=1.0, complex_mesh_spacing=4.0,
+                  area_discretization=10.):
         """
         Return an instance of the class :class:`mtkSourceModel`
         """

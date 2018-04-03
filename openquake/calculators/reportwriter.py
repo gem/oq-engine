@@ -24,11 +24,10 @@ from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
-import ast
 import mock
 import time
-
-from openquake.baselib.general import AccumDict
+import numpy
+from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
@@ -39,24 +38,27 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
+def count_ruptures(sources, srcfilter, gsims, param, monitor):
     """
-    Count the effective number of ruptures contained in the given sources
-    within the integration distance and return a dictionary src_group_id ->
-    num_ruptures. All sources must belong to the same tectonic region type.
+    Count the number of ruptures contained in the given sources by applying a
+    raw source filtering on the integration distance. Return a dictionary
+    src_group_id -> {}.
+    All sources must belong to the same tectonic region type.
     """
-    acc = AccumDict()
-    acc.grp_id = sources[0].src_group_id
-    acc.calc_times = []
-    count = 0
-    for src in sources:
-        t0 = time.time()
-        sites = srcfilter.get_close_sites(src)
-        if sites is not None:
-            count += src.num_ruptures
-            dt = time.time() - t0
-            acc.calc_times.append((src.source_id, len(sites), src.weight, dt))
-    acc.eff_ruptures = {acc.grp_id: count}
+    dic = groupby(sources, lambda src: src.src_group_ids[0])
+    acc = AccumDict({grp_id: {} for grp_id in dic})
+    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
+    acc.calc_times = AccumDict(accum=numpy.zeros(4))
+    for grp_id in dic:
+        for src in sources:
+            t0 = time.time()
+            src_id = src.source_id.split(':')[0]
+            sites = srcfilter.get_close_sites(src)
+            if sites is not None:
+                acc.eff_ruptures[grp_id] += src.num_ruptures
+                dt = time.time() - t0
+                acc.calc_times[src_id] += numpy.array(
+                    [src.weight, len(sites), dt, 1])
     return acc
 
 
@@ -79,8 +81,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'short_source_info': 'Slowest sources',
-        'task:0': 'Fastest task',
-        'task:-1': 'Slowest task',
+        'task_classical:0': 'Fastest task',
+        'task_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -90,19 +92,10 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        try:
-            info = {decode(k): ast.literal_eval(decode(v))
-                    for k, v in dict(dstore['job_info']).items()}
-        except KeyError:  # job_info not in the datastore (scenario hazard)
-            info = dict(hostname='localhost')
-        dpath = dstore.hdf5path
-        mtime = os.path.getmtime(dpath)
-        host = '%s:%s' % (info['hostname'], decode(dpath))
-        updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
-        self.text += '\n\nnum_sites = %d, num_imts = %d' % (
-            len(dstore['sitecol']), len(oq.imtls))
+        self.text += '\n\n' + views.rst_table(versions)
+        self.text += '\n\nnum_sites = %d, num_levels = %d' % (
+            len(dstore['sitecol']), len(oq.imtls.array))
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -124,11 +117,9 @@ class ReportWriter(object):
             if ds['csm_info'].source_models[0].name != 'fake':
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
-        self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
+            self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
-        if 'job_info' in ds:
-            self.add('job_info')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
@@ -142,8 +133,9 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             if 'classical' in ds['task_info']:
-                self.add('task:0')
-                self.add('task:-1')
+                self.add('task_classical:0')
+                self.add('task_classical:-1')
+            self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
@@ -173,12 +165,12 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures):
+    with p(PSHACalculator, 'core_task', count_ruptures):
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
         calc.pre_execute()
-    if hasattr(calc, '_composite_source_model'):
+    if hasattr(calc, 'csm'):
         calc.datastore['csm_info'] = calc.csm.info
     rw = ReportWriter(calc.datastore)
     rw.make_report()

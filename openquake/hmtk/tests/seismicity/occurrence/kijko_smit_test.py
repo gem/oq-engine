@@ -67,10 +67,10 @@ class KijkoSmitTest(unittest.TestCase):
         """
         # Generates a data set assuming b=1
         self.dmag = 0.1
-        mext = np.arange(4.0,7.01,0.1)
+        mext = np.arange(4.0, 7.01, 0.1)
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
-        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
+        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval * mext + 7.0))))
 
         # Define completeness window
         numobs[0:6] *= 10
@@ -87,11 +87,11 @@ class KijkoSmitTest(unittest.TestCase):
 
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
-            uidx = int(lidx+nobs)
+            uidx = int(lidx + nobs)
             magnitude[lidx:uidx] = mag + 0.01
             year_low = compl[0, np.min(np.nonzero(compl[1, :] < mag)[0])]
-            year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
-                               (2000-year_low))
+            year[lidx:uidx] = (year_low + np.random.rand(uidx - lidx) *
+                               (2000 - year_low))
             lidx = uidx
 
         self.catalogue = Catalogue.make_from_dict(

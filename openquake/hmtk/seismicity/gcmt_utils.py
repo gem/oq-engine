@@ -49,8 +49,8 @@ COORD_SYSTEM = {'USE': tensor_components_to_use,
                 'NED': tensor_components_to_ned}
 
 ROT_NED_USE = np.matrix([[0., 0., -1.],
-                        [-1., 0., 0.],
-                        [0., 1., 0.]])
+                         [-1., 0., 0.],
+                         [0., 1., 0.]])
 
 
 def use_to_ned(tensor):
@@ -122,14 +122,14 @@ def matrix_to_euler(rotmat):
     if np.linalg.norm(enodes) < 1e-10:
         enodes = exs
     enodess = rotmat * enodes
-    cos_alpha = float((ez.T*ezs))
+    cos_alpha = float((ez.T * ezs))
     if cos_alpha > 1.:
         cos_alpha = 1.
     if cos_alpha < -1.:
         cos_alpha = -1.
     alpha = acos(cos_alpha)
     beta = np.mod(atan2(enodes[1, 0], enodes[0, 0]), pi * 2.)
-    gamma = np.mod(-atan2(enodess[1, 0], enodess[0, 0]), pi*2.)
+    gamma = np.mod(-atan2(enodess[1, 0], enodess[0, 0]), pi * 2.)
     return unique_euler(alpha, beta, gamma)
 
 
@@ -181,7 +181,7 @@ def unique_euler(alpha, beta, gamma):
 
     if alpha == 0.5 * pi and beta >= pi:
         gamma = - gamma
-        beta = np.mod(beta-pi, 2.0 * pi)
+        beta = np.mod(beta - pi, 2.0 * pi)
         gamma = np.mod(gamma + pi, 2.0 * pi) - pi
         assert 0. <= beta < pi
         assert -pi <= gamma < pi
@@ -193,16 +193,12 @@ def unique_euler(alpha, beta, gamma):
     return (alpha, beta, gamma)
 
 
-
 def moment_magnitude_scalar(moment):
     '''
     Uses Hanks & Kanamori formula for calculating moment magnitude from
     a scalar moment (Nm)
     '''
     if isinstance(moment, np.ndarray):
-        return  (2. / 3.) * (np.log10(moment) - 9.05)
+        return (2. / 3.) * (np.log10(moment) - 9.05)
     else:
-        return  (2. / 3.) * (log10(moment) - 9.05)
-
-
-
+        return (2. / 3.) * (log10(moment) - 9.05)

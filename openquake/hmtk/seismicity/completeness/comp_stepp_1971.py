@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #
 # LICENSE
 #
@@ -37,25 +36,24 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-#/usr/bin/env/python
-
 """
-Module :mod: 'openquake.hmtk.seismicity.completeness.comp_stepp_1972' defines the
-openquake.hmtk implementation of the Stepp (1972) algorithm for analysing the
-completeness of an earthquake catalogue
+Module :mod:`openquake.hmtk.seismicity.completeness.comp_stepp_1972` defines
+the openquake.hmtk implementation of the Stepp (1972) algorithm for analysing
+the completeness of an earthquake catalogue
 """
 
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
-from openquake.hmtk.seismicity.utils import decimal_time, piecewise_linear_scalar
+from openquake.hmtk.seismicity.utils import (
+    decimal_time, piecewise_linear_scalar)
 from openquake.hmtk.seismicity.completeness.base import (
     BaseCatalogueCompleteness, COMPLETENESS_METHODS)
 
@@ -100,10 +98,10 @@ class Stepp1971(BaseCatalogueCompleteness):
     Implements the completeness analysis methodology of Stepp (1972)
     Stepp, J. C. (1972) Analysis of Completeness of the Earhquake Sample in
     the Puget Sound Area and Its Effect on Statistical Estimates of Earthquake
-    Hazard. NOAA Environmental Research Laboratories
+    Hazard, NOAA Environmental Research Laboratories.
 
     The original methodology of J. C. Stepp (1972) implements a graphical
-    method in which the devation of the observed rate from the expected
+    method in which the deviation of the observed rate from the expected
     Poisson rate is assessed by judgement. To implement the selection
     in an automated fashion this implementation uses optimisation of a
     2-segment piecewise linear fit to each magnitude bin, using the
@@ -137,17 +135,20 @@ class Stepp1971(BaseCatalogueCompleteness):
         self.end_year = None
 
     def completeness(self, catalogue, config):
-        '''Gets the completeness table
+        '''
+        Gets the completeness table.
 
         :param catalogue:
             Earthquake catalogue as instance of
-            :class: openquake.hmtk.seismicity.catalogue.Catalogue
+            :class:`openquake.hmtk.seismicity.catalogue.Catalogue`
 
         :param dict config:
             Configuration parameters of the algorithm, containing the
             following information:
             'magnitude_bin' Size of magnitude bin (non-negative float)
-            'time_bin' Size (in dec. years) of the time window (non-negative float)         'increment_lock' Boolean to indicate whether to ensure
+            'time_bin' Size (in dec. years) of the time window
+            (non-negative float)
+            'increment_lock' Boolean to indicate whether to ensure
             completeness magnitudes always decrease with more recent bins
 
         :returns:
@@ -196,6 +197,43 @@ class Stepp1971(BaseCatalogueCompleteness):
             np.floor(self.end_year - comp_time),
             self.magnitude_bin[:-1]])
         return self.completeness_table
+
+    def simplify(self, deduplicate=True, mag_range=None, year_range=None):
+        """
+        Simplify a completeness table result. Intended to work with
+        'increment_lock' enabled.
+        """
+
+        if self.completeness_table is None:
+            return
+
+        years = self.completeness_table[:, 0]
+        mags = self.completeness_table[:, 1]
+        keep = np.array([True] * years.shape[0])
+
+        if deduplicate:
+            keep[1:] = years[1:] != years[:-1]
+
+        if year_range is not None:
+            year_min, year_max = year_range
+            if year_min is not None:
+                too_early = years < year_min
+                keep &= years >= years[too_early].max()
+                self.completeness_table[too_early, 0] = year_min
+            if year_max is not None:
+                keep &= years <= year_max
+
+        if mag_range is not None:
+            mag_min, mag_max = mag_range
+            if mag_min is not None:
+                keep &= mags >= mag_min
+            if mag_max is not None:
+                keep &= mags <= mag_max
+
+        self.completeness_table = self.completeness_table[keep, :]
+        self.model_line = self.model_line[:, keep]
+        self.sigma = self.sigma[:, keep]
+        self.magnitude_bin = self.magnitude_bin[np.hstack((keep, True))]
 
     def _get_time_limits_from_config(self, config, dec_year):
         '''
@@ -370,7 +408,7 @@ class Stepp1971(BaseCatalogueCompleteness):
                                                           np.ndarray):
             x_0 = initial_values
         else:
-            x_0 = [-1.0, xdata[len(xdata) / 2], xdata[0]]
+            x_0 = [-1.0, xdata[int(len(xdata) / 2)], xdata[0]]
 
         bnds = ((None, fixed_slope), (0.0, None), (None, None))
         result, _, convergence_info = \

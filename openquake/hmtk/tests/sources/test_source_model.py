@@ -75,6 +75,7 @@ class TestSourceModel(unittest.TestCase):
     '''
     Module to test the :class: openquake.hmtk.sources.source_model.mtkSourceModel
     '''
+
     def setUp(self):
         self.source_model = None
 

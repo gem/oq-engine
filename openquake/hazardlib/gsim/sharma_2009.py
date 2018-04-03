@@ -91,6 +91,8 @@ class SharmaEtAl2009(GMPE):
     #: Required distance measure is Joyner-Boore distance, see p. 1200
     REQUIRES_DISTANCES = set(('rjb',))
 
+    ALREADY_WARNED = False  # warn the first time only
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
         """
@@ -194,10 +196,13 @@ class SharmaEtAl2009(GMPE):
         is_reverse = np.array(
             self.RAKE_THRESH < rup.rake < (180. - self.RAKE_THRESH))
 
-        if is_normal.any():
+        if not self.ALREADY_WARNED and is_normal.any():
+            # make sure that the warning is printed only once to avoid
+            # flooding the terminal
             msg = ('Normal faulting not supported by %s; '
                    'treating as strike-slip' % type(self).__name__)
             warnings.warn(msg, UserWarning)
+            self.ALREADY_WARNED = True
 
         is_strike_slip = ~is_reverse | is_normal
         is_strike_slip = is_strike_slip.astype(float)

@@ -25,7 +25,8 @@ from openquake.server import dbserver as dbs
 
 
 @sap.Script
-def dbserver(cmd, dbhostport=None, dbpath=None):
+def dbserver(cmd, dbhostport=None,
+             dbpath=os.path.expanduser(config.dbserver.file)):
     """
     start/stop/restart the database server, or return its status
     """
@@ -38,21 +39,19 @@ def dbserver(cmd, dbhostport=None, dbpath=None):
     elif cmd == 'stop':
         if status == 'running':
             pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGTERM)
-            print('dbserver stopped')
+            os.kill(pid, signal.SIGINT)  # this is trapped by the DbServer
         else:
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(dbhostport, dbpath)
+            dbs.run_server(dbpath, dbhostport)
         else:
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             pid = logs.dbcmd('getpid')
-            os.kill(pid, signal.SIGTERM)
-            print('dbserver stopped')
-        dbs.run_server(dbhostport, dbpath)
+            os.kill(pid, signal.SIGINT)
+        dbs.run_server(dbpath, dbhostport)
 
 dbserver.arg('cmd', 'dbserver command',
              choices='start stop status restart'.split())

@@ -393,14 +393,14 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
                 azp = az
             else:
                 if np.fabs(np.fabs(az - azp) - np.pi) < D2R * 10.:
-                        azi[n][1] = azp
-                        n += 1
-                        azi[n][0] = az
+                    azi[n][1] = azp
+                    n += 1
+                    azi[n][0] = az
                 if np.fabs(np.fabs(az - azp) - np.pi * 2.) < D2R * 2.:
-                        if azp < az:
-                            azi[n][0] += np.pi * 2.
-                        else:
-                            azi[n][0] -= np.pi * 2.
+                    if azp < az:
+                        azi[n][0] += np.pi * 2.
+                    else:
+                        azi[n][0] -= np.pi * 2.
                 if n == 0:
                     x[j] = x0 + radius_size * r * si
                     y[j] = y0 + radius_size * r * co
@@ -691,9 +691,9 @@ def StrikeDip(n, e, u):
     strike = np.arctan2(e, n) * r2d
     strike = strike - 90
     while strike >= 360:
-            strike = strike - 360
+        strike = strike - 360
     while strike < 0:
-            strike = strike + 360
+        strike = strike + 360
     x = np.sqrt(np.power(n, 2) + np.power(e, 2))
     dip = np.arctan2(x, u) * r2d
     return (strike, dip)
@@ -750,8 +750,8 @@ def MT2Plane(mt):
     (d, v) = np.linalg.eig(mt.mt)
     D = np.array([d[1], d[0], d[2]])
     V = np.array([[v[1, 1], -v[1, 0], -v[1, 2]],
-                 [v[2, 1], -v[2, 0], -v[2, 2]],
-                 [-v[0, 1], v[0, 0], v[0, 2]]])
+                  [v[2, 1], -v[2, 0], -v[2, 2]],
+                  [-v[0, 1], v[0, 0], v[0, 2]]])
     IMAX = D.argmax()
     IMIN = D.argmin()
     AE = (V[:, IMAX] + V[:, IMIN]) / np.sqrt(2.0)
@@ -900,6 +900,7 @@ class PrincipalAxis(object):
     >>> a.val
     1.3
     """
+
     def __init__(self, val=0, strike=0, dip=0):
         self.val = val
         self.strike = strike
@@ -920,6 +921,7 @@ class NodalPlane(object):
     >>> a.rake
     50
     """
+
     def __init__(self, strike=0, dip=0, rake=0):
         self.strike = strike
         self.dip = dip
@@ -942,6 +944,7 @@ class MomentTensor(object):
     >>> a.expo
     26
     """
+
     def __init__(self, *args):
         if len(args) == 2:
             A = args[0]

@@ -209,7 +209,7 @@ class mtkAreaSource(object):
         """
         Converts the source model into an instance of the :class:
         openquake.hazardlib.source.area.AreaSource
-        
+
         :param tom:
             Temporal Occurrence model as instance of :class:
             openquake.hazardlib.tom.TOM
@@ -233,4 +233,3 @@ class mtkAreaSource(object):
             conv.hdd_to_pmf(self.hypo_depth_dist, use_defaults),
             self.geometry,
             area_discretisation)
-

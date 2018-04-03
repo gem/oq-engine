@@ -4,7 +4,7 @@ _DRAFT_
 
 ## Prerequisites
 
-A working installation of the OpenQuake Engine in Python 2.7 venv. Please refer to [Development installation](development.md).
+A working installation of the OpenQuake Engine in a Python venv. Please refer to [Development installation](development.md).
 
 
 ## Clone repositories
@@ -21,16 +21,6 @@ pip install -e oq-platform-ipt
 pip install -e oq-platform-taxtweb
 pip install -e oq-platform-taxonomy
 ```
-
-## Update Engine server settings
-
-In `openquake/server/`
-
-```bash
-cp local_settings.py.standalone local_settings.py
-```
-
-Or merge `local_settings.py.standalone` with any existing `local_settings.py`.
 
 ## Start the server
 

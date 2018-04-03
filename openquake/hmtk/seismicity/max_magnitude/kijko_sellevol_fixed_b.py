@@ -96,6 +96,7 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
 
     Kijko, A. (2004), ..., Pure & Applied Geophysics,
     '''
+
     def get_mmax(self, catalogue, config):
         '''
         Calculates Maximum magnitude

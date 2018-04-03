@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -54,7 +54,6 @@ from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 #from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvGCMTCatalogueParser
 
 
-
 class GCMTCatalogueParserTestCase(unittest.TestCase):
     """
     Unit tests for the GCMT Catalogue Parser Class
@@ -79,7 +78,8 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         correctly
         """
         self.assertAlmostEqual(self.cat.data['eventID'][0], 0)
-        self.assertAlmostEqual(self.cat.data['centroidID'][0], 'S199004281929A  ')
+        self.assertAlmostEqual(
+            self.cat.data['centroidID'][0], 'S199004281929A  ')
         self.assertAlmostEqual(self.cat.data['year'][0], 1990.)
         self.assertAlmostEqual(self.cat.data['month'][0], 04.)
         self.assertAlmostEqual(self.cat.data['day'][0], 28.)
@@ -96,13 +96,16 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.cat.data['strike2'][0], 276.)
         self.assertAlmostEqual(self.cat.data['dip2'][0], 46.)
         self.assertAlmostEqual(self.cat.data['rake2'][0], 84.)
-        self.assertAlmostEqual(self.cat.data['eigenvalue_t'][0], 3.42 * (10 ** 16))
+        self.assertAlmostEqual(
+            self.cat.data['eigenvalue_t'][0], 3.42 * (10 ** 16))
         self.assertAlmostEqual(self.cat.data['plunge_t'][0], 86.)
         self.assertAlmostEqual(self.cat.data['azimuth_t'][0], 112.)
-        self.assertAlmostEqual(self.cat.data['eigenvalue_b'][0], -0.33 * (10 ** 16))
+        self.assertAlmostEqual(
+            self.cat.data['eigenvalue_b'][0], -0.33 * (10 ** 16))
         self.assertAlmostEqual(self.cat.data['plunge_b'][0], 4.)
         self.assertAlmostEqual(self.cat.data['azimuth_b'][0], 280.)
-        self.assertAlmostEqual(self.cat.data['eigenvalue_p'][0], -3.092 * (10 ** 16))
+        self.assertAlmostEqual(
+            self.cat.data['eigenvalue_p'][0], -3.092 * (10 ** 16))
         self.assertAlmostEqual(self.cat.data['plunge_p'][0], 1.)
         self.assertAlmostEqual(self.cat.data['azimuth_p'][0], 10.)
 
@@ -112,7 +115,6 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         correct
         """
         self.assertAlmostEqual(self.cat.get_number_tensors(), 2)
-
 
     def test_select_use_centroid(self):
         """
@@ -125,20 +127,18 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.cat_cent.data['latitude'][0], 18.58)
         self.assertAlmostEqual(self.cat_cent.data['depth'][0], 12.0)
 
-        
     def test_select_events_depth(self):
         """
         Check that the number of earthquakes after filtering by depth is
         correct
         """
         fdepth = np.logical_and(self.cat.data['depth'] >= 100.,
-                               self.cat.data['depth'] <= 200.)                
+                                self.cat.data['depth'] <= 200.)
         self.cat.select_catalogue_events(np.where(fdepth)[0])
         t1 = self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
         t2 = self.assertAlmostEqual(self.cat.data['centroidID'][0],
-                              'S199004281929A  ')
+                                    'S199004281929A  ')
         self.assertAlmostEqual(t1, t2)
-
 
     def test_select_events_mag(self):
         """
@@ -146,14 +146,13 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         correct
         """
         fmag = np.logical_and(self.cat.data['magnitude'] >= 5.,
-                               self.cat.data['magnitude'] <= 8.)                
+                              self.cat.data['magnitude'] <= 8.)
         self.cat.select_catalogue_events(np.where(fmag)[0])
         self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
         t1 = self.assertAlmostEqual(self.cat.get_number_tensors(), 1)
         t2 = self.assertAlmostEqual(self.cat.data['centroidID'][0],
-                              'C201001122153A  ')
+                                    'C201001122153A  ')
         self.assertAlmostEqual(t1, t2)
-
 
     def test_without_specifying_years(self):
         """
@@ -164,5 +163,7 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         filename = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue.txt')
         parser = ParseNDKtoGCMT(filename)
         self.cat = parser.read_file()
-        self.assertAlmostEqual(self.cat.start_year, np.min(self.cat.data['year']))
-        self.assertAlmostEqual(self.cat.end_year, np.max(self.cat.data['year']))
+        self.assertAlmostEqual(self.cat.start_year,
+                               np.min(self.cat.data['year']))
+        self.assertAlmostEqual(
+            self.cat.end_year, np.max(self.cat.data['year']))

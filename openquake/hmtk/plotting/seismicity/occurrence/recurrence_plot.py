@@ -7,12 +7,13 @@ Simple plots for the recurrence model
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hmtk.plotting.seismicity.catalogue_plots import \
-        (get_completeness_adjusted_table, _save_image)
+    (get_completeness_adjusted_table, _save_image)
 from openquake.hmtk.seismicity.occurrence.utils import get_completeness_counts
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import\
-        YoungsCoppersmith1985MFD
+    YoungsCoppersmith1985MFD
+
 
 def _check_recurrence_model_type(input_model):
     """
@@ -20,12 +21,13 @@ def _check_recurrence_model_type(input_model):
     """
     valid_model = False
     for model in [TruncatedGRMFD, EvenlyDiscretizedMFD,
-            YoungsCoppersmith1985MFD]:
+                  YoungsCoppersmith1985MFD]:
         valid_model = isinstance(input_model, model)
         if valid_model:
             break
     if not valid_model:
         raise ValueError('Recurrence model not recognised')
+
 
 def _get_recurrence_model(input_model):
     """
@@ -41,6 +43,7 @@ def _get_recurrence_model(input_model):
                                  for iloc in range(0, len(annual_rates), 1)])
     return annual_rates, cumulative_rates
 
+
 def _check_completeness_table(completeness, catalogue):
     """
     Generates the completeness table according to different instances
@@ -54,17 +57,17 @@ def _check_completeness_table(completeness, catalogue):
         return np.array([[float(np.min(catalogue.data['year'])),
                           np.min(catalogue.data['magnitude'])]])
     else:
-         raise ValueError('Completeness representation not recognised')
+        raise ValueError('Completeness representation not recognised')
 
 
 def plot_recurrence_model(input_model, catalogue, completeness, dmag,
-        figure_size=(10, 8), filename=None, filetype='png', dpi=300):
+                          figure_size=(10, 8), filename=None, filetype='png', dpi=300):
     """
     Plot a calculated recurrence model over an observed catalogue, adjusted for
     time-varying completeness
     """
     if figure_size is None:
-        figure_size=(10, 8)
+        figure_size = (10, 8)
     if dmag is None:
         dmag = 0.1
     annual_rates, cumulative_rates = _get_recurrence_model(input_model)
@@ -93,9 +96,10 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     plt.tick_params(labelsize=12)
     _save_image(filename, filetype, dpi)
 
+
 def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,
-        completeness=None, figure_size=None, filename=None, filetype='png', 
-        dpi=300):
+                        completeness=None, figure_size=None, filename=None, filetype='png',
+                        dpi=300):
     """
     Plots a Gutenberg-Richter model
     """
@@ -118,5 +122,4 @@ def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,
                               figure_size,
                               filename,
                               filetype,
-              		      dpi)
-                    
+                              dpi)

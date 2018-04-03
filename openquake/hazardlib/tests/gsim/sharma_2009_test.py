@@ -85,7 +85,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         rctx.mag = np.array([6.5])
         dctx.rjb = np.array([100.])
         sctx.vs30 = np.array([2000.])
-        im_type = sorted(gmpe.COEFFS.sa_coeffs.keys())[0]
+        im_type = sorted(gmpe.COEFFS.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
         # set critical value to trigger warning
@@ -94,8 +94,7 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
 
-            mean = gmpe.get_mean_and_stddevs(
-                sctx, rctx, dctx, im_type, std_types)[0]
+            gmpe.get_mean_and_stddevs(sctx, rctx, dctx, im_type, std_types)
 
             # confirm type and content of warning
             assert len(warning_stream) == 1
