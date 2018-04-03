@@ -388,14 +388,27 @@ def extract_aggcurves(dstore, what):
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()
-    losses_by_asset = dstore['losses_by_asset'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        # I am exporting the 'mean' and ignoring the 'stddev'
-        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()  # shape (N, 1)
+    if 'losses_by_asset' in dstore:
+        losses_by_asset = dstore['losses_by_asset'].value
+        for rlz in rlzs:
+            # I am exporting the 'mean' and ignoring the 'stddev'
+            losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            yield 'rlz-%03d' % rlz.ordinal, data
+    elif 'avg_losses-stats' in dstore:
+        avg_losses = dstore['avg_losses-stats'].value
+        stats = dstore['avg_losses-stats'].attrs['stats'].split()
+        for s, stat in enumerate(stats):
+            losses = avg_losses[:, s].copy()
+            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            yield stat, data
+    elif 'avg_losses-rlzs' in dstore:  # there is only one realization
+        avg_losses = dstore['avg_losses-rlzs'].value
+        losses = avg_losses[:, 0].copy()
         data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
-        yield 'rlz-%03d' % rlz.ordinal, data
+        yield 'rlz-000', data
 
 
 def _gmf_scenario(data, num_sites, imts):
