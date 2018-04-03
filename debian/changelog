@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a script utils/reduce_sm to reduce the source model of a calculation
+    by removing all the sources not affecting the hazard
   * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
   * Fixed the export of ruptures with a GriddedSurface geometry
   * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
