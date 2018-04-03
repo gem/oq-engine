@@ -9,7 +9,7 @@
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/pytz-2018.3-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/setuptools-39.0.1-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/mock-2.0.0-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/h5py-2.7.1-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/h5py-2.8.0rc1-cp36-cp36m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/nose-1.3.7-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/numpy-1.14.2-cp36-cp36m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/scipy-1.0.1-cp36-cp36m-manylinux1_x86_64.whl
