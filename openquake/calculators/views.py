@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import io
 import ast
+import math
 import os.path
 import numbers
 import operator
@@ -28,16 +28,17 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, AccumDict, CallableDict)
+    humansize, groupby, DictArray, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import unicode, decode
 from openquake.baselib.general import group_array
-from openquake.hazardlib import valid, stats as hstats
+from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv, FIVEDIGITS)
+    build_header, scientificformat, FIVEDIGITS)
+from openquake.calculators import getters
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
@@ -221,16 +222,15 @@ def view_contents(token, dstore):
 def view_csm_info(token, dstore):
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    header = ['smlt_path', 'weight', 'source_model_file',
-              'gsim_logic_tree', 'num_realizations']
+    header = ['smlt_path', 'weight', 'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
         num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         num_paths = sm.num_gsim_paths
-        link = "`%s <%s>`_" % (sm.name, sm.name)
-        row = ('_'.join(sm.path), sm.weight, link,
-               classify_gsim_lt(csm_info.gsim_lt), '%d/%d' %
-               (num_rlzs, num_paths))
+        row = ('_'.join(sm.path),
+               sm.weight,
+               classify_gsim_lt(csm_info.gsim_lt),
+               '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
 
@@ -238,36 +238,30 @@ def view_csm_info(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = ('source_model grp_id trt num_sources '
-              'eff_ruptures tot_ruptures'.split())
+    header = ('source_model grp_id trt eff_ruptures tot_ruptures'.split())
     num_trts = 0
-    tot_sources = 0
     eff_ruptures = 0
     tot_ruptures = 0
-    source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    r = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(r['num_ruptures'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(1 for r in rows))
+    oq = dstore['oqparam']
+    num_sites = len(dstore['sitecol'])
+    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures
+            er = src_group.eff_ruptures / num_tiles
             if er:
                 num_trts += 1
-                num_sources = n.get(src_group.id, 0)
-                tot_sources += num_sources
                 eff_ruptures += er
-                ruptures = r.get(src_group.id, 0)
-                tot_ruptures += ruptures
-                tbl.append((sm.name, src_group.id, trt,
-                            num_sources, er, ruptures))
+                tbl.append(
+                    (sm.names, src_group.id, trt, er, src_group.tot_ruptures))
+            tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
-            ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
-            ('#tot_weight', csm_info.tot_weight), ]
+            ('#tot_weight', csm_info.tot_weight)]
+    if num_tiles > 1:
+        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -288,7 +282,8 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'ground_motion_correlation_model', 'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'minimum_intensity',
+              'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     return rst_table([(param, repr(getattr(oq, param, None)))
@@ -333,9 +328,17 @@ def view_job_info(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = dict(dstore.hdf5['job_info'])
-    rows = [(k, _humansize(v)) for k, v in sorted(job_info.items())]
-    return rst_table(rows)
+    data = [['task', 'sent', 'received']]
+    for task in dstore['task_info']:
+        if task not in ('task_sources', 'source_data'):
+            dset = dstore['task_info/' + task]
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset.attrs['sent']
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
+    return rst_table(data)
 
 
 @view.add('avglosses_data_transfer')
@@ -346,7 +349,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['realizations'])
+    R = dstore['csm_info'].get_num_rlzs()
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -389,15 +392,15 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    tax_idx = dstore['assetcol'].get_tax_idx()
     loss_dt = oq.loss_dt()
-    losses_by_tag = dstore['losses_by_tag-rlzs']
-    R = losses_by_tag.shape[1]  # shape (T, R, L')
+    R = dstore['csm_info'].get_num_rlzs()
+    by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
+        loss = by_rlzi[r]['loss'].sum(axis=0)
         for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_tag[tax_idx, r, l].sum()
+            data[r][lt] = loss[l]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
@@ -426,38 +429,17 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].loss_dt()
-    weights = dstore['realizations']['weight']
-    array = dstore['avg_losses-rlzs'].value  # shape (N, R)
-    if len(weights) == 1:  # one realization
-        mean = array[:, 0]
+    oq = dstore['oqparam']
+    R = dstore['csm_info'].get_num_rlzs()
+    if R == 1:  # one realization
+        mean = dstore['avg_losses-rlzs'][:, 0]
     else:
-        mean = hstats.compute_stats2(array, [hstats.mean_curve], weights)[:, 0]
-    data = numpy.array([tuple(row) for row in mean], dt)
+        mean = dstore['avg_losses-stats'][:, 0]
+    data = numpy.array([tuple(row) for row in mean], oq.loss_dt())
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
     return rst_table(losses, fmt=FIVEDIGITS)
-
-
-# this is used by the classical calculator
-@view.add('loss_curves_avg')
-def view_loss_curves_avg(token, dstore):
-    """
-    Returns the average losses computed from the loss curves; for each
-    asset shows all realizations.
-    """
-    array = dstore['loss_curves-rlzs'].value  # shape (N, R)
-    n, r = array.shape
-    lt_dt = numpy.dtype([(lt, numpy.float32, r) for lt in array.dtype.names])
-    avg = numpy.zeros(n, lt_dt)
-    for lt in array.dtype.names:
-        array_lt = array[lt]
-        for i, row in enumerate(array_lt):
-            avg[lt][i] = row['avg']
-    assets = util.get_assets(dstore)
-    losses = util.compose_arrays(assets, avg)
-    return rst_table(losses, fmt='%8.6E')
 
 
 @view.add('exposure_info')
@@ -477,27 +459,10 @@ def view_exposure_info(token, dstore):
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
-@view.add('assetcol')
-def view_assetcol(token, dstore):
-    """
-    Display the exposure in CSV format
-    """
-    assetcol = dstore['assetcol']
-    taxonomies = assetcol.taxonomies
-    header = list(assetcol.array.dtype.names)
-    columns = [None] * len(header)
-    for i, field in enumerate(header):
-        if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol.array[field]]
-        else:
-            columns[i] = assetcol.array[field]
-    return write_csv(io.StringIO(), [header] + list(zip(*columns)))
-
-
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = sum(len(v) for v in dstore['ruptures'].values())
-    num_events = sum(len(v) for v in dstore['events'].values())
+    num_ruptures = len(dstore['ruptures'])
+    num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
@@ -549,7 +514,8 @@ def stats(name, array, *extras):
     :param name: a descriptive string
     :returns: (name, mean, std, min, max, len)
     """
-    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
+    return (name, numpy.mean(array), std,
             numpy.min(array), numpy.max(array), len(array)) + extras
 
 
@@ -558,9 +524,10 @@ def view_num_units(token, dstore):
     """
     Display the number of units by taxonomy
     """
+    taxo = dstore['assetcol/tagcol/taxonomy'].value
     counts = collections.Counter()
     for asset in dstore['assetcol']:
-        counts[asset.taxonomy] += asset.number
+        counts[taxo[asset.taxonomy]] += asset.number
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
     return rst_table(data, header=['taxonomy', 'num_units'])
@@ -571,6 +538,7 @@ def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
+    taxonomies = dstore['assetcol/tagcol/taxonomy'].value
     assets_by_site = dstore['assetcol'].assets_by_site()
     data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
@@ -579,7 +547,7 @@ def view_assets_by_site(token, dstore):
             assets, operator.attrgetter('taxonomy')).items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
-        data.append(stats(taxo, val, val.sum()))
+        data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
@@ -591,10 +559,10 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_grp_id = sorted(
-        dstore['csm_info'].get_rlzs_assoc().gsims_by_grp_id.items())
+    csm_info = dstore['csm_info']
     tbl = []
-    for grp_id, gsims in gsims_per_grp_id:
+    for grp_id, trt in sorted(csm_info.grp_by("trt").items()):
+        gsims = csm_info.gsim_lt.get_gsims(trt)
         maker = ContextMaker(gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
@@ -625,7 +593,7 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        if task != 'source_data':  # this is special
+        if task not in ('task_sources', 'source_data'):  # this is special
             val = dstore['task_info/' + task]['duration']
             data.append(stats(task, val))
     if len(data) == 1:
@@ -645,26 +613,43 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task')
-def view_task(token, dstore):
+@view.add('task_classical')
+def view_task_classical(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task:0  # the fastest task
-     $ oq show task:-1  # the slowest task
+     $ oq show task_classical:0  # the fastest task
+     $ oq show task_classical:-1  # the slowest task
     """
     data = dstore['task_info/classical'].value
     data.sort(order='duration')
-    i = int(token.split(':')[1])
-    taskno, weight, duration = data[i]
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
-    st = [stats('nsites', arr['nsites']),
-          stats('weight', arr['weight'])]
-    sources = dstore['task_sources'][taskno - 1].split()
+    st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
+    sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
-        taskno, weight, duration, ' '.join(sorted(srcs)))
+        taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
+
+
+@view.add('task_risk')
+def view_task_risk(token, dstore):
+    """
+    Display info about a given risk task. Here are a few examples of usage::
+
+     $ oq show task_risk:0  # the fastest task
+     $ oq show task_risk:-1  # the slowest task
+    """
+    [key] = dstore['task_info']
+    data = dstore['task_info/' + key].value
+    data.sort(order='duration')
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
+    res = 'taskno=%d, weight=%d, duration=%d s' % (
+        taskno, rec['weight'], rec['duration'])
+    return res
 
 
 @view.add('hmap')
@@ -691,30 +676,43 @@ def view_hmap(token, dstore):
     return rst_table(array)
 
 
-@view.add('synthetic_hcurves')
-def view_synthetic_hcurves(token, dstore):
+@view.add('flat_hcurves')
+def view_flat_hcurves(token, dstore):
     """
-    Display the synthetic hazard curves for the calculation. They are
+    Display the flat hazard curves for the calculation. They are
     used for debugging purposes when comparing the results of two
-    calculations, they have no physical meaning. They are the simple mean
-    of the PoEs arrays over source groups, gsims and number of sites.
+    calculations. They are the mean over the sites of the mean hazard
+    curves.
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    array = numpy.zeros(len(oq.imtls.array), F32)
-    ngroups = 0
-    for sm in dstore['csm_info'].source_models:
-        for src_group in sm.src_groups:
-            grp_id = src_group.id
-            try:
-                pmap = dstore['poes/grp-%02d' % grp_id]
-            except KeyError:
-                continue
-            ngroups += 1
-            for sid in pmap:
-                array += pmap[sid].array.sum(axis=1) / pmap.shape_z
-    array /= (ngroups * nsites)
-    return oq.imtls.new(array)
+    mean = getters.PmapGetter(dstore).get_mean()
+    array = calc.convert_to_array(mean, nsites, oq.imtls)
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].mean()
+    return rst_table(res)
+
+
+@view.add('flat_hmaps')
+def view_flat_hmaps(token, dstore):
+    """
+    Display the flat hazard maps for the calculation. They are
+    used for debugging purposes when comparing the results of two
+    calculations. They are the mean over the sites of the mean hazard
+    maps.
+    """
+    oq = dstore['oqparam']
+    assert oq.poes
+    nsites = len(dstore['sitecol'])
+    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    mean = getters.PmapGetter(dstore).get_mean()
+    hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
+    array = calc.convert_to_array(hmaps, nsites, pdic)
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].mean()
+    return rst_table(res)
 
 
 @view.add('dupl_sources')
@@ -732,14 +730,11 @@ def view_dupl_sources(token, dstore):
             tot_calc_time += calc_time
             grp_ids = sorted(rec['grp_id'] for rec in records)
             tbl.append((source_id, calc_time, grp_ids))
-    if tbl:
-        if info.attrs['has_dupl_sources']:
-            tot = info['calc_time'].sum()
-            percent = tot_calc_time / tot * 100
-            m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
-                tot_calc_time, tot, percent)
-        else:
-            m = '\nSources with the same ID but different parameters'
+    if tbl and info.attrs['has_dupl_sources']:
+        tot = info['calc_time'].sum()
+        percent = tot_calc_time / tot * 100
+        m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
+            tot_calc_time, tot, percent)
         return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
     else:
         return 'There are no duplicated sources'
@@ -760,3 +755,50 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('mean_disagg')
+def view_mean_disagg(token, dstore):
+    """
+    Display mean quantities for the disaggregation. Useful for checking
+    differences between two calculations.
+    """
+    tbl = []
+    for key, dset in sorted(dstore['disagg'].items()):
+        vals = [ds.value.mean() for k, ds in sorted(dset.items())]
+        tbl.append([key] + vals)
+    header = ['key'] + sorted(dset)
+    return rst_table(sorted(tbl), header=header)
+
+
+@view.add('elt')
+def view_elt(token, dstore):
+    """
+    Display the event loss table averaged by event
+    """
+    oq = dstore['oqparam']
+    R = len(dstore['csm_info'].rlzs)
+    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    header = oq.loss_dt().names
+    tbl = []
+    for rlzi in range(R):
+        if rlzi in dic:
+            tbl.append(dic[rlzi]['loss'].mean(axis=0))
+        else:
+            tbl.append([0.] * len(header))
+    return rst_table(tbl, header)
+
+
+@view.add('pmap')
+def view_pmap(token, dstore):
+    """
+    Display the mean ProbabilityMap associated to a given source group name
+    """
+    name = token.split(':')[1]  # called as pmap:name
+    pmap = {}
+    pgetter = getters.PmapGetter(dstore)
+    for grp, dset in dstore['poes'].items():
+        if dset.attrs['name'] == name:
+            pmap = pgetter.get_mean(grp)
+            break
+    return str(pmap)

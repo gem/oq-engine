@@ -48,7 +48,7 @@ import unittest
 import numpy as np
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 from openquake.hmtk.seismicity.max_magnitude.base import (_get_observed_mmax,
-                                              _get_magnitude_vector_properties)
+                                                          _get_magnitude_vector_properties)
 from openquake.hmtk.seismicity.max_magnitude.cumulative_moment_release import \
     CumulativeMoment
 from openquake.hmtk.seismicity.max_magnitude.kijko_sellevol_fixed_b import \
@@ -62,8 +62,10 @@ from openquake.hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian import
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
                               './../completeness/data')
 
+
 class MmaxTestCase(unittest.TestCase):
     '''Testing class for Mmax functions'''
+
     def setUp(self):
         '''Set up the test class'''
         self.config = {'algorithm': None,
@@ -76,7 +78,7 @@ class MmaxTestCase(unittest.TestCase):
                        'sigma-b': 0.1,
                        'number_samples': 51,
                        'number_earthquakes': 100,
-                       'number_bootstraps': None }
+                       'number_bootstraps': None}
         #self.completeness = np.array([])
 
     def test_get_observed_mmax_good_data(self):
@@ -85,7 +87,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
-            }
+        }
         # Test 1: Finds the mmax from the catalogue with defined sigma
         mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6)
@@ -100,7 +102,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': None
-            }
+        }
         mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertAlmostEqual(mmax, 8.5)
         self.assertAlmostEqual(mmax_sig, 0.35)
@@ -115,7 +117,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': None
-            }
+        }
         self._get_observed_mmax_error(test_catalogue, self.config)
 
     def test_bad_sigma_magnitude_mmax_error(self):
@@ -131,13 +133,13 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': None
-            }
+        }
         self._get_observed_mmax_error(test_catalogue, self.config)
         # 2nd case - sigmaMagnitude is different from that of magnitude
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([])
-            }
+        }
         self._get_observed_mmax_error(test_catalogue, self.config)
 
         # 3rd case, is np.ndarray of equal length to magnitude but entirely
@@ -145,7 +147,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([np.nan] * 5)
-            }
+        }
         self._get_observed_mmax_error(test_catalogue, self.config)
 
     def test_observed_mmax_catalogue_uncertainty_config(self):
@@ -156,7 +158,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([])
-            }
+        }
         mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6)
         self.assertAlmostEqual(mmax_sig, 0.5)
@@ -169,7 +171,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([0.1, 0.4, np.nan, 0.2, 0.1])
-            }
+        }
         mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6)
         self.assertAlmostEqual(mmax_sig, 0.4)
@@ -210,7 +212,7 @@ class MmaxTestCase(unittest.TestCase):
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 3.8]),
             'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
-            }
+        }
         self.config['input_mmin'] = 4.0
         # Test 1: Finds the number of events from the catalogue with defined
         # minimum magnitude
@@ -233,6 +235,7 @@ class TestCumulativeMoment(unittest.TestCase):
     :class: openquake.hmtk.seismicity.max_magnitude.cumulative_moment_release
     module
     '''
+
     def setUp(self):
         filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
@@ -303,6 +306,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
     '''
     Test suite for the Kijko & Sellevol fixed b-value estimator of Mmax
     '''
+
     def setUp(self):
         '''
         Set up test class
@@ -327,7 +331,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         beta = np.log(10.)
         neq = 100.
         self.assertAlmostEqual(self.model._ks_intfunc(mval, neq, mmax, mmin,
-                               beta), 0.04151379)
+                                                      beta), 0.04151379)
 
         # Test case 4 - Number of earthquakes is 0
         mmax = 8.5
@@ -419,6 +423,7 @@ class TestKijkoSellevolBayes(unittest.TestCase):
     '''
     Test the openquake.hmtk.seismicity.max_magnitude.KijkoSellevolBayes module
     '''
+
     def setUp(self):
         filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
@@ -513,6 +518,7 @@ class TestKijkoNPG(unittest.TestCase):
     '''
     Class to test the Kijko Nonparametric Gaussian function
     '''
+
     def setUp(self):
         filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
@@ -522,7 +528,6 @@ class TestKijkoNPG(unittest.TestCase):
                        'number_samples': 51,
                        'tolerance': 0.05}
         self.model = KijkoNonParametricGaussian()
-
 
     def test_get_exponential_values(self):
         # Tests the function to derive an exponentially spaced set of values.

@@ -447,6 +447,6 @@ class CatalogueSelector(object):
         is_valid = np.logical_and(
             self.catalogue.data['longitude'] >= limits[0],
             np.logical_and(self.catalogue.data['longitude'] <= limits[2],
-            np.logical_and(self.catalogue.data['latitude'] >= limits[1],
-                           self.catalogue.data['latitude'] <= limits[3])))
+                           np.logical_and(self.catalogue.data['latitude'] >= limits[1],
+                                          self.catalogue.data['latitude'] <= limits[3])))
         return self.select_catalogue(is_valid)

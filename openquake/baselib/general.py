@@ -26,6 +26,10 @@ import sys
 import imp
 import copy
 import math
+import socket
+import random
+import atexit
+import zipfile
 import operator
 import warnings
 import tempfile
@@ -284,7 +288,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if isinstance(a, (str, bytes, int)):
         # another shortcut
-        assert a == b
+        assert a == b, (a, b)
         return
     if hasattr(a, '_slots_'):  # record-like objects
         assert a._slots_ == b._slots_
@@ -294,7 +298,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     if hasattr(a, 'keys'):  # dict-like objects
         assert a.keys() == b.keys()
         for x in a:
-            assert_close(a[x], b[x], rtol, atol, x)
+            if x != '__geom__':
+                assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
@@ -310,6 +315,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))
+
+_tmp_paths = []
 
 
 def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
@@ -327,6 +334,7 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    _tmp_paths.append(path)
     if content:
         fh = os.fdopen(fh, "wb")
         if hasattr(content, 'encode'):
@@ -334,6 +342,16 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         fh.write(content)
         fh.close()
     return path
+
+
+@atexit.register
+def removetmp():
+    """
+    Remove the temporary files created by writetmp
+    """
+    for path in _tmp_paths:
+        if os.path.exists(path):  # not removed yet
+            os.remove(path)
 
 
 def git_suffix(fname):
@@ -510,6 +528,26 @@ class CallableDict(collections.OrderedDict):
         raise KeyError(key)
 
 
+class pack(dict):
+    """
+    Compact a dictionary of lists into a dictionary of arrays.
+    If attrs are given, consider those keys as attributes. For instance,
+
+    >>> p = pack(dict(x=[1], a=[0]), ['a'])
+    >>> p
+    {'x': array([1])}
+    >>> p.a
+    array([0])
+    """
+    def __init__(self, dic, attrs=()):
+        for k, v in dic.items():
+            arr = numpy.array(v)
+            if k in attrs:
+                setattr(self, k, arr)
+            else:
+                self[k] = arr
+
+
 class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables::
@@ -668,7 +706,8 @@ class DictArray(collections.Mapping):
     """
     def __init__(self, imtls):
         self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
+            [(str(imt), F64,
+              (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
@@ -852,3 +891,80 @@ def safeprint(*args, **kwargs):
         new_args.append(s.encode('utf-8').decode(str_encoding, 'ignore'))
 
     return print(*new_args, **kwargs)
+
+
+def socket_ready(hostport):
+    """
+    :param hostport: a pair (host, port) or a string (tcp://)host:port
+    :returns: True if the socket is ready and False otherwise
+    """
+    if hasattr(hostport, 'startswith'):
+        # string representation of the hostport combination
+        if hostport.startswith('tcp://'):
+            hostport = hostport[6:]  # strip tcp://
+        host, port = hostport.split(':')
+        hostport = (host, int(port))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        exc = sock.connect_ex(hostport)
+    finally:
+        sock.close()
+    return False if exc else True
+
+port_candidates = list(range(1920, 2000))
+
+
+def _get_free_port():
+    # extracts a free port in the range 1920:2000 and raises a RuntimeError if
+    # there are no free ports. NB: the port is free when extracted, but another
+    # process may take it immediately, so this function is not safe against
+    # race conditions. Moreover, once a port is taken, it is taken forever and
+    # never considered free again, even if it is. These restrictions as
+    # acceptable for usage in the tests, but only in that case.
+    while port_candidates:
+        port = random.choice(port_candidates)
+        port_candidates.remove(port)
+        if not socket_ready(('127.0.0.1', port)):  # no server listening
+            return port  # the port is free
+    raise RuntimeError('No free ports in the range 1920:2000')
+
+
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+    """
+    Build a zip archive from the given file names.
+
+    :param fnames: list of path names
+    :param archive: path of the archive
+    """
+    prefix = len(os.path.commonprefix([os.path.dirname(f) for f in fnames]))
+    with zipfile.ZipFile(
+            archive, mode, zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+        for f in fnames:
+            log('Archiving %s' % f)
+            z.write(f, f[prefix:])
+
+
+def detach_process():
+    """
+    Detach the current process from the controlling terminal by using a
+    double fork. Can be used only on platforms with fork (no Windows).
+    """
+    # see https://pagure.io/python-daemon/blob/master/f/daemon/daemon.py and
+    # https://stackoverflow.com/questions/45911705/why-use-os-setsid-in-python
+    def fork_then_exit_parent():
+        pid = os.fork()
+        if pid:  # in parent
+            os._exit(0)
+    fork_then_exit_parent()
+    os.setsid()
+    fork_then_exit_parent()
+
+
+def println(msg):
+    """
+    Convenience function to print messages on a single line in the terminal
+    """
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+    sys.stdout.write('\x08' * len(msg))
+    sys.stdout.flush()

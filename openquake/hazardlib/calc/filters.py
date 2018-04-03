@@ -59,6 +59,7 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
+import math
 import logging
 import collections
 from contextlib import contextmanager
@@ -69,8 +70,18 @@ try:
 except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+from openquake.hazardlib.site import SiteCollection
+
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
+
+
+def angular_distance(km, lat):
+    """
+    Return the angular distance of two points at the given latitude.
+    """
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @contextmanager
@@ -157,6 +168,9 @@ def get_distances(rupture, mesh, param):
         dist = rupture.get_cdppvalue(mesh)
     elif param == 'azimuth':
         dist = rupture.surface.get_azimuth(mesh)
+    elif param == "rvolc":
+        # Volcanic distance not yet supported, defaulting to zero
+        dist = numpy.zeros_like(mesh.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
@@ -166,19 +180,44 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+class Piecewise(object):
+    """
+    Given two arrays x and y of non-decreasing values, build a piecewise
+    function associating to each x the corresponding y. If x is smaller
+    then the minimum x, the minimum y is returned; if x is larger than the
+    maximum x, the maximum y is returned.
+    """
+    def __init__(self, x, y):
+        self.y = numpy.array(y)
+        # interpolating from x values to indices in the range [0: len(x)]
+        self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
+                                  fill_value=(0, len(x) - 1))
+
+    def __call__(self, x):
+        idx = numpy.int64(numpy.ceil(self.piecewise(x)))
+        return self.y[idx]
+
+
 class IntegrationDistance(collections.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type. The integration distances can be scalars or
     list of pairs (magnitude, distance). Here is an example using 'default'
-    as tectonic region type sot that the same values will be used for all
+    as tectonic region type, so that the same values will be used for all
     tectonic region types:
 
     >>> maxdist = IntegrationDistance({'default': [
-    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
-    ...          (7, 400), (8, 800)]})
-    >>> maxdist('Some TRT', mag=5.5)
-    array(150.0)
+    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
+    >>> maxdist('Some TRT', mag=2.5)
+    30
+    >>> maxdist('Some TRT', mag=3)
+    30
+    >>> maxdist('Some TRT', mag=3.1)
+    40
+    >>> maxdist('Some TRT', mag=8)
+    400
+    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
+    2000
 
     It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
@@ -190,8 +229,7 @@ class IntegrationDistance(collections.Mapping):
         self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in self.dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
-                value.sort()  # make sure the list is sorted by magnitude
-                self.magdist[trt] = list(zip(*value))
+                self.magdist[trt] = value
             else:
                 self.dic[trt] = float(value)
 
@@ -199,19 +237,21 @@ class IntegrationDistance(collections.Mapping):
         value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
-        elif mag is None:  # get the maximum magnitude distance
-            return value[-1][1]
-        elif not hasattr(self, 'interp'):
-            self.interp = {}  # function cache
+        elif mag is None:  # get the maximum distance
+            return MAX_DISTANCE
+        elif not hasattr(self, 'piecewise'):
+            self.piecewise = {}  # function cache
         try:
-            md = self.interp[trt]  # retrieve from the cache
+            md = self.piecewise[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
-            magdist = getdefault(self.magdist, trt)
-            md = self.interp[trt] = interp1d(
-                *magdist, bounds_error=False, fill_value='extrapolate')
+            mags, dists = zip(*getdefault(self.magdist, trt))
+            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
+                mags = numpy.concatenate([mags, [11]])
+                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
+            md = self.piecewise[trt] = Piecewise(mags, dists)
         return md(mag)
 
-    def get_closest(self, sites, rupture, distance_type='rrup'):
+    def get_closest(self, sites, rupture, distance_type='rrup', filter=True):
         """
         :param sites: a (Filtered)SiteColletion
         :param rupture: a rupture
@@ -220,13 +260,36 @@ class IntegrationDistance(collections.Mapping):
         :raises: a FarAwayRupture exception if the rupture is far away
         """
         distances = get_distances(rupture, sites.mesh, distance_type)
-        if not self.dic:  # for sites already filtered
+        if not filter or not self.dic:  # for sites already filtered
             return sites, distances
         mask = distances <= self(rupture.tectonic_region_type, rupture.mag)
         if mask.any():
             return sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture
+
+    def get_bounding_box(self, lon, lat, trt=None, mag=None):
+        """
+        Build a bounding box around the given lon, lat by computing the
+        maximum_distance at the given tectonic region type and magnitude.
+
+        :param lon: longitude
+        :param lat: latitude
+        :param trt: tectonic region type, possibly None
+        :param mag: magnitude, possibly None
+        :returns: min_lon, min_lat, max_lon, max_lat
+        """
+        if trt is None:  # take the greatest integration distance
+            maxdist = max(self(trt, mag) for trt in self.dic)
+        else:  # get the integration distance for the given TRT
+            maxdist = self(trt, mag)
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, lat), 180)
+        return lon - a2, lat - a1, lon + a2, lat + a1
+
+    def __getstate__(self):
+        # otherwise is not pickleable due to .piecewise
+        return dict(dic=self.dic, magdist=self.magdist)
 
     def __getitem__(self, trt):
         return self(trt)
@@ -277,9 +340,8 @@ class SourceFilter(object):
             integration_distance and sitecol is not None and
             sitecol.at_sea_level())
         if self.use_rtree:
-            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
+            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
         if sitecol is not None and rtree is None:
             logging.info('Using distance filtering [no rtree]')
@@ -291,19 +353,9 @@ class SourceFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        maxdist = self.integration_distance[src.tectonic_region_type]
-        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
-        if self.idl:  # apply IDL fix
-            if min_lon < 0 and max_lon > 0:
-                return max_lon, min_lat, min_lon + 360, max_lat
-            elif min_lon < 0 and max_lon < 0:
-                return min_lon + 360, min_lat, max_lon + 360, max_lat
-            elif min_lon > 0 and max_lon > 0:
-                return min_lon, min_lat, max_lon, max_lat
-            elif min_lon > 0 and max_lon < 0:
-                return max_lon + 360, min_lat, min_lon, max_lat
-        else:
-            return min_lon, min_lat, max_lon, max_lat
+        mag = src.get_min_max_mag()[1]
+        maxdist = self.integration_distance(src.tectonic_region_type, mag)
+        return src.get_bounding_box(maxdist)
 
     def get_rectangle(self, src):
         """
@@ -322,15 +374,28 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
+    def get_bounding_boxes(self, trt=None, mag=None):
+        """
+        :param trt: a tectonic region type (used for the integration distance)
+        :param mag: a magnitude (used for the integration distance)
+        :returns: a list of bounding boxes, one per site
+        """
+        bbs = []
+        for site in self.sitecol:
+            bb = self.integration_distance.get_bounding_box(
+                site.location.longitude, site.location.latitude, trt, mag)
+            bbs.append(bb)
+        return bbs
+
     def __call__(self, sources, sites=None):
         if sites is None:
             sites = self.sitecol
-        if self.sitecol is None:  # do not filter
-            for source in sources:
-                yield source, sites
-            return
         for src in sources:
-            if not self.integration_distance:  # do not filter
+            if hasattr(src, 'sites'):  # already filtered
+                yield src, src.sites
+            elif not self.integration_distance:  # do not filter
+                if sites is not None:
+                    src.nsites = len(sites)
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
@@ -343,9 +408,11 @@ class SourceFilter(object):
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
-                    yield src, FilteredSiteCollection(sids, sites.complete)
+                    yield src, sites.filtered(sids)
             else:  # normal filtering, used in the workers
-                maxdist = self.integration_distance(src.tectonic_region_type)
+                _, maxmag = src.get_min_max_mag()
+                maxdist = self.integration_distance(
+                    src.tectonic_region_type, maxmag)
                 with context(src):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
@@ -356,5 +423,6 @@ class SourceFilter(object):
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
                     sitecol=self.sitecol, use_rtree=False)
+
 
 source_site_noop_filter = SourceFilter(None, {})

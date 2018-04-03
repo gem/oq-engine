@@ -18,12 +18,12 @@ import pickle
 import numpy
 
 import openquake.hazardlib
+from openquake.baselib.parallel import Starmap, sequential_apply
 from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
-from openquake.baselib.parallel import Sequential, Processmap
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import akkar_bommer_2010
 from openquake.hazardlib.pmf import PMF
@@ -167,8 +167,8 @@ def example_calc(apply):
 
 class HazardCurvesParallelTestCase(unittest.TestCase):
     def test_same_curves_as_sequential(self):
-        curves_par = example_calc(Processmap.apply)  # use multiprocessing
-        curves_seq = example_calc(Sequential.apply)  # sequential computation
+        curves_par = example_calc(Starmap.apply)  # use multiprocessing
+        curves_seq = example_calc(sequential_apply)  # sequential computation
         for name in curves_par.dtype.names:
             numpy.testing.assert_almost_equal(
                 curves_seq[name], curves_par[name])

@@ -50,7 +50,7 @@ import os
 import numpy as np
 from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import (CsvCatalogueParser,
-                                                         CsvCatalogueWriter)
+                                                                   CsvCatalogueWriter)
 
 
 class CsvCatalogueParserTestCase(unittest.TestCase):
@@ -113,6 +113,7 @@ class TestCsvCatalogueWriter(unittest.TestCase):
     '''
     Tests the catalogue csv writer
     '''
+
     def setUp(self):
         '''
         '''
@@ -187,7 +188,7 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         expected_catalogue.data['magnitude'] = np.array([5.6, 4.8, 5.0])
         expected_catalogue.data['year'] = np.array([1960, 1970, 1990])
         expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan,
-                                                          np.nan])
+                                                           np.nan])
         self.check_catalogues_are_equal(expected_catalogue, cat2)
 
     def test_catalogue_writer_both_purging(self):

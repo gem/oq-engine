@@ -36,10 +36,22 @@ $ oq webui createsuperuser
 $ python -m openquake.server.manage createsuperuser
 ```
 
+##### Groups support
+
+Users can be part of groups. Members of the same group can have access to any calculation and output produced by any member of that group; only the owner of a calculation can delete it.
+
+
+##### Users and groups management
+
+Users and group can be managed via the Django admin interface, available at `/admin` when `LOCKDOWN` is enabled.
+
+
 #### Authentication using PAM
 Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature [python-pam](https://github.com/FirefighterBlu3/python-pam) and [django-pam](https://github.com/cnobile2012/django-pam) extensions must be installed and activated. To activate them copy `openquake/server/local_settings.py.pam` to `openquake/server/local_settings.py` and restart the `WebUI` service.
 
 This feature is available on _Linux only_ and the WebUI process owner must be member of the `shadow` group.
+
+Mapping of unix groups isn't supported at the moment.
 
 ## Running in production
 

@@ -15,31 +15,53 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
+from decorator import decorator
+from nose.plugins.attrib import attr
+from openquake.baselib import config
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase
 
-from nose.plugins.attrib import attr
+celery = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
+NO_SHARED_DIR = celery and not config.directory.shared_dir
+
+
+@decorator
+def manage_shared_dir_error(func, self):
+    """
+    When the shared_dir is not configured, expect an error, unless
+    the distribution mechanism is set to processpool.
+    """
+    if NO_SHARED_DIR:
+        with self.assertRaises(ValueError) as ctx:
+            func(self)
+        self.assertIn('You must configure the shared_dir in openquake.cfg',
+                      str(ctx.exception))
+    else:
+        func(self)
 
 
 class UcerfTestCase(CalculatorTestCase):
+
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 37)
-        if REFERENCE_OS:
-            # check the header and the first 18 events
-            self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
+                      concurrent_tasks='0',  # avoid usual fork bug
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
         # check the GMFs
@@ -53,12 +75,13 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
-        got = writetmp(rst_table(gmdata, fmt='%s'))
+        got = writetmp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
         # check the mean hazard map
@@ -66,6 +89,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
+    @manage_shared_dir_error
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
         fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
@@ -78,6 +102,7 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
@@ -89,6 +114,7 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
+    @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
@@ -98,9 +124,13 @@ class UcerfTestCase(CalculatorTestCase):
                               delta=1E-6)
 
     @attr('qa', 'risk', 'ucerf')
+    @manage_shared_dir_error
     def test_event_based_risk(self):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
+
+        # check the right number of events was stored
+        self.assertEqual(len(self.calc.datastore['events']), 79)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)

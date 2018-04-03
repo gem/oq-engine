@@ -129,14 +129,14 @@ def input_checks(catalogue, config, completeness):
                   'magnitude_interval': 0.1}
     else:
         if (not 'reference_magnitude' in config.keys()) or\
-            (config['reference_magnitude'] is None):
+                (config['reference_magnitude'] is None):
             ref_mag = 0.
             config['reference_magnitude'] = None
         else:
             ref_mag = config['reference_magnitude']
 
         if (not 'magnitude_interval' in config.keys()) or \
-            not config['magnitude_interval']:
+                not config['magnitude_interval']:
             dmag = 0.1
         else:
             dmag = config['magnitude_interval']
@@ -200,7 +200,7 @@ def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
     new_comp_table = []
     for i in range(comp_table.shape[0] - 1):
         mvals = np.arange(comp_table[i, 1],
-        comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
+                          comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
         new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
     # If mmax > last magnitude in completeness table
     if mmax and (mmax > comp_table[-1, 1]):

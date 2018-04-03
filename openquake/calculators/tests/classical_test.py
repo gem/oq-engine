@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
@@ -33,9 +35,9 @@ from openquake.qa_tests_data.classical import (
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
+        kind = kw.pop('kind', '')  # 'all' or ''
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore
-        kind = kw.get('kind', '')  # 'all' or ''
         got = (export(('hcurves/' + kind, 'csv'), ds) +
                export(('hmaps/' + kind, 'csv'), ds) +
                export(('uhs/' + kind, 'csv'), ds))
@@ -52,11 +54,10 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            # make sure we saved the data transfer information in job_info
-            keys = {decode(key) for key in dict(
-                self.calc.datastore['job_info'])}
-            self.assertIn('classical.received', keys)
-            self.assertIn('classical.sent', keys)
+            info = view('job_info', self.calc.datastore)
+            self.assertIn('task', info)
+            self.assertIn('sent', info)
+            self.assertIn('received', info)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -66,7 +67,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check extraction
         sitecol = extract(self.calc.datastore, 'sitecol')
-        self.assertEqual(repr(sitecol), '<SiteCollection with 1 sites>')
+        self.assertEqual(repr(sitecol), '<SiteCollection with 1/1 sites>')
 
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
@@ -122,13 +123,10 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
 
-        with self.assertRaises(ValueError) as ctx:
-            self.run_calc(
-                case_7.__file__, 'job.ini', mean_hazard_curves='false',
-                hazard_maps='true', poes='0.1')
-        self.assertEqual(
-            'The job.ini says that no statistics should be computed, but then '
-            'there is no output!', str(ctx.exception))
+        # exercise the warning for no output when mean_hazard_curves='false'
+        self.run_calc(
+            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            poes='0.1')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -180,16 +178,40 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
-            concurrent_tasks='0')
+            concurrent_tasks='0', gsim_logic_tree_file='',
+            source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
                               delta=1E-5)
 
-        # test extract; 'hazard/rlzs also works
-        haz = dict(extract(self.calc.datastore, 'hazard/rlz-0'))
+        # test extract/hazard/rlzs
+        dic = dict(extract(self.calc.datastore, 'hazard/rlzs'))
+        hcurves = sorted(k for k in dic if k.startswith('hcurves'))
+        hmaps = sorted(k for k in dic if k.startswith('hmaps'))
+        self.assertEqual(hcurves, ['hcurves/PGA/rlz-000',
+                                   'hcurves/PGA/rlz-001',
+                                   'hcurves/PGA/rlz-002',
+                                   'hcurves/PGA/rlz-003',
+                                   'hcurves/SA(0.2)/rlz-000',
+                                   'hcurves/SA(0.2)/rlz-001',
+                                   'hcurves/SA(0.2)/rlz-002',
+                                   'hcurves/SA(0.2)/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
+                                 'hmaps/poe-0.2/rlz-001',
+                                 'hmaps/poe-0.2/rlz-002',
+                                 'hmaps/poe-0.2/rlz-003'])
+
+        # test extract/hcurves/rlz-0 also works, used by the npz exports
+        haz = dict(extract(self.calc.datastore, 'hcurves'))
+        self.assertEqual(sorted(haz), ['all', 'investigation_time'])
         self.assertEqual(
-            sorted(haz),
-            ['hcurves-rlz-0', 'hmaps-rlz-0', 'oqparam', 'sitecol'])
+            haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
+        array = haz['all']['mean']
+        self.assertEqual(array.dtype.names, ('PGA', 'SA(0.2)'))
+        self.assertEqual(array['PGA'].dtype.names,
+                         ('0.005', '0.007', '0.0098', '0.0137', '0.0192',
+                          '0.0269', '0.0376', '0.0527', '0.0738', '0.103',
+                          '0.145', '0.203', '0.284'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
@@ -216,22 +238,6 @@ hazard_uhs-mean.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
-        # test hmaps geojson export
-        fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
-                  if 'mean' in f]
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
-        self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
-
         # npz exports
         export(('hmaps', 'npz'), self.calc.datastore)
         export(('uhs', 'npz'), self.calc.datastore)
@@ -247,6 +253,32 @@ hazard_uhs-mean.csv
         # 3	0	 {6}
         # 3	1	 {7}
         # nbytes = (2 + 2 + 8) * 8 + 4 * 4 + 4 * 2 = 120
+
+        # full source model logic tree
+        cinfo = self.calc.datastore['csm_info']
+        ra0 = cinfo.get_rlzs_assoc()
+        self.assertEqual(
+            sorted(ra0.by_grp()), ['grp-00', 'grp-01', 'grp-02', 'grp-03'])
+
+        # reduction of the source model logic tree
+        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM2', 'a3b1'])
+        self.assertEqual(len(ra.by_grp()), 1)
+        numpy.testing.assert_equal(
+            len(ra.by_grp()['grp-02']),
+            len(ra0.by_grp()['grp-02']))
+
+        # more reduction of the source model logic tree
+        ra = cinfo.get_rlzs_assoc(sm_lt_path=['SM1'])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(
+            ra.by_grp()['grp-00'], ra0.by_grp()['grp-00'])
+        numpy.testing.assert_equal(
+            ra.by_grp()['grp-01'], ra0.by_grp()['grp-01'])
+
+        # reduction of the gsim logic tree
+        ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
+        self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'][0], [0, [0, 1]])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
@@ -288,6 +320,12 @@ hazard_uhs-mean.csv
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
+
+        # extracting hmaps
+        hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
+        self.assertEqual(
+            hmaps.dtype.names,
+            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
@@ -357,7 +395,7 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 4227047805)
+        self.assertEqual(checksum, 2061302359)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT

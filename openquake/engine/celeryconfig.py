@@ -29,11 +29,6 @@ try:
 except ImportError:
     pass
 else:
-    if '--with-doctest' in sys.argv:  # horrible hack for nosetests
-        pass  # don't set OQ_DISTRIBUTE
-    else:
-        os.environ["OQ_DISTRIBUTE"] = "celery"
-
     # just in the case that are you using oq-engine from sources
     # with the rest of oq libraries installed into the system (or a
     # virtual environment) you must set this environment variable
@@ -41,12 +36,7 @@ else:
         sys.modules['openquake'].__dict__["__path__"].insert(
             0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-    # there must be no dependency from something higher than baselib,
-    # othewise baselib.parallel that imports this file will depend on
-    # the engine
     from openquake.baselib import config
-    config.read(os.path.join(os.path.dirname(__file__), "openquake.cfg"),
-                port=int, soft_mem_limit=int, hard_mem_limit=int)
 
     task_serializer = 'pickle'
     result_serializer = 'pickle'

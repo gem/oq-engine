@@ -18,7 +18,7 @@ risk calculation is shown in Listing~\ref{lst:config_scenario_risk_combined}.
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_risk_combined.ini}
-  \caption{Example combined configuration file for a scenario risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_risk_combined.ini}{Download example})}
+  \caption{Example combined configuration file for a scenario risk calculation (\href{https://raw.githubusercontent.com/gem/oq-engine/master/oqum/risk/verbatim/config_scenario_risk_combined.ini}{Download example})}
   \label{lst:config_scenario_risk_combined}
 \end{listing}
 
@@ -91,8 +91,7 @@ The remaining new parameters introduced in this example are the following:
     stored for each realization; the default value of this parameter is
     \Verb+false+ and only mean and standard deviation of the portfolio losses
     across all realizations are stored. If this flag is set to \Verb+true+, a
-    matrix containing all of the losses is saved in the datastore and can be
-    exported in the .npz format.
+    matrix containing all of the losses is saved in the datastore.
 
 \end{itemize}
 
@@ -111,8 +110,9 @@ displayed:
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
 Calculation 2735 completed in 10 seconds. Results:
   id | name
-5328 | agglosses-rlzs
-5329 | losses_by_asset
+5328 | Aggregate Asset Losses
+5329 | Average Asset Losses
+5330 | Aggregate Event Losses
 \end{minted}
 
 All of the different ways of running a scenario damage calculation as

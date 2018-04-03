@@ -1,31 +1,33 @@
 QA test for disaggregation case_2
 =================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5570.hdf5 Fri Sep 22 11:30:34 2017
-checksum32                                           1,100,395,680           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     131,107,173        
+date           2018-03-26T15:57:45
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 2, num_imts = 1
+num_sites = 2, num_levels = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'disaggregation'  
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              1.0               
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            4.0               
-complex_fault_mesh_spacing      4.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      10.0              
-ground_motion_correlation_model None              
-random_seed                     23                
-master_seed                     0                 
-=============================== ==================
+=============================== =================
+calculation_mode                'disaggregation' 
+number_of_logic_tree_samples    0                
+maximum_distance                {'default': 80.0}
+investigation_time              1.0              
+ses_per_logic_tree_path         1                
+truncation_level                3.0              
+rupture_mesh_spacing            4.0              
+complex_fault_mesh_spacing      4.0              
+width_of_mfd_bin                0.1              
+area_source_discretization      10.0             
+ground_motion_correlation_model None             
+minimum_intensity               {}               
+random_seed                     23               
+master_seed                     0                
+ses_seed                        42               
+=============================== =================
 
 Input files
 -----------
@@ -41,12 +43,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============== ====== ========================================== =============== ================
-smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
-============== ====== ========================================== =============== ================
-source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
-source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,1)     2/2             
-============== ====== ========================================== =============== ================
+============== ====== =============== ================
+smlt_path      weight gsim_logic_tree num_realizations
+============== ====== =============== ================
+source_model_1 0.500  simple(1,2)     2/2             
+source_model_2 0.500  simple(1,2)     2/2             
+============== ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -70,87 +72,12 @@ Realizations per (TRT, GSIM)
   2,BooreAtkinson2008(): [2]
   2,ChiouYoungs2008(): [3]>
 
-Number of ruptures per tectonic region type
--------------------------------------------
-================== ====== ==================== =========== ============ ============
-source_model       grp_id trt                  num_sources eff_ruptures tot_ruptures
-================== ====== ==================== =========== ============ ============
-source_model_1.xml 0      Subduction Intraslab 1           1815         1,815       
-source_model_1.xml 1      Active Shallow Crust 2           3630         3,630       
-source_model_2.xml 2      Active Shallow Crust 1           1420         1,420       
-================== ====== ==================== =========== ============ ============
-
-============= =====
-#TRT models   3    
-#sources      4    
-#eff_ruptures 6,865
-#tot_ruptures 6,865
-#tot_weight   0    
-============= =====
-
-Informational data
-------------------
-=========================== =============================================================================
-count_eff_ruptures.received tot 1.81 KB, max_per_task 635 B                                              
-count_eff_ruptures.sent     sources 5.58 KB, param 2.23 KB, srcfilter 2.09 KB, monitor 981 B, gsims 454 B
-hazard.input_weight         1964.5                                                                       
-hazard.n_imts               1                                                                            
-hazard.n_levels             19                                                                           
-hazard.n_realizations       4                                                                            
-hazard.n_sites              2                                                                            
-hazard.n_sources            4                                                                            
-hazard.output_weight        38.0                                                                         
-hostname                    tstation.gem.lan                                                             
-require_epsilons            False                                                                        
-=========================== =============================================================================
-
-Slowest sources
----------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-2      1         SimpleFaultSource 1,420        0.003     1         1        
-1      1         AreaSource        1,815        0.001     1         1        
-1      3         AreaSource        1,815        0.001     1         1        
-0      2         AreaSource        1,815        0.001     1         1        
-====== ========= ================= ============ ========= ========= =========
-
-Computation times by source typology
-------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-AreaSource        0.004     3     
-SimpleFaultSource 0.003     1     
-================= ========= ======
-
-Duplicated sources
-------------------
-========= ========= =============
-source_id calc_time src_group_ids
-========= ========= =============
-1         0.005     1 2          
-========= ========= =============
-Sources with the same ID but different parameters
-
-Information about the tasks
----------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.001  0.002 0.004 3        
-================== ===== ====== ===== ===== =========
-
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.040     0.0       1     
-total count_eff_ruptures       0.009     0.0       3     
-store source_info              0.003     0.0       1     
-managing sources               0.003     0.0       1     
-prefiltering source model      0.003     0.0       1     
-aggregate curves               5.460E-05 0.0       3     
-reading site collection        3.052E-05 0.0       1     
-saving probability maps        2.432E-05 0.0       1     
+reading composite source model 0.095     0.0       1     
+splitting sources              0.053     0.0       1     
+reading site collection        5.198E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel>SiMidorikawa1999Asc</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Subduction Interface">
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>SiMidorikawa1999SInter</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                    applyToTectonicRegionType="Subduction IntraSlab">
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>SiMidorikawa1999SSlab</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                    applyToTectonicRegionType="Subduction Interface - North East Correction">
+                <logicTreeBranch branchID="b41">
+                    <uncertaintyModel>SiMidorikawa1999SInterNorthEastCorrection</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5"
+                    applyToTectonicRegionType="Subduction IntraSlab - North East Correction">
+                <logicTreeBranch branchID="b51">
+                    <uncertaintyModel>SiMidorikawa1999SSlabNorthEastCorrection</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs6"
+                    applyToTectonicRegionType="Subduction Interface - South West Correction">
+                <logicTreeBranch branchID="b61">
+                    <uncertaintyModel>SiMidorikawa1999SInterSouthWestCorrection</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs7"
+                    applyToTectonicRegionType="Subduction IntraSlab - South West Correction">
+                <logicTreeBranch branchID="b71">
+                    <uncertaintyModel>SiMidorikawa1999SSlabSouthWestCorrection</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

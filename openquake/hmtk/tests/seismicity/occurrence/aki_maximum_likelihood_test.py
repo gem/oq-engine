@@ -79,7 +79,7 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         magnitude = np.zeros(size)
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
-            uidx = int(lidx+nobs)
+            uidx = int(lidx + nobs)
             magnitude[lidx:uidx] = mag + 0.01
             lidx = uidx
         year = np.ones(size) * 1999

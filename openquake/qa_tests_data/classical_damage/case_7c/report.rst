@@ -1,13 +1,13 @@
 Classical PSHA-Based Hazard
 ===========================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5500.hdf5 Fri Sep 22 11:29:00 2017
-checksum32                                           949,605,442             
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     949,605,442        
+date           2018-03-26T15:54:58
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 7, num_imts = 3
+num_sites = 7, num_levels = 25
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      1.0
 width_of_mfd_bin                0.1               
 area_source_discretization      20.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     42                
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -42,11 +44,11 @@ structural_fragility    `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -66,27 +68,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 1           1694         1,694       
-================ ====== ==================== =========== ============ ============
-
-Informational data
-------------------
-=========================== ====================================================================================
-count_eff_ruptures.received tot 8.35 KB, max_per_task 640 B                                                     
-count_eff_ruptures.sent     sources 14.59 KB, param 12.59 KB, srcfilter 11.65 KB, monitor 4.47 KB, gsims 1.24 KB
-hazard.input_weight         11858.0                                                                             
-hazard.n_imts               3                                                                                   
-hazard.n_levels             25                                                                                  
-hazard.n_realizations       1                                                                                   
-hazard.n_sites              7                                                                                   
-hazard.n_sources            1                                                                                   
-hazard.output_weight        175.0                                                                               
-hostname                    tstation.gem.lan                                                                    
-require_epsilons            False                                                                               
-=========================== ====================================================================================
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 1,694        1,694       
+================ ====== ==================== ============ ============
 
 Exposure model
 --------------
@@ -99,26 +85,26 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
+Wood     1.000 0.0    1   1   3         3         
 Concrete 1.000 0.0    1   1   2         2         
 Steel    1.000 0.0    1   1   2         2         
-Wood     1.000 0.0    1   1   3         3         
 *ALL*    1.000 0.0    1   1   7         7         
 ======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
-====== ========= ================= ============ ========= ========= =========
-grp_id source_id source_class      num_ruptures calc_time num_sites num_split
-====== ========= ================= ============ ========= ========= =========
-0      1         SimpleFaultSource 1,694        0.046     7         15       
-====== ========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========== ========= =========
+source_id source_class      num_ruptures calc_time split_time num_sites num_split
+========= ================= ============ ========= ========== ========= =========
+1         SimpleFaultSource 1,694        0.094     2.618E-04  105       15       
+========= ================= ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.046     1     
+SimpleFaultSource 0.094     1     
 ================= ========= ======
 
 Duplicated sources
@@ -127,23 +113,31 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.004 7.838E-04 0.003 0.007 14       
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.009 0.004  0.004 0.019 13       
+================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== =============================================================================== ========
+task           sent                                                                            received
+count_ruptures sources=13.88 KB srcfilter=13.32 KB param=9.33 KB monitor=4.19 KB gsims=1.52 KB 4.62 KB 
+============== =============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.104     0.0       1     
-total count_eff_ruptures       0.056     0.055     14    
-reading exposure               0.007     0.0       1     
-reading composite source model 0.007     0.0       1     
+total count_ruptures           0.120     3.445     13    
+managing sources               0.029     0.0       1     
+reading composite source model 0.016     0.0       1     
+reading exposure               0.005     0.0       1     
 store source_info              0.004     0.0       1     
-prefiltering source model      0.002     0.0       1     
-aggregate curves               2.770E-04 0.0       14    
-saving probability maps        3.219E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+splitting sources              6.824E-04 0.0       1     
+unpickling count_ruptures      5.054E-04 0.0       13    
+aggregate curves               2.263E-04 0.0       13    
+reading site collection        4.125E-05 0.0       1     
+saving probability maps        3.123E-05 0.0       1     
 ============================== ========= ========= ======

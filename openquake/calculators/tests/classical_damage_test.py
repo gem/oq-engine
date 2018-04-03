@@ -22,10 +22,8 @@ from openquake.qa_tests_data.classical_damage import (
     case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a)
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.calculators.classical_damage import ClassicalDamageCalculator
 
 import numpy
 
@@ -85,7 +83,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     def check(self, case):
         out = self.run_calc(
-            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv',
+            concurrent_tasks='0')  # avoid the usual fork issue
         [fname] = out['damages-rlzs', 'csv']
         self.assertEqualFiles('expected/damages.csv', fname)
 
@@ -183,11 +182,3 @@ class ClassicalDamageTestCase(CalculatorTestCase):
             'expected/damages-rlzs-SadighEtAl1997().csv', f1)
         [f] = export(('damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damages-stats.csv', f)
-
-    @attr('qa', 'risk', 'classical_damage')
-    def test_poe_1(self):
-        oq = object.__new__(OqParam)
-        oq.hazard_imtls = {'PGA': [0.00001, 0.0001, 0.001, 0.002, 0.01, 0.05]}
-        curves = [{'PGA': numpy.array([1, 0.99, 0.95, 0.9, 0.6, 0.1])}]
-        with self.assertRaises(ValueError):
-            ClassicalDamageCalculator(oq).check_poes(curves)

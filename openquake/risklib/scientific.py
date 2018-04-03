@@ -170,7 +170,7 @@ class VulnerabilityFunction(object):
         if epsilons is None:
             return means
         self.set_distribution(epsilons)
-        return self.distribution.sample(means, covs, None, idxs)
+        return self.distribution.sample(means, covs, means * covs, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -270,7 +270,8 @@ class VulnerabilityFunction(object):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
 
         :param int steps:
             Number of steps between loss ratios.
@@ -420,10 +421,12 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
-        """Compute the LREM (Loss Ratio Exceedance Matrix).
+        """
+        Compute the LREM (Loss Ratio Exceedance Matrix).
         Required for the Classical Risk and BCR Calculators.
         Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators
+        Scenario and Event Based Risk Calculators.
+
         :param int steps:
             Number of steps between loss ratios.
         """
@@ -484,10 +487,10 @@ class FragilityFunctionContinuous(object):
         self.mean = mean
         self.stddev = stddev
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         variance = self.stddev ** 2.0
         sigma = numpy.sqrt(numpy.log(
@@ -496,7 +499,7 @@ class FragilityFunctionContinuous(object):
         mu = self.mean ** 2.0 / numpy.sqrt(
             variance + self.mean ** 2.0)
 
-        return stats.lognorm.cdf(iml, sigma, scale=mu)
+        return stats.lognorm.cdf(imls, sigma, scale=mu)
 
     def __getstate__(self):
         return dict(limit_state=self.limit_state,
@@ -520,21 +523,22 @@ class FragilityFunctionDiscrete(object):
     def interp(self):
         if self._interp is not None:
             return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes)
+        self._interp = interpolate.interp1d(self.imls, self.poes,
+                                            bounds_error=False)
         return self._interp
 
-    def __call__(self, iml):
+    def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
-        Intensity Measure Level (IML).
+        Intensity Measure Levels (IMLs).
         """
         highest_iml = self.imls[-1]
-
-        if self.no_damage_limit and iml < self.no_damage_limit:
-            return 0.
-        # when the intensity measure level is above
-        # the range, we use the highest one
-        return self.interp(highest_iml if iml > highest_iml else iml)
+        imls = numpy.array(imls)
+        imls[imls > highest_iml] = highest_iml
+        result = self.interp(imls)
+        if self.no_damage_limit:
+            result[imls < self.no_damage_limit] = 0
+        return result
 
     # so that the curve is pickeable
     def __getstate__(self):
@@ -559,6 +563,7 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
+    # NB: the list is populated after instantiation by .append calls
     def __init__(self, array, **attrs):
         self.array = array
         vars(self).update(attrs)
@@ -566,6 +571,36 @@ class FragilityFunctionList(list):
     def mean_loss_ratios_with_steps(self, steps):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
+
+    def build(self, limit_states, discretization, steps_per_interval):
+        """
+        :param limit_states: a sequence of limit states
+        :param discretization: continouos fragility discretization parameter
+        :param steps_per_interval: steps_per_interval parameter
+        :returns: a populated FragilityFunctionList instance
+        """
+        new = copy.copy(self)
+        add_zero = (self.format == 'discrete' and
+                    self.nodamage is not None and self.nodamage < self.imls[0])
+        new.imls = build_imls(new, discretization)
+        if steps_per_interval > 1:
+            new.interp_imls = build_imls(  # passed to classical_damage
+                new, discretization, steps_per_interval)
+        for i, ls in enumerate(limit_states):
+            data = self.array[i]
+            if self.format == 'discrete':
+                if add_zero:
+                    new.append(FragilityFunctionDiscrete(
+                        ls, [self.nodamage] + self.imls,
+                        numpy.concatenate([[0.], data]),
+                        self.nodamage))
+                else:
+                    new.append(FragilityFunctionDiscrete(
+                        ls, self.imls, data, self.nodamage))
+            else:  # continuous
+                new.append(FragilityFunctionContinuous(
+                    ls, data['mean'], data['stddev']))
+        return new
 
     def __toh5__(self):
         return self.array, {k: v for k, v in vars(self).items()
@@ -676,30 +711,10 @@ class FragilityModel(dict):
             configuration parameter
         """
         newfm = copy.copy(self)
-        for key, ff in self.items():
-            newfm[key] = new = copy.copy(ff)
-            # TODO: this is complicated: check with Anirudh
-            add_zero = (ff.format == 'discrete' and
-                        ff.nodamage is not None and ff.nodamage < ff.imls[0])
-            new.imls = build_imls(new, continuous_fragility_discretization)
-            if steps_per_interval > 1:
-                new.interp_imls = build_imls(  # passed to classical_damage
-                    new, continuous_fragility_discretization,
-                    steps_per_interval)
-            for i, ls in enumerate(self.limitStates):
-                data = ff.array[i]
-                if ff.format == 'discrete':
-                    if add_zero:
-                        new.append(FragilityFunctionDiscrete(
-                            ls, [ff.nodamage] + ff.imls,
-                            numpy.concatenate([[0.], data]),
-                            ff.nodamage))
-                    else:
-                        new.append(FragilityFunctionDiscrete(
-                            ls, ff.imls, data, ff.nodamage))
-                else:  # continuous
-                    new.append(FragilityFunctionContinuous(
-                        ls, data['mean'], data['stddev']))
+        for key, ffl in self.items():
+            newfm[key] = ffl.build(self.limitStates,
+                                   continuous_fragility_discretization,
+                                   steps_per_interval)
         return newfm
 
 
@@ -837,7 +852,7 @@ class DiscreteDistribution(Distribution):
         ret = []
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
-            random.seed(self.seed)
+            random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
             ret.append(loss_ratios[pmf])
@@ -869,13 +884,18 @@ CurveParams = collections.namedtuple(
 # Scenario Damage
 #
 
-def scenario_damage(fragility_functions, gmv):
+def scenario_damage(fragility_functions, gmvs):
     """
-    Compute the damage state fractions for the given ground motion value.
-    Return am array of M values where M is the numbers of damage states.
+    :param fragility_functions: a list of D - 1 fragility functions
+    :param gmvs: an array of E ground motion values
+    :returns: an array of (D, E) damage fractions
     """
-    return pairwise_diff(
-        [1] + [ff(gmv) for ff in fragility_functions] + [0])
+    lst = [numpy.ones_like(gmvs)]
+    for f, ff in enumerate(fragility_functions):  # D - 1 functions
+        lst.append(ff(gmvs))
+    lst.append(numpy.zeros_like(gmvs))
+    # convert a (D + 1, E) array into a (D, E) array
+    return pairwise_diff(numpy.array(lst))
 
 #
 # Classical Damage
@@ -1206,13 +1226,13 @@ def build_loss_curve_dt(curve_resolution, insured_losses=False):
     lc_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
-        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+        pairs = [('losses', (F32, C)), ('poes', (F32, C))]
         lc_dt = numpy.dtype(pairs)
         lc_list.append((str(lt), lc_dt))
     if insured_losses:
         for lt in sorted(curve_resolution):
             C = curve_resolution[lt]
-            pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+            pairs = [('losses', (F32, C)), ('poes', (F32, C))]
             lc_dt = numpy.dtype(pairs)
             lc_list.append((str(lt) + '_ins', lc_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
@@ -1223,7 +1243,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    ;returns: an array of 32 bit periods
+    :returns: an array of 32 bit periods
 
     Here are a few examples:
 
@@ -1262,22 +1282,24 @@ def losses_by_period(losses, return_periods, num_events, eff_time):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events
+    :param num_events: the number of events (must be more than the losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /len(losses). Outsided the interval they
+    where min_time = eff_time /len(losses). Outside the interval they
     have NaN values. If there are less losses than events, the array
-    is filled with zeros.
-    Here is an example:
+    is filled with zeros. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
     array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
     """
-    assert num_events >= len(losses), (num_events, len(losses))
+    if num_events < len(losses):
+        raise ValueError(
+            'There are not enough events to compute the loss curves: %d'
+            % num_events)
     losses = numpy.sort(losses)
     num_zeros = num_events - len(losses)
     if num_zeros:
@@ -1354,7 +1376,10 @@ class LossesByPeriodBuilder(object):
         A, P = len(asset_values), len(self.return_periods)
         array = numpy.zeros((A, P), self.loss_dt)
         for a, asset_value in enumerate(asset_values):
-            ratios = loss_ratios[a]  # shape (E, LI)
+            try:
+                ratios = loss_ratios[a]  # shape (E, LI)
+            except KeyError:  # no loss ratios > 0 for the given asset
+                continue
             for li, lt in enumerate(self.loss_dt.names):
                 aval = asset_value[lt.replace('_ins', '')]
                 array[a][lt] = aval * losses_by_period(
@@ -1362,10 +1387,10 @@ class LossesByPeriodBuilder(object):
                     self.num_events[rlzi], self.eff_time)
         return array
 
-    def build(self, agg_loss_table, stats=()):
+    def build(self, agg_loss_table_array, stats=()):
         """
-        :param agg_loss_table:
-            the aggregate loss table
+        :param agg_loss_table_array:
+            the aggregate loss table as an array
         :param stats:
             list of pairs [(statname, statfunc), ...]
         :returns:
@@ -1373,7 +1398,7 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        dic = group_array(agg_loss_table, 'rlzi')
+        dic = group_array(agg_loss_table_array, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']

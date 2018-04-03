@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import os
 import collections
 import tempfile
 import logging
@@ -65,7 +66,7 @@ def get_pstats(pstatfile, n):
     # 1      25.166  calculators/classical.py:115(execute)
     # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(classical)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
@@ -79,9 +80,10 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
                   exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
-    rcalc = base.calculators(oq, monitor)
-    with monitor:
-        rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
+    rcalc = base.calculators(oq)
+    with rcalc._monitor:
+        # disable concurrency in the second calculation to avoid fork issues
+        rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
 
@@ -130,7 +132,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
-    Run a calculation.
+    Run a calculation bypassing the database layer
     """
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
@@ -145,6 +147,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
         print(get_pstats(pstat, slowest))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
+
 
 run.arg('job_ini', 'calculation configuration file '
         '(or files, comma-separated)')

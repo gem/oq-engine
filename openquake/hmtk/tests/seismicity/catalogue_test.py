@@ -53,25 +53,32 @@ Tests for the catalogue module
 
 import unittest
 import numpy as np
+import filecmp
+import os
+import tempfile
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from openquake.hmtk.seismicity.catalogue import Catalogue
+from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
 from openquake.hmtk.seismicity.utils import decimal_time
 
+
+CURRENT_DIR = os.path.dirname(__file__)
 
 class CatalogueTestCase(unittest.TestCase):
     """
     Unit tests for the Catalogue class
     """
+
     def setUp(self):
         self.data_array = np.array([
-            [1900, 5.00],  # E
+            [1900, 5.00],  #  E
             [1910, 6.00],  # E
             [1920, 7.00],  # I
             [1930, 5.00],  # E
             [1970, 5.50],  # I
-            [1960, 5.01],  # I
+            [1960, 5.01],  #  I
             [1960, 6.99],  # I
         ])
         self.mt_table = np.array([
@@ -80,6 +87,15 @@ class CatalogueTestCase(unittest.TestCase):
             [1950, 5.5],
             [1960, 5.0],
         ])
+
+    def write_catalogue(self):
+        # Test the export of a catalogue in csv format
+        fi = os.path.join(CURRENT_DIR, 'data/simple.csv')
+        parser = CsvCatalogueParser(fi)
+        cat = parser.read_file()
+        with tempfile.NamedTemporaryFile() as fo:
+            cat.write_catalogue(fo.name)
+            self.assertTrue(filecmp.cmp(fi, fo.name))
 
     def test_load_from_array(self):
         # Tests the creation of a catalogue from an array and a key list
@@ -201,6 +217,7 @@ class TestGetDistributions(unittest.TestCase):
     determine depth distribution, magnitude-depth distribution,
     and magnitude-time distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
 
@@ -254,6 +271,7 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
     """
     Tests the method for generating the magnitude depth distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(5., 50., 10.), np.arange(5.5, 9.0, 1.))
@@ -340,6 +358,7 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
     """
     Simple class to test the magnitude time density distribution
     """
+
     def setUp(self):
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(1915., 2010., 10.),
@@ -403,4 +422,3 @@ class TestCatalogueConcatenate(unittest.TestCase):
         self.cat2.data['month'] = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(Warning):
             self.cat1.concatenate(self.cat2)
-

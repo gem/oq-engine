@@ -94,8 +94,8 @@ class CharacteristicFaultSource(ParametricSeismicSource):
                                numpy.array([[north, north], [south, south]]),
                                None)
         poly = mesh.get_convex_hull()
-
-        return poly.dilate(dilation)
+        dpoly = poly.dilate(dilation)
+        return dpoly
 
     def iter_ruptures(self):
         """

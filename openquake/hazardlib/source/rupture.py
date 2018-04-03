@@ -222,6 +222,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
+        prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):
@@ -476,7 +477,8 @@ def get_subclasses(cls):
             yield ssc
 
 
-def get_geom(surface, is_from_fault_source, is_multi_surface):
+def get_geom(surface, is_from_fault_source, is_multi_surface,
+             is_gridded_surface):
     """
     The following fields can be interpreted different ways,
     depending on the value of `is_from_fault_source`. If
@@ -522,6 +524,11 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
             lons = numpy.concatenate([x.corner_lons for x in surfaces])
             lats = numpy.concatenate([x.corner_lats for x in surfaces])
             depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        elif is_gridded_surface:
+            # the surface mesh has shape (1, N)
+            lons = surface.mesh.lons[0]
+            lats = surface.mesh.lats[0]
+            depths = surface.mesh.depths[0]
         else:
             # For area or point source,
             # rupture geometry is represented by a planar surface,
@@ -563,13 +570,20 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events, grp_id, serial):
+    def __init__(self, rupture, sids, events, serial=0):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.grp_id = grp_id
         self.serial = serial
-        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
+        self.eidx1 = 0
+        self.eidx2 = len(events)
+
+    @property
+    def grp_id(self):
+        """
+        Group ID of the rupture
+        """
+        return int(self.events[0]['grp_id'])  # need Python int, not uint16
 
     @property
     def weight(self):
@@ -592,7 +606,7 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh, sm_by_grp):
+    def export(self, mesh):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
@@ -615,10 +629,12 @@ class EBRupture(object):
         new.is_from_fault_source = iffs = isinstance(
             rupture.surface, (geo.ComplexFaultSurface,
                               geo.SimpleFaultSurface))
+        new.is_gridded_surface = igs = isinstance(
+            rupture.surface, geo.GriddedSurface)
         new.is_multi_surface = ims = isinstance(
             rupture.surface, geo.MultiSurface)
         new.lons, new.lats, new.depths = get_geom(
-            rupture.surface, iffs, ims)
+            rupture.surface, iffs, ims, igs)
         new.surface = rupture.surface
         new.strike = rupture.surface.get_strike()
         new.dip = rupture.surface.get_dip()
@@ -626,13 +642,13 @@ class EBRupture(object):
         new.hypocenter = rupture.hypocenter
         new.tectonic_region_type = rupture.tectonic_region_type
         new.magnitude = new.mag = rupture.mag
-        new.top_left_corner = None if iffs or ims else (
+        new.top_left_corner = None if iffs or ims or igs else (
             new.lons[0], new.lats[0], new.depths[0])
-        new.top_right_corner = None if iffs or ims else (
+        new.top_right_corner = None if iffs or ims or igs else (
             new.lons[1], new.lats[1], new.depths[1])
-        new.bottom_left_corner = None if iffs or ims else (
+        new.bottom_left_corner = None if iffs or ims or igs else (
             new.lons[2], new.lats[2], new.depths[2])
-        new.bottom_right_corner = None if iffs or ims else (
+        new.bottom_right_corner = None if iffs or ims or igs else (
             new.lons[3], new.lats[3], new.depths[3])
         return new
 

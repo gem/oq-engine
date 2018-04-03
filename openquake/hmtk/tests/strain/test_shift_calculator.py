@@ -61,6 +61,7 @@ class TestShift(unittest.TestCase):
     '''
     Test suite for the class openquake.hmtk.strain.shift.Shift
     '''
+
     def setUp(self):
         self.model = None
         self.strain_model = GeodeticStrain()
@@ -118,7 +119,7 @@ class TestShift(unittest.TestCase):
             'err': np.array([0., 0., 0., 1.0, -1.0, 0.1, -0.1, 0.0, 0.0,  0.0,
                              0.0, 0.0]),
             'e1h': np.array([0., 0., 0., 0.0, -1.0, 0.0, -1.0, 1.0, 0.0, -1.0,
-                            -1.0, -1.0]),
+                             -1.0, -1.0]),
             'e2h': np.array([0., 0., 0., 1.0,  0.0, 1.0,  0.0, 1.0, 0.0,  2.0,
                              0.5, -1.0]),
             'region': np.array(['IPL', 'S', 'O', 'C', 'C', 'C', 'C', 'R', 'R',

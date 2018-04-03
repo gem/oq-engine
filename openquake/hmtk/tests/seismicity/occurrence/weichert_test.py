@@ -57,7 +57,7 @@ from openquake.hmtk.seismicity.catalogue import Catalogue
 from openquake.hmtk.seismicity.occurrence.weichert import Weichert
 
 
-#class WeichertTestCase(unittest.TestCase):
+# class WeichertTestCase(unittest.TestCase):
 #
 #    def setUp(self):
 #        """
@@ -126,6 +126,7 @@ class WeichertTestCase(unittest.TestCase):
      [1930, 6.0],
      [1910, 7.0]]
     """
+
     def setUp(self):
         """
         Sets up the test catalogue to be used for the Weichert algorithm
@@ -159,4 +160,4 @@ class WeichertTestCase(unittest.TestCase):
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(rate, 100.1078, 4)
-        self.assertAlmostEqual(sigma_rate, 2.1218, 4) 
+        self.assertAlmostEqual(sigma_rate, 2.1218, 4)

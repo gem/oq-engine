@@ -28,6 +28,8 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+from openquake.commands.abort import abort
+
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
@@ -35,10 +37,10 @@ MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 def get_job_id(job_id, username=None):
     username = username or getpass.getuser()
-    job_id = logs.dbcmd('get_job_id', job_id, username)
-    if not job_id:
+    job = logs.dbcmd('get_job', job_id, username)
+    if not job:
         sys.exit('Job %s of %s not found' % (job_id, username))
-    return job_id
+    return job.id
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
@@ -80,19 +82,28 @@ def del_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
     """
+    if logs.dbcmd('get_job', job_id) is None:
+        print('There is no job %d' % job_id)
+        return
+
     if confirmed or confirm(
-            'Are you sure you want to delete this calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
+            'Are you sure you want to (abort and) delete this calculation and '
+            'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            logs.dbcmd('del_calc', job_id, getpass.getuser())
+            abort(job_id)
+            resp = logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)
+        else:
+            if 'success' in resp:
+                print('Removed %d' % job_id)
+            else:
+                print(resp['error'])
 
 
 @sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, db_version, what_if_I_upgrade,
-           run_hazard, run_risk, run,
+           upgrade_db, db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
@@ -101,7 +112,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    if run or run_hazard or run_risk:
+    if run:
         # the logging will be configured in engine.py
         pass
     else:
@@ -153,55 +164,23 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        job_inis = [os.path.expanduser(ini) for ini in run.split(',')]
-        if len(job_inis) not in (1, 2):
-            sys.exit('%s should be a .ini filename or a pair of filenames '
-                     'separated by a comma' % run)
-        for job_ini in job_inis:
-            open(job_ini).read()  # raise an IOError if the file does not exist
+        job_ini = os.path.expanduser(run)
+        open(job_ini, 'rb').read()  # IOError if the file does not exist
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-
-        if len(job_inis) == 2:
-            # run hazard
-            job_id = run_job(job_inis[0], log_level,
-                             log_file, exports)
-            # run risk
-            run_job(job_inis[1], log_level, log_file,
-                    exports, hazard_calculation_id=job_id)
-        else:
-            run_job(
-                os.path.expanduser(run), log_level, log_file,
+        run_job(os.path.expanduser(run), log_level, log_file,
                 exports, hazard_calculation_id=hc_id)
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
                 'list_calculations', 'hazard', getpass.getuser()):
             safeprint(line)
-    elif run_hazard is not None:
-        safeprint('WARN: --rh/--run-hazard are deprecated, use --run instead',
-                  file=sys.stderr)
-        log_file = os.path.expanduser(log_file) \
-            if log_file is not None else None
-        run_job(os.path.expanduser(run_hazard), log_level,
-                log_file, exports)
     elif delete_calculation is not None:
         del_calculation(delete_calculation, yes)
     # risk
     elif list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
             safeprint(line)
-    elif run_risk is not None:
-        safeprint('WARN: --rr/--run-risk are deprecated, use --run instead',
-                  file=sys.stderr)
-        if hazard_calculation_id is None:
-            sys.exit(MISSING_HAZARD_MSG)
-        log_file = os.path.expanduser(log_file) \
-            if log_file is not None else None
-        run_job(
-            os.path.expanduser(run_risk),
-            log_level, log_file, exports,
-            hazard_calculation_id=hc_id)
 
     # export
     elif make_html_report:
@@ -257,16 +236,12 @@ engine.flg('upgrade_db', 'Upgrade the openquake database')
 engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
-engine._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '
-            'the specified config file', metavar='CONFIG_FILE')
-engine._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
-            'specified config file', metavar='CONFIG_FILE')
 engine._add('run', '--run', help='Run a job with the specified config file',
             metavar='CONFIG_FILE')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
-            help='List risk calculation information', action='store_true')
-engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
             help='List hazard calculation information', action='store_true')
+engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
+            help='List risk calculation information', action='store_true')
 engine._add('delete_calculation', '--delete-calculation', '--dc',
             help='Delete a calculation and all associated outputs',
             metavar='CALCULATION_ID', type=int)

@@ -36,6 +36,14 @@ abrahamson_silva_2008
     :undoc-members:
     :show-inheritance:
 
+afshari_stewart_2016
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.afshari_stewart_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 akkar_2013
 ------------------------------------------
 
@@ -167,6 +175,22 @@ bindi_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bindi_2017
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bindi_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bommer_2009
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bommer_2009
     :members:
     :undoc-members:
     :show-inheritance:
@@ -331,6 +355,14 @@ convertito_2012
     :undoc-members:
     :show-inheritance:
 
+derras_2014
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.derras_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 dost_2004
 -----------------------------------------
 
@@ -443,10 +475,10 @@ ghofrani_atkinson_2014
     :undoc-members:
     :show-inheritance:
 
-gsim_table
+gmpe_table
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.gsim_table
+.. automodule:: openquake.hazardlib.gsim.gmpe_table
     :members:
     :undoc-members:
     :show-inheritance:
@@ -563,10 +595,26 @@ nath_2012
     :undoc-members:
     :show-inheritance:
 
+nga_east
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nga_east
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nshmp_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.nshmp_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pankow_pechmann_2004
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.pankow_pechmann_2004
     :members:
     :undoc-members:
     :show-inheritance:
@@ -715,6 +763,14 @@ youngs_1997
     :undoc-members:
     :show-inheritance:
 
+yu_2013
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.yu_2013
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 zhao_2006
 -----------------------------------------
 
@@ -735,6 +791,14 @@ zhao_2006_swiss_coeffs
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006_swiss_coeffs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+zhao_2016
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zhao_2016
     :members:
     :undoc-members:
     :show-inheritance:

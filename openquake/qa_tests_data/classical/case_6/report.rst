@@ -1,13 +1,13 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-==================================================== ========================
-tstation.gem.lan:/home/michele/oqdata/calc_5519.hdf5 Fri Sep 22 11:29:27 2017
-checksum32                                           3,056,992,103           
-engine_version                                       2.6.0-gite59d75a        
-==================================================== ========================
+============== ===================
+checksum32     3,056,992,103      
+date           2018-03-26T15:55:43
+engine_version 2.10.0-git543cfb0  
+============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 3
 
 Parameters
 ----------
@@ -23,8 +23,10 @@ complex_fault_mesh_spacing      0.1
 width_of_mfd_bin                1.0               
 area_source_discretization      10.0              
 ground_motion_correlation_model None              
+minimum_intensity               {}                
 random_seed                     1066              
 master_seed                     0                 
+ses_seed                        42                
 =============================== ==================
 
 Input files
@@ -40,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations
-========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-========= ====== ====================================== =============== ================
+========= ====== =============== ================
+smlt_path weight gsim_logic_tree num_realizations
+========= ====== =============== ================
+b1        1.000  trivial(1)      1/1             
+========= ====== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -64,36 +66,20 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 2           140          140         
-================ ====== ==================== =========== ============ ============
-
-Informational data
-------------------
-=========================== =============================================================================
-count_eff_ruptures.received tot 1.18 KB, max_per_task 606 B                                              
-count_eff_ruptures.sent     sources 2.17 KB, srcfilter 1.34 KB, param 1.18 KB, monitor 654 B, gsims 182 B
-hazard.input_weight         287.0                                                                        
-hazard.n_imts               1                                                                            
-hazard.n_levels             3                                                                            
-hazard.n_realizations       1                                                                            
-hazard.n_sites              1                                                                            
-hazard.n_sources            2                                                                            
-hazard.output_weight        3.0                                                                          
-hostname                    tstation.gem.lan                                                             
-require_epsilons            False                                                                        
-=========================== =============================================================================
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+source_model.xml 0      Active Shallow Crust 140          140         
+================ ====== ==================== ============ ============
 
 Slowest sources
 ---------------
-====== ========= ================== ============ ========= ========= =========
-grp_id source_id source_class       num_ruptures calc_time num_sites num_split
-====== ========= ================== ============ ========= ========= =========
-0      1         SimpleFaultSource  91           0.003     1         1        
-0      2         ComplexFaultSource 49           0.003     1         1        
-====== ========= ================== ============ ========= ========= =========
+========= ================== ============ ========= ========== ========= =========
+source_id source_class       num_ruptures calc_time split_time num_sites num_split
+========= ================== ============ ========= ========== ========= =========
+1         SimpleFaultSource  91           0.005     1.574E-05  1         1        
+2         ComplexFaultSource 49           0.003     6.914E-06  1         1        
+========= ================== ============ ========= ========== ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -101,7 +87,7 @@ Computation times by source typology
 source_class       calc_time counts
 ================== ========= ======
 ComplexFaultSource 0.003     1     
-SimpleFaultSource  0.003     1     
+SimpleFaultSource  0.005     1     
 ================== ========= ======
 
 Duplicated sources
@@ -110,22 +96,30 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.003 7.839E-05 0.003 0.004 2        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.005 0.002  0.004 0.007 2        
+================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ======================================================================= ========
+task           sent                                                                    received
+count_ruptures sources=2.21 KB srcfilter=1.41 KB param=836 B monitor=660 B gsims=240 B 728 B   
+============== ======================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.102     0.0       1     
-total count_eff_ruptures       0.007     0.0       2     
-store source_info              0.003     0.0       1     
-prefiltering source model      0.003     0.0       1     
-managing sources               0.002     0.0       1     
-reading site collection        4.053E-05 0.0       1     
-aggregate curves               3.338E-05 0.0       2     
-saving probability maps        2.360E-05 0.0       1     
+reading composite source model 0.257     0.0       1     
+total count_ruptures           0.011     3.379     2     
+managing sources               0.006     0.0       1     
+store source_info              0.004     0.0       1     
+splitting sources              3.815E-04 0.0       1     
+reading site collection        3.273E-04 0.0       1     
+unpickling count_ruptures      8.321E-05 0.0       2     
+aggregate curves               4.053E-05 0.0       2     
+saving probability maps        3.052E-05 0.0       1     
 ============================== ========= ========= ======

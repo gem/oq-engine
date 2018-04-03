@@ -11,116 +11,79 @@ obtain the list of calculations performed with their corresponding ID):
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
-\textcolor{red}{3 | hcurves}
-\textcolor{black}{4 | realizations}
+\textcolor{red}{3 | Hazard Curves}
+\textcolor{black}{4 | Realizations}
 \end{Verbatim}
 
-To export from the database the outputs (in this case hazard curves)  contained in one of the output identifies, one can do so with the following command:
+To export from the database the outputs (in this case hazard curves) contained
+in one of the output identifies, one can do so with the following command:
 
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --export-output <output_id> <output_directory>
 \end{Verbatim}
 
-Alternatively, if the user wishes to export all of the outputs associated with a particular calculation then they can use the \texttt{-{}-export-outputs} with the corresponding calculation key:
+Alternatively, if the user wishes to export all of the outputs associated with
+a particular calculation then they can use the \texttt{-{}-export-outputs}
+with the corresponding calculation key:
 
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --export-outputs <calc_id> <output_directory>
 \end{Verbatim}
 
-The exports will produce one or more nrml files containing the seismic hazard curves, as represented in the example in the inset below:
+The exports will produce one or more nrml files containing the seismic hazard
+curves, as represented in the example in the inset below:
 
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <hazardCurves sourceModelTreePath="b1|b212"
-                gsimTreePath="b2" IMT="PGA"
-                investigationTime="50.0">
-    <IMLs>0.005 0.007 0.0098 ... 1.09 1.52 2.13</IMLs>
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>10.0 45.0</gml:pos>
-      </gml:Point>
-      <poEs>1.0 1.0 1.0 ... 0.000688359310522 0.0 0.0</poEs>
-    </hazardCurve>
-    ...
-    <hazardCurve>
-      <gml:Point>
-        <gml:pos>lon lat</gml:pos>
-      </gml:Point>
-      <poEs>poe1 poe2 ... poeN</poEs>
-    </hazardCurve>
-  </hazardCurves>
-</nrml>
-\end{minted}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_hazard_curves.xml}
+  \caption{Example hazard curves NRML output file}
+  \label{lst:output_hazard_curves_xml}
+\end{listing}
 
-%\input{oqum/hazard/verbatim/output_hazard_curves}
+Notwithstanding the intuitiveness of this file, let's have a brief overview of
+the information included. The overall content of this file is a list of hazard
+curves, one for each investigated site, computed using a PSHA input model
+representing one possible realisation obtained using the complete logic tree
+structure.
 
-Notwithstanding the intuitiveness of this file, let's have a brief
-overview of the information included.
-
-The overall content of this file is a list of hazard curves, one for each
-investigated site, computed using a PSHA input model representing one possible realisation obtained using the complete logic tree structure.
-
-The attributes of the \texttt{hazardCurves} element (see text in red) specifythe path of the logic tree used to create the seismic source model
+The attributes of the \texttt{hazardCurves} element (see text in red) specify
+the path of the logic tree used to create the seismic source model
 (\texttt{source\-Model\-TreePath}) and the ground motion model
 (\texttt{gsim\-Tree\-Path}) plus the intensity measure type and the
 investigation time used to compute the probability of exceedance.
 
-The \texttt{IMLs} element (in green in the example) contains the values of shaking used by the engine to compute the probability of exceedance in the investigation time. For each site this file contains a \texttt{hazardCurve} element which has the coordinates (longitude and latitude in decimal degrees) of the site and the values of the probability of exceedance for all the intensity measure levels specified in the \texttt{IMLs} element.
+The \texttt{IMLs} element (in green in the example) contains the values of
+shaking used by the engine to compute the probability of exceedance in the
+investigation time. For each site this file contains a \texttt{hazardCurve}
+element which has the coordinates (longitude and latitude in decimal degrees)
+of the site and the values of the probability of exceedance for all the
+intensity measure levels specified in the \texttt{IMLs} element.
 
-If the hazard calculation is configured to produce results including seismic hazard maps and uniform hazard spectra, then the list of outputs would display the following:
+If the hazard calculation is configured to produce results including seismic
+hazard maps and uniform hazard spectra, then the list of outputs would display
+the following:
 
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
-\textcolor{red}{3 | hcurves}
-\textcolor{red}{4 | hmaps}
-\textcolor{black}{5 | realizations}
-\textcolor{red}{6 | uhs}
+\textcolor{red}{3 | Hazard Curves}
+\textcolor{red}{4 | Hazard Maps}
+\textcolor{black}{5 | Realizations}
+\textcolor{red}{6 | Uniform Hazard Spectra}
 \end{Verbatim}
 
-The following inset shows a sample of the nrml file used to describe a hazard map:
+The following inset shows a sample of the nrml file used to describe a hazard
+map:
 
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <hazardMap sourceModelTreePath="b1" gsimTreePath="b1"
-             IMT="PGA" investigationTime="50.0" poE="0.1">
-    <node lon="119.596690957" lat="21.5497682591" iml="0.204569990197"/>
-    <node lon="119.596751048" lat="21.6397004197" iml="0.212391638188"/>
-    <node lon="119.596811453" lat="21.7296325803" iml="0.221407505615"/>
-    ...
-  </hazardMap>
-</nrml>
-\end{minted}
-
-%\input{oqum/hazard/verbatim/output_hazard_map}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_hazard_map.xml}
+  \caption{Example hazard map NRML output file}
+  \label{lst:output_hazard_map_xml}
+\end{listing}
 
 \noindent and a uniform hazard spectrum:
 
-\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <uniformHazardSpectra sourceModelTreePath="b1_b2_b4"
-                        gsimTreePath="b1_b2"
-                        investigationTime="50.0" poE="0.1">
-        <periods>0.0 0.025 0.1 0.2</periods>
-        <uhs>
-            <gml:Point>
-                <gml:pos>0.0 0.0</gml:pos>
-            </gml:Point>
-            <IMLs>0.3 0.5 0.2 0.1</IMLs>
-        </uhs>
-        <uhs>
-            <gml:Point>
-                <gml:pos>0.0 1.0</gml:pos>
-            </gml:Point>
-            <IMLs>0.3 0.5 0.2 0.1</IMLs>
-        </uhs>
-    </uniformHazardSpectra>
-</nrml>
-\end{minted}
-%\input{oqum/hazard/verbatim/output_uhs}
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_uhs.xml}
+  \caption{Example uniform hazard spectrum NRML output file}
+  \label{lst:output_uhs}
+\end{listing}

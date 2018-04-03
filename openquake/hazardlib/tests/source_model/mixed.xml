@@ -7,6 +7,8 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Test Source Model"
     >
         <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
         srcs_weights="1.0"
         tectonicRegion="Stable Continental Crust"
         >
@@ -46,6 +48,8 @@ xmlns:gml="http://www.opengis.net/gml"
             </pointSource>
         </sourceGroup>
         <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
         srcs_weights="1.0"
         tectonicRegion="Subduction Interface"
         >
@@ -97,6 +101,8 @@ xmlns:gml="http://www.opengis.net/gml"
             </complexFaultSource>
         </sourceGroup>
         <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
         srcs_weights="1.0 1.0"
         tectonicRegion="Active Shallow Crust"
         >
@@ -204,6 +210,8 @@ xmlns:gml="http://www.opengis.net/gml"
             </simpleFaultSource>
         </sourceGroup>
         <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
         srcs_weights="1.0 1.0 1.0"
         tectonicRegion="Volcanic"
         >

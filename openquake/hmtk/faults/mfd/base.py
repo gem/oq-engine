@@ -5,6 +5,7 @@ for :class:`BaseMFDfromSlip>`
 import abc
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
+
 def _scale_moment(magnitude, in_nm=False):
     '''Returns the moment for a given magnitude.
     :param float magnitude:
