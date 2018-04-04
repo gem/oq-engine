@@ -245,6 +245,11 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
+        maxyear = self.calc.datastore['events']['year'].max()
+        itime = self.calc.datastore['oqparam'].investigation_time
+        # the year in the events table is below the investigation time because
+        # this is a case with nonparametric sources, the SES are independent
+        self.assertGreater(itime, maxyear)
         if REFERENCE_OS:
             self.assertEqualFiles('expected/rup_data.csv', fname)
 
