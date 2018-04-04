@@ -1,36 +1,51 @@
 Release notes for the OpenQuake Engine, version 3.0
 ===================================================
 
-This release drops support for Python 2.7, now the engine requires Python 3.5+
-to run. Several new features entered, in particular in the disaggregation
-calculator and in the exposure support.
-Over 80 issues were closed. For the complete
-list of changes, please see the changelog:
+This release drops support for Python 2.7. From now on, the engine
+requires Python 3.5+ to run. Apart from this change, several new features
+entered, in particular in the disaggregation calculator and in the exposure
+support.  Over 110 issues were closed. For the complete list of
+changes, please see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.0/debian/changelog .
+
+Management of the source models
+--------------------------------
+
+The task distribution has been improved by changing the algorithm
+used to manage the sources. As of engine 3.0, the sources are first
+split and then sent to the workers. This change is reflected in the log
+messages.
+
+An improvement of the splitting procedure for complex fault sources
+resulted in a substantial improvement of the parallelization for
+several calculations. It also fixed a bug with the event_based_rupture
+calculator generating too few tasks.
+
+A different bug with the classical calculator generating too few tasks
+when the option `optimize_same_id_sources` is set has been fixed as
+well.
+
+We extended the check on duplicated IDs in the source model to models in
+the NRML 0.5 format. This means that even if a source model is split in
+several files (i.e. the `<uncertaintyModel>` tag in the source model logic
+tree file contains several paths) the source IDs must be unique across all
+files.
+
+Source models with time-dependent sources now require two new tags
+`investigation_time` (mandatory) and `start_time` (optional, but it will
+likely become mandatory in the future). The `investigation_time` is used
+to check the `investigation_time` used in the `job.ini` file, so that
+the user cannot accidentally use the wrong  `investigation_time`.
 
 Hazard
 --------------
 
-The task distribution has been improved even more, in particular for
-event based hazard calculations.
-
-Bug: event_based_rupture calculator generating too few tasks.
-
-We improved the splitting algorithm for the sources, result in faster
-calculations.
-
 We made relocatable the export in case of gmpe_table.
-
-We extended the check on duplicated IDs in the source model to models in
-the NRML 0.5 format.
-
-`investigation_time` and `start_time` in source models 
 
 Better error message when there are duplicated sites in the CSV
 
 Fix years on event_based_rupture calculator with sampling
 
-Log information about the floating/spinning factors
 
 Event based mutex sources
 
@@ -57,44 +72,50 @@ Graeme Weatherill ported the [Strong Motion Toolkit]
 (https://github.com/GEMScienceTools/gmpe-smtk) which depends on hazardlib
 and is a part of the OpenQuake suite to Python 3.5.
 
-
 Risk
 -----
 
-The management of the exposure has been refactored and improved. As
-a consequence it is not possible to export risk results produced
-by previous versions of the engine with engine 3.0. On the plus side
-it is now possible to run a risk calculation from a pre-imported
+The management of the exposure has been refactored and improved.
+Ot is now possible to run a risk calculation from a pre-imported
 exposure. This is very importance because now the engine is powerful
 enough to run calculations with millions of assets and it is convenient
 to avoid reimporting them every time if the exposure does not change.
 
-Made it possible to use a pre-imported risk model.
+On the same note, it is possible to use a pre-imported risk model,
+without having to reimport it at each risk calculation.
 
-Extended `get_site_collection` to read the sites from the hazard
-curves when available
+We extended `get_site_collection` to read the sites from the hazard
+curves when available. The sites are extracted from the exposure in
+precedence over the site model.
 
-Fixed bug in classical_risk
-when `num_statistics > num_realizations`.
+We fixed bug in classical_risk, happening when the number of statistics
+was larger than the number of realizations (for instance, in a case with
+two realizations, computing mean, quantile-0.15 and quantile-0.85).
 
-Fixed small negative numbers in scenario_damage outputs due to rounding errors.
+We fixed the strange issue of small negative numbers appearing in
+scenario_damage outputs: this happened due to rounding errors. Now
+the correct result (i.e. zeros) is stored.
 
-Aggregating the avg_losses for event_based_risk
+We added a check in calculations reading the GMFs in CSV format: now
+the must be a single one realization in the input file.
 
-Only one realization is accepted in GMFs in CSV format
+When running a scenario calculation using precomputed GMFs, a clear
+error message appears when the IMTs in the GMFs are not
+compatible with the IMTs in the fragility/vulnerability file.
 
-When running a scenario calculation using precomputed gmfs, the
-following error message appears when the IMTs in the gmf are not
-compatible with the IMTs in the fragility/vulnerability file
-
-Added a check against duplicated fields in the exposure CSV
+We added a check against duplicated fields in the exposure CSV.
 
 WebAPI/WebUI/QGIS plugin
 -----------------------------------------------------
 
-We fixed some permission bugs with the WebUI when groups are involved.
+We fixed some permission bugs with the WebUI when groups are involved:
+now it is possible to download the outputs of calculations run by
+other people in the same group.
 
-Added more risk outputs to the extract API
+We added more risk outputs to the extract API. In particular now it is
+possible to extract also the losses by asset coming from event based risk
+calculations. Moreover it is possible to aggregate such losses by using
+the usual aggregation interfaces (the web API and the QGIS plugin).
 
 Bug fixes/additional checks
 ------------------------------
@@ -107,6 +128,12 @@ in that case it reports a summary for the full composite source model.
 
 The command `oq dbserver stop` and `oq workers stop` now correctly
 stops the zmq workers (relevant for the experimental zmq mode).
+
+There is a new command `oq importcalc host calc_id username password`
+to import remote calculations into the local engine database. The
+commmand has some limitations: it works only for calculations without
+a parent and only if there are no clashes between the remove calculation ID
+and the local calculation ID. It should be considered an internal command.
 
 IT
 ---
@@ -123,9 +150,28 @@ code in the state experimental/proof-of-concept has been removed: in
 particular the support to ipython and the support to SGE. As it is
 now, they are not used and still a significant maintenance cost.
 
-Made it possible to import remote calculations
+Now we use the port 1907 for the DbServer, when installing the engine
+from the packages. When installing from sources, the port is the number 1906,
+as before. In this aways an installation from packages can coexists with
+an installation from sources out of the box.
 
-Use port 1907 for the DbServer in packages
+Internals
+--------------
+
+Now we log some information about the floating/spinning factors, which
+are relevant for point sources and area sources. This is useful for us since
+in the future we may introduce some optimization to reduce the
+floating/spinning of the ruptures (see the manual section 2.1.1.1
+for an explanation) when not relevant. Regular users can just ignore such logs.
+
+The engine now store more information. In particular in the case of
+event based calculations the `source_info` dataset contains the number
+of events generated by each source. There is an utility
+`utils/reduce_sm` than can read such information and reduce a source
+model by removing all sources not producing events.
+
+As usual a lot of refactoring was done and several engine tests are
+faster than before.
 
 Deprecations/removals
 ---------------------
@@ -134,3 +180,12 @@ The old commands `oq engine --run-hazard` and `oq engine --run-risk`, deprecated
 two years ago, have been finally removed. The only command to use to run
 calculations is `oq engine --run`, without distinction between hazard and
 risk.
+
+The function `openquake.hazardlib.calc.stochastic.stochastic_event_set`
+has been deprecated: you can use the function
+`openquake.hazardlib.calc.stochastic.sample_ruptures` instead.
+
+As usual, exporting the results of a calculation executed with previous
+version of the engine is not supported, except for hazard curves/maps and
+spectra. We recommend first to export all the results you need and then
+to upgrade to the latest version of the engine.
