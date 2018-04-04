@@ -44,13 +44,16 @@ disagg_outputs = Mag_Dist_Eps Mag_Lon_Lat
 
 \begin{itemize}
 
-    \item \Verb+poes_disagg+: mandatory; disaggregation is performed for the intensity
+    \item \Verb+poes_disagg+: disaggregation is performed for the intensity
     measure levels corresponding to the probability of exceedance value(s) provided
     here. The computations use the \texttt{investigation\_time} and the
     \texttt{intensity\_measure\_types\_and\_levels} defined in the
     ``Calculation configuration'' section   (see page~\pageref{sec:calculation_configuration}).
-    Alternatively, the intensity measure level(s) to be disaggregated can be directly defined
-    by specifying \texttt{iml\_disagg} (further described below). Note that a
+    For the \texttt{poes\_disagg} the intensity measure level(s) for the disaggregation are
+    inferred by performing a classical calculation and by inverting the hazard curves.
+
+    \item \Verb+iml_disagg+: the intensity measure level(s) to be disaggregated can be directly defined
+    by specifying \texttt{iml\_disagg}. Note that a
     disaggregation computation requires either \texttt{poes\_disagg} or
     \texttt{iml\_disagg} to be defined, but both cannot be defined at the same time.
 
@@ -91,9 +94,7 @@ specifying the probability of exceedance. An example is shown below:
 iml_disagg = {'PGA': 0.1}
 \end{minted}
 
-Either \texttt{poes\_disagg} or \texttt{iml\_disagg} needs
-to be defined, but both cannot be defined at the same time. If
- \texttt{iml\_disagg} is specified, the user should not include
+If \texttt{iml\_disagg} is specified, the user should not include
  \texttt{intensity\_measure\_types\_and\_levels} in the
 ``Calculation configuration'' section (see page~\pageref{sec:calculation_configuration})
 since it is explicitly given here.
