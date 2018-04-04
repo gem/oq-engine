@@ -13,8 +13,7 @@ sed -i "s/Version X\.Y\.Z/Version $VERSION/" figures/oq_manual_cover.svg
 inkscape -A figures/oq_manual_cover.pdf figures/oq_manual_cover.svg
 
 sed -i "s/#PUBYEAR#/$(date +%Y)/g; s/#PUBMONTH#/$(date +%B)/g" oq-manual.tex
-sed -i "s/version X\.Y\.Z/version $VERSION/" oq-manual.tex
-sed -i "s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/" oq-manual.tex
+sed -i "s/version X\.Y\.Z/version $VERSION/; s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/" oq-manual.tex
 
 (pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
 bibtex oq-manual
