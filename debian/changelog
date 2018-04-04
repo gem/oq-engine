@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the HMTK plotting libraries and added the ability to
+    customize the figure size
   * Fixed bug in the datastore: now we automatically look for the attributes
     in the parent dataset, if the dataset is missing in the child datastore
   * Extended extract_losses_by_asset to the event based risk calculator
