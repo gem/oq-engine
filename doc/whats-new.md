@@ -76,12 +76,23 @@ Hazard disaggregation
 We fixed a small bug in the disaggregation calculation: we were
 reading the source model twice without reason.
 
-We implemented statistical disaggregation outputs.
+We implemented statistical disaggregation outputs. This is implemented in
+a straightforward way: if there are multiple realization and in the `job.ini`
+the parameter `mean_hazard_curves` and/or `quantile_hazard_curves` are set,
+the mean and/or quantiles of the hazard outputs are computed. You can export
+such outputs as usual.
 
-disagg_outputs is now honored.
+The parameter `disagg_outputs` is now honored: for instance if you set
+in the `job.ini` `disagg_outputs = Mag Mag_Dist` then only the outputs
+of kind `Mag` and `Mag_Dist` are computed and stored. If `disagg_outputs`,
+all the available disaggregation outputs are generated.
 
-Disaggregation by source is in.
-
+We introduced, experimentally, a _disaggregation by source_ feature. It is
+restricted to the case of a single realization. In that case, if you set
+`disagg_by_src=true` in the `job.ini`, then an output "Disaggregation by
+Source" is generated. When exported, you get a set of .csv files with fields
+`(source_id, source_name, poe)`. For each source with nonzero contribution
+the contribution to the total probability of exceedence is given.
 
 Hazardlib/HMTK/SMTK
 --------------------
