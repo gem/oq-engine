@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (C) 2014-2017 GEM Foundation
+# packager.sh  Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -589,7 +589,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = futures/oq_distribute = celery/g' /etc/openquake/openquake.cfg
+        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/g' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.
