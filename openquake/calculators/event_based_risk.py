@@ -363,9 +363,6 @@ class EbriskCalculator(base.RiskCalculator):
         if self.precomputed_gmfs:
             return base.RiskCalculator.execute(self)
 
-        if self.oqparam.number_of_logic_tree_samples:
-            logging.warn('The event based risk calculator with sampling is '
-                         'EXPERIMENTAL, UNTESTED and SLOW')
         if self.oqparam.ground_motion_fields:
             logging.warn('To store the ground motion fields change '
                          'calculation_mode = event_based')
