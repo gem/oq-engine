@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,6 @@ import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.baselib.python3compat import decode
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -171,7 +170,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1296)
+        self.assertEqual(nbytes, 1404)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -246,10 +245,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
-        # check job_info is stored
-        job_info = {decode(k) for k in dict(self.calc.datastore['job_info'])}
-        self.assertIn('build_curves_maps.sent', job_info)
-        self.assertIn('build_curves_maps.received', job_info)
         check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -263,6 +258,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
+
+        # this is a case with exposure and region_grid_spacing
+        self.run_calc(case_miriam.__file__, 'job2.ini')
+        sitecol = self.calc.datastore['sitecol']
+        assetcol = self.calc.datastore['assetcol']
+        self.assertEqual(len(sitecol), 15)
+        self.assertGreater(sitecol.vs30.sum(), 0)
+        self.assertEqual(len(assetcol), 548)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):

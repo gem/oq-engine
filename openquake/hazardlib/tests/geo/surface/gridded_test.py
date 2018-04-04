@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -60,10 +60,10 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_strike(self):
-        self.assertRaises(NotImplementedError, self.surf.get_strike)
+        np.testing.assert_equal(np.nan, self.surf.get_strike())
 
     def test_get_dip(self):
-        self.assertRaises(NotImplementedError, self.surf.get_dip)
+        np.testing.assert_equal(np.nan, self.surf.get_dip())
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
