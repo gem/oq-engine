@@ -973,7 +973,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text.strip()
+                    smfname = ' '.join(br.uncertaintyModel.text.split())
                     if smfname:
                         yield smfname
 
