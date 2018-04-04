@@ -223,14 +223,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore, 'events',
-                             int(self.oqparam.investigation_time),
-                             self.oqparam.ses_per_logic_tree_path)
+                             int(self.oqparam.investigation_time))
 
 
 def set_counts(dstore, dsetname):
     """
     :param dstore: a DataStore instance
-    :dsetname: name of dataset with a field `grp_id`
+    :param dsetname: name of dataset with a field `grp_id`
     :returns: a dictionary grp_id > counts
     """
     groups = dstore[dsetname]['grp_id']
@@ -240,19 +239,20 @@ def set_counts(dstore, dsetname):
     return dic
 
 
-def set_random_years(dstore, name, investigation_time, num_ses):
+def set_random_years(dstore, name, investigation_time):
     """
     Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
+
+    :param dstore: a DataStore instance
+    :param name: name of the dataset ('events')
+    :param investigation_time: investigation time
     """
     events = dstore[name].value
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
-        ses_idx = event['ses'] - 1  # starts from 0
-        offset = num_ses * event['sample'] * investigation_time
-        event['year'] = (offset + ses_idx * investigation_time +
-                         year_of[event['eid']])
+        event['year'] = year_of[event['eid']]
     dstore[name] = events
 
 
