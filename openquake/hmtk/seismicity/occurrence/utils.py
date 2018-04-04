@@ -229,7 +229,8 @@ def get_completeness_counts(catalogue, completeness, d_m):
         * n_obs - number of events in completeness period
     """
     mmax_obs = np.max(catalogue.data["magnitude"])
-    catalogue.data["dtime"] = catalogue.get_decimal_time()
+    # thw line below was added by Nick Ackerley but it breaks the tests
+    # catalogue.data["dtime"] = catalogue.get_decimal_time()
     if mmax_obs > np.max(completeness[:, 1]):
         cmag = np.hstack([completeness[:, 1], mmax_obs])
     else:
