@@ -40,14 +40,35 @@ the user cannot accidentally use the wrong  `investigation_time`.
 Hazard
 --------------
 
-We made relocatable the export in case of gmpe_table.
+Running a calculation on a big machine, copying the datastore on a small
+machine (i.e. a laptop) and exporting the results now work even for
+calculations involving GMPE tables i.e. prediction equations implemented
+as numeric table in .hdf5 format. This is relevant for the Canada model
+and others.
 
-Better error message when there are duplicated sites in the CSV
+We have now a better error message when there are duplicated sites in the CSV;
+in particular, the first line with the duplicates is shown, as well as the
+line number.
 
-Fix years on event_based_rupture calculator with sampling
+We extended the event based calculator to work with mutually exclusive
+(mutex) sources: this is relevant for the Japan model and others.
 
+We fixed how the event year is set: now each stochastic event sets
+is considered independent, Before the events sets were considered
+temporally ordered, i.e. in a case with 2 stochastic event sets (SES)
+with an investigation time of 50 years one could have years (0, 4, 13, 27, 49)
+in the first SES and (55, 61, 90) in the second SES: now we would have
+(0, 4, 13, 27, 49) in the first SES and (5, 11, 40) in the second. The
+event in the second SES have no greater years that the events in the first SES.
+This is the correct way of proceeding in the case of time-dependent models,
+which were not supported before.
 
-Event based mutex sources
+The net effect of the change is that the ordering of the event loss
+table can be different than before, since the year was used (solely)
+as an ordering parameter in the exporter.
+
+The setting of the years now also works in case of sampling: this case
+was previously untested.
 
 Hazard disaggregation
 ---------------------
