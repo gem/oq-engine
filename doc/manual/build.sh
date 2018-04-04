@@ -8,9 +8,13 @@ set -e
 CURPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VERSION="$(cat $CURPATH/../../openquake/baselib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 cd $CURPATH
-sed -i "s/Version [0-9]\.[0-9]\.[0-9]/Version $VERSION/" figures/oq_manual_cover.svg
+sed -i "s/Version X\.Y\.Z/Version $VERSION/" figures/oq_manual_cover.svg
 
 inkscape -A figures/oq_manual_cover.pdf figures/oq_manual_cover.svg
+
+sed -i "s/GEM (YEAR)/GEM ($(date +%Y))/" oq-manual.tex
+sed -i "s/version X\.Y\.Z/version $VERSION/" oq-manual.tex
+sed -i "s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/" oq-manual.tex
 
 (pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex
 bibtex oq-manual
