@@ -35,6 +35,8 @@ These configurations however are not tested by our [continuous integration syste
 
 Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
 
+Official support for Ubuntu 18.04 (Bionic) will be added in release 3.1.
+
 ***
 
 ### 32bit support
@@ -66,6 +68,26 @@ On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook
 $ python3 -m venv </path/to/myvenv>
 $ . /path/to/myvenv/bin/activate
 $ pip3 install openquake.engine
+```
+
+***
+
+### Errors upgrading from an old version on Ubuntu
+
+When upgrading from an OpenQuake version **older than 2.9 on to a newer one*** you may encounter an error on **Ubuntu**. Using `apt` to perform the upgrade you may get an error like this:
+
+```bash
+Unpacking oq-python3.5 (3.5.3-1ubuntu0~gem03~xenial01) ...
+dpkg: error processing archive /var/cache/apt/archives/oq-python3.5_3.5.3-1ubuntu0~gem03~xenial01_amd64.deb (--unpack):
+ trying to overwrite '/opt/openquake/bin/easy_install', which is also in package python-oq-libs 1.3.0~dev1496296871+a6bdffb
+```
+
+This issue can be resolved uninstalling OpenQuake first and then making a fresh installation of the latest version:
+
+```bash
+$ sudo apt remove python-oq-.*
+$ sudo rm -Rf /opt/openquake
+$ sudo apt install python3-oq-engine
 ```
 
 ***
