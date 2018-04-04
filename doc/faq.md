@@ -74,7 +74,7 @@ $ pip3 install openquake.engine
 
 ### Errors upgrading from an old version on Ubuntu
 
-When upgrading from an OpenQuake version **older than 2.9 on to a newer one*** you may encounter an error on **Ubuntu**. Using `apt` to perform the upgrade you may get an error like this:
+When upgrading from an OpenQuake version **older than 2.9 to a newer one** you may encounter an error on **Ubuntu**. Using `apt` to perform the upgrade you may get an error like this:
 
 ```bash
 Unpacking oq-python3.5 (3.5.3-1ubuntu0~gem03~xenial01) ...
