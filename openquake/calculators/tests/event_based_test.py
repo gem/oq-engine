@@ -308,7 +308,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
         events = extract(self.calc.datastore, 'events')
         years = numpy.unique(events['year'])
-        numpy.testing.assert_equal(years, [328, 587, 692, 830, 898, 989])
+        numpy.testing.assert_equal(years, [1])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
