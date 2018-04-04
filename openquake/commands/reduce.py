@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,6 +98,7 @@ def reduce(fname, reduction_factor):
     with open(fname, 'wb') as f:
         nrml.write([model], f, xmlns=node['xmlns'])
     print('Extracted %d nodes out of %d' % (num_nodes, total))
+
 
 reduce.arg('fname', 'path to the model file')
 reduce.arg('reduction_factor', 'reduction factor in the range 0..1',

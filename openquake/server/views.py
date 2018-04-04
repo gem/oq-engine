@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,14 +42,15 @@ except ImportError:
     from urllib import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
-    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
+    HttpResponseForbidden)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle, encode
+from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -298,6 +299,8 @@ def calc_info(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
+        if not utils.user_has_permission(request, info['user_name']):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
@@ -316,10 +319,9 @@ def calc_list(request, id=None):
     """
     base_url = _get_base_url(request)
 
-    user = utils.get_user_data(request)
-    allowed_users = user['group_members'] or [user['name']]
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           allowed_users, user['acl_on'], id)
+                           utils.get_valid_users(request),
+                           utils.get_acl_on(request), id)
 
     response_data = []
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
@@ -363,12 +365,9 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    user = utils.get_user_data(request)
-    info = logs.dbcmd('calc_info', calc_id)
-    allowed_users = user['group_members'] or [user['name']]
-    if user['acl_on'] and info['user_name'] not in allowed_users:
+    if not utils.user_has_permission(request, job.user_name):
         message = {'error': ('User %s has no permission to abort job %s' %
-                             (info['user_name'], job.id))}
+                             (job.user_name, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
@@ -394,7 +393,8 @@ def calc_remove(request, calc_id):
     """
     Remove the calculation id
     """
-    user = utils.get_user_data(request)['name']
+    # Only the owner can remove a job
+    user = utils.get_user(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
@@ -482,9 +482,9 @@ def run_calc(request):
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
-    user = utils.get_user_data(request)
+    user = utils.get_user(request)
     try:
-        job_id, pid = submit_job(inifiles[0], user['name'], hazard_job_id)
+        job_id, pid = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -540,15 +540,12 @@ def calc_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
-    user = utils.get_user_data(request)
-
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        allowed_users = user['group_members'] or [user['name']]
-        if user['acl_on'] and info['user_name'] not in allowed_users:
-            return HttpResponseNotFound()
+        if not utils.user_has_permission(request, info['user_name']):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
@@ -620,8 +617,10 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, job_status, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
+        if not utils.user_has_permission(request, job_user):
+            return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
@@ -672,11 +671,11 @@ def extract(request, calc_id, what):
     Wrapper over the `oq extract` command. If setting.LOCKDOWN is true
     only calculations owned by the current user can be retrieved.
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(calc_id), username)
+    job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     # read the data and save them on a temporary .pik file
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -692,6 +691,10 @@ def extract(request, calc_id, what):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
+        for key, val in attrs.items():
+            if isinstance(val, str):
+                # without this oq extract would fail
+                attrs[key] = numpy.array(val.encode('utf-8'))
         numpy.savez_compressed(fname, array=array, **attrs)
 
     # stream the data back
@@ -717,11 +720,11 @@ def get_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(job_id), username)
+    job = logs.dbcmd('get_job', int(job_id))
     if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
@@ -737,11 +740,12 @@ def get_oqparam(request, job_id):
     """
     Return the calculation parameters as a JSON
     """
-    user = utils.get_user_data(request)
-    username = user['name'] if user['acl_on'] else None
-    job = logs.dbcmd('get_job', int(job_id), username)
+    job = logs.dbcmd('get_job', int(job_id))
     if job is None:
         return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
     return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)

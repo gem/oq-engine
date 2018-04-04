@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,8 +24,8 @@ from openquake.server import views
 
 urlpatterns = [
     url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
-    url(r'^engine_version$', views.get_engine_version),
-    url(r'^engine_latest_version$', views.get_engine_latest_version),
+    url(r'^v1/engine_version$', views.get_engine_version),
+    url(r'^v1/engine_latest_version$', views.get_engine_latest_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),

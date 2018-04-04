@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -253,7 +253,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 17)
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 29)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
@@ -322,4 +322,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_mutex(self):
-        self.run_calc(mutex.__file__, 'job.ini')
+        out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
+        [fname] = out['ruptures', 'xml']
+        self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
