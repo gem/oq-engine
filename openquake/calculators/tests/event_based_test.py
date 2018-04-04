@@ -36,7 +36,7 @@ from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_12, case_13, case_17, case_18, mutex)
+    case_8, case_9, case_10, case_12, case_13, case_17, case_18, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -256,6 +256,14 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
         self.assertEqual(len(self.calc.datastore['gmf_data/data']), 29)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_10(self):
+        # this is a case with multiple files in the smlt uncertaintyModel
+        # and with sampling
+        self.run_calc(case_10.__file__, 'job.ini')
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
