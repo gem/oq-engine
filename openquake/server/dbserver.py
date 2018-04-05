@@ -16,16 +16,16 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import time
-import os.path
 import sqlite3
 import logging
 import threading
 import subprocess
 
 from openquake.baselib import config, sap, zeromq as z, workerpool as w
-from openquake.baselib.general import socket_ready
+from openquake.baselib.general import socket_ready, detach_process
 from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
 from openquake.server.db import actions
@@ -213,4 +213,9 @@ run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
+    if hasattr(os, 'fork') and not config.dbserver.multi_user:
+        # needed for https://github.com/gem/oq-engine/issues/3211
+        # but only if multi_user = False, otherwise init/supervisor
+        # will loose control of the process
+        detach_process()
     run_server.callfunc()

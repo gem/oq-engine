@@ -3,11 +3,11 @@ Event Based Risk QA Test 2
 
 ============== ===================
 checksum32     3,754,416,453      
-date           2018-01-11T04:29:27
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:02:42
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 3, num_imts = 3
+num_sites = 3, num_levels = 15
 
 Parameters
 ----------
@@ -75,19 +75,19 @@ source_model.xml 0      Active Shallow Crust 18           18
 
 Informational data
 ------------------
-========================= =========================================================================
-compute_ruptures.received max_per_task 12.05 KB, tot 12.05 KB                                      
-compute_ruptures.sent     sources 2.17 KB, src_filter 830 B, param 818 B, monitor 323 B, gsims 98 B
-hazard.input_weight       1.8000000000000003                                                       
-hazard.n_imts             3                                                                        
-hazard.n_levels           15                                                                       
-hazard.n_realizations     1                                                                        
-hazard.n_sites            3                                                                        
-hazard.n_sources          3                                                                        
-hazard.output_weight      45.0                                                                     
-hostname                  tstation.gem.lan                                                         
-require_epsilons          True                                                                     
-========================= =========================================================================
+========================= ==========================================================================
+compute_ruptures.received tot 12.07 KB, max_per_task 12.07 KB                                       
+compute_ruptures.sent     sources 2.17 KB, src_filter 830 B, param 818 B, monitor 323 B, gsims 127 B
+hazard.input_weight       1.8000000000000003                                                        
+hazard.n_imts             3                                                                         
+hazard.n_levels           15                                                                        
+hazard.n_realizations     1                                                                         
+hazard.n_sites            3                                                                         
+hazard.n_sources          3                                                                         
+hazard.output_weight      45.0                                                                      
+hostname                  tstation.gem.lan                                                          
+require_epsilons          True                                                                      
+========================= ==========================================================================
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -104,9 +104,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC+      1.000 NaN    1   1   1         1         
-RM       1.000 0.0    1   1   2         2         
-W/1      1.000 NaN    1   1   1         1         
+1        1.000 0.0    1   1   2         2         
+2        1.000 NaN    1   1   1         1         
+3        1.000 NaN    1   1   1         1         
 *ALL*    1.333 0.577  1   2   3         4         
 ======== ===== ====== === === ========= ==========
 
@@ -115,9 +115,9 @@ Slowest sources
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-1         PointSource  6            0.0       1         0        
 3         PointSource  6            0.0       1         0        
 2         PointSource  6            0.0       1         0        
+1         PointSource  6            0.0       1         0        
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.014 NaN    0.014 0.014 1        
+compute_ruptures   0.029 NaN    0.029 0.029 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,14 +144,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.028     0.0       1     
-total compute_ruptures         0.014     0.738     1     
-reading exposure               0.008     0.0       1     
-making contexts                0.006     0.0       9     
-assoc_assets_sites             0.006     0.0       1     
-store source_info              0.003     0.0       1     
+managing sources               0.044     0.0       1     
+total compute_ruptures         0.029     0.871     1     
+making contexts                0.012     0.0       9     
+reading exposure               0.004     0.0       1     
+store source_info              0.004     0.0       1     
 saving ruptures                0.003     0.0       1     
 reading composite source model 0.003     0.0       1     
-setting event years            0.001     0.0       1     
-reading site collection        5.889E-05 0.0       1     
+assoc_assets_sites             0.002     0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        5.674E-05 0.0       1     
 ============================== ========= ========= ======

@@ -56,6 +56,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     description = valid.Param(valid.utf8_not_empty)
+    disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
@@ -178,8 +179,14 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
+        self.check_source_model()
+        if self.hazard_precomputed():
+            self.check_missing('site_model', 'error')
+            self.check_missing('gsim_logic_tree', 'error')
+            self.check_missing('source_model_logic_tree', 'error')
+
         # check the gsim_logic_tree
-        if 'gsim_logic_tree' in self.inputs:
+        if self.inputs.get('gsim_logic_tree'):
             if self.gsim:
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
                                   ' must be no `gsim` key' % job_ini)
@@ -201,7 +208,16 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
-        self.check_source_model()
+        # checks for hazard outputs
+        if not self.hazard_stats():
+            if self.uniform_hazard_spectra:
+                raise InvalidFile(
+                    '%(job_ini)s: uniform_hazard_spectra=true is inconsistent '
+                    'with mean_hazard_curves=false' % self.inputs)
+            elif self.hazard_maps:
+                raise InvalidFile(
+                    '%(job_ini)s: hazard_maps=true is inconsistent '
+                    'with mean_hazard_curves=false' % self.inputs)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -502,7 +518,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if 'source_model_logic_tree' not in self.inputs:
+        if (not self.inputs.get('source_model_logic_tree') or not
+                self.inputs.get('gsim_logic_tree')):
             return True  # don't apply validation
         gsim_lt = self.inputs['gsim_logic_tree']
         trts = set(self.maximum_distance)
@@ -635,3 +652,23 @@ class OqParam(valid.ParamSet):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
+
+    def check_missing(self, param, action):
+        """
+        Make sure the given parameter is missing in the job.ini file
+        """
+        assert action in ('warn', 'error'), action
+        if self.inputs.get(param):
+            msg = 'Please remove %s_file from %s, it makes no sense in %s' % (
+                param, self.inputs['job_ini'], self.calculation_mode)
+            if action == 'error':
+                raise InvalidFile(msg)
+            else:
+                logging.warn(msg)
+
+    def hazard_precomputed(self):
+        """
+        :returns: True if the hazard is precomputed
+        """
+        return (self.calculation_mode == 'gmf_ebrisk' or 'gmfs' in self.inputs
+                or 'hazard_curves' in self.inputs)

@@ -172,11 +172,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1272)
+        self.assertEqual(nbytes, 1296)
 
+        # test postprocessing
+        self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='csv', hazard_calculation_id=str(hc_id))
+                      exports='csv', hazard_calculation_id=str(hc_id),
+                      concurrent_tasks='0')  # avoid hdf5 fork issues
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -231,8 +234,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                       fname, delta=1E-5)
 
         # extract curves by tag
-        tags = ['taxonomy=tax1', 'state=01', 'cresta=0.11']
-        a = extract(self.calc.datastore, 'aggcurves/structural', *tags)
+        tags = 'taxonomy=tax1&state=01&cresta=0.11'
+        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))

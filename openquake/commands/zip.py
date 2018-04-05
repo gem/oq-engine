@@ -21,6 +21,7 @@ import sys
 import os.path
 import logging
 from openquake.baselib import sap, general
+from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
 
@@ -48,6 +49,24 @@ def zip(job_ini, archive_zip):
                 table = getattr(gsim, 'GMPE_TABLE', None)
                 if table:
                     files.add(table)
+
+    # collect exposure.csv, if any
+    exposure_xml = oq.inputs.get('exposure')
+    if exposure_xml:
+        dname = os.path.dirname(exposure_xml)
+        expo = nrml.read(exposure_xml, stop='asset')[0]
+        if not expo.assets:
+            exposure_csv = (~expo.assets).strip()
+            for csv in exposure_csv.split():
+                if csv and os.path.exists(os.path.join(dname, csv)):
+                    files.add(os.path.join(dname, csv))
+
+    # collection .hdf5 UCERF file, if any
+    if oq.calculation_mode.startswith('ucerf_'):
+        sm = nrml.read(oq.inputs['source_model'])
+        fname = sm.sourceModel.UCERFSource['filename']
+        f = os.path.join(os.path.dirname(oq.inputs['source_model']), fname)
+        files.add(os.path.normpath(f))
 
     # collect all other files
     for key in oq.inputs:

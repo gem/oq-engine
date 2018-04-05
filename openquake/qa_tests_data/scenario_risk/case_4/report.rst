@@ -3,11 +3,11 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     2,254,713,843      
-date           2018-01-11T04:31:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:04:44
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 20, num_imts = 1
+num_sites = 20, num_levels = 8
 
 Parameters
 ----------
@@ -71,24 +71,24 @@ deductibile     relative
 insurance_limit relative
 =============== ========
 
-========================== ===== ====== === === ========= ==========
-taxonomy                   mean  stddev min max num_sites num_assets
-Adobe                      1.000 0.0    1   1   3         3         
-Stone-Masonry              1.000 0.0    1   1   4         4         
-Unreinforced-Brick-Masonry 1.000 0.0    1   1   5         5         
-Wood                       1.000 0.0    1   1   8         8         
-*ALL*                      1.000 0.0    1   1   20        20        
-========================== ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.000 0.0    1   1   8         8         
+2        1.000 0.0    1   1   3         3         
+3        1.000 0.0    1   1   4         4         
+4        1.000 0.0    1   1   5         5         
+*ALL*    1.000 0.0    1   1   20        20        
+======== ===== ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.039     0.0       1     
+building riskinputs     0.040     0.0       1     
 saving gmfs             0.012     0.0       1     
-reading exposure        0.009     0.0       1     
+reading exposure        0.006     0.0       1     
 computing gmfs          0.001     0.0       1     
-building epsilons       5.128E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
+building epsilons       5.612E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

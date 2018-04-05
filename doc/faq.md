@@ -65,12 +65,6 @@ To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profi
 
 ***
 
-### Swap partitions
-
-Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
-
-***
-
 ### OpenQuake Hazardlib errors
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
@@ -168,6 +162,22 @@ error: [Errno 104] Connection reset by peer
 ```
 
 This means that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
+
+***
+
+### Swap partitions
+
+Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
+
+***
+
+### System running out of disk space
+
+The OpenQuake Engine may require lot of disk space for the raw results data (`hdf5` files stored in `/home/<user>/oqdata`) and the temporary files used to either generated outputs or load input files via the `API`. On certain cloud configurations the amount of space allocated to the root fs (`/`) is fairly limited and extra 'data' volumes needs to be attached. To make the Engine use these volumes for `oqdata` and the _temporary_ storage you must change the `openquake.cfg` configuration; assuming `/mnt/ext_volume` as the mount point of the extra 'data' volume, it must be changed as follow:
+
+- `shared_dir` must be set to `/mnt/ext_volume`
+- A `tmp` dir must be created in `/mnt/ext_volume`
+- `custom_tmp` must be set to `/mnt/ext_volume/tmp` (the directory must exist)
 
 ***
 

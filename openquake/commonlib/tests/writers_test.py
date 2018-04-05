@@ -20,6 +20,7 @@ import os
 import unittest
 import tempfile
 from io import BytesIO
+import psutil
 from openquake.baselib.performance import memory_info
 from openquake.commonlib.writers import write_csv
 from openquake.baselib.node import Node, tostring, StreamingXMLWriter
@@ -71,10 +72,6 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     def test_memory(self):
         # make sure the memory occupation is low
         # (to protect against bad refactoring of the XMLWriter)
-        try:
-            import psutil
-        except ImportError:
-            raise unittest.SkipTest('psutil not installed')
         proc = psutil.Process(os.getpid())
         try:
             rss = memory_info(proc).rss

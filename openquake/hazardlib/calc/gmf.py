@@ -51,8 +51,8 @@ class GmfComputer(object):
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
 
-    :param :class:`openquake.hazardlib.site.SiteCollection` sites:
-        Sites of interest to calculate GMFs.
+    :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
+        a complete SiteCollection
 
     :param imts:
         a sorted list of Intensity Measure Type strings
@@ -77,9 +77,9 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sites, imts, cmaker,
+    def __init__(self, rupture, sitecol, imts, cmaker,
                  truncation_level=None, correlation_model=None):
-        if len(sites) == 0:
+        if len(sitecol) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
             raise ValueError('No IMTs')
@@ -97,10 +97,10 @@ class GmfComputer(object):
         try:
             self.ctx = rupture.ctx
         except AttributeError:
-            self.ctx = cmaker.make_contexts(sites, rupture)
+            self.ctx = cmaker.make_contexts(sitecol, rupture)
         self.sids = self.ctx[0].sids
-        if correlation_model:
-            self.sites = sites
+        if correlation_model:  # store the filtered sitecol
+            self.sites = sitecol.filtered(self.sids, sitecol.array)
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -132,6 +132,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         sctx, rctx, dctx = self.ctx
+        dctx = dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             assert self.correlation_model is None
             mean, _stddevs = gsim.get_mean_and_stddevs(
@@ -172,7 +173,6 @@ class GmfComputer(object):
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
-
             intra_residual = stddev_intra * distribution.rvs(
                 size=(len(self.sids), num_events))
 

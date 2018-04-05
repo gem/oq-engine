@@ -104,6 +104,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
+            self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             self.before_export()  # save 'realizations' dataset
