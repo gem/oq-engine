@@ -802,6 +802,14 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
+    def get_nonparametric_sources(self):
+        """
+        :returns: list of non parametric sources in the composite source model
+        """
+        return [src for sm in self.source_models
+                for src_group in sm.src_groups
+                for src in src_group if hasattr(src, 'data')]
+
     def check_dupl_sources(self):  # used in print_csm_info
         """
         Extracts duplicated sources, i.e. sources with the same source_id in
@@ -965,7 +973,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text.strip()
+                    smfname = ' '.join(br.uncertaintyModel.text.split())
                     if smfname:
                         yield smfname
 
