@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -60,7 +60,7 @@ class MeshCreationTestCase(_BaseMeshTestCase):
         self.assertEqual(len(mesh), 1)
 
     def test_wrong_arguments(self):
-        self.assertRaises(AssertionError, self._make_mesh, [1, 2], [2, 3])
+        self.assertRaises(AttributeError, self._make_mesh, [1, 2], [2, 3])
         self.assertRaises(AssertionError, self._make_mesh,
                           numpy.array([1, 2]), numpy.array([2, 3, 4]))
         self.assertRaises(AssertionError, self._make_mesh,
