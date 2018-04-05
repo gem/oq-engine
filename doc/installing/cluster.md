@@ -182,6 +182,7 @@ The following ports must be open on the **master node**:
 
 * 5672 for RabbitMQ
 * 1907 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
+* 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The **worker nodes** must be able to connect to the master on port 5672, and port 1907.
