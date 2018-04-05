@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -333,7 +333,7 @@ def view_job_info(token, dstore):
         if task not in ('task_sources', 'source_data'):
             dset = dstore['task_info/' + task]
             argnames = dset.attrs['argnames'].split()
-            totsent = dset['sent'].sum(axis=0)
+            totsent = dset.attrs['sent']
             sent = ['%s=%s' % (a, humansize(s))
                     for s, a in sorted(zip(totsent, argnames), reverse=True)]
             recv = dset['received'].sum()
@@ -632,6 +632,24 @@ def view_task_classical(token, dstore):
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
+
+
+@view.add('task_risk')
+def view_task_risk(token, dstore):
+    """
+    Display info about a given risk task. Here are a few examples of usage::
+
+     $ oq show task_risk:0  # the fastest task
+     $ oq show task_risk:-1  # the slowest task
+    """
+    [key] = dstore['task_info']
+    data = dstore['task_info/' + key].value
+    data.sort(order='duration')
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
+    res = 'taskno=%d, weight=%d, duration=%d s' % (
+        taskno, rec['weight'], rec['duration'])
+    return res
 
 
 @view.add('hmap')

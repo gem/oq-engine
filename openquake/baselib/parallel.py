@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -393,15 +393,11 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        if sent:  # can be empty if Starmap was applied to the empty list
-            nargs = len(sent[0])
-            self.task_data_dt = numpy.dtype(
-                [('taskno', numpy.uint32), ('weight', numpy.float32),
-                 ('duration', numpy.float32),
-                 ('sent', (numpy.int64, nargs)), ('received', numpy.int64)])
-            totsent = sum(s.sum() for s in sent)
-            self.progress('Sent %s of data in %s task(s)',
-                          humansize(totsent), num_tasks)
+        self.task_data_dt = numpy.dtype(
+            [('taskno', numpy.uint32), ('weight', numpy.float32),
+             ('duration', numpy.float32), ('received', numpy.int64)])
+        self.progress('Sent %s of data in %s task(s)',
+                      humansize(sent.sum()), num_tasks)
 
     def _log_percent(self):
         yield 0
@@ -445,11 +441,10 @@ class IterResult(object):
     def save_task_info(self, mon):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
-            sent = self.sent[mon.task_no - 1]
-            tup = (mon.task_no, mon.weight, duration, sent, self.received[-1])
+            tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
-                         argnames=self.argnames)
+                         argnames=self.argnames, sent=self.sent)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -562,7 +557,6 @@ class Starmap(object):
         else:
             self.progress = logging.info
         self.distribute = distribute or oq_distribute(task_func)
-        self.sent = []
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
             self.argnames = inspect.getargspec(task_func).args
@@ -572,6 +566,7 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.host, config.zworkers.receiver_ports)
+        self.sent = numpy.zeros(len(self.argnames))
 
     @property
     def num_tasks(self):
@@ -600,9 +595,7 @@ class Starmap(object):
                 self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
-                self.sent.append(numpy.array([len(p) for p in args]))
-            else:
-                self.sent.append(numpy.zeros(len(args)))
+                self.sent += numpy.array([len(p) for p in args])
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', self.num_tasks,
                               self.name)
