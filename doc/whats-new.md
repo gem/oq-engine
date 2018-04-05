@@ -4,8 +4,8 @@ Release notes for the OpenQuake Engine, version 3.0
 This release drops support for Python 2.7. From now on, the engine
 requires Python 3.5+ to run. Apart from this change, several new
 features were implemented, like the support for time dependent source
-models, the support for CSV exposures, enhancements to the
-disaggregation calculator, to the task distribution and a lot more.
+models, automatic gridding of the exposure, enhancements to the
+disaggregation calculator, improvements to the task distribution and a lot more.
 Over 110 issues were closed. For the complete list of changes, please
 see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.0/debian/changelog .
@@ -15,9 +15,9 @@ Management of the source model
 
 As of engine 3.0, the sources are split upfront, before starting to
 send them to the workers. This is a simplification of the previous
-logic (the sources were split while sending them) which became
-possible after fixing some performance bug in the splitting procedure,
-which is now a lot faster for fault sources.
+logic which became
+possible after fixing some performance bug in the splitting procedure
+for fault sources.
 
 Moreover, an improvement on the splitting procedure for complex fault
 sources resulted in a substantial improvement of the parallelization
@@ -40,14 +40,15 @@ likely become mandatory in the future). The `investigation_time` tag is used
 to check the `investigation_time` parameter in the `job.ini` file, so that
 the user cannot accidentally use the wrong investigation time.
 
+Now we log some information about the floating/spinning factors, which
+are relevant for point sources and area sources (see the manual
+section 2.1.1.1 for an explanation). This is useful for us since in
+the future we may introduce some optimization to reduce the
+floating/spinning of the ruptures when not relevant. Users can
+simply ignore such logs.
+
 Hazard
 --------------
-
-Running a calculation on a big machine, copying the datastore on a small
-machine (i.e. a laptop) and exporting the results now works even for
-calculations involving GMPE tables i.e. prediction equations implemented
-as numeric tables in .hdf5 format. This is relevant for the Canada model
-and others.
 
 We extended the event based calculator to work with mutually exclusive
 (mutex) sources: this is relevant for the Japan model and others.
@@ -78,16 +79,18 @@ Hazard disaggregation
 We fixed a small bug in the disaggregation calculation: we were
 reading the source model twice without reason.
 
-We implemented statistical disaggregation outputs. This is implemented in
-a straightforward way: if there are multiple realization and in the `job.ini`
-the parameter `mean_hazard_curves` and/or `quantile_hazard_curves` are set,
-the mean and/or quantiles of the hazard outputs are computed. You can export
-such outputs as usual.
+We implemented statistical disaggregation outputs. This is implemented
+in a straightforward way: if there are multiple realizations and in
+the `job.ini` file the parameters `mean_hazard_curves` and/or
+`quantile_hazard_curves` are set, then the mean and/or quantiles of the
+hazard outputs are computed. You can export such outputs as usual.
 
 The parameter `disagg_outputs` is now honored: for instance if you set
-in the `job.ini` `disagg_outputs = Mag Mag_Dist` then only the outputs
-of kind `Mag` and `Mag_Dist` are computed and stored. If `disagg_outputs`,
-all the available disaggregation outputs are generated.
+in the `job.ini` `disagg_outputs = Mag Mag_Dist`, then only the
+outputs of kind `Mag` and `Mag_Dist` are computed and stored. Before
+all of them were computed and stored and the parameter affected only
+the export. If `disagg_outputs` is not given, all of the available
+disaggregation outputs are generated, as in the paste.
 
 We introduced, experimentally, a _disaggregation by source_ feature. It is
 restricted to the case of a single realization. In that case, if you set
@@ -99,19 +102,19 @@ the contribution to the total probability of exceedence is given.
 Hazardlib/HMTK/SMTK
 --------------------
 
-The `sourcewriter` in hazardlib now checks that the sum of the
-probabilities of occurrence is 1, when saving nonparametric sources.
-This avoids errors were building time-dependent models.
-
 We optimized the Yu et al. (2013) GMPEs for China which is now several time
 faster than before.
 
-Graeme Weatherill ported to Python 3.5 the [Strong Motion Toolkit]
+[Graeme Weatherill](https://github.com/g-weatherill) ported to Python 3.5 the [Strong Motion Toolkit]
 (https://github.com/GEMScienceTools/gmpe-smtk), which depends on hazardlib
 and is a part of the OpenQuake suite.
 
-Nick Ackerley fixed a bug in the HMTK plotting libraries and added the
-ability to customize the figure size.
+[Nick Ackerley](https://github.com/nackerley) fixed a bug in the HMTK
+plotting libraries and added the ability to customize the figure size.
+
+The `sourcewriter` in hazardlib now checks that the sum of the
+probabilities of occurrence is 1, when saving nonparametric sources.
+This avoids errors were building time-dependent models.
 
 Risk
 -----
@@ -132,11 +135,18 @@ will get a warning. If such tag is present, but the listed occupancy
 periods are inconsistent with the ones found in the assets, a clear error
 is raised.
 
+The ability to import CSV exposures has been extended to the cases
+when there are occupancy periods, which are managed simply as additional
+fields. Insurance parameters (insured_losses/deductibles) are still
+not supported in CSV format, so the XML format is still needed for
+that case. We plan to keep working on that in the future.
+
+
 We extended the engine logic to read the sites from the hazard
 curves, if available. Moreover we changed the logic to extract the sites:
 now the sites are extracted from the exposure in precedence over the site model,
-if the sites are not provided explicitly via a sites.csv file, via
-the hazard curves or via a region.
+if the sites are not provided explicitly (via a sites.csv file,
+the hazard curves or a region).
 
 This was necessary because of a new feature,
 i.e. automatic gridding of the exposure. If your `job.ini` file
@@ -178,6 +188,12 @@ web API and the QGIS plugin).
 
 Bug fixes/additional checks
 ------------------------------
+
+Running a calculation on a big machine, copying the datastore on a small
+machine (i.e. a laptop) and exporting the results now works even for
+calculations involving GMPE tables i.e. prediction equations implemented
+as numeric tables in .hdf5 format. This is relevant for the Canada model
+and others.
 
 We have now a better error message when there are duplicated sites in the CSV;
 in particular, the first line with the duplicates is shown, as well as the
@@ -232,26 +248,20 @@ Internals
 
 A huge improvement has been made in cluster situations: now the results
 are returned via [ZeroMQ](http://zeromq.org/) and not via rabbimq.
-This allows to bypass the limit of rabbitmq and larger computations can 
+This allows us to bypass the limit of rabbitmq and large computations can 
 be run without running out of disk space in the mnesia directory.
-Hundreds of thousands of tasks can be generated without issue, a feat
+Hundreds of thousands of tasks can be generated without issues, a feat
 previously impossible.
 
-Task distribution code has been simplified:
-code in the state experimental/proof-of-concept has been removed: in
-particular the support to ipython and the support to SGE. As it is
-now, they are not used and still a significant maintenance cost.
+The task distribution code has been simplified and
+code in the experimental/proof-of-concept state has been removed: in
+particular the support to ipython and the support to SGE have disappeared.
+As it is now, they were nit used and they were a significant maintenance cost.
 
 Now we use the port 1907 for the DbServer, when installing the engine
 from the packages. When installing from sources, the port is the number 1906,
-as before. In this aways an installation from packages can coexists with
+as before. In this way an installation from packages can coexists with
 an installation from sources out of the box.
-
-Now we log some information about the floating/spinning factors, which
-are relevant for point sources and area sources. This is useful for us since
-in the future we may introduce some optimization to reduce the
-floating/spinning of the ruptures (see the manual section 2.1.1.1
-for an explanation) when not relevant. Regular users can just ignore such logs.
 
 The engine now stores more information. In particular in the case of
 event based calculations the `source_info` dataset contains the number
@@ -260,13 +270,13 @@ of events generated by each source. Moreover, there is an utility
 model by removing all sources not producing events.
 
 As usual a lot of refactoring was done and several engine tests are
-faster than before. Also the event based risk demo is a lot faster than
-before. 
+faster than before. Also the event based risk demo is several times
+faster than before.
 
 Deprecations/removals
 ---------------------
 
-The engine does not work anymore with Python 2. hazardlib and the
+The engine does not work anymore with Python 2. Hazardlib and the
 Hazard Modeller Toolkit, included in the engine, still work with
 Python 2 but this is only incidental: they may stop working at
 any moment without warning, since we are not testing anymore the
