@@ -269,44 +269,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         writer.serialize(self.data)
         check_equal(__file__, 'expected_hazard_curves.xml', path)
 
-    def test_serialize_geojson(self):
-        expected = {
-            u'features': [
-                {u'geometry': {u'coordinates': [38.0, -20.1],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.1, 0.2, 0.3]},
-                 u'type': u'Feature'},
-                {u'geometry': {u'coordinates': [38.1, -20.2],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.4, 0.5, 0.6]},
-                 u'type': u'Feature'},
-                {u'geometry': {u'coordinates': [38.2, -20.3],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.7, 0.8, 0.8]},
-                 u'type': u'Feature'}],
-            u'oqmetadata': {u'IMT': u'SA',
-                            u'gsimTreePath': u'b1_b4_b5',
-                            u'investigationTime': u'5.000000000E+01',
-                            u'IMLs': [0.005, 0.007, 0.0098],
-                            u'saDamping': u'5.000000000E+00',
-                            u'saPeriod': u'2.500000000E-02',
-                            u'sourceModelTreePath': u'b1_b2_b4'},
-            u'oqnrmlversion': u'0.4',
-            u'oqtype': u'HazardCurve',
-            u'type': u'FeatureCollection'
-        }
-
-        metadata = dict(
-            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
-            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-            gsimlt_path='b1_b4_b5'
-        )
-        writer = writers.HazardCurveGeoJSONWriter(path, **metadata)
-        writer.serialize(self.data)
-
-        actual = json.load(open(path))
-        self.assertEqual(expected, actual)
-
     def test_serialize_quantile(self):
         # Test serialization of qunatile curves.
         metadata = dict(
@@ -317,44 +279,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         writer = writers.HazardCurveXMLWriter(path, **metadata)
         writer.serialize(self.data)
         check_equal(__file__, 'expected_quantile_curves.xml', path)
-
-    def test_serialize_quantile_geojson(self):
-        expected = {
-            u'features': [
-                {u'geometry': {u'coordinates': [38.0, -20.1],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.1, 0.2, 0.3]},
-                 u'type': u'Feature'},
-                {u'geometry': {u'coordinates': [38.1, -20.2],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.4, 0.5, 0.6]},
-                 u'type': u'Feature'},
-                {u'geometry': {u'coordinates': [38.2, -20.3],
-                               u'type': u'Point'},
-                 u'properties': {u'poEs': [0.7, 0.8, 0.8]},
-                 u'type': u'Feature'}],
-            u'oqmetadata': {u'IMT': u'SA',
-                            u'investigationTime': u'5.000000000E+01',
-                            u'IMLs': [0.005, 0.007, 0.0098],
-                            u'saDamping': u'5.000000000E+00',
-                            u'saPeriod': u'2.500000000E-02',
-                            u'statistics': u'quantile',
-                            u'quantileValue': u'1.500000000E-01'},
-            u'oqnrmlversion': u'0.4',
-            u'oqtype': u'HazardCurve',
-            u'type': u'FeatureCollection'
-        }
-
-        metadata = dict(
-            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
-            sa_period=0.025, sa_damping=5.0, statistics='quantile',
-            quantile_value=0.15
-        )
-        writer = writers.HazardCurveGeoJSONWriter(path, **metadata)
-        writer.serialize(self.data)
-
-        actual = json.load(open(path))
-        self.assertEqual(expected, actual)
 
 
 class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
@@ -413,50 +337,6 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
         writer.serialize(self.data)
         check_equal(__file__, 'expected_hazard_map.xml',  path)
 
-    def test_serialize_geojson(self):
-        expected = {
-            'type': 'FeatureCollection',
-            'oqnrmlversion': '0.4',
-            'oqtype': 'HazardMap',
-            'oqmetadata': {
-                'sourceModelTreePath': 'b1_b2_b4',
-                'gsimTreePath': 'b1_b4_b5',
-                'IMT': 'SA',
-                'saPeriod': '0.025',
-                'saDamping': '5.0',
-                'investigationTime': '50.0',
-                'poE': '0.1',
-            },
-            'features': [
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
-                 'properties': {'iml': 0.01},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
-                 'properties': {'iml': 0.02},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
-                 'properties': {'iml': 0.03},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
-                 'properties': {'iml': 0.04},
-                 },
-            ],
-        }
-
-        metadata = dict(
-            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
-            sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
-        )
-        writer = writers.HazardMapGeoJSONWriter(path, **metadata)
-        writer.serialize(self.data)
-
-        actual = json.load(open(path))
-        self.assertEqual(expected, actual)
-
     def test_serialize_quantile_xml(self):
         metadata = dict(
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
@@ -466,50 +346,6 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
         writer.serialize(self.data)
 
         check_equal(__file__, 'expected_quantile.xml', path)
-
-    def test_serialize_quantile_geojson(self):
-        expected = {
-            'type': 'FeatureCollection',
-            'oqnrmlversion': '0.4',
-            'oqtype': 'HazardMap',
-            'oqmetadata': {
-                'statistics': 'quantile',
-                'quantileValue': '0.85',
-                'IMT': 'SA',
-                'saPeriod': '0.025',
-                'saDamping': '5.0',
-                'investigationTime': '50.0',
-                'poE': '0.1',
-            },
-            'features': [
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
-                 'properties': {'iml': 0.01},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
-                 'properties': {'iml': 0.02},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
-                 'properties': {'iml': 0.03},
-                 },
-                {'type': 'Feature',
-                 'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
-                 'properties': {'iml': 0.04},
-                 },
-            ],
-        }
-
-        metadata = dict(
-            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
-            sa_damping=5.0, statistics='quantile', quantile_value=0.85
-        )
-        writer = writers.HazardMapGeoJSONWriter(path, **metadata)
-        writer.serialize(self.data)
-
-        actual = json.load(open(path))
-        self.assertEqual(expected, actual)
 
 
 class DisaggXMLWriterTestCase(HazardWriterTestCase):

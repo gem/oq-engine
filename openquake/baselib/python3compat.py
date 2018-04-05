@@ -34,7 +34,6 @@ except ImportError:
     # Python 2
     from urllib2 import urlopen, Request
 
-
 PY3 = sys.version_info[0] >= 3
 PY2 = sys.version_info[0] == 2
 

@@ -3,11 +3,11 @@ Scenario Risk with site model
 
 ============== ===================
 checksum32     1,603,095,237      
-date           2018-01-11T04:31:23
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:04:44
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 11, num_imts = 2
+num_sites = 11, num_levels = 106
 
 Parameters
 ----------
@@ -72,24 +72,24 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-============ ===== ====== === === ========= ==========
-taxonomy     mean  stddev min max num_sites num_assets
-EMCA_PRIM_2L 1.111 0.333  1   2   9         10        
-EMCA_PRIM_4L 1.000 NaN    1   1   1         1         
-concrete_spl 1.000 0.0    1   1   4         4         
-steel_spl    1.000 0.0    1   1   3         3         
-*ALL*        1.059 0.243  1   2   17        18        
-============ ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.111 0.333  1   2   9         10        
+2        1.000 NaN    1   1   1         1         
+3        1.000 0.0    1   1   4         4         
+4        1.000 0.0    1   1   3         3         
+*ALL*    1.059 0.243  1   2   17        18        
+======== ===== ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.034     0.0       1     
-reading exposure        0.028     0.0       1     
+building riskinputs     0.035     0.0       1     
+reading exposure        0.024     0.0       1     
 saving gmfs             0.008     0.0       1     
 computing gmfs          0.004     0.0       1     
-building epsilons       4.506E-04 0.0       1     
-reading site collection 4.530E-06 0.0       1     
+building epsilons       4.997E-04 0.0       1     
+reading site collection 6.437E-06 0.0       1     
 ======================= ========= ========= ======

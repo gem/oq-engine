@@ -60,7 +60,7 @@ if parallel.oq_distribute() == 'zmq':
                     logs.LOG.warn('%s is not running', host)
                     continue
                 num_workers += sock.send('get_num_workers')
-        OqParam.concurrent_tasks.default = num_workers * 2
+        OqParam.concurrent_tasks.default = num_workers * 3
         logs.LOG.info('Using %d zmq workers', num_workers)
 
 elif USE_CELERY:
@@ -75,7 +75,7 @@ elif USE_CELERY:
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 2
+        OqParam.concurrent_tasks.default = num_cores * 3
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
@@ -121,7 +121,7 @@ def expose_outputs(dstore):
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
-    if 'poes' in hdf5 or 'hcurves' in hdf5:
+    if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
         dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them

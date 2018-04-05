@@ -3,7 +3,7 @@ set -e
 # run demos with job_hazard.ini and job_risk.ini
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
-       oq engine --run $demo_dir/job_hazard.ini
+       oq engine --run $demo_dir/job_hazard.ini --exports npz
        oq engine --run $demo_dir/job_risk.ini --hc -1
    fi
 done
@@ -22,7 +22,7 @@ done
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -6
 
 # do something with the generated data
-oq extract -1 hazard/rlzs
+oq extract hazard/rlzs
 oq engine --lhc
 MPLBACKEND=Agg oq plot -1
 MPLBACKEND=Agg oq plot_uhs -1

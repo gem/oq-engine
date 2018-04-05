@@ -4,9 +4,10 @@
     <description>Test Exposure</description>
     <conversions>
       <costTypes>
-        <costType name="structural" unit="USD" type="aggregated" retrofittedType="aggregated" retrofittedUnit="USD"/>
+        <costType name="structural" unit="USD" type="aggregated" />
       </costTypes>
     </conversions>
+    <occupancyPeriods/>
     <assets>
       <asset id="a1" taxonomy="VF">
         <location lon="1" lat="1"/>
