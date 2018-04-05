@@ -691,11 +691,16 @@ def extract(request, calc_id, what):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
+        a = {}
         for key, val in attrs.items():
+            if isinstance(key, bytes):
+                key = key.decode('utf-8')
             if isinstance(val, str):
                 # without this oq extract would fail
-                attrs[key] = numpy.array(val.encode('utf-8'))
-        numpy.savez_compressed(fname, array=array, **attrs)
+                a[key] = numpy.array(val.encode('utf-8'))
+            else:
+                a[key] = val
+        numpy.savez_compressed(fname, array=array, **a)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))
