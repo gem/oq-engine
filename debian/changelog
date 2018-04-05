@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed a bug with newlines in the logic tree path breaking the CSV exporter
+    for the realizations output
+  * When setting the event year, each stochastic event set is now considered
+    independent
   * Fixed a bug in the HMTK plotting libraries and added the ability to
     customize the figure size
   * Fixed bug in the datastore: now we automatically look for the attributes
