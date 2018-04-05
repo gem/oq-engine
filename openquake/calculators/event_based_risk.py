@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -101,6 +101,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
 
     # update the result dictionary and the agg array with each output
     for out in riskmodel.gen_outputs(riskinput, monitor):
+        if len(out.eids) == 0:  # this happens for sites with no events
+            continue
         r = out.rlzi
         idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
@@ -108,7 +110,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                 continue
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
-
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
