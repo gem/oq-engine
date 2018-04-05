@@ -20,8 +20,8 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.mesh import Mesh
 
-POINTS = [Point(0, 0, 0), Point(0, 1, 0), Point(1, 1, 0),
-          Point(1, 0, 0)]
+POINTS = [Point(0, 0, 0.1), Point(0, 1, 0), Point(1, 1, 0.1),
+          Point(1, 0, 0.1)]
 
 
 class GriddedSurfaceTestCase(unittest.TestCase):
@@ -34,12 +34,14 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.235389])
+        expected = np.array([111.232737])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
-        self.assertRaises(NotImplementedError, self.surf.get_closest_points,
-                          self.mesh)
+        res = self.surf.get_closest_points(self.mesh)
+        self.assertEqual(res.lons, [1.0])
+        self.assertEqual(res.lats, [1.0])
+        self.assertEqual(res.depths, [0.1])
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)

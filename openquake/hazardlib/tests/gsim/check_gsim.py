@@ -34,8 +34,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
-from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI, IA
-
+from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
+                                     RSD595, RSD2080)
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
@@ -312,6 +312,12 @@ def _parse_csv_line(headers, values):
                 imt = MMI()
             elif param == "arias":
                 imt = IA()
+            elif param == "rsd595":
+                imt = RSD595()
+            elif param == "rsd575":
+                imt = RSD575()
+            elif param == "rsd2080":
+                imt = RSD2080()
             else:
                 period = float(param)
                 assert damping is not None

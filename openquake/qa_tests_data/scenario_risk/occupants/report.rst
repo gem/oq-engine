@@ -3,11 +3,11 @@ Scenario QA Test for occupants
 
 ============== ===================
 checksum32     95,847,934         
-date           2018-01-11T04:31:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:04:43
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 3, num_imts = 3
+num_sites = 3, num_levels = 15
 
 Parameters
 ----------
@@ -65,9 +65,9 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
-RM       1.000 NaN    1   1   1         1         
-W        1.000 NaN    1   1   1         1         
+1        1.000 NaN    1   1   1         1         
+2        1.000 NaN    1   1   1         1         
+3        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   3         3         
 ======== ===== ====== === === ========= ==========
 
@@ -76,6 +76,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading exposure        0.003     0.0       1     
+reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======

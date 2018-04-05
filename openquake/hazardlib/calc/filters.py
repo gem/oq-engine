@@ -71,7 +71,6 @@ except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.geo.utils import fix_bounding_box_idl, fix_lons_idl
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -340,11 +339,9 @@ class SourceFilter(object):
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None and
             sitecol.at_sea_level())
-        if sitecol is not None:
-            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
         if self.use_rtree:
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
+            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
         if sitecol is not None and rtree is None:
             logging.info('Using distance filtering [no rtree]')
@@ -358,7 +355,7 @@ class SourceFilter(object):
         """
         mag = src.get_min_max_mag()[1]
         maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        return fix_bounding_box_idl(src.get_bounding_box(maxdist), self.idl)
+        return src.get_bounding_box(maxdist)
 
     def get_rectangle(self, src):
         """
@@ -387,7 +384,7 @@ class SourceFilter(object):
         for site in self.sitecol:
             bb = self.integration_distance.get_bounding_box(
                 site.location.longitude, site.location.latitude, trt, mag)
-            bbs.append(fix_bounding_box_idl(bb, self.idl))
+            bbs.append(bb)
         return bbs
 
     def __call__(self, sources, sites=None):
@@ -411,7 +408,7 @@ class SourceFilter(object):
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
-                    yield src, SiteCollection.filtered(sids, sites)
+                    yield src, SiteCollection.filtered(sids, sites.array)
             else:  # normal filtering, used in the workers
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(

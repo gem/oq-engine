@@ -3,11 +3,11 @@ Classical BCR test
 
 ============== ===================
 checksum32     233,068,017        
-date           2018-01-11T04:29:54
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:11
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 11, num_imts = 1
+num_sites = 11, num_levels = 8
 
 Parameters
 ----------
@@ -77,19 +77,19 @@ source_model.xml 0      Active Shallow Crust 792          828
 
 Informational data
 ------------------
-======================= ==================================================================================
-count_ruptures.received tot 6.1 KB, max_per_task 1.73 KB                                                  
-count_ruptures.sent     sources 28.11 KB, srcfilter 6.18 KB, param 2.24 KB, monitor 1.56 KB, gsims 1.25 KB
-hazard.input_weight     82.80000000000001                                                                 
-hazard.n_imts           1                                                                                 
-hazard.n_levels         8                                                                                 
-hazard.n_realizations   3                                                                                 
-hazard.n_sites          11                                                                                
-hazard.n_sources        3                                                                                 
-hazard.output_weight    88.0                                                                              
-hostname                tstation.gem.lan                                                                  
-require_epsilons        True                                                                              
-======================= ==================================================================================
+======================= ===================================================================================
+count_ruptures.received tot 10.29 KB, max_per_task 1.24 KB                                                 
+count_ruptures.sent     sources 39.84 KB, srcfilter 13.59 KB, param 4.92 KB, monitor 3.43 KB, gsims 3.31 KB
+hazard.input_weight     82.80000000000001                                                                  
+hazard.n_imts           1                                                                                  
+hazard.n_levels         8                                                                                  
+hazard.n_realizations   3                                                                                  
+hazard.n_sites          11                                                                                 
+hazard.n_sources        3                                                                                  
+hazard.output_weight    88.0                                                                               
+hostname                tstation.gem.lan                                                                   
+require_epsilons        True                                                                               
+======================= ===================================================================================
 
 Exposure model
 --------------
@@ -100,23 +100,23 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-========================== ===== ====== === === ========= ==========
-taxonomy                   mean  stddev min max num_sites num_assets
-Adobe                      1.000 0.0    1   1   2         2         
-Stone-Masonry              1.000 0.0    1   1   6         6         
-Unreinforced-Brick-Masonry 1.000 NaN    1   1   1         1         
-Wood                       1.000 0.0    1   1   2         2         
-*ALL*                      1.000 0.0    1   1   11        11        
-========================== ===== ====== === === ========= ==========
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+1        1.000 0.0    1   1   2         2         
+2        1.000 0.0    1   1   6         6         
+3        1.000 NaN    1   1   1         1         
+4        1.000 0.0    1   1   2         2         
+*ALL*    1.000 0.0    1   1   11        11        
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========= =========
 source_id source_class num_ruptures calc_time num_sites num_split
 ========= ============ ============ ========= ========= =========
-231       AreaSource   414          0.008     11        69       
-229       AreaSource   264          0.005     8         38       
-232       AreaSource   150          0.002     11        1        
+231       AreaSource   414          0.012     19        69       
+229       AreaSource   264          0.006     14        38       
+232       AreaSource   150          0.005     16        30       
 ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -124,7 +124,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.015     3     
+AreaSource   0.023     3     
 ============ ========= ======
 
 Duplicated sources
@@ -133,22 +133,22 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.004 0.002  0.001 0.007 5        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_ruptures     0.003 8.818E-04 0.001 0.005 11       
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.075     0.0       1     
-managing sources               0.055     0.0       1     
-total count_ruptures           0.021     0.0       5     
-reading exposure               0.009     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               2.532E-04 0.0       5     
-saving probability maps        4.601E-05 0.0       1     
-reading site collection        8.106E-06 0.0       1     
+reading composite source model 0.078     0.0       1     
+managing sources               0.077     0.0       1     
+total count_ruptures           0.035     0.0       11    
+reading exposure               0.004     0.0       1     
+store source_info              0.004     0.0       1     
+aggregate curves               2.947E-04 0.0       11    
+saving probability maps        3.219E-05 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

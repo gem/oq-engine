@@ -3,11 +3,11 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     762,001,888        
-date           2018-01-11T04:54:44
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:34
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 10, num_imts = 1
+num_sites = 10, num_levels = 13
 
 Parameters
 ----------
@@ -76,7 +76,7 @@ Informational data
 ------------------
 ======================= ===================================================================================
 count_ruptures.received tot 7 KB, max_per_task 682 B                                                       
-count_ruptures.sent     srcfilter 14.19 KB, sources 12.91 KB, param 5.86 KB, monitor 3.74 KB, gsims 2.29 KB
+count_ruptures.sent     srcfilter 14.19 KB, sources 12.91 KB, param 5.86 KB, monitor 3.74 KB, gsims 2.77 KB
 hazard.input_weight     447.0                                                                              
 hazard.n_imts           1                                                                                  
 hazard.n_levels         13                                                                                 
@@ -93,7 +93,7 @@ Slowest sources
 ========= ================= ============ ========= ========= =========
 source_id source_class      num_ruptures calc_time num_sites num_split
 ========= ================= ============ ========= ========= =========
-3         SimpleFaultSource 447          0.047     10        15       
+3         SimpleFaultSource 447          0.045     1,100     15       
 ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.047     1     
+SimpleFaultSource 0.045     1     
 ================= ========= ======
 
 Duplicated sources
@@ -112,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.003  0.002 0.014 12       
+count_ruptures     0.004 0.003  0.002 0.014 12       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -120,11 +120,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.072     0.0       1     
-total count_ruptures           0.056     0.0       12    
-reading composite source model 0.007     0.0       1     
-store source_info              0.005     0.0       1     
-aggregate curves               2.511E-04 0.0       12    
-reading site collection        2.153E-04 0.0       1     
-saving probability maps        4.530E-05 0.0       1     
+managing sources               0.076     0.0       1     
+total count_ruptures           0.054     0.0       12    
+reading composite source model 0.008     0.0       1     
+store source_info              0.004     0.0       1     
+reading site collection        2.618E-04 0.0       1     
+aggregate curves               1.636E-04 0.0       12    
+saving probability maps        3.147E-05 0.0       1     
 ============================== ========= ========= ======

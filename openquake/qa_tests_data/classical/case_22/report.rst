@@ -3,11 +3,11 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     4,227,047,805      
-date           2018-01-11T04:54:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:17
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 21, num_imts = 6
+num_sites = 21, num_levels = 114
 
 Parameters
 ----------
@@ -79,8 +79,8 @@ Alaska_asc_grid_NSHMP2007.xml
 Informational data
 ------------------
 ======================= =============================================================================
-count_ruptures.received max_per_task 662 B, tot 662 B                                                
-count_ruptures.sent     sources 2.85 KB, srcfilter 1.76 KB, param 1.63 KB, gsims 353 B, monitor 319 B
+count_ruptures.received tot 662 B, max_per_task 662 B                                                
+count_ruptures.sent     sources 2.43 KB, srcfilter 1.76 KB, param 1.63 KB, gsims 418 B, monitor 319 B
 hazard.input_weight     126.4                                                                        
 hazard.n_imts           6                                                                            
 hazard.n_levels         114                                                                          
@@ -97,7 +97,7 @@ Slowest sources
 ========= ================ ============ ========= ========= =========
 source_id source_class     num_ruptures calc_time num_sites num_split
 ========= ================ ============ ========= ========= =========
-mps-0     MultiPointSource 1,104        4.051E-04 2         3        
+mps-0     MultiPointSource 1,104        6.361E-04 73        3        
 ========= ================ ============ ========= ========= =========
 
 Computation times by source typology
@@ -105,7 +105,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 4.051E-04 1     
+MultiPointSource 6.361E-04 1     
 ================ ========= ======
 
 Duplicated sources
@@ -116,7 +116,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.001 NaN    0.001 0.001 1        
+count_ruptures     0.002 NaN    0.002 0.002 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -124,11 +124,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.006     0.0       1     
-reading composite source model 0.004     0.0       1     
+reading composite source model 0.005     0.0       1     
+managing sources               0.005     0.0       1     
 store source_info              0.004     0.0       1     
-total count_ruptures           0.001     0.0       1     
-reading site collection        2.732E-04 0.0       1     
-saving probability maps        3.052E-05 0.0       1     
-aggregate curves               2.027E-05 0.0       1     
+total count_ruptures           0.002     0.0       1     
+reading site collection        2.849E-04 0.0       1     
+saving probability maps        3.004E-05 0.0       1     
+aggregate curves               1.979E-05 0.0       1     
 ============================== ========= ========= ======

@@ -3,11 +3,11 @@ event based two source models
 
 ============== ===================
 checksum32     2,633,907,336      
-date           2018-01-11T04:30:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:46
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 11
 
 Parameters
 ----------
@@ -92,19 +92,19 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 
 Informational data
 ------------------
-========================= =================================================================================
-compute_ruptures.received tot 9.54 KB, max_per_task 2.63 KB                                                
-compute_ruptures.sent     sources 27.88 KB, src_filter 5.64 KB, param 5.04 KB, monitor 2.52 KB, gsims 808 B
-hazard.input_weight       969.0                                                                            
-hazard.n_imts             1                                                                                
-hazard.n_levels           11                                                                               
-hazard.n_realizations     2                                                                                
-hazard.n_sites            1                                                                                
-hazard.n_sources          4                                                                                
-hazard.output_weight      0.08                                                                             
-hostname                  tstation.gem.lan                                                                 
-require_epsilons          True                                                                             
-========================= =================================================================================
+========================= ===================================================================================
+compute_ruptures.received tot 9.54 KB, max_per_task 2.63 KB                                                  
+compute_ruptures.sent     sources 27.88 KB, src_filter 5.64 KB, param 5.04 KB, monitor 2.52 KB, gsims 1.02 KB
+hazard.input_weight       969.0                                                                              
+hazard.n_imts             1                                                                                  
+hazard.n_levels           11                                                                                 
+hazard.n_realizations     2                                                                                  
+hazard.n_sites            1                                                                                  
+hazard.n_sources          4                                                                                  
+hazard.output_weight      0.08                                                                               
+hostname                  tstation.gem.lan                                                                   
+require_epsilons          True                                                                               
+========================= ===================================================================================
 
 Exposure model
 --------------
@@ -117,7 +117,7 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 NaN    1   1   1         1         
+1        1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
 Slowest sources
@@ -125,8 +125,8 @@ Slowest sources
 ========= ========================= ============ ========= ========= =========
 source_id source_class              num_ruptures calc_time num_sites num_split
 ========= ========================= ============ ========= ========= =========
-1         SimpleFaultSource         482          0.0       1         0        
 2         CharacteristicFaultSource 1            0.0       1         0        
+1         SimpleFaultSource         482          0.0       1         0        
 ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -146,7 +146,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.039 0.024  0.003 0.072 8        
+compute_ruptures   0.046 0.028  0.003 0.079 8        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -154,13 +154,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.311     0.0       8     
-managing sources               0.172     0.0       1     
-reading composite source model 0.018     0.0       1     
-reading exposure               0.005     0.0       1     
-saving ruptures                0.004     0.0       8     
-making contexts                0.004     0.0       2     
-store source_info              0.003     0.0       1     
-setting event years            0.001     0.0       1     
-reading site collection        5.484E-06 0.0       1     
+total compute_ruptures         0.369     0.0       8     
+managing sources               0.217     0.0       1     
+reading composite source model 0.024     0.0       1     
+saving ruptures                0.006     0.0       8     
+store source_info              0.006     0.0       1     
+making contexts                0.003     0.0       2     
+reading exposure               0.003     0.0       1     
+setting event years            0.002     0.0       1     
+reading site collection        6.676E-06 0.0       1     
 ============================== ========= ========= ======
