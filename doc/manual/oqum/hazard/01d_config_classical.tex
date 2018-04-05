@@ -156,9 +156,6 @@ The file containing the site model has the following structure:
   \caption{Example site model input file}
   \label{lst:input_site_model}
 \end{listing}
-\begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
-
-\end{minted}
 
 If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
 
@@ -192,12 +189,12 @@ calculation. This can be input directly in terms of kilometres (as above).
 There may be cases, however, in which it may be appropriate to have a
 different maximum source to site distance depending on the tectonic region
 type. This may be used, for example, to eliminate the impact of small, very
-far-field sources with very low activity rates in stable tectonic regions (in
-which case maximum distance is reduced), or conversely it may be raised to
-allow certain source types to contribute to the hazard at greater distances
-(such as in the case of large subduction interface events). An example
-configuration for a maximum distance in Active Shallow Crust of 200 km, and in
-Stable Continental Crust of 150 km, is shown below:
+far-field sources in regions of high attenuation (in which case maximum distance
+is reduced), or conversely it may be raised to allow certain source types to
+contribute to the hazard at greater distances (such as in the case when the
+region has lower attenuation). An example configuration for a maximum distance
+in Active Shallow Crust of 150 km, and in Stable Continental Crust of 200 km,
+is shown below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 maximum_distance = {'Active Shallow Crust': 150.0,
@@ -257,7 +254,6 @@ export_dir = outputs/
 mean_hazard_curves = true
 quantile_hazard_curves = 0.1 0.5 0.9
 uniform_hazard_spectra = false
-
 poes = 0.1
 \end{minted}
 
@@ -272,14 +268,7 @@ listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no
 quantiles are required). Setting \verb=uniform_hazard_spectra= to true will
 output the uniform hazard spectra at the same probabilities of exceedence
 (poes) as those specified by the later option \verb=poes=. The probabilities
-specified here correspond to the set investigation time.
-
-By default, OpenQuake will export only the statistical results, i.e. mean
-curves and quantiles. If the user requires the complete results for all
-realizations, there is a specific command for that, `oq extract hazard/all`.
-Beware that if the logic tree contains a large number of end branches the
-process of exporting the results from each end branch can add a significant
-amount of time - possibly longer than the computation time - and result in a
-large volume of disk spaced being used. In this case it is best to postprocess
-the data programmatically. Please contact us and we will be happy to give
-directions on how to do that in Python.
+specified here correspond to the set investigation time. Specifying poes
+will output hazard maps. For more information about the outputs of the
+calculation, see the section:
+``Description of hazard output'' (page~\pageref{sec:hazard_outputs}).
