@@ -237,7 +237,7 @@ information was available only at the end of the computation.
 
 There is a new command `oq importcalc host calc_id username password`
 to import remote calculations into the local engine database. The
-commmand has some limitations: it works only for calculations without
+command has some limitations: it works only for calculations without
 a parent and only if there are no clashes between the remote calculation ID
 and the local calculation ID. It should be considered an internal command.
 
@@ -251,6 +251,10 @@ This allows us to bypass the limitations of
 be run without running out of disk space in the mnesia directory.
 Hundreds of thousands of tasks can be generated without issues, a feat
 previously impossible.
+
+Notice that you may need to adjust the master node firewall, if
+already configured, to allow incoming traffic on TCP port range
+1907-1920.
 
 The task distribution code has been simplified and features
 in the experimental/proof-of-concept state has been removed: in
