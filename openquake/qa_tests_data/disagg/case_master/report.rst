@@ -3,11 +3,11 @@ disaggregation with a complex logic tree
 
 ============== ===================
 checksum32     3,362,416,243      
-date           2018-01-11T06:30:55
-engine_version 2.9.0-git1ab8653   
+date           2018-02-02T16:04:45
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 2, num_imts = 2
+num_sites = 2, num_levels = 102
 
 Parameters
 ----------
@@ -79,6 +79,6 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.018     0.0       1     
-reading site collection        4.053E-05 0.0       1     
+reading composite source model 0.019     0.0       1     
+reading site collection        4.101E-05 0.0       1     
 ============================== ========= ========= ======

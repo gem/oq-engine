@@ -115,7 +115,12 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         # this is a test with multiple same ID sources
         self.assertIn('multiplicity', str(p))
 
-    # NB: info --report is tested in the packager
+    def test_report(self):
+        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        save = 'openquake.calculators.reportwriter.ReportWriter.save'
+        with Print.patch() as p, mock.patch(save, lambda self, fname: None):
+            info(None, None, None, None, None, True, path)
+        self.assertIn('report.rst', str(p))
 
 
 class TidyTestCase(unittest.TestCase):
@@ -265,7 +270,7 @@ class ReduceTestCase(unittest.TestCase):
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
             reduce(dest, 0.5)
-        self.assertIn('Extracted 50 lines out of 100', str(p))
+        self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
 

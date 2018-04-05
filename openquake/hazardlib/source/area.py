@@ -16,8 +16,9 @@
 """
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
+import math
 from copy import deepcopy
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -114,9 +115,9 @@ class AreaSource(ParametricSeismicSource):
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
-                    hypocenter = Point(latitude=epicenter0.latitude,
-                                       longitude=epicenter0.longitude,
-                                       depth=hc_depth)
+                    hypocenter = geo.Point(latitude=epicenter0.latitude,
+                                           longitude=epicenter0.longitude,
+                                           depth=hc_depth)
                     occurrence_rate = (mag_occ_rate
                                        * float(np_prob) * float(hc_prob))
                     occurrence_rate *= rate_scaling_factor
@@ -137,8 +138,7 @@ class AreaSource(ParametricSeismicSource):
                 rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
                     surface, type(self), occ_rate,
-                    self.temporal_occurrence_model
-                )
+                    self.temporal_occurrence_model)
                 yield rupture
 
     def count_ruptures(self):
@@ -157,3 +157,59 @@ class AreaSource(ParametricSeismicSource):
     _get_max_rupture_projection_radius = PointSource.__dict__[
         '_get_max_rupture_projection_radius']
     _get_rupture_surface = PointSource.__dict__['_get_rupture_surface']
+
+    def __iter__(self):
+        """
+        Split an area source into a generator of point sources.
+
+        MFDs will be rescaled appropriately for the number of points in the
+        area mesh.
+        """
+        mesh = self.polygon.discretize(self.area_discretization)
+        num_points = len(mesh)
+        area_mfd = self.mfd
+
+        if isinstance(area_mfd, mfd.TruncatedGRMFD):
+            new_mfd = mfd.TruncatedGRMFD(
+                a_val=area_mfd.a_val - math.log10(num_points),
+                b_val=area_mfd.b_val,
+                bin_width=area_mfd.bin_width,
+                min_mag=area_mfd.min_mag,
+                max_mag=area_mfd.max_mag)
+        elif isinstance(area_mfd, mfd.EvenlyDiscretizedMFD):
+            new_occur_rates = [x/num_points for x in area_mfd.occurrence_rates]
+            new_mfd = mfd.EvenlyDiscretizedMFD(
+                min_mag=area_mfd.min_mag,
+                bin_width=area_mfd.bin_width,
+                occurrence_rates=new_occur_rates)
+        elif isinstance(area_mfd, mfd.ArbitraryMFD):
+            new_occur_rates = [x/num_points for x in area_mfd.occurrence_rates]
+            new_mfd = mfd.ArbitraryMFD(
+                magnitudes=area_mfd.magnitudes,
+                occurrence_rates=new_occur_rates)
+        elif isinstance(area_mfd, mfd.YoungsCoppersmith1985MFD):
+            new_mfd = mfd.YoungsCoppersmith1985MFD.from_characteristic_rate(
+                area_mfd.min_mag, area_mfd.b_val, area_mfd.char_mag,
+                area_mfd.char_rate / num_points, area_mfd.bin_width)
+        else:
+            raise TypeError('Unknown MFD: %s' % area_mfd)
+
+        for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
+            pt = PointSource(
+                # Generate a new ID and name
+                source_id='%s:%s' % (self.source_id, i),
+                name='%s:%s' % (self.name, i),
+                tectonic_region_type=self.tectonic_region_type,
+                mfd=new_mfd,
+                rupture_mesh_spacing=self.rupture_mesh_spacing,
+                magnitude_scaling_relationship=
+                self.magnitude_scaling_relationship,
+                rupture_aspect_ratio=self.rupture_aspect_ratio,
+                upper_seismogenic_depth=self.upper_seismogenic_depth,
+                lower_seismogenic_depth=self.lower_seismogenic_depth,
+                location=geo.Point(lon, lat),
+                nodal_plane_distribution=self.nodal_plane_distribution,
+                hypocenter_distribution=self.hypocenter_distribution,
+                temporal_occurrence_model=self.temporal_occurrence_model)
+            pt.num_ruptures = pt.count_ruptures()
+            yield pt

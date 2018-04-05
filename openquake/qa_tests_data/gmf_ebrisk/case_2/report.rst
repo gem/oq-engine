@@ -3,11 +3,11 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     3,574,592,625      
-date           2018-01-11T04:30:28
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:46
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 3, num_imts = 2
+num_sites = 3, num_levels = 10
 
 Parameters
 ----------
@@ -67,8 +67,8 @@ insurance_limit absolute
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-RC       1.000 NaN    1   1   1         1         
-RM       1.000 0.0    1   1   2         2         
+1        1.000 0.0    1   1   2         2         
+2        1.000 NaN    1   1   1         1         
 *ALL*    1.000 0.0    1   1   3         3         
 ======== ===== ====== === === ========= ==========
 
@@ -77,8 +77,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-building riskinputs     0.005     0.0       1     
-assoc_assets_sites      0.005     0.0       1     
-reading site collection 1.805E-04 0.0       1     
+building riskinputs     0.007     0.0       1     
+reading exposure        0.003     0.0       1     
+assoc_assets_sites      0.002     0.0       1     
+reading site collection 1.981E-04 0.0       1     
 ======================= ========= ========= ======

@@ -219,57 +219,6 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             poes_elem.text = ' '.join(map(scientificformat, hc.poes))
 
 
-class HazardCurveGeoJSONWriter(BaseCurveWriter):
-    """
-    Writes hazard curves to GeoJSON. Has the same constructor and interface as
-    :class:`HazardCurveXMLWriter`.
-    """
-
-    def serialize(self, data):
-        """
-        Write the hazard curves to the given as GeoJSON. The GeoJSON format
-        is customized to contain various bits of metadata.
-
-        See :meth:`HazardCurveXMLWriter.serialize` for expected input.
-        """
-        oqmetadata = {}
-        for key, value in self.metadata.items():
-            if key == 'imls':
-                oqmetadata['IMLs'] = value
-            if value is not None:
-                if key == 'imls':
-                    oqmetadata['IMLs'] = list(value)
-                else:
-                    oqmetadata[_ATTR_MAP.get(key)] = scientificformat(value)
-
-        features = []
-        feature_coll = {
-            'type': 'FeatureCollection',
-            'features': features,
-            'oqtype': 'HazardCurve',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': oqmetadata,
-        }
-        for hc in data:
-            poes = list(hc.poes)
-            lon = hc.location.x
-            lat = hc.location.y
-
-            feature = {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Point',
-                    'coordinates': [float(lon), float(lat)],
-                },
-                'properties': {'poEs': list(poes)},
-            }
-            features.append(feature)
-
-        with open(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh, sort_keys=True, indent=4,
-                      separators=(',', ': '))
-
-
 def gen_gmfs(gmf_set):
     """
     Generate GMF nodes from a gmf_set
@@ -619,51 +568,6 @@ class HazardMapXMLWriter(HazardMapWriter):
                 node.set('iml', str(iml))
 
             nrml.write(list(root), fh)
-
-
-class HazardMapGeoJSONWriter(HazardMapWriter):
-    """
-    GeoJSON implementation of a :class:`HazardMapWriter`. Serializes hazard
-    maps as FeatureCollection artifacts with additional hazard map metadata.
-
-    See :class:`HazardMapWriter` for information about constructor parameters.
-    """
-
-    def serialize(self, data):
-        """
-        Serialize hazard map data to GeoJSON.
-
-        See :meth:`HazardMapWriter.serialize` for details about the expected
-        input.
-        """
-        oqmetadata = {}
-        for key, value in self.metadata.items():
-            if value is not None:
-                oqmetadata[_ATTR_MAP.get(key)] = str(value)
-
-        features = []
-        feature_coll = {
-            'type': 'FeatureCollection',
-            'features': features,
-            'oqtype': 'HazardMap',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': oqmetadata,
-        }
-
-        for lon, lat, iml in data:
-            feature = {
-                'type': 'Feature',
-                'geometry': {
-                    'type': 'Point',
-                    'coordinates': [float(lon), float(lat)],
-                },
-                'properties': {'iml': float(iml)},
-            }
-            features.append(feature)
-
-        with open(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh, sort_keys=True, indent=4,
-                      separators=(',', ': '))
 
 
 class DisaggXMLWriter(object):

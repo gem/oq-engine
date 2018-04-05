@@ -18,6 +18,7 @@
 
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.calculators import base, classical_risk
 
@@ -40,15 +41,15 @@ def classical_bcr(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    result = {}  # (N, R) -> data
+    R = riskinput.hazard_getter.num_rlzs
+    result = AccumDict(accum=numpy.zeros((R, 3), F32))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         assets = outputs.assets
-        for l, out in enumerate(outputs):
-            loss_type = riskmodel.loss_types[l]
+        for out in outputs:
             for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
-                aval = asset.value(loss_type)
-                result[asset.ordinal, loss_type, outputs.rlzi] = numpy.array([
-                    (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
+                aval = asset.value('structural')
+                result[asset.ordinal][outputs.rlzi] = numpy.array([
+                    eal_orig * aval, eal_retro * aval, bcr])
     return result
 
 
@@ -60,15 +61,16 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     core_task = classical_bcr
 
     def post_execute(self, result):
-        bcr_data = numpy.zeros((self.A, self.R), self.oqparam.loss_dt(bcr_dt))
-        for (aid, lt, r), data in result.items():
-            bcr_data[lt][aid, r] = data
+        # NB: defined only for loss_type = 'structural'
+        bcr_data = numpy.zeros((self.A, self.R), bcr_dt)
+        for aid, data in result.items():
+            bcr_data[aid]['annual_loss_orig'] = data[:, 0]
+            bcr_data[aid]['annual_loss_retro'] = data[:, 1]
+            bcr_data[aid]['bcr'] = data[:, 2]
         self.datastore['bcr-rlzs'] = bcr_data
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         if len(weights) > 1:
             snames, sfuncs = zip(*self.oqparam.risk_stats())
-            bcr_stats = numpy.zeros((self.A, len(sfuncs)),
-                                    self.oqparam.loss_dt(bcr_dt))
-            for lt in bcr_data.dtype.names:
-                bcr_stats[lt] = compute_stats2(bcr_data[lt], sfuncs, weights)
+            bcr_stats = numpy.zeros((self.A, len(sfuncs)), bcr_dt)
+            bcr_stats = compute_stats2(bcr_data, sfuncs, weights)
             self.datastore['bcr-stats'] = bcr_stats

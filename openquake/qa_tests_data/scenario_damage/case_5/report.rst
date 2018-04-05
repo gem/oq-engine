@@ -3,11 +3,11 @@ Calculation of the ground motion fields for a scenario
 
 ============== ===================
 checksum32     3,547,835,629      
-date           2018-01-11T04:29:22
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:02:36
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 7, num_imts = 1
+num_sites = 7, num_levels = 1
 
 Parameters
 ----------
@@ -64,10 +64,10 @@ insurance_limit relative
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
-A        1.000 0.0    1   1   5         5         
-DS       1.000 0.0    1   1   2         2         
-UFB      1.000 0.0    1   1   2         2         
-W        1.000 0.0    1   1   2         2         
+1        1.000 0.0    1   1   2         2         
+2        1.000 0.0    1   1   5         5         
+3        1.000 0.0    1   1   2         2         
+4        1.000 0.0    1   1   2         2         
 *ALL*    1.000 0.0    1   1   11        11        
 ======== ===== ====== === === ========= ==========
 
@@ -76,6 +76,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.009     0.0       1     
-reading site collection 5.722E-06 0.0       1     
+reading exposure        0.004     0.0       1     
+reading site collection 4.530E-06 0.0       1     
 ======================= ========= ========= ======

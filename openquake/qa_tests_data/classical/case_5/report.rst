@@ -3,11 +3,11 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2018-01-11T04:54:44
-engine_version 2.9.0-git3c583c4   
+date           2018-02-02T16:03:35
+engine_version 2.9.0-gitd6a3184   
 ============== ===================
 
-num_sites = 1, num_imts = 1
+num_sites = 1, num_levels = 3
 
 Parameters
 ----------
@@ -72,26 +72,26 @@ source_model.xml 0      Active Shallow Crust 49           49
 
 Informational data
 ------------------
-======================= ========================================================================
-count_ruptures.received max_per_task 588 B, tot 588 B                                           
-count_ruptures.sent     sources 1.13 KB, srcfilter 722 B, param 418 B, monitor 319 B, gsims 91 B
-hazard.input_weight     196.0                                                                   
-hazard.n_imts           1                                                                       
-hazard.n_levels         3                                                                       
-hazard.n_realizations   1                                                                       
-hazard.n_sites          1                                                                       
-hazard.n_sources        1                                                                       
-hazard.output_weight    3.0                                                                     
-hostname                tstation.gem.lan                                                        
-require_epsilons        False                                                                   
-======================= ========================================================================
+======================= =========================================================================
+count_ruptures.received tot 588 B, max_per_task 588 B                                            
+count_ruptures.sent     sources 1.13 KB, srcfilter 722 B, param 418 B, monitor 319 B, gsims 120 B
+hazard.input_weight     196.0                                                                    
+hazard.n_imts           1                                                                        
+hazard.n_levels         3                                                                        
+hazard.n_realizations   1                                                                        
+hazard.n_sites          1                                                                        
+hazard.n_sources        1                                                                        
+hazard.output_weight    3.0                                                                      
+hostname                tstation.gem.lan                                                         
+require_epsilons        False                                                                    
+======================= =========================================================================
 
 Slowest sources
 ---------------
 ========= ================== ============ ========= ========= =========
 source_id source_class       num_ruptures calc_time num_sites num_split
 ========= ================== ============ ========= ========= =========
-1         ComplexFaultSource 49           0.003     1         1        
+1         ComplexFaultSource 49           0.003     196       1        
 ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -118,11 +118,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.175     0.0       1     
+reading composite source model 0.190     0.0       1     
+store source_info              0.004     0.0       1     
+managing sources               0.004     0.0       1     
 total count_ruptures           0.003     0.0       1     
-managing sources               0.003     0.0       1     
-store source_info              0.003     0.0       1     
-reading site collection        5.078E-05 0.0       1     
-saving probability maps        2.623E-05 0.0       1     
-aggregate curves               1.383E-05 0.0       1     
+reading site collection        5.531E-05 0.0       1     
+saving probability maps        3.147E-05 0.0       1     
+aggregate curves               1.621E-05 0.0       1     
 ============================== ========= ========= ======
