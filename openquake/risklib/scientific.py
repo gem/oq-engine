@@ -534,6 +534,8 @@ class FragilityFunctionDiscrete(object):
         """
         highest_iml = self.imls[-1]
         imls = numpy.array(imls)
+        if imls.sum() == 0.0:
+            return numpy.zeros_like(imls)
         imls[imls > highest_iml] = highest_iml
         result = self.interp(imls)
         if self.no_damage_limit:

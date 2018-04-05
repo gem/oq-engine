@@ -187,6 +187,7 @@ def get_source_model_05(node, fname, converter=default):
     return SourceModel(sorted(groups), node.get('name'),
                        node.get('investigation_time'), node.get('start_time'))
 
+
 validators = {
     'strike': valid.strike_range,
     'dip': valid.dip_range,
@@ -236,13 +237,9 @@ validators = {
     'poes': valid.positivefloats,
     'description': valid.utf8_not_empty,
     'noDamageLimit': valid.NoneOr(valid.positivefloat),
-    'investigationTime': valid.positivefloat,
     'poEs': valid.probabilities,
     'gsimTreePath': lambda v: v.split('_'),
     'sourceModelTreePath': lambda v: v.split('_'),
-    'poE': valid.probability,
-    'IMLs': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMT': str,
     'saPeriod': valid.positivefloat,
     'saDamping': valid.positivefloat,
@@ -250,10 +247,7 @@ validators = {
     'investigationTime': valid.positivefloat,
     'poE': valid.probability,
     'periods': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMLs': valid.positivefloats,
-    'lon': valid.longitude,
-    'lat': valid.latitude,
     'magBinEdges': valid.integers,
     'distBinEdges': valid.integers,
     'epsBinEdges': valid.integers,
@@ -261,14 +255,12 @@ validators = {
     'latBinEdges': valid.latitudes,
     'type': valid.simple_id,
     'dims': valid.positiveints,
-    'poE': valid.probability,
     'iml': valid.positivefloat,
     'index': valid.positiveints,
     'value': valid.positivefloat,
     'assetLifeExpectancy': valid.positivefloat,
     'interestRate': valid.positivefloat,
     'statistics': valid.Choice('mean', 'quantile'),
-    'pos': valid.lon_lat,
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
@@ -315,17 +307,22 @@ class SourceModelParser(object):
         :param investigation_time:
             investigation_time to compare with in the case of
             nonparametric sources
+        :returns:
+            list of nonparametric sources in the composite source model
         """
+        npsources = []
         for fname, sm in self.sm.items():
             # NonParametricSeismicSources
             np = [src for sg in sm.src_groups for src in sg
                   if hasattr(src, 'data')]
             if np:
+                npsources.extend(np)
                 if sm.investigation_time != investigation_time:
                     raise ValueError(
                         'The source model %s contains an investigation_time '
                         'of %s, while the job.ini has %s' % (
                             fname, sm.investigation_time, investigation_time))
+        return npsources
 
 
 def read(source, chatty=True, stop=None):

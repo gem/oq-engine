@@ -114,7 +114,6 @@ class PSHACalculator(base.HazardCalculator):
         for grp in self.csm.src_groups:
             num_gsims = len(csm_info.gsim_lt.get_gsims(grp.trt))
             zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
-        zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         return zd
 
@@ -213,9 +212,10 @@ class PSHACalculator(base.HazardCalculator):
         :param pmap_by_grp_id:
             a dictionary grp_id -> hazard curves
         """
+        oq = self.oqparam
         grp_trt = self.csm.info.grp_by("trt")
         grp_source = self.csm.info.grp_by("name")
-        if self.oqparam.disagg_by_src:
+        if oq.disagg_by_src:
             src_name = {src.src_group_id: src.name
                         for src in self.csm.get_sources()}
         data = []
@@ -226,12 +226,14 @@ class PSHACalculator(base.HazardCalculator):
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=grp_trt[grp_id])
-                    if self.oqparam.disagg_by_src:
+                    if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
-                if self.oqparam.disagg_by_src:
+                if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
+                    # this is useful for disaggregation, which is implemented
+                    # only for the case of a single realization
                     self.datastore['disagg_by_src/source_id'] = numpy.array(
                         sorted(data), grp_source_dt)
 
