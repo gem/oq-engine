@@ -269,7 +269,7 @@ def fix_minimum_intensity(min_iml, imts):
 
     >>> min_iml = {'PGA': 0.1, 'default': 0.05}
     >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([ 0.1 ,  0.05], dtype=float32)
+    array([0.1 , 0.05], dtype=float32)
     >>> sorted(min_iml.items())
     [('PGA', 0.1), ('PGV', 0.05)]
     """
