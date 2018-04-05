@@ -1,4 +1,24 @@
   [Michele Simionato]
+  * Fixed a bug with newlines in the logic tree path breaking the CSV exporter
+    for the realizations output
+  * When setting the event year, each stochastic event set is now considered
+    independent
+  * Fixed a bug in the HMTK plotting libraries and added the ability to
+    customize the figure size
+  * Fixed bug in the datastore: now we automatically look for the attributes
+    in the parent dataset, if the dataset is missing in the child datastore
+  * Extended extract_losses_by_asset to the event based risk calculator
+  * Stored in source_info the number of events generated per source
+  * Added a script utils/reduce_sm to reduce the source model of a calculation
+    by removing all the sources not affecting the hazard
+  * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
+  * Fixed the export of ruptures with a GriddedSurface geometry
+  * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
+  * Fixed the issue of slow tasks in event_based_risk from precomputed GMFs
+    for sites without events
+  * Now the engine automatically associates the exposure to a grid if
+    `region_grid_spacing` is given and the sites are not specified otherwise
+  * Extracting the site mesh from the exposure before looking at the site model
   * Added a check on probs_occur summing up to 1 in the SourceWriter
   * `oq show job_info` now shows the received data amount while the
     calculation is progressing
