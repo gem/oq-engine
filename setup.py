@@ -67,7 +67,7 @@ install_requires = [
     'django >=1.6, <2.1',
     'matplotlib >=1.5, <2.2',
     'requests >=2.2, <2.19',
-    'pyshp >=1.2.3, <1.2.13',
+    'pyshp ==1.2.3',
     'PyYAML',
 ]
 
