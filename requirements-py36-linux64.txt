@@ -26,7 +26,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/urllib3-1.22-py2.py3-no
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/chardet-3.0.4-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/idna-2.6-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/requests-2.18.4-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/pyshp-1.2.12-py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/staging/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/PyYAML-3.12-cp36-cp36m-manylinux1_x86_64.whl
 
 ## Extra ##
