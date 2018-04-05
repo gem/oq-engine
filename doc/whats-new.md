@@ -16,11 +16,11 @@ Management of the source model
 As of engine 3.0, the sources are split upfront, before filtering.
 This approach became possible after optimizing the splitting procedure
 for fault sources which now is extremely fast. It has several benefits
-in terms of simplicity of the code and better estimation of a task
+in terms of simplicity of the code and better estimation of the task
 computational weight.
 
 Moreover, complex fault sources are now split in more sub-sources
-than before and this produces a substantial improvement in the task
+than before and this produces a substantial improvement of the task
 distribution. It also fixed a bug with the `event_based_rupture`
 calculator generating too few tasks.
 
@@ -29,7 +29,7 @@ when the option `optimize_same_id_sources` is set has been fixed as
 well.
 
 We extended the check on duplicated IDs in the source model to models in
-the NRML 0.5 format. This means that even if a single source model is split in
+the NRML 0.5 format. This means that if a single source model is split in
 several files (i.e. the `<uncertaintyModel>` tag in the source model logic
 tree file contains several paths) the source IDs must be unique across all
 files.
@@ -44,8 +44,7 @@ Now we log some information about the floating/spinning factors, which
 are relevant for point sources and area sources (see the manual
 section 2.1.1.1 for an explanation). This is useful for us since in
 the future we may introduce some optimization to reduce the
-floating/spinning of the ruptures when not relevant. Users can
-simply ignore such logs.
+floating/spinning of the ruptures. Users can simply ignore such logs.
 
 Hazard
 --------------
@@ -56,13 +55,14 @@ Thanks to some fixes to the GriddedRupture class in hazardlib now it
 is also possible to export ruptures of this kind, which are relevant
 for several recent hazard models.
 
-We fixed how the event year is set: now each stochastic event sets
-is considered independent, Before the events sets were considered
+We fixed how the event year is set in event based calculations.
+Before the events sets were considered
 temporally ordered, i.e. in a case with 2 stochastic event sets (SES)
 with an investigation time of 50 years one could have years (0, 4, 13, 27, 49)
 in the first SES and (55, 61, 90) in the second SES: now we would have
 (0, 4, 13, 27, 49) in the first SES and (5, 11, 40) in the second. The
-event in the second SES have no greater years that the events in the first SES.
+event in the second SES have no greater years that the events in the first SES
+since each event set starts from the year 0.
 This is the correct way of proceeding in the case of time-dependent models,
 which were not supported before.
 
@@ -70,27 +70,21 @@ The net effect of the change is that the ordering of the event loss
 table can be different than before, since the year was used (solely)
 as an ordering parameter in the exporter.
 
-The setting of the years now also works in case of sampling: this case
-was previously untested.
-
 Hazard disaggregation
 ---------------------
 
-We fixed a small bug in the disaggregation calculation: we were
-reading the source model twice without reason.
-
 We implemented statistical disaggregation outputs. This is implemented
-in a straightforward way: if there are multiple realizations and in
+in a straightforward way: if there are multiple realizations and if in
 the `job.ini` file the parameters `mean_hazard_curves` and/or
 `quantile_hazard_curves` are set, then the mean and/or quantiles of the
 hazard outputs are computed. You can export such outputs as usual.
 
-The parameter `disagg_outputs` is now honored: for instance if you set
+The parameter `disagg_outputs` is now honored: for instance if you have
 in the `job.ini` `disagg_outputs = Mag Mag_Dist`, then only the
 outputs of kind `Mag` and `Mag_Dist` are computed and stored. Before
 all of them were computed and stored and the parameter affected only
 the export. If `disagg_outputs` is not given, all of the available
-disaggregation outputs are generated, as in the paste.
+disaggregation outputs are generated, as in the past.
 
 We introduced, experimentally, a _disaggregation by source_ feature. It is
 restricted to the case of a single realization. In that case, if you set
@@ -99,20 +93,22 @@ Source" is generated. When exported, you get a set of .csv files with fields
 `(source_id, source_name, poe)`. For each source with nonzero contribution
 the contribution to the total probability of exceedence is given.
 
+Finally, we fixed a small bug in the disaggregation calculator with
+parameter `poes_disagg`: we were reading the source model twice without reason.
+
 Hazardlib/HMTK/SMTK
 --------------------
 
 We optimized the Yu et al. (2013) GMPEs for China which is now several time
 faster than before.
 
-[Graeme Weatherill](https://github.com/g-weatherill) ported to Python 3.5 the [Strong Motion Toolkit]
-(https://github.com/GEMScienceTools/gmpe-smtk), which depends on hazardlib
-and is a part of the OpenQuake suite.
+[Graeme Weatherill](https://github.com/g-weatherill) ported to Python 3.5 the [Strong Motion Toolkit](https://github.com/GEMScienceTools/gmpe-smtk),
+which depends on hazardlib and is a part of the OpenQuake suite.
 
 [Nick Ackerley](https://github.com/nackerley) fixed a bug in the HMTK
 plotting libraries and added the ability to customize the figure size.
 
-The `sourcewriter` in hazardlib now checks that the sum of the
+The source writer in hazardlib now checks that the sum of the
 probabilities of occurrence is 1, when saving nonparametric sources.
 This avoids errors were building time-dependent models.
 
@@ -129,7 +125,7 @@ On the same note, it is possible to use a pre-imported risk model,
 without having to reimport it at each risk calculation.
 
 As of engine 3.0, the exposure should contain a tag `<occupancyPeriod>`
-listing the occupancy periods, i.e. combinations of `day`, `night`, `transit`,
+listing the occupancy periods, i.e. subsets of `day`, `night`, `transit`,
 including the case of no occupancy periods. If such tag is missing, you
 will get a warning. If such tag is present, but the listed occupancy
 periods are inconsistent with the ones found in the assets, a clear error
@@ -138,21 +134,21 @@ is raised.
 The ability to import CSV exposures has been extended to the cases
 when there are occupancy periods, which are managed simply as additional
 fields. Insurance parameters (insured_losses/deductibles) are still
-not supported in CSV format, so the XML format is still needed for
+not supported in CSV format and the XML format is still needed for
 that case. We plan to keep working on that in the future.
 
 
 We extended the engine logic to read the sites from the hazard
-curves, if available. Moreover we changed the logic to extract the sites:
-now the sites are extracted from the exposure in precedence over the site model,
+curves, if available. Moreover we changed the logic to extract the sites
+from the exposure in precedence over the site model,
 if the sites are not provided explicitly (via a sites.csv file,
 the hazard curves or a region).
 
 This was necessary because of a new feature,
-i.e. automatic gridding of the exposure. If your `job.ini` file
+i.e. the automatic gridding of the exposure. If your `job.ini` file
 contains an exposure, no `region` parameter and the parameter
 `region_grid_spacing`, then a grid of sites is automatically generated
-from the region encircling the exposure (if there is a `region` the
+from the region encircling the exposure (if there is a `region` parameter the
 grid is generated from the `region` as before).
 
 Automatic gridding of the exposure is very important, because often
@@ -162,12 +158,13 @@ can become a lot faster (say 25 times faster) while producing very
 similar results for the aggregated losses.
 
 Care is taken so that points of the grid with no close assets
-are automatically discarded; moreover, there are checks to make
-sure that all assets are associated to the grid.
+(i.e. outside the grid spacing) are automatically discarded; moreover,
+there are checks to make sure that all assets are associated to the
+grid.
 
 Event Based Risk calculations with sampling are now officially supported,
 after years in which this feature was experimental and not really working.
-This is relevant for models like the India model were the number of
+This is relevant for cases like the India model were the number of
 realizations is so large (there are over 200,000 realizations) that full
 enumeration is not an option and sampling of the logic tree is a necessity.
 
@@ -205,9 +202,10 @@ files, like the CCARA model.
 
 We fixed a bug in classical_risk, happening when the number of statistics
 was larger than the number of realizations (for instance, in a case with
-two realizations, computing mean, quantile-0.15 and quantile-0.85).
+two realizations, computing mean, quantile-0.15 and quantile-0.85, i.e. three
+statistics).
 
-We fixed the strange issue of small negative numbers appearing in
+We fixed the strange issue of very small negative numbers appearing in
 scenario_damage outputs: this happened due to rounding errors. Now
 the correct result (i.e. zeros) is stored.
 
@@ -240,7 +238,7 @@ information was available only at the end of the computation.
 There is a new command `oq importcalc host calc_id username password`
 to import remote calculations into the local engine database. The
 commmand has some limitations: it works only for calculations without
-a parent and only if there are no clashes between the remove calculation ID
+a parent and only if there are no clashes between the remote calculation ID
 and the local calculation ID. It should be considered an internal command.
 
 Internals
@@ -248,22 +246,24 @@ Internals
 
 A huge improvement has been made in cluster situations: now the results
 are returned via [ZeroMQ](http://zeromq.org/) and not via rabbimq.
-This allows us to bypass the limit of rabbitmq and large computations can 
+This allows us to bypass the limitations of
+[rabbitmq](https://www.rabbitmq.com/): large computations can 
 be run without running out of disk space in the mnesia directory.
 Hundreds of thousands of tasks can be generated without issues, a feat
 previously impossible.
 
-The task distribution code has been simplified and
-code in the experimental/proof-of-concept state has been removed: in
+The task distribution code has been simplified and features
+in the experimental/proof-of-concept state has been removed: in
 particular the support to ipython and the support to SGE have disappeared.
 As it is now, they were not used and they were a significant maintenance cost.
 
 Now we use the port 1907 for the DbServer, when installing the engine
-from the packages. When installing from sources, the port is the number 1906,
+from the packages. When installing from sources, the port is the number 1908,
 as before. In this way an installation from packages can coexists with
 an installation from sources out of the box.
 
-The engine now stores more information. In particular in the case of
+The engine now stores more information about the sources.
+In particular in the case of
 event based calculations the `source_info` dataset contains the number
 of events generated by each source. Moreover, there is an utility
 `utils/reduce_sm` than can read such information and reduce a source
@@ -280,7 +280,7 @@ The engine does not work anymore with Python 2. Hazardlib and the
 Hazard Modeller Toolkit, included in the engine, still work with
 Python 2 but this is only incidental: they may stop working at
 any moment without warning, since we are not testing anymore the
-engine with Python 2.
+engine libraries with Python 2.
 
 The old commands `oq engine --run-hazard` and `oq engine --run-risk`, deprecated
 two years ago, have been finally removed. The only command to use to run
@@ -293,5 +293,5 @@ has been deprecated: you can use the function
 
 As usual, exporting the results of a calculation executed with a previous
 version of the engine is not supported, except for hazard curves/maps/spectra.
-We recommend first to export all the results you need and then
+We recommend first to export all of the results you need and then
 to upgrade to the latest version of the engine.
