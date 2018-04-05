@@ -13,15 +13,15 @@ https://github.com/gem/oq-engine/blob/engine-3.0/debian/changelog .
 Management of the source model
 --------------------------------
 
-As of engine 3.0, the sources are split upfront, before starting to
-send them to the workers. This is a simplification of the previous
-logic which became
-possible after fixing some performance bug in the splitting procedure
-for fault sources.
+As of engine 3.0, the sources are split upfront, before filtering.
+This approach became possible after optimizing the splitting procedure
+for fault sources which now is extremely fast. It has several benefits
+in terms of simplicity of the code and better estimation of a task
+computational weight.
 
-Moreover, an improvement on the splitting procedure for complex fault
-sources resulted in a substantial improvement of the parallelization
-in various cases. It also fixed a bug with the `event_based_rupture`
+Moreover, complex fault sources are now split in more sub-sources
+than before and this produces a substantial improvement in the task
+distribution. It also fixed a bug with the `event_based_rupture`
 calculator generating too few tasks.
 
 A different bug with the classical calculator generating too few tasks
@@ -256,7 +256,7 @@ previously impossible.
 The task distribution code has been simplified and
 code in the experimental/proof-of-concept state has been removed: in
 particular the support to ipython and the support to SGE have disappeared.
-As it is now, they were nit used and they were a significant maintenance cost.
+As it is now, they were not used and they were a significant maintenance cost.
 
 Now we use the port 1907 for the DbServer, when installing the engine
 from the packages. When installing from sources, the port is the number 1906,
