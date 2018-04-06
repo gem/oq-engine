@@ -112,7 +112,7 @@ class OqParam(valid.ParamSet):
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_backarc = valid.Param(valid.boolean, False)
-    region = valid.Param(valid.coordinates, None)
+    region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
@@ -164,9 +164,8 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('You cannot have both region and '
                                   'region_constraint in %s' % job_ini)
             logging.warn('region_constraint is obsolete, use region instead')
-            coords = names_vals['region_constraint'].split(',')
-            coords += coords[0]  # add last point at the end
-            self.region = None
+            self.region = valid.wkt_polygon(
+                names_vals.pop('region_constraint'))
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -484,12 +483,6 @@ class OqParam(valid.ParamSet):
             return self.truncation_level is not None
         else:
             return True
-
-    def is_valid_region(self):
-        """
-        If there is a region a region_grid_spacing must be given
-        """
-        return self.region_grid_spacing if self.region else True
 
     def is_valid_geometry(self):
         """
