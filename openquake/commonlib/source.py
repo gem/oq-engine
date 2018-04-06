@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -802,6 +802,14 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
+    def get_nonparametric_sources(self):
+        """
+        :returns: list of non parametric sources in the composite source model
+        """
+        return [src for sm in self.source_models
+                for src_group in sm.src_groups
+                for src in src_group if hasattr(src, 'data')]
+
     def check_dupl_sources(self):  # used in print_csm_info
         """
         Extracts duplicated sources, i.e. sources with the same source_id in
@@ -965,7 +973,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text.strip()
+                    smfname = ' '.join(br.uncertaintyModel.text.split())
                     if smfname:
                         yield smfname
 
@@ -981,6 +989,7 @@ class SourceInfo(object):
         ('split_time', numpy.float32),     # 4
         ('num_sites', numpy.uint32),       # 5
         ('num_split',  numpy.uint32),      # 6
+        ('events', numpy.uint32),          # 7
     ])
 
     def __init__(self, src, calc_time=0, split_time=0, num_split=0):
@@ -991,3 +1000,4 @@ class SourceInfo(object):
         self.calc_time = calc_time
         self.split_time = split_time
         self.num_split = num_split
+        self.events = 0  # set in event based

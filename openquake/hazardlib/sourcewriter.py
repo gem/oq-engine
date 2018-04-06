@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -434,6 +434,9 @@ def build_rupture_node(rupt, probs_occur):
     :param rupt: a hazardlib rupture object
     :param probs_occur: a list of floats with sum 1
     """
+    s = sum(probs_occur)
+    if abs(s - 1) > 1E-12:
+        raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
     rupt_nodes = [Node('magnitude', {}, rupt.mag),

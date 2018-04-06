@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -101,6 +101,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
 
     # update the result dictionary and the agg array with each output
     for out in riskmodel.gen_outputs(riskinput, monitor):
+        if len(out.eids) == 0:  # this happens for sites with no events
+            continue
         r = out.rlzi
         idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
@@ -108,7 +110,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                 continue
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
-
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
@@ -282,9 +283,9 @@ class EbriskCalculator(base.RiskCalculator):
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
         monitor = self.monitor(taskname)
         for grp_id in grp_ids:
+            ruptures = self.ruptures_by_grp.get(grp_id, [])
             rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = samples_by_grp[grp_id]
-            ruptures = self.ruptures_by_grp.get(grp_id, [])
             num_ruptures[grp_id] = len(ruptures)
             from_parent = hasattr(ruptures, 'split')
             if from_parent:  # read the ruptures from the parent datastore
@@ -362,9 +363,6 @@ class EbriskCalculator(base.RiskCalculator):
         if self.precomputed_gmfs:
             return base.RiskCalculator.execute(self)
 
-        if self.oqparam.number_of_logic_tree_samples:
-            logging.warn('The event based risk calculator with sampling is '
-                         'EXPERIMENTAL, UNTESTED and SLOW')
         if self.oqparam.ground_motion_fields:
             logging.warn('To store the ground motion fields change '
                          'calculation_mode = event_based')

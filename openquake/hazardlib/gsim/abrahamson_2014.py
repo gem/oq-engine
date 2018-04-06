@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -93,6 +93,7 @@ class AbrahamsonEtAl2014(GMPE):
         # compute median sa on rock (vs30=1180m/s). Used for site response
         # term calculation
         sa1180 = np.exp(self._get_sa_at_1180(C, imt, sites, rup, dists))
+
         # get the mean value
         mean = (self._get_basic_term(C, rup, dists) +
                 self._get_faulting_style_term(C, rup) +

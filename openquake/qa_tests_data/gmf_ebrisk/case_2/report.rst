@@ -3,8 +3,8 @@ Event Based Risk from GMF
 
 ============== ===================
 checksum32     3,482,777,328      
-date           2018-02-25T06:43:26
-engine_version 2.10.0-git1f7c0c0  
+date           2018-03-26T15:56:34
+engine_version 2.10.0-git543cfb0  
 ============== ===================
 
 num_sites = 3, num_levels = 10
@@ -60,7 +60,7 @@ Realizations per (TRT, GSIM)
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 480 B
+3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 1.41 KB
 
 Exposure model
 --------------
@@ -83,7 +83,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.008     0.0       1     
-reading exposure        0.001     0.0       1     
-reading site collection 2.091E-04 0.0       1     
+building riskinputs     0.010     0.0       1     
+reading exposure        0.005     0.0       1     
+reading site collection 2.818E-04 0.0       1     
 ======================= ========= ========= ======
