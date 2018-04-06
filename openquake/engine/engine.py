@@ -291,8 +291,9 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # avoid flooding our API server with requests from CI systems
         return
 
-    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
-               (__version__, calculation_mode, platform.platform())}
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
+               (__version__, calculation_mode, platform.platform(),
+                config.distribution.oq_distribute)}
     try:
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work
