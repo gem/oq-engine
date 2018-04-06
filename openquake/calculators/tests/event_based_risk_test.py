@@ -148,6 +148,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'minimum_intensity threshold')
 
     @attr('qa', 'risk', 'event_based_risk')
+    def test_case_2_sampling(self):
+        self.run_calc(case_2.__file__, 'job_sampling.ini')
+        self.assertEqual(len(self.calc.datastore['events']), 20)
+        # TODO: improve this test
+
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_correlation(self):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             asset_correlation=1.0)

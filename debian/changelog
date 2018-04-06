@@ -2,6 +2,11 @@
   * Move to Celery 4. Celery support is removed from Windows.
 
   [Michele Simionato]
+  * Added a distribution mechanism `threadpool`
+
+python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
+
+  [Michele Simionato]
   * Fixed a bug with newlines in the logic tree path breaking the CSV exporter
     for the realizations output
   * When setting the event year, each stochastic event set is now considered
@@ -96,6 +101,8 @@
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 09 Apr 2018 09:52:32 +0200
 
 python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
 
