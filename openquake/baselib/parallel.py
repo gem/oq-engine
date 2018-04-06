@@ -498,7 +498,6 @@ def _wakeup(sec, mon):
 
 
 class Starmap(object):
-    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
     calc_id = None
 
@@ -507,8 +506,7 @@ class Starmap(object):
         if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
-            self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
-            cls.pids = list(self)
+            cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
         elif OQ_DISTRIBUTE == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
 
