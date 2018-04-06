@@ -31,7 +31,7 @@ user@ubuntu:~$ oq engine --export-outputs <calc_id> <output_directory>
 \end{Verbatim}
 
 The exports will produce one or more nrml files containing the seismic hazard
-curves, as represented in the example in the inset below:
+curves, as represented below in Listing~\ref{lst:output_hazard_curves_xml}.
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_hazard_curves.xml}
@@ -65,14 +65,17 @@ the following:
 \begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\small]
 user@ubuntu:~$ oq engine --lo <calc_id>
 id | name
+\textcolor{black}{2 | Full Report}
 \textcolor{red}{3 | Hazard Curves}
 \textcolor{red}{4 | Hazard Maps}
 \textcolor{black}{5 | Realizations}
 \textcolor{red}{6 | Uniform Hazard Spectra}
+\textcolor{black}{5 | Seismic Source Groups}
 \end{Verbatim}
 
-The following inset shows a sample of the nrml file used to describe a hazard
-map:
+Listing~\ref{lst:output_hazard_map_xml} shows a sample of the nrml file
+used to describe a hazard map, and and Listing~\ref{lst:output_uhs}
+shows a sample of the nrml used to describe a uniform hazard spectrum.
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_hazard_map.xml}
@@ -80,7 +83,6 @@ map:
   \label{lst:output_hazard_map_xml}
 \end{listing}
 
-\noindent and a uniform hazard spectrum:
 
 \begin{listing}[htbp]
   \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_uhs.xml}
