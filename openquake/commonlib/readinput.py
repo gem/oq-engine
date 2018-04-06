@@ -258,13 +258,10 @@ def get_mesh(oqparam):
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
-    elif oqparam.region:
-        # close the linear polygon ring by appending the first
-        # point to the end
-        firstpoint = geo.Point(*oqparam.region[0])
-        points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
+    elif oqparam.region and oqparam.region_grid_spacing:
+        poly = geo.Polygon.from_wkt(oqparam.region)
         try:
-            mesh = geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+            mesh = poly.discretize(oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except:
             raise ValueError(
@@ -604,7 +601,7 @@ def get_exposure(oqparam):
     """
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.region_constraint, oqparam.ignore_missing_costs)
+        oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
 
