@@ -22,7 +22,7 @@ import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
 
-from openquake.hazardlib import geo, site, imt
+from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 F32 = numpy.float32
@@ -82,19 +82,6 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
 # PSA30 = spectral acceleration at 3.0 s period, 5% damping (percent-g)
 # STDPGA = the standard deviation of PGA (natural log of percent-g)
 
-def spatial_length_scale(imt, vs30clustered):
-    """
-    :param imt: intensity measure type
-    :param vs30clustered: boolean
-    :returns: the `b` parameter in the correlation matrix
-    """
-    T = imt.period
-    if T < 1:
-        b = 40.7 - 15.0 * T if vs30clustered else 8.5 + 17.2 * T
-    elif T >= 1:
-        b = 22.0 + 3.7 * T
-    return b
-
 
 def spatial_correlation_array(dmatrix, imts, correl='spatial',
                               vs30clustered=True):
@@ -113,8 +100,7 @@ def spatial_correlation_array(dmatrix, imts, correl='spatial',
         if correl == 'full correlation':
             corr[imti] = numpy.eye(n)
         elif correl == 'spatial':
-            b = spatial_length_scale(im, vs30clustered)
-            corr[imti] = numpy.exp(-3 * dmatrix / b)
+            corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
     return corr
 
 
