@@ -106,6 +106,7 @@ class PGA(_IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
+    period = 0.0
 
 
 class PGV(_IMT):
