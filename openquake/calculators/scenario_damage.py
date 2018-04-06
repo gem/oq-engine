@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import itertools
+import logging
 import numpy
 
 from openquake.risklib import scientific, riskmodels
@@ -41,7 +42,10 @@ def dist_by_asset(data, multi_stat_dt, number):
             mean, stddev = data[n, r, l]
             out_lt[n, r] = (mean, stddev)
             # sanity check on the sum over all damage states
-            numpy.testing.assert_almost_equal(mean.sum(), number[n], decimal=1)
+            if abs(mean.sum() / number[n] - 1) > 1E-3:
+                logging.warn(
+                    'Asset #%d, rlz=%d, expected %s, got %s for %s damage',
+                    n, r, number[n], mean.sum(), lt)
     return out
 
 
