@@ -177,7 +177,7 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -509,10 +509,12 @@ class Starmap(object):
             m = Monitor('wakeup')
             self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
             cls.pids = list(self)
+        elif OQ_DISTRIBUTE == 'threadpool' and not hasattr(cls, 'pool'):
+            cls.pool = multiprocessing.dummy.Pool(poolsize)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'processpool' and hasattr(cls, 'pool'):
+        if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -607,7 +609,7 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute == 'processpool':
+        elif self.distribute in ('processpool', 'threadpool'):
             it = self._iter_processes()
         elif self.distribute == 'celery':
             it = self._iter_celery()
