@@ -608,7 +608,7 @@ class Starmap(object):
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
         elif self.distribute in ('processpool', 'threadpool'):
-            it = self._iter_processes()
+            it = self._iter_pool()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
@@ -633,7 +633,7 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args)
 
-    def _iter_processes(self):
+    def _iter_pool(self):
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
