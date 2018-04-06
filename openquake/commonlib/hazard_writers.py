@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Classes for serializing various NRML XML artifacts.
 """
-
-import json
 import operator
 from collections import OrderedDict
 
@@ -355,6 +353,16 @@ def rupture_to_element(rup, parent=None):
         # that i and j will be undefined
         mesh_elem.set('rows', str(i + 1))
         mesh_elem.set('cols', str(j + 1))
+    elif rup.is_gridded_surface:
+        # the rup geometry is represented by a mesh of (1, N) points
+        mesh_elem = et.SubElement(rup_elem, 'mesh')
+        for j, _ in enumerate(rup.lons):
+            node_elem = et.SubElement(mesh_elem, 'node')
+            node_elem.set('row', '0')
+            node_elem.set('col', str(j))
+            node_elem.set('lon', str(rup.lons[j]))
+            node_elem.set('lat', str(rup.lats[j]))
+            node_elem.set('depth', str(rup.depths[j]))
     else:
         # rupture is from a multi surface fault source
         if rup.is_multi_surface:
