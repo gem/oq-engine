@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (C) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
 import operator
@@ -508,10 +508,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         a :class:`openquake.server.dbapi.Db` instance
     :param request_get_dict:
         a dictionary
-    :param user_name:
-        user name
+    :param allowed_users:
+        a list of users
     :param user_acl_on:
-        if True, returns only the calculations owned by the user
+        if True, returns only the calculations owned by the user or the group
     :param id:
         if given, extract only the specified calculation
     :returns:
@@ -547,8 +547,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
     if user_acl_on:
         users_filter = "user_name IN (?X)"
     else:
@@ -651,7 +649,8 @@ def get_result(db, result_id):
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
-    return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
+    return (job.id, job.status, job.user_name,
+            os.path.dirname(job.ds_calc_dir), job.ds_key)
 
 
 def get_results(db, job_id):

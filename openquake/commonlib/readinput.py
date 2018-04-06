@@ -19,7 +19,9 @@
 from __future__ import division
 import os
 import csv
+import copy
 import zlib
+import shutil
 import zipfile
 import logging
 import operator
@@ -27,17 +29,15 @@ import tempfile
 import collections
 import numpy
 
-from openquake.baselib.general import groupby, AccumDict, DictArray, deprecated
+from openquake.baselib.general import AccumDict, DictArray, deprecated
 from openquake.baselib.python3compat import configparser, decode
 from openquake.baselib.node import Node
-from openquake.baselib import hdf5
 from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
-from openquake.baselib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import logictree, source, writers
 
@@ -204,10 +204,14 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     oqparam.validate()
     return oqparam
 
+
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
 # this hack is necessary, otherwise we would have to parse the file twice
+
+exposure = None  # set as side effect when the user reads the site mesh
+# this hack is necessary, otherwise we would have to parse the exposure twice
 
 
 def get_mesh(oqparam):
@@ -218,9 +222,12 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap
+    global pmap, exposure
+    if 'exposure' in oqparam.inputs and exposure is None:
+        # read it only once
+        exposure = get_exposure(oqparam)
     if oqparam.sites:
-        return geo.Mesh.from_coords(sorted(oqparam.sites))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').readlines()
         has_header = csv_data[0].startswith('site_id')
@@ -240,7 +247,8 @@ def get_mesh(oqparam):
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
-        return geo.Mesh.from_coords(c)
+        # TODO: sort=True below would break a lot of tests :-(
+        return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
@@ -257,21 +265,15 @@ def get_mesh(oqparam):
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         try:
             mesh = geo.Polygon(points).discretize(oqparam.region_grid_spacing)
-            lons, lats = zip(*sorted(zip(mesh.lons, mesh.lats)))
-            return geo.Mesh(numpy.array(lons), numpy.array(lats))
+            return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except:
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
-        # the mesh will be extracted from the exposure later
-        return
-    elif 'site_model' in oqparam.inputs:
-        coords = [(param['lon'], param['lat'], 0)
-                  for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(sorted(coords))
-        mesh.from_site_model = True
-        return mesh
+        return exposure.mesh
+
+
 
 site_model_dt = numpy.dtype([
     ('lon', numpy.float64),
@@ -303,33 +305,32 @@ def get_site_model(oqparam):
     return array
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param mesh:
-        a mesh of hazardlib points; if None the mesh is
-        determined by invoking get_mesh
     """
-    if mesh is None:
-        mesh = get_mesh(oqparam)
-    if mesh is None and oqparam.hazard_calculation_id:
-        with datastore.read(oqparam.hazard_calculation_id) as dstore:
-            return dstore['sitecol'].complete
-    elif mesh is None:
-        return
+    mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
-        if getattr(mesh, 'from_site_model', False):
+        try:
+            # in the future we could have elevation in the site model
+            depth = sm['depth']
+        except ValueError:
+            # this is the normal case
+            depth = None
+        if mesh is None:
+            # extract the site collection directly from the site model
             return site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, None, sm)
+                sm['lon'], sm['lat'], depth, sm)
         # associate the site parameters to the mesh
         site_model_params = geo.utils.GeographicObjects(
             sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
-        sitecol = site.SiteCollection.from_points(mesh.lons, mesh.lats)
+        sitecol = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats, mesh.depths)
         dic = site_model_params.assoc(
             sitecol, oqparam.max_site_model_distance, 'warn')
         for sid in dic:
@@ -602,70 +603,85 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    return asset.Exposure.read(
+    exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region_constraint, oqparam.ignore_missing_costs)
+    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    return exposure
 
 
-def _get_mesh_assets_by_site(oqparam, exposure):
-    assets_by_loc = groupby(exposure, key=lambda a: a.location)
-    lons, lats = zip(*sorted(assets_by_loc))
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    assets_by_site = [
-        assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
-    return mesh, assets_by_site
-
-
-def get_sitecol_assetcol(oqparam, haz_sitecol=None):
+def get_sitecol_assetcol(oqparam, haz_sitecol):
     """
     :param oqparam: calculation parameters
-    :param haz_sitecol: a pre-existing site collection, if any
+    :param haz_sitecol: the hazard site collection
     :returns: (site collection, asset collection) instances
     """
-    exposure = get_exposure(oqparam)
-    mesh, assets_by_site = _get_mesh_assets_by_site(oqparam, exposure)
-    if haz_sitecol:
-        tot_assets = sum(len(assets) for assets in assets_by_site)
+    global exposure
+    if exposure is None:
+        # haz_sitecol not extracted from the exposure
+        exposure = get_exposure(oqparam)
+    if oqparam.region_grid_spacing and not oqparam.region:
+        # extract the hazard grid from the exposure
+        exposure.mesh = exposure.mesh.get_convex_hull().dilate(
+            oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
+        haz_sitecol = get_site_collection(oqparam)
+        haz_distance = oqparam.region_grid_spacing
+        if haz_distance != oqparam.asset_hazard_distance:
+            logging.info('Using asset_hazard_distance=%d km instead of %d km',
+                         haz_distance, oqparam.asset_hazard_distance)
+    else:
+        haz_distance = oqparam.asset_hazard_distance
+
+    if haz_sitecol.mesh != exposure.mesh:
         all_sids = haz_sitecol.complete.sids
         sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
-        asset_hazard_distance = oqparam.asset_hazard_distance
         siteobjects = geo.utils.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
         assets_by_sid = AccumDict(accum=[])
-        for assets in assets_by_site:
+        tot_assets = 0
+        for assets in exposure.assets_by_site:
+            tot_assets += len(assets)
             lon, lat = assets[0].location
-            site, distance = siteobjects.get_closest(lon, lat)
-            if site.sid in sids and distance <= asset_hazard_distance:
+            obj, distance = siteobjects.get_closest(lon, lat)
+            if obj.sid in sids and distance <= haz_distance:
                 # keep the assets, otherwise discard them
-                assets_by_sid += {site.sid: list(assets)}
+                assets_by_sid += {obj.sid: list(assets)}
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
-                'asset_hazard_distance of %s km' % asset_hazard_distance)
+                'asset_hazard_distance of %s km' % haz_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        assets_by_site = [
+        exposure.assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in all_sids]
-        num_assets = sum(len(assets) for assets in assets_by_site)
+        num_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol = haz_sitecol.complete.filter(mask)
-        logging.info('Associated %d/%d assets to %d sites',
-                     num_assets, tot_assets, len(sitecol))
-    else:  # use the exposure sites as hazard sites
-        sitecol = get_site_collection(oqparam, mesh)
+        logging.info('Associated %d assets to %d sites',
+                     num_assets, len(sitecol))
+        if num_assets < tot_assets:
+            msg = ('Discarded %d assets outside the asset_hazard_distance of '
+                   '%d km') % (tot_assets - num_assets, haz_distance)
+            if oqparam.region_grid_spacing:
+                raise geo.utils.SiteAssociationError(msg)
+            else:
+                logging.warn(msg)
+    else:
+        sitecol = haz_sitecol
+
     asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site
+                  for assets in exposure.assets_by_site
                   for asset in assets]
     assetcol = asset.AssetCollection(
         asset_refs,
-        assets_by_site,
+        exposure.assets_by_site,
         exposure.tagcol,
         exposure.cost_calculator,
         oqparam.time_event,
-        occupancy_periods=hdf5.array_of_vstr(
-            sorted(exposure.occupancy_periods)))
+        occupancy_periods=exposure.occupancy_periods)
     return sitecol, assetcol
 
 
@@ -933,6 +949,36 @@ def get_mesh_hcurves(oqparam):
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+
+
+# used in utils/reduce_sm and utils/extract_source
+def reduce_source_model(smlt_file, source_ids):
+    """
+    Extract sources from the composite source model
+    """
+    for paths in gen_sm_paths(smlt_file):
+        for path in paths:
+            root = nrml.read(path)
+            model = Node('sourceModel', root[0].attrib)
+            origmodel = root[0]
+            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+                for src_node in origmodel:
+                    if src_node['id'] in source_ids:
+                        model.nodes.append(src_node)
+            else:  # nrml/0.5
+                for src_group in origmodel:
+                    sg = copy.copy(src_group)
+                    sg.nodes = []
+                    for src_node in src_group:
+                        if src_node['id'] in source_ids:
+                            sg.nodes.append(src_node)
+                    if sg.nodes:
+                        model.nodes.append(sg)
+            if model:
+                shutil.copy(path, path + '.bak')
+                with open(path, 'wb') as f:
+                    nrml.write([model], f, xmlns=root['xmlns'])
+                    logging.warn('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):
