@@ -256,15 +256,21 @@ Notice that you may need to adjust the master node firewall, if
 already configured, to allow incoming traffic on TCP port range
 1907-1920.
 
-The task distribution code has been simplified and features
-in the experimental/proof-of-concept state has been removed: in
-particular the support to ipython and the support to SGE have disappeared.
-As it is now, they were not used and they were a significant maintenance cost.
-
 Now we use the port 1907 for the DbServer, when installing the engine
 from the packages. When installing from sources, the port is the number 1908,
 as before. In this way an installation from packages can coexists with
 an installation from sources out of the box.
+
+The task distribution code has been simplified and features
+in the experimental/proof-of-concept state has been removed: in
+particular the support to ipython and the support to SGE have disappeared.
+They were not used and they were a significant maintenance cost.
+The default for the `distribution` parameter in the configuration
+file openquake.cfg is now `processpool`, not `futures`. The old
+syntax is still supported, but a warning will be printed, saying
+to use `processpool` instead. Technically we do not rely anymore
+on the Python module `concurrent.futures`, we use the module
+`multiprocessing` directly.
 
 The engine now stores more information about the sources.
 In particular in the case of
