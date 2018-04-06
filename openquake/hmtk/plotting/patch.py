@@ -16,21 +16,46 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+# copied from https://pypi.python.org/pypi/descartes
+
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from numpy import asarray, concatenate, ones
 
 
-# copied from https://pypi.python.org/pypi/descartes
+class Polygon(object):
+    # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
+    def __init__(self, context):
+        if isinstance(context, dict):
+            self.context = context['coordinates']
+        else:
+            self.context = context
+
+    @property
+    def exterior(self):
+        return (getattr(self.context, 'exterior', None) or self.context[0])
+
+    @property
+    def interiors(self):
+        value = getattr(self.context, 'interiors', None)
+        if value is None:
+            value = self.context[1:]
+        return value
+
+
 def PolygonPatch(polygon, **kwargs):
-    """
-    Constructs a compound matplotlib path from a Shapely object.
-    Here is an example of usage:
+    """Constructs a matplotlib patch from a geometric object
 
-    pp = PolygonPatch(shapely_pol)
-    ax.add_patch(patch)  # matplotlib axes
-    """
+    The `polygon` may be a Shapely or GeoJSON-like object possibly with holes.
+    The `kwargs` are those supported by the matplotlib.patches.Polygon class
+    constructor. Returns an instance of matplotlib.patches.PathPatch.
 
+    Example (using Shapely Point and a matplotlib axes):
+
+      >>> b = Point(0, 0).buffer(1.0)
+      >>> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
+      >>> axis.add_patch(patch)
+    """
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
         # beginning of each subpath
@@ -39,13 +64,26 @@ def PolygonPatch(polygon, **kwargs):
         vals[0] = Path.MOVETO
         return vals
 
-    ptype = polygon.geom_type
-    if ptype == 'Polygon':
-        polygon = [polygon]
-    elif ptype == 'MultiPolygon':
-        polygon = [p for p in polygon]
-    else:
-        raise ValueError("A polygon or multi-polygon is required")
+    if hasattr(polygon, 'geom_type'):  # Shapely
+        ptype = polygon.geom_type
+        if ptype == 'Polygon':
+            polygon = [Polygon(polygon)]
+        elif ptype == 'MultiPolygon':
+            polygon = [Polygon(p) for p in polygon]
+        else:
+            raise ValueError(
+                "A polygon or multi-polygon representation is required")
+
+    else:  # GeoJSON
+        polygon = getattr(polygon, '__geo_interface__', polygon)
+        ptype = polygon["type"]
+        if ptype == 'Polygon':
+            polygon = [Polygon(polygon)]
+        elif ptype == 'MultiPolygon':
+            polygon = [Polygon(p) for p in polygon['coordinates']]
+        else:
+            raise ValueError(
+                "A polygon or multi-polygon representation is required")
 
     vertices = concatenate([
         concatenate([asarray(t.exterior)[:, :2]] +
@@ -55,4 +93,4 @@ def PolygonPatch(polygon, **kwargs):
         concatenate([coding(t.exterior)] +
                     [coding(r) for r in t.interiors]) for t in polygon])
 
-    return PathPatch(Path(vertices, codes), **kwargs)
+    return PathPatch(Path(vertices, codes),  **kwargs)
