@@ -439,7 +439,7 @@
             calculations.fetch({reset: true});
             setTimer();
 
-            ajax = $.ajax({url: gem_oq_server_url + "/engine_latest_version",
+            ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
                            async: true}).done(function (data) {
                                                  /* None is returned in case of an error,
                                                     but we don't care about errors here */

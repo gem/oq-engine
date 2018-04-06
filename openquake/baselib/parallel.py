@@ -177,7 +177,7 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -498,7 +498,6 @@ def _wakeup(sec, mon):
 
 
 class Starmap(object):
-    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
     calc_id = None
 
@@ -507,12 +506,13 @@ class Starmap(object):
         if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
-            self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
-            cls.pids = list(self)
+            cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
+        elif OQ_DISTRIBUTE == 'threadpool' and not hasattr(cls, 'pool'):
+            cls.pool = multiprocessing.dummy.Pool(poolsize)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'processpool' and hasattr(cls, 'pool'):
+        if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -607,8 +607,8 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute == 'processpool':
-            it = self._iter_processes()
+        elif self.distribute in ('processpool', 'threadpool'):
+            it = self._iter_pool()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
@@ -633,7 +633,7 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args)
 
-    def _iter_processes(self):
+    def _iter_pool(self):
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
