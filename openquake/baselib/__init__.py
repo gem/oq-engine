@@ -23,7 +23,7 @@ from openquake.baselib.python3compat import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.0.0'
+__version__ = '3.1.0'
 __version__ += git_suffix(__file__)
 
 
