@@ -123,8 +123,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
 
 def jbcorrelation(distances, imt, vs30_clustering):
         """
-        Returns the Jayaram-Baker correlation model for a set of distances,
-        given the appropriate period
+        Returns the Jayaram-Baker correlation model.
 
         :param numpy.ndarray distances:
             Distance matrix
