@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -109,7 +109,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         zd = AccumDict()
-        zd.calc_times = []
         zd.eff_ruptures = AccumDict()
         self.grp_trt = self.csm.info.grp_by("trt")
         return zd
@@ -123,7 +122,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
         if hasattr(ruptures_by_grp_id, 'calc_times'):
-            acc.calc_times.extend(ruptures_by_grp_id.calc_times)
+            for srcid, nsites, eids, dt in ruptures_by_grp_id.calc_times:
+                info = self.csm.infos[srcid]
+                info.num_sites += nsites
+                info.calc_time += dt
+                info.num_split += 1
+                info.events += len(eids)
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
@@ -219,14 +223,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                           autoflush=True):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore, 'events',
-                             int(self.oqparam.investigation_time),
-                             self.oqparam.ses_per_logic_tree_path)
+                             int(self.oqparam.investigation_time))
 
 
 def set_counts(dstore, dsetname):
     """
     :param dstore: a DataStore instance
-    :dsetname: name of dataset with a field `grp_id`
+    :param dsetname: name of dataset with a field `grp_id`
     :returns: a dictionary grp_id > counts
     """
     groups = dstore[dsetname]['grp_id']
@@ -236,19 +239,20 @@ def set_counts(dstore, dsetname):
     return dic
 
 
-def set_random_years(dstore, name, investigation_time, num_ses):
+def set_random_years(dstore, name, investigation_time):
     """
     Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
+
+    :param dstore: a DataStore instance
+    :param name: name of the dataset ('events')
+    :param investigation_time: investigation time
     """
     events = dstore[name].value
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
-        ses_idx = event['ses'] - 1  # starts from 0
-        offset = num_ses * event['sample'] * investigation_time
-        event['year'] = (offset + ses_idx * investigation_time +
-                         year_of[event['eid']])
+        event['year'] = year_of[event['eid']]
     dstore[name] = events
 
 

@@ -264,12 +264,12 @@ Attempt to login, given the parameters `username` and `password`
 Logout
 
 
-#### GET /engine_version
+#### GET /v1/engine_version
 
 Return a string with the OpenQuake engine version
 
 
-#### GET /engine_latest_version
+#### GET /v1/engine_latest_version
 
 Return a string with if new versions have been released.
 Return 'None' if the version is not available
