@@ -274,7 +274,6 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-
 site_model_dt = numpy.dtype([
     ('lon', numpy.float64),
     ('lat', numpy.float64),
