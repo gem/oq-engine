@@ -405,7 +405,7 @@ class ExposureTestCase(unittest.TestCase):
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['occupants']
         oqparam.inputs = {'exposure': self.exposure}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -421,7 +421,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
         oqparam.inputs = {'exposure': self.exposure0}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -438,7 +438,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure1}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -455,7 +455,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insured_losses = True
         oqparam.inputs = {'exposure': self.exposure,
                           'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -470,7 +470,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,
                           'structural_vulnerability': None}
@@ -486,7 +486,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure3}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.insured_losses = False
