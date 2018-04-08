@@ -18,6 +18,7 @@
 
 import os
 import re
+import ast
 import logging
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
@@ -352,11 +353,11 @@ def _cast(col, ntype, shape, lineno, fname):
 def parse_comment(comment):
     """
     Parse a comment of the form
-    # investigation_time=50.0, imt=PGA, ...
+    # investigation_time=50.0, imt="PGA", ...
     and returns it as pairs of strings:
 
-    >>> parse_comment("path=('b1',), time=50.0, imt=PGA")
-    [('path', "('b1',)"), ('time', '50.0'), ('imt', 'PGA')]
+    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
+    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
     """
     names, vals = [], []
     pieces = comment.split('=')
@@ -364,10 +365,10 @@ def parse_comment(comment):
         if i == 0:  # first line
             names.append(piece.strip())
         elif i == len(pieces) - 1:  # last line
-            vals.append(piece.strip())
+            vals.append(ast.literal_eval(piece))
         else:
             val, name = piece.rsplit(',', 1)
-            vals.append(val.strip())
+            vals.append(ast.literal_eval(val))
             names.append(name.strip())
     return list(zip(names, vals))
 
