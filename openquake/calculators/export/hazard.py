@@ -272,7 +272,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt,
+            rlzs_assoc, kind, oq.investigation_time) + ',imt="%s"' % imt,
                                         header=[name for (name, dt) in lst]))
     return fnames
 
