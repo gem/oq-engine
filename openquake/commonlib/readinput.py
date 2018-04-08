@@ -252,7 +252,7 @@ def get_mesh(oqparam):
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
-            mesh, pmap = get_pmap_from_csv(oqparam, fname)
+            mesh, pmap = get_pmap_from_csv(oqparam, fname.split())
         elif fname.endswith('.xml'):
             mesh, pmap = get_pmap_from_nrml(oqparam, fname)
         else:
@@ -685,50 +685,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     return sitecol, assetcol
 
 
-def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
-    """
-    Read CSV data in the format `IMT lon lat value1 ... valueN`.
-
-    :param csvfile:
-        a file or file-like object with the CSV data
-    :param imts:
-        a list of intensity measure types
-    :param num_values:
-        dictionary with the number of expected values per IMT
-    :param validvalues:
-        validation function for the values
-    :returns:
-        the mesh of points and the data as a dictionary
-        imt -> array of curves for each site
-    """
-    number_of_values = dict(zip(imts, num_values))
-    lon_lats = {imt: set() for imt in imts}
-    data = AccumDict()  # imt -> list of arrays
-    check_imt = valid.Choice(*imts)
-    for line, row in enumerate(csv.reader(csvfile, delimiter=' '), 1):
-        try:
-            imt = check_imt(row[0])
-            lon_lat = valid.longitude(row[1]), valid.latitude(row[2])
-            if lon_lat in lon_lats[imt]:
-                raise DuplicatedPoint(lon_lat)
-            lon_lats[imt].add(lon_lat)
-            values = validvalues(' '.join(row[3:]))
-            if len(values) != number_of_values[imt]:
-                raise ValueError('Found %d values, expected %d' %
-                                 (len(values), number_of_values[imt]))
-        except (ValueError, DuplicatedPoint) as err:
-            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
-        data += {imt: [numpy.array(values)]}
-    points = lon_lats.pop(imts[0])
-    for other_imt, other_points in lon_lats.items():
-        if points != other_points:
-            raise ValueError('Inconsistent locations between %s and %s' %
-                             (imts[0], other_imt))
-    lons, lats = zip(*sorted(points))
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
-
-
 def get_gmfs(oqparam):
     """
     :param oqparam:
@@ -792,30 +748,36 @@ def get_gmfs(oqparam):
     return eids, gmfs
 
 
-@deprecated('Reading hazard curves from CSV may change in the future')
-def get_pmap_from_csv(oqparam, fname):
+def get_pmap_from_csv(oqparam, fnames):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        a .txt file with format `IMT lon lat poe1 ... poeN`
+    :param fnames:
+        a space-separated list of .csv relative filenames
     :returns:
-        the site mesh and the hazard curves read by the .txt file
+        the site mesh and the hazard curves read by the .csv files
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
-    num_values = list(map(len, list(oqparam.imtls.values())))
-    with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves = get_mesh_csvdata(
-            csvfile, list(oqparam.imtls), num_values,
-            valid.decreasing_probabilities)
-    array = numpy.zeros((len(mesh), sum(num_values)))
-    for imt_ in hcurves:
-        array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
-    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
+
+    dic = {wrapper.imt: wrapper.array
+           for wrapper in map(writers.read_composite_array, fnames)}
+    array = dic[next(iter(dic))]
+    mesh = geo.Mesh(array['lon'], array['lat'])
+    num_levels = sum(len(imls) for imls in oqparam.imtls.values())
+    data = numpy.zeros((len(mesh), num_levels))
+    level = 0
+    for im in oqparam.imtls:
+        arr = dic[im]
+        for poe in arr.dtype.names[3:]:
+            data[:, level] = arr[poe]
+            level += 1
+        for field in ('lon', 'lat', 'depth'):  # sanity check
+            numpy.testing.assert_equal(arr[field], array[field])
+    return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
 def get_pmap_from_nrml(oqparam, fname):
