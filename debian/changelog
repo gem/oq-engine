@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an XML exporter for the site model
+  * Slight change to the correlation module to fix a bug in the SMTK
   * Added a distribution mechanism `threadpool`
 
 python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
