@@ -51,6 +51,7 @@ class ScenarioCalculator(base.HazardCalculator):
         gsim_lt = readinput.get_gsim_lt(oq)
         cinfo = source.CompositionInfo.fake(gsim_lt)
         self.datastore['csm_info'] = cinfo
+        self.datastore['oqparam'] = oq
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
     def init(self):

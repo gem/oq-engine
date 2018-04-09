@@ -25,6 +25,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.baselib.node import floatformat
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -94,6 +95,10 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_4(self):
         medians = self.medians(case_4)['PGA']
         aae(medians, [0.41615372, 0.22797466, 0.1936226], decimal=2)
+
+        # this is a case with a site model
+        [fname] = export(('site_model', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('site_model.xml', fname)
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_5(self):
