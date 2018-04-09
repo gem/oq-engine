@@ -782,7 +782,7 @@ def import_gmfs(dstore, fname, sids):
     :param sids: the site IDs (complete)
     :returns: event_ids, num_rlzs
     """
-    array = writers.read_composite_array(fname)
+    array = writers.read_composite_array(fname).array
     n_imts = len(array.dtype.names[3:])  # rlzi, sid, eid, gmv_PGA, ...
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
