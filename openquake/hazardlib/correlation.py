@@ -19,8 +19,6 @@ spatially-distributed ground-shaking intensities.
 """
 import abc
 import numpy
-
-from openquake.hazardlib.imt import SA, PGA
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -111,8 +109,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         self.cache = {}  # imt -> correlation model
 
     def _get_correlation_matrix(self, sites, imt):
-        distances = sites.mesh.get_distance_matrix()
-        return jbcorrelation(distances, imt, self.vs30_clustering)
+        return jbcorrelation(sites, imt, self.vs30_clustering)
 
     def get_lower_triangle_correlation_matrix(self, sites, imt):
         """
@@ -121,17 +118,22 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         return numpy.linalg.cholesky(self._get_correlation_matrix(sites, imt))
 
 
-def jbcorrelation(distances, imt, vs30_clustering):
+def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
         """
         Returns the Jayaram-Baker correlation model.
 
-        :param numpy.ndarray distances:
-            Distance matrix
+        :param sites_or_distances:
+            SiteCollection instance o ristance matrix
         :param imt:
             Intensity Measure Type (PGA or SA)
         :param vs30_clustering:
-            flag
+            flag, defalt false
         """
+        if hasattr(sites_or_distances, 'mesh'):
+            distances = sites_or_distances.mesh.get_distance_matrix()
+        else:
+            distances = sites_or_distances
+
         # formulae are from page 1700
         if imt.period < 1:
             if not vs30_clustering:

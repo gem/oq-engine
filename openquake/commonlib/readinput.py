@@ -739,7 +739,7 @@ def get_gmfs(oqparam):
     M = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = writers.read_composite_array(fname)
+        array = writers.read_composite_array(fname).array
         R = len(numpy.unique(array['rlzi']))
         if R > 1:
             raise InvalidFile('%s: found %d realizations, currently only one '
