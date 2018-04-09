@@ -17,17 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap
-from openquake.hazardlib.shakemap import download
+from openquake.hazardlib.shakemap import download_array
 from openquake.commonlib.writers import write_csv
-
-SHAKEMAP_URL = ('https://earthquake.usgs.gov/realtime/product/shakemap/'
-                '{}/us/1520506325004/download/{}.xml')
 
 
 @sap.Script
 def shakemap(id):
-    array = download(id, SHAKEMAP_URL)
-    dest = write_csv('shakemap_%s.csv' % id, array)
+    dest = write_csv('shakemap_%s.csv' % id, download_array(id))
     print('Saved %s' % dest)
 
 shakemap.arg('id', 'USGS Shakemap ID')
