@@ -17,7 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
 from urllib.error import HTTPError
+import io
+import re
 import math
+import zipfile
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -25,8 +28,13 @@ from scipy import interpolate
 from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
+US_GOV = 'https://earthquake.usgs.gov'
+SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
+URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
+GRID_RX = URL_RX + 'grid\.xml\.zip'
+UNCERTAINTY_RX = URL_RX + "uncertainty\.xml\.zip"
+
 F32 = numpy.float32
-SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/{}.xml'
 PCTG = 100  # percent of g, the gravity acceleration
 
 
@@ -34,20 +42,45 @@ class DownloadFailed(Exception):
     """Raised by shakemap.download"""
 
 
-def download(shakemap_id, shakemap_url=SHAKEMAP_URL):
+class MissingLink(Exception):
+    """Could not find link in web page"""
+
+
+def _download(url):
+    try:
+        with urlopen(url) as f:
+            return f.read().decode('utf-8')
+    except HTTPError as exc:  # not found
+        raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
+
+
+def urlextract(url, fname):
+    """
+    Download and unzip an archive and extract the underlying fname
+    """
+    with urlopen(url) as f:
+        data = io.BytesIO(f.read())
+    with zipfile.ZipFile(data) as z:
+        return z.open(fname)
+
+
+def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     """
     :param shakemap_id: USGS Shakemap ID
     :returns: an array with the shakemap
     """
-    fs = []
-    for kind in ('grid', 'uncertainty'):
-        url = shakemap_url.format(shakemap_id, kind)
-        try:
-            fs.append(urlopen(url))
-        except HTTPError as exc:  # not found
-            raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
-    with fs[0] as f0, fs[1] as f1:
-        return get_shakemap_array(f0, f1)
+    url = shakemap_url.format(shakemap_id)
+    grid = re.search(GRID_RX, _download(url))
+    uncertainty = re.search(UNCERTAINTY_RX, _download(url))
+    if grid is None:
+        raise MissingLink('Could not find grid.xml.zip link in %s' % url)
+    if uncertainty is None:
+        with urlopen(US_GOV + grid.group()) as f:
+            return get_shakemap_array(f)
+    else:
+        with urlextract(US_GOV + grid.group(), 'grid.xml') as f1, \
+             urlextract(US_GOV + uncertainty.group(), 'uncertainty.xml') as f2:
+            return get_shakemap_array(f1, f2)
 
 
 def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
@@ -58,7 +91,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, int):
-        array = download(array_or_id)
+        array = download_array(array_or_id)
     else:
         array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
