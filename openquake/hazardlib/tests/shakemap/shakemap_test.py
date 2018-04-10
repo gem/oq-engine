@@ -71,7 +71,7 @@ class ShakemapTestCase(unittest.TestCase):
         val = numpy.array(
             [(5.38409665, 3.9383686, 3.55435415, 4.37692394)] * 9, imt_dt)
 
-        shakemap = numpy.zeros(9, shakemap_dt)
+        shakemap = numpy.zeros(9, shakemap_dt)  # 9 sites
         shakemap['lon'] = lons
         shakemap['lat'] = lats
         shakemap['vs30'] = numpy.array([301.17] * 9)
