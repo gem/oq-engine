@@ -19,7 +19,7 @@ CDIR = os.path.dirname(__file__)
 def mean_gmf(shakemap):
     gmfs = to_gmfs(
         shakemap, site_effects=True, trunclevel=3, num_gmfs=10, seed=42)
-    return [gmfs[i].mean() for i, imt in enumerate(imts)]
+    return [gmfs[i].mean() for i in range(len(imts))]
 
 
 class ShakemapTestCase(unittest.TestCase):
