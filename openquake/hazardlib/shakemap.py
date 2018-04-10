@@ -243,7 +243,7 @@ def cholesky(spatial_cov, cross_corr):
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (N, G) and dtype imt_dt
+    :returns: an array of GMFs of shape (M, N, E)
     """
     std = shakemap['std']
     imts = [imt.from_string(name) for name in std.dtype.names]
@@ -257,17 +257,15 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in std.dtype.names for j in range(N)])
-    L = cholesky(spatial_cov, cross_corr)
+    # mu has shape (M * N, E)
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
+    # Z has shape (M * N, E)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-
-    arr = numpy.zeros((M, N, num_gmfs))
-    for i, im in enumerate(std.dtype.names):
-        arr[i] = gmfs[i * N:(i + 1) * N]
-    return arr
+    return gmfs.reshape((M, N, num_gmfs))
 
 """
 here is an example for Tanzania:
