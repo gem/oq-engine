@@ -55,7 +55,7 @@ def get_valid_users(request):
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
-            groups = request.user.groups.values_list('name', flat=True)
+            groups = request.user.groups.get()
             if groups:
                 users = list(User.objects.filter(groups__name=groups)
                              .values_list('username', flat=True))
