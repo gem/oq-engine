@@ -16,7 +16,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
+from urllib.error import HTTPError
+import io
+import re
 import math
+import zipfile
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -24,9 +28,59 @@ from scipy import interpolate
 from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
+US_GOV = 'https://earthquake.usgs.gov'
+SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
+URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
+GRID_RX = URL_RX + 'grid\.xml\.zip'
+UNCERTAINTY_RX = URL_RX + "uncertainty\.xml\.zip"
+
 F32 = numpy.float32
-SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/{}.xml'
 PCTG = 100  # percent of g, the gravity acceleration
+
+
+class DownloadFailed(Exception):
+    """Raised by shakemap.download"""
+
+
+class MissingLink(Exception):
+    """Could not find link in web page"""
+
+
+def _download(url):
+    try:
+        with urlopen(url) as f:
+            return f.read().decode('utf-8')
+    except HTTPError as exc:  # not found
+        raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
+
+
+def urlextract(url, fname):
+    """
+    Download and unzip an archive and extract the underlying fname
+    """
+    with urlopen(url) as f:
+        data = io.BytesIO(f.read())
+    with zipfile.ZipFile(data) as z:
+        return z.open(fname)
+
+
+def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
+    """
+    :param shakemap_id: USGS Shakemap ID
+    :returns: an array with the shakemap
+    """
+    url = shakemap_url.format(shakemap_id)
+    grid = re.search(GRID_RX, _download(url))
+    uncertainty = re.search(UNCERTAINTY_RX, _download(url))
+    if grid is None:
+        raise MissingLink('Could not find grid.xml.zip link in %s' % url)
+    if uncertainty is None:
+        with urlopen(US_GOV + grid.group()) as f:
+            return get_shakemap_array(f)
+    else:
+        with urlextract(US_GOV + grid.group(), 'grid.xml') as f1, \
+             urlextract(US_GOV + uncertainty.group(), 'uncertainty.xml') as f2:
+            return get_shakemap_array(f1, f2)
 
 
 def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
@@ -37,9 +91,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, int):
-        with urlopen(SHAKEMAP_URL.format(array_or_id, 'grid')) as f1, \
-             urlopen(SHAKEMAP_URL.format(array_or_id, 'uncertainty')) as f2:
-            array = get_shakemap_array(f1, f2)
+        array = download_array(array_or_id)
     else:
         array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
@@ -191,7 +243,7 @@ def cholesky(spatial_cov, cross_corr):
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (N, G) and dtype imt_dt
+    :returns: an array of GMFs of shape (M, N, E)
     """
     std = shakemap['std']
     imts = [imt.from_string(name) for name in std.dtype.names]
@@ -205,17 +257,15 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in std.dtype.names for j in range(N)])
-    L = cholesky(spatial_cov, cross_corr)
+    # mu has shape (M * N, E)
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
+    # Z has shape (M * N, E)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-
-    arr = numpy.zeros((N, num_gmfs), std.dtype)
-    for i, im in enumerate(std.dtype.names):
-        arr[im] = gmfs[i * N:(i + 1) * N]
-    return arr
+    return gmfs.reshape((M, N, num_gmfs))
 
 """
 here is an example for Tanzania:
