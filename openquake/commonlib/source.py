@@ -44,7 +44,7 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
-rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
+rlz_dt = numpy.dtype([('path', 'S200'), ('model', 'S200'),
                       ('gsims', 'S100'), ('weight', F32)])
 
 
