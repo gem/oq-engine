@@ -174,7 +174,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float64':
+        if numpytype != 'float64' and not numpytype.startswith('|S'):
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
