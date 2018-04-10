@@ -41,16 +41,13 @@ class LoginRequiredMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        return self.get_response(request)
-
-    def process_request(self, request):
         assert hasattr(request, 'user'), "The Login Required middleware\
  requires authentication middleware to be installed. Edit your\
  MIDDLEWARE_CLASSES setting to insert\
  'django.contrib.auth.middlware.AuthenticationMiddleware'. If that doesn't\
  work, ensure your TEMPLATE_CONTEXT_PROCESSORS setting includes\
  'django.core.context_processors.auth'."
-        if not request.user.is_authenticated():
+        if not request.user.is_authenticated:
             path = request.path_info.lstrip('/')
             if not any(m.match(path) for m in EXEMPT_URLS):
                 # The programmatic API (under '/v1/') should not return a
@@ -61,3 +58,5 @@ class LoginRequiredMiddleware:
                     return HttpResponseForbidden()
                 else:
                     return HttpResponseRedirect(settings.LOGIN_URL)
+
+        return self.get_response(request)
