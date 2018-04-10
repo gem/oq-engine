@@ -264,9 +264,9 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
 
-    arr = numpy.zeros((N, num_gmfs), std.dtype)
+    arr = numpy.zeros((M, N, num_gmfs))
     for i, im in enumerate(std.dtype.names):
-        arr[im] = gmfs[i * N:(i + 1) * N]
+        arr[i] = gmfs[i * N:(i + 1) * N]
     return arr
 
 """
