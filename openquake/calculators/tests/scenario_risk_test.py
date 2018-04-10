@@ -171,6 +171,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+
+        # check realizations
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)

@@ -25,6 +25,8 @@ import collections
 import numpy
 
 from openquake.baselib.general import humansize, group_array, DictArray
+from openquake.baselib.node import Node
+from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.calculators.views import view
@@ -101,6 +103,30 @@ def export_ruptures_csv(ekey, dstore):
     comment = 'investigation_time=%s, ses_per_logic_tree_path=%s' % (
         oq.investigation_time, oq.ses_per_logic_tree_path)
     writers.write_csv(dest, rows, header=header, sep='\t', comment=comment)
+    return [dest]
+
+
+@export.add(('site_model', 'xml'))
+def export_site_model(ekey, dstore):
+    dest = dstore.export_path('site_model.xml')
+    site_model_node = Node('siteModel')
+    hdffields = 'lons lats vs30 vs30measured z1pt0 z2pt5 '.split()
+    xmlfields = 'lon lat vs30 vs30Type z1pt0 z2pt5'.split()
+    recs = [tuple(rec[f] for f in hdffields)
+            for rec in dstore['sitecol'].array]
+    unique_recs = sorted(set(recs))
+    for rec in unique_recs:
+        n = Node('site')
+        for f, hdffield in enumerate(hdffields):
+            xmlfield = xmlfields[f]
+            if hdffield == 'vs30measured':
+                value = 'measured' if rec[f] else 'inferred'
+            else:
+                value = rec[f]
+            n[xmlfield] = value
+        site_model_node.append(n)
+    with open(dest, 'wb') as f:
+        nrml.write([site_model_node], f)
     return [dest]
 
 
@@ -272,7 +298,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt,
+            rlzs_assoc, kind, oq.investigation_time) + ', imt="%s"' % imt,
                                         header=[name for (name, dt) in lst]))
     return fnames
 
