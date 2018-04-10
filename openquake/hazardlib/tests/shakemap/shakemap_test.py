@@ -19,7 +19,7 @@ CDIR = os.path.dirname(__file__)
 def mean_gmf(shakemap):
     gmfs = to_gmfs(
         shakemap, site_effects=True, trunclevel=3, num_gmfs=10, seed=42)
-    return [gmfs[str(imt)].mean() for imt in imts]
+    return [gmfs[i].mean() for i, imt in enumerate(imts)]
 
 
 class ShakemapTestCase(unittest.TestCase):
@@ -79,9 +79,9 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['std'] = std
         gmfs = to_gmfs(
             shakemap, site_effects=False, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.3708301, 0.5671011])
+        aae(gmfs[0].sum(axis=0), [0.3708301, 0.5671011])  # PGA
 
         gmfs = to_gmfs(
             shakemap, site_effects=True, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.4101717, 0.6240185])
-        aae(gmfs['SA(1.0)'].sum(axis=0), [0.3946015, 0.5385107])
+        aae(gmfs[0].sum(axis=0), [0.4101717, 0.6240185])  # PGA
+        aae(gmfs[2].sum(axis=0), [0.3946015, 0.5385107])  # SA(1.0)
