@@ -48,7 +48,7 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     urlpatterns += [
-        url(r'^admin/', include(admin.site.urls)),
+        url(r'^admin/', admin.site.urls),
         url(r'^accounts/login/$', login,
             {'template_name': 'account/login.html'}, name="login"),
         url(r'^accounts/logout/$', logout,
