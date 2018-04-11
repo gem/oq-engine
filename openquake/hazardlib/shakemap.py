@@ -21,6 +21,8 @@ import io
 import re
 import math
 import zipfile
+import logging
+import operator
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -36,6 +38,9 @@ UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
 
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
+
+LON = operator.attrgetter('lon')
+LAT = operator.attrgetter('lat')
 
 
 class DownloadFailed(Exception):
@@ -73,6 +78,7 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     :returns: an array with the shakemap
     """
     url = shakemap_url.format(shakemap_id)
+    logging.info('Downloading %s', url)
     grid = re.search(GRID_RX, _download(url))
     uncertainty = re.search(UNCERTAINTY_RX, _download(url))
     if grid is None:
@@ -93,7 +99,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, int):
+    if isinstance(array_or_id, str):
         array = download_array(array_or_id)
     else:
         array = array_or_id
@@ -104,8 +110,8 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # TODO: forbid IDL crossing
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sitecol = sitecol.within_bb(bbox)
-    data = geo.utils.GeographicObjects(array)
+    sitecol = sitecol.within_bbox(bbox)
+    data = geo.utils.GeographicObjects(array, LON, LAT)
     dic = data.assoc(sitecol, assoc_dist)
     sids = sorted(dic)
     return sitecol.filtered(sids), numpy.array([dic[sid] for sid in sids])
