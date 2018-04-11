@@ -20,7 +20,6 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
-from openquake.baselib.python3compat import range
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface

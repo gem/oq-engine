@@ -146,9 +146,9 @@ import copy
 import types
 import warnings
 import pprint as pp
+import configparser
 from contextlib import contextmanager
-from openquake.baselib.python3compat import (
-    raise_, exec_, configparser, decode, unicode)
+from openquake.baselib.python3compat import raise_, decode
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape, quoteattr
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -198,7 +198,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     """
     if isinstance(value, bytes):
         return value.decode('utf8')
-    elif isinstance(value, unicode):
+    elif isinstance(value, str):
         return value
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
@@ -427,7 +427,7 @@ class Node(object):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
-        :param unicode text: the Node text (default None)
+        :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         """
         self.tag = fulltag
