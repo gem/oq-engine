@@ -2,6 +2,7 @@
   * Move to Celery 4. Celery support is removed from Windows.
 
   [Michele Simionato]
+  * Added an utility to download shakemaps
   * Added an XML exporter for the site model
   * Slight change to the correlation module to fix a bug in the SMTK
   * Added a distribution mechanism `threadpool`
