@@ -19,7 +19,7 @@
 import os
 import sys
 import collections
-from openquake.baselib.python3compat import configparser
+import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
