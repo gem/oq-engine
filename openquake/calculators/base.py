@@ -64,8 +64,8 @@ logversion = True
 PRECALC_MAP = dict(
     classical=['psha'],
     disaggregation=['psha'],
-    scenario_risk=['scenario'],
-    scenario_damage=['scenario'],
+    scenario_risk=['scenario', 'event_based_rupture'],
+    scenario_damage=['scenario', 'event_based_rupture'],
     classical_risk=['classical'],
     classical_bcr=['classical'],
     classical_damage=['classical'],
@@ -597,18 +597,16 @@ class RiskCalculator(HazardCalculator):
         and stored in the datastore.
         """
         oq = self.oqparam
+        E = oq.number_of_ground_motion_fields
         haz_sitecol = self.datastore.parent['sitecol']
         self.sitecol, shakemap = get_sitecol_shakemap(
-            oq.shakemap_id, haz_sitecol, oq.asset_hazard_distance)
+            oq.shakemap_id, haz_sitecol.complete, oq.asset_hazard_distance)
         site_effects = True
-        gmfs = to_gmfs(shakemap, site_effects, oq.truncation_level,
-                       oq.number_of_ground_motion_fields, oq.random_seed)
-        R, N, E, M = gmfs.shape
-        idx = (slice(None) if haz_sitecol.indices is None
-               else haz_sitecol.indices)
-        save_gmf_data(self.datastore, haz_sitecol, gmfs[:, idx])
+        gmfs = to_gmfs(shakemap, site_effects, oq.truncation_level, E,
+                       oq.random_seed)
+        save_gmf_data(self.datastore, self.sitecol, gmfs)
         events = numpy.zeros(E, readinput.stored_event_dt)
-        events['eid'] = numpy.arange(E, dtye=U64)
+        events['eid'] = numpy.arange(E, dtype=U64)
         self.datastore['events'] = events
 
     def make_eps(self, num_ruptures):

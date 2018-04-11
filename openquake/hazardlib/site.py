@@ -351,6 +351,9 @@ class SiteCollection(object):
         mask = numpy.array([min_lon < rec['lons'] < max_lon and
                             min_lat < rec['lats'] < max_lat
                             for rec in self.array])
+        if not mask.any():
+            raise Exception('There are no sites within the boundind box %s'
+                            % str(bbox))
         return self.complete.filter(mask)
 
     def __getstate__(self):
