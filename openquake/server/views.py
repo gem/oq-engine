@@ -491,8 +491,7 @@ def run_calc(request):
 
 
 RUNCALC = '''\
-import os, sys
-from openquake.baselib.python3compat import pickle
+import os, sys, pickle
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
