@@ -31,8 +31,8 @@ from openquake.hazardlib.shakemapconverter import get_shakemap_array
 US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
 URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
-GRID_RX = URL_RX + 'grid\.xml\.zip'
-UNCERTAINTY_RX = URL_RX + "uncertainty\.xml\.zip"
+GRID_RX = URL_RX + 'grid\.xml(\.zip)?'
+UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
 
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
@@ -58,10 +58,13 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
-    with urlopen(url) as f:
-        data = io.BytesIO(f.read())
-    with zipfile.ZipFile(data) as z:
-        return z.open(fname)
+    if url.endswith('.zip'):
+        with urlopen(url) as f:
+            data = io.BytesIO(f.read())
+        with zipfile.ZipFile(data) as z:
+            return z.open(fname)
+    else:  # not a zip
+        return urlopen(url)
 
 
 def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
