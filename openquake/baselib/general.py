@@ -434,7 +434,6 @@ def import_all(module_or_package):
                 try:
                     importlib.import_module(modname)
                 except Exception as exc:
-                    raise
                     print('Could not import %s: %s: %s' % (
                         modname, exc.__class__.__name__, exc),
                           file=sys.stderr)
