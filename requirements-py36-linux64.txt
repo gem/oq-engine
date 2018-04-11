@@ -44,8 +44,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/python_prctl-1.6.1-cp
 ### Rtree ###
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
-# FIXME
-# http://cdn.ftp.openquake.org/wheelhouse/linux/py36/Rtree-0.8.2-cp36-cp36m-manylinux1_x86_64.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py36/staging/Rtree-0.8.3-cp36-cp36m-manylinux1_x86_64.whl
 
 ### Celery ###
 # comment the following lines to skip installation
