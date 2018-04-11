@@ -325,7 +325,8 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        if self.oqparam.hazard_calculation_id and read_access:
+        if (self.oqparam.hazard_calculation_id and read_access
+                and 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
