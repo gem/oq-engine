@@ -512,7 +512,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
     tmp_py = writetmp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
-    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    devnull = subprocess.DEVNULL
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
