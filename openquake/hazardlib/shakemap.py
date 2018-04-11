@@ -39,8 +39,8 @@ UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 
-LON = operator.attrgetter('lon')
-LAT = operator.attrgetter('lat')
+LON = operator.itemgetter('lon')
+LAT = operator.itemgetter('lat')
 
 
 class DownloadFailed(Exception):
