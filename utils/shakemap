@@ -28,7 +28,7 @@ def shakemap(id):
     Example of usage: utils/shakemap usp000fjta
     """
     with performance.Monitor('shakemap', measuremem=True) as mon:
-        dest = 'shakemap_%s.npy' % id
+        dest = '%s.npy' % id
         numpy.save(dest, download_array(id))
     print(mon)
     print('Saved %s' % dest)
