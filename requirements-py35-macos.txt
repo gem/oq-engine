@@ -36,7 +36,10 @@ http://cdn.ftp.openquake.org/wheelhouse/macos/py35/staging/PyYAML-3.12-cp35-cp35
 # of setproctitle (optional feature)
 http://cdn.ftp.openquake.org/wheelhouse/macos/py35/staging/setproctitle-1.1.10-cp35-cp35m-macosx_10_6_intel.whl
 
-### Rtree wheel is not currently available for macOS ###
+### Rtree ###
+# comment the following lines to skip installation
+# of Rtree (experimental wheel, optional feature)
+http://cdn.ftp.openquake.org/wheelhouse/macos/py35/staging/Rtree-0.8.3-cp35-cp35m-macosx_10_6_intel.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
