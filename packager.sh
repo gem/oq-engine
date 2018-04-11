@@ -175,9 +175,9 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <precise|trusty|xenial>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (precise, trusty or xenial),"
-    echo "           (default precise)"
+    echo "    $0 [<-s|--serie> <trusty|xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (trusty, xenial or bionic),"
+    echo "           (default xenial)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
@@ -1134,7 +1134,7 @@ BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
-BUILD_UBUVER_REFERENCE="precise"
+BUILD_UBUVER_REFERENCE="xenial"
 BUILD_UBUVER="$BUILD_UBUVER_REFERENCE"
 BUILD_ON_LXC=0
 BUILD_FLAGS=""
@@ -1154,7 +1154,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" ]; then
+            if [ "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
