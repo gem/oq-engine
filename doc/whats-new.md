@@ -19,7 +19,13 @@ for fault sources which now is extremely fast. It has several benefits
 in terms of simplicity of the code and better estimation of the task
 computational weight.
 
-Moreover, complex fault sources are now split in more sub-sources
+Moreover, it is now possible to warn the user upfront, if she uses
+discretization parameters such as the `area_source_discretization`,
+the `rupture_mesh_spacing` and the `complex_fault_mesh_spacing` which
+are too small, thus producing millions of ruptures without need (this is
+a common mistake).
+
+Complex fault sources are now split in more sub-sources
 than before and this produces a substantial improvement of the task
 distribution. It also fixed a bug with the `event_based_rupture`
 calculator generating too few tasks.
@@ -136,7 +142,6 @@ when there are occupancy periods, which are managed simply as additional
 fields. Insurance parameters (insured_losses/deductibles) are still
 not supported in CSV format and the XML format is still needed for
 that case. We plan to keep working on that in the future.
-
 
 We extended the engine logic to read the sites from the hazard
 curves, if available. Moreover we changed the logic to extract the sites
