@@ -36,6 +36,7 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
@@ -588,6 +589,28 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+    def read_shakemap(self):
+        """
+        Enabled only if there is a shakemap_id parameter in the job.ini.
+        Download, unzip, parse USGS shakemap files and build a corresponding
+        set of GMFs which are then filtered with the hazard site collection
+        and stored in the datastore.
+        """
+        oq = self.oqparam
+        haz_sitecol = self.datastore.parent['sitecol']
+        self.sitecol, shakemap = get_sitecol_shakemap(
+            oq.shakemap_id, haz_sitecol, oq.asset_hazard_distance)
+        site_effects = True
+        gmfs = to_gmfs(shakemap, site_effects, oq.truncation_level,
+                       oq.number_of_ground_motion_fields, oq.random_seed)
+        R, N, E, M = gmfs.shape
+        idx = (slice(None) if haz_sitecol.indices is None
+               else haz_sitecol.indices)
+        save_gmf_data(self.datastore, haz_sitecol, gmfs[:, idx])
+        events = numpy.zeros(E, readinput.stored_event_dt)
+        events['eid'] = numpy.arange(E, dtye=U64)
+        self.datastore['events'] = events
+
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
@@ -743,7 +766,7 @@ def get_gmfs(calculator):
     elif calculator.precalc:  # from previous step
         num_assocs = dstore['csm_info'].get_num_rlzs()
         E = oq.number_of_ground_motion_fields
-        eids = numpy.arange(E)
+        eids = numpy.arange(E, dtype=U64)
         gmfs = numpy.zeros((num_assocs, N, E, I))
         for g, gsim in enumerate(calculator.precalc.gsims):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
@@ -758,7 +781,7 @@ def save_gmf_data(dstore, sitecol, gmfs):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmfs: an array of shape (R, N, E, I)
+    :param gmfs: an array of shape (R, N, E, M)
     """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
