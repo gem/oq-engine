@@ -470,6 +470,12 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
+    def is_valid_shakemap(self):
+        """
+        hazard_calculation_id must be set if shakemap_id is set
+        """
+        return self.hazard_calculation_id if self.shakemap_id else True
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
