@@ -148,7 +148,7 @@ import warnings
 import pprint as pp
 import configparser
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, decode
+from openquake.baselib.python3compat import raise_, decode, encode
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape, quoteattr
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -378,9 +378,9 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = ' %s' % repr(node.text) \
-        if expandvals and node.text is not None else ''
-    output.write(decode((indent + striptag(node.tag) + attrs + val + '\n')))
+    val = (' %s' % repr(node.text) if expandvals and node.text is not None
+           else '')
+    output.write(encode(indent + striptag(node.tag) + attrs + val + '\n'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -470,9 +470,9 @@ class Node(object):
         :param expandvals:
           print the values if True, else print only the tag names
         """
-        out = io.StringIO()
+        out = io.BytesIO()
         node_display(self, expandattrs, expandvals, out)
-        return out.getvalue()
+        return decode(out.getvalue())
 
     def __iter__(self):
         """Iterate over subnodes"""
@@ -656,7 +656,7 @@ def node_to_elem(root):
     generate_elem(output.append, root, 1)  # print "\n".join(output)
     namespace = {"Element": ElementTree.Element,
                  "SubElement": ElementTree.SubElement}
-    exec_("\n".join(output), globals(), namespace)
+    exec("\n".join(output), globals(), namespace)
     return namespace["e1"]
 
 
