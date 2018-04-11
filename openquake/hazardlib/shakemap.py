@@ -94,13 +94,14 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
 
 def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     """
-    :param array_or_id: shakemap ID or full shakemap array
+    :param array_or_id: shakemap ID, shakemap array, or shakemap .npy
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, str):
-        array = download_array(array_or_id)
+        array = (numpy.load(array_or_id) if array_or_id.endswith('.npy')
+                 else download_array(array_or_id))
     else:
         array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
