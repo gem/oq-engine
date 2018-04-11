@@ -31,8 +31,9 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+from urllib.request import urlopen, Request
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import urlopen, Request, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
