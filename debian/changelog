@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a numeric issue for nonparametric sources causing the hazard curves
+    to saturate at high intensities
+  * Added an utility to download shakemaps
   * Added an XML exporter for the site model
   * Slight change to the correlation module to fix a bug in the SMTK
   * Added a distribution mechanism `threadpool`

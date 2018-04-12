@@ -31,7 +31,7 @@ from openquake.baselib.general import (
     humansize, groupby, DictArray, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
-from openquake.baselib.python3compat import unicode, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import group_array
 from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -85,7 +85,7 @@ def form(value):
             return str(int(value))
     elif isinstance(value, bytes):
         return decode(value)
-    elif isinstance(value, unicode):
+    elif isinstance(value, str):
         return value
     elif isinstance(value, numpy.object_):
         return str(value)
