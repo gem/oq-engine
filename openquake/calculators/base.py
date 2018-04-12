@@ -600,6 +600,7 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
         haz_sitecol = self.datastore.parent['sitecol']
+
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
@@ -608,13 +609,13 @@ class RiskCalculator(HazardCalculator):
                 smap, haz_sitecol, oq.asset_hazard_distance)
 
         logging.info('Building GMFs')
-        with self.monitor('building GMFs'):
+        with self.monitor('building/saving GMFs'):
             gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
                            oq.random_seed)
-        save_gmf_data(self.datastore, self.sitecol, gmfs)
-        events = numpy.zeros(E, readinput.stored_event_dt)
-        events['eid'] = numpy.arange(E, dtype=U64)
-        self.datastore['events'] = events
+            save_gmf_data(self.datastore, self.sitecol, gmfs)
+            events = numpy.zeros(E, readinput.stored_event_dt)
+            events['eid'] = numpy.arange(E, dtype=U64)
+            self.datastore['events'] = events
 
     def make_eps(self, num_ruptures):
         """
