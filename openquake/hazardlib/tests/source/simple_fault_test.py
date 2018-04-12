@@ -17,7 +17,6 @@ import unittest
 
 import numpy
 from copy import deepcopy
-from openquake.baselib.python3compat import range
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
