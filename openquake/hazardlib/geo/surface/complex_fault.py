@@ -24,7 +24,7 @@ from __future__ import division
 import numpy
 import shapely
 
-from openquake.baselib.python3compat import range, round
+from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point

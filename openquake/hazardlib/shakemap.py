@@ -21,6 +21,8 @@ import io
 import re
 import math
 import zipfile
+import logging
+import operator
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -31,11 +33,14 @@ from openquake.hazardlib.shakemapconverter import get_shakemap_array
 US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
 URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
-GRID_RX = URL_RX + 'grid\.xml\.zip'
-UNCERTAINTY_RX = URL_RX + "uncertainty\.xml\.zip"
+GRID_RX = URL_RX + 'grid\.xml(\.zip)?'
+UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
 
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
+
+LON = operator.itemgetter('lon')
+LAT = operator.itemgetter('lat')
 
 
 class DownloadFailed(Exception):
@@ -58,10 +63,13 @@ def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
-    with urlopen(url) as f:
-        data = io.BytesIO(f.read())
-    with zipfile.ZipFile(data) as z:
-        return z.open(fname)
+    if url.endswith('.zip'):
+        with urlopen(url) as f:
+            data = io.BytesIO(f.read())
+        with zipfile.ZipFile(data) as z:
+            return z.open(fname)
+    else:  # not a zip
+        return urlopen(url)
 
 
 def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
@@ -70,6 +78,7 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     :returns: an array with the shakemap
     """
     url = shakemap_url.format(shakemap_id)
+    logging.info('Downloading %s', url)
     grid = re.search(GRID_RX, _download(url))
     uncertainty = re.search(UNCERTAINTY_RX, _download(url))
     if grid is None:
@@ -85,27 +94,26 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
 
 def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     """
-    :param array_or_id: shakemap ID or full shakemap array
+    :param array_or_id: shakemap array or shakemap ID
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, int):
+    if isinstance(array_or_id, str):  # shakemap ID
         array = download_array(array_or_id)
-    else:
+    else:  # shakemap array
         array = array_or_id
     if sitecol is None:  # extract the sites from the shakemap
         return site.SiteCollection.from_shakemap(array), array
 
-    # associate the shakemap to the site collection
-    # TODO: forbid IDL crossing
+    # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sitecol = sitecol.within_bb(bbox)
-    data = geo.utils.GeographicObjects(array)
-    dic = data.assoc(sitecol, assoc_dist)
-    sids = sorted(dic)
-    return sitecol.filtered(sids), numpy.array([dic[sid] for sid in sids])
+    sitecol_within = sitecol.within_bbox(bbox)
+    logging.info('Associating %d GMVs to %d sites',
+                 len(array), len(sitecol_within))
+    data = geo.utils.GeographicObjects(array, LON, LAT)
+    return data.assoc(sitecol_within, assoc_dist)
 
 
 # Here is the explanation of USGS for the units they are using:
@@ -243,7 +251,7 @@ def cholesky(spatial_cov, cross_corr):
 
 def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
-    :returns: an array of GMFs of shape (M, N, E)
+    :returns: an array of GMFs of shape (R, N, E, M)
     """
     std = shakemap['std']
     imts = [imt.from_string(name) for name in std.dtype.names]
@@ -265,7 +273,7 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((M, N, num_gmfs))
+    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
 
 """
 here is an example for Tanzania:
