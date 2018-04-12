@@ -47,7 +47,8 @@ def expo2csv(job_ini):
                 header.append(costname + '-insured_limit')
     if exposure.retrofitted:
         header.append('retrofitted')
-    header.extend(exposure.occupancy_periods)
+    occupancy_periods = exposure.occupancy_periods.split()
+    header.extend(occupancy_periods)
     header.extend(exposure.tagcol.tagnames)
     for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
         row = [asset_ref.decode('utf8'), asset.location[0], asset.location[1],
@@ -63,7 +64,7 @@ def expo2csv(job_ini):
                     row.append(asset.insurance_limits[costname])
         if exposure.retrofitted:
             row.append(asset._retrofitted)
-        for time_event in exposure.occupancy_periods:
+        for time_event in occupancy_periods:
             row.append(asset.values['occupants_' + time_event])
         for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
             tags = getattr(exposure.tagcol, tagname)
@@ -82,11 +83,9 @@ def expo2csv(job_ini):
 
         # save exposure header as xml
         head = nrml.read(oq.inputs['exposure'], stop='assets')
-        if exposure.occupancy_periods and not hasattr(
-                head[0], 'occupancyPeriods'):
+        if occupancy_periods and not hasattr(head[0], 'occupancyPeriods'):
             assets = head[0].nodes.pop(-1)  # remove assets node
-            n = node.Node('occupancyPeriods',
-                          text=' '.join(exposure.occupancy_periods))
+            n = node.Node('occupancyPeriods', text=' '.join(occupancy_periods))
             head[0].append(n)  # add occupancyPeriods node
             head[0].append(assets)  # restore assets node
         xmlname = oq.inputs['exposure'].replace('.xml', '-header.xml')
