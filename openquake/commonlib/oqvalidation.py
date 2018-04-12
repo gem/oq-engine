@@ -670,7 +670,7 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                'rupture_model' in self.inputs):
+                self.calculation_mode.startswith('scenario')):
             return
         if 'source' not in self.inputs and not self.hazard_calculation_id:
             raise ValueError('Missing source_model_logic_tree in %s '
