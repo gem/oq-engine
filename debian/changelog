@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented scenario_risk/scenario_damage from shakemap calculators
   * Exported the asset tags in the asset based risk outputs
   * Fixed a numeric issue for nonparametric sources causing the hazard curves
     to saturate at high intensities
