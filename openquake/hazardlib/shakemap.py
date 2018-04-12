@@ -111,8 +111,8 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
     data = geo.utils.GeographicObjects(array, LON, LAT)
-    d = data.assoc(sitecol.within_bbox(bbox), assoc_dist)
-    return sitecol.filtered(d), numpy.array([d[sid] for sid in sorted(d)])
+    sids, filtered_array = data.assoc(sitecol.within_bbox(bbox), assoc_dist)
+    return sitecol.filtered(sids), filtered_array
 
 
 # Here is the explanation of USGS for the units they are using:
