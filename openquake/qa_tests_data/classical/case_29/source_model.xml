@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="test"
+    investigation_time="1.0"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <nonParametricSeismicSource
+            id="test"
+            name="test"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <singlePlaneRupture
+                probs_occur="0.9 0.1"
+                >
+                    <magnitude>
+                        6.7
+                    </magnitude>
+                    <rake>
+                        90.0
+                    </rake>
+                    <hypocenter depth="7.0" lat="43.0" lon="10.2"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="43.0" lon="10.0"/>
+                        <topRight depth="0.0" lat="43.0" lon="10.4"/>
+                        <bottomLeft depth="14.0" lat="43.0" lon="10.0"/>
+                        <bottomRight depth="14.0" lat="43.0" lon="10.4"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
