@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 from shapely import geometry
-from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
