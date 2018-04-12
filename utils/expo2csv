@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -63,7 +63,7 @@ def expo2csv(job_ini):
                     row.append(asset.insurance_limits[costname])
         if exposure.retrofitted:
             row.append(asset._retrofitted)
-        for time_event in exposure.occupancy_periods:
+        for time_event in exposure.occupancy_periods.split():
             row.append(asset.values['occupants_' + time_event])
         for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
             tags = getattr(exposure.tagcol, tagname)
