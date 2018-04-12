@@ -606,7 +606,8 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             self.sitecol, shakemap = get_sitecol_shakemap(
-                smap, haz_sitecol, oq.asset_hazard_distance)
+                smap, haz_sitecol, oq.asset_hazard_distance or
+                oq.region_grid_spacing)
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
