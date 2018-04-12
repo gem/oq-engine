@@ -27,19 +27,12 @@ import subprocess
 import threading
 import signal
 import zlib
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
+import pickle
+import urllib.parse as urlparse
 import re
 import numpy
 import psutil
-try:
-    # Python 3
-    from urllib.parse import unquote_plus
-except ImportError:
-    # Python 2
-    from urllib import unquote_plus
+from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -50,7 +43,6 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -268,13 +260,13 @@ def validate_nrml(request):
         exc_msg = exc.args[0]
         if isinstance(exc_msg, bytes):
             exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
-        elif isinstance(exc_msg, unicode):
+        elif isinstance(exc_msg, str):
             pass
         else:
             # if it is another kind of object, it is not obvious a priori how
             # to extract the error line from it
             return _make_response(
-                error_msg=unicode(exc_msg), error_line=None, valid=False)
+                error_msg=str(exc_msg), error_line=None, valid=False)
         # if the line is not mentioned, the whole message is taken
         error_msg = exc_msg.split(', line')[0]
         # check if the exc_msg contains a line number indication
@@ -499,8 +491,7 @@ def run_calc(request):
 
 
 RUNCALC = '''\
-import os, sys
-from openquake.baselib.python3compat import pickle
+import os, sys, pickle
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
@@ -520,7 +511,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
     tmp_py = writetmp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
-    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    devnull = subprocess.DEVNULL
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
