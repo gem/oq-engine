@@ -109,8 +109,11 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
+    sitecol_within = sitecol.within_bbox(bbox)
+    logging.info('Associating %d GMVs to %d sites',
+                 len(array), len(sitecol_within))
     data = geo.utils.GeographicObjects(array, LON, LAT)
-    return data.assoc(sitecol.within_bbox(bbox), assoc_dist)
+    return data.assoc(sitecol_within, assoc_dist)
 
 
 # Here is the explanation of USGS for the units they are using:
