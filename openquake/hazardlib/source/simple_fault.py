@@ -20,7 +20,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 from __future__ import division
 import copy
 import math
-from openquake.baselib.python3compat import range, round
+from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface

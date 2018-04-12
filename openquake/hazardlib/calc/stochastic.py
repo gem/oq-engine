@@ -27,7 +27,7 @@ import collections
 import numpy
 from openquake.baselib.general import AccumDict, deprecated
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import range, raise_
+from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
