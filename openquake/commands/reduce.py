@@ -21,6 +21,7 @@ from __future__ import print_function
 import csv
 import random
 import shutil
+import numpy
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.baselib.python3compat import encode
 from openquake.baselib import sap
@@ -72,6 +73,14 @@ def reduce(fname, reduction_factor):
         print('Copied the original file in %s.bak' % fname)
         _save_csv(fname, lines, header)
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
+        return
+    elif fname.endswith('.npy'):
+        array = numpy.load(fname)
+        shutil.copy(fname, fname + '.bak')
+        print('Copied the original file in %s.bak' % fname)
+        arr = numpy.array(random_filter(array, reduction_factor))
+        numpy.save(fname, arr)
+        print('Extracted %d rows out of %d' % (len(arr), len(array)))
         return
     node = nrml.read(fname)
     model = node[0]

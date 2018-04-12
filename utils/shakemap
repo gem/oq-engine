@@ -17,14 +17,20 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib import sap
+import numpy
+from openquake.baselib import sap, performance
 from openquake.hazardlib.shakemap import download_array
-from openquake.commonlib.writers import write_csv
 
 
 @sap.Script
 def shakemap(id):
-    dest = write_csv('shakemap_%s.csv' % id, download_array(id))
+    """
+    Example of usage: utils/shakemap usp000fjta
+    """
+    with performance.Monitor('shakemap', measuremem=True) as mon:
+        dest = '%s.npy' % id
+        numpy.save(dest, download_array(id))
+    print(mon)
     print('Saved %s' % dest)
 
 shakemap.arg('id', 'USGS Shakemap ID')
