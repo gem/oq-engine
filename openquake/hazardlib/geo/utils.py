@@ -35,6 +35,7 @@ from openquake.hazardlib.geo.geodetic import (
     EARTH_RADIUS, geodetic_distance, min_idx_dst)
 from openquake.baselib.slots import with_slots
 
+U32 = numpy.uint32
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
@@ -90,7 +91,7 @@ class GeographicObjects(object):
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'error', 'warn' or 'ignore'
-        :returns: a dictionary site_id -> array of associated objects
+        :returns: (filtered site collection, filtered objects)
         """
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
@@ -112,7 +113,8 @@ class GeographicObjects(object):
         if not dic and mode == 'error':
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return dic
+        return (sitecol.filtered(dic),
+                numpy.array([dic[sid] for sid in sorted(dic)]))
 
 
 def clean_points(points):
