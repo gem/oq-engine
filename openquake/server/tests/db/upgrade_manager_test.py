@@ -128,11 +128,10 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(db_version(conn, pkg), '0000')
 
     def check_message(self, html, expected):
-        if hasattr(urllib, 'urlopen'):  # Python 2
-            with mock.patch('urllib.urlopen') as urlopen:
-                urlopen().read.return_value = html
-                got = what_if_I_upgrade(conn, pkg)
-                self.assertEqual(got, expected)
+        with mock.patch('urllib.request.urlopen') as urlopen:
+            urlopen().read.return_value = html
+            got = what_if_I_upgrade(conn, pkg)
+            self.assertEqual(got, expected)
 
     def test_safe_upgrade(self):
         expected = '''\
