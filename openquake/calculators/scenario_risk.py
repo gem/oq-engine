@@ -95,7 +95,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        if self.oqparam.shakemap_id:
+        if self.oqparam.shakemap_id or 'shakemap' in self.oqparam.inputs:
             self.read_shakemap()
             self.R = 1
         else:
