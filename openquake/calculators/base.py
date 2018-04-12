@@ -598,14 +598,11 @@ class RiskCalculator(HazardCalculator):
         and stored in the datastore.
         """
         oq = self.oqparam
-        if not oq.imtls:
-            oq.risk_imtls = self.datastore.parent['oqparam'].risk_imtls
         E = oq.number_of_ground_motion_fields
         haz_sitecol = self.datastore.parent['sitecol']
         self.sitecol, shakemap = get_sitecol_shakemap(
             oq.shakemap_id, haz_sitecol, oq.asset_hazard_distance)
-        site_effects = True
-        gmfs = to_gmfs(shakemap, site_effects, oq.truncation_level, E,
+        gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
                        oq.random_seed)
         save_gmf_data(self.datastore, self.sitecol, gmfs)
         events = numpy.zeros(E, readinput.stored_event_dt)
