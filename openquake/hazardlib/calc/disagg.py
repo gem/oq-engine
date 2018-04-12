@@ -29,7 +29,7 @@ import collections
 import numpy
 import scipy.stats
 
-from openquake.baselib.python3compat import raise_, range
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import AccumDict, pack, groupby

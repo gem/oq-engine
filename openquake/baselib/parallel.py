@@ -151,6 +151,7 @@ import mock
 import time
 import socket
 import signal
+import pickle
 import inspect
 import logging
 import operator
@@ -167,7 +168,6 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
