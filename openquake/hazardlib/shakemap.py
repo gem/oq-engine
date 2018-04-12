@@ -107,15 +107,12 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     if sitecol is None:  # extract the sites from the shakemap
         return site.SiteCollection.from_shakemap(array), array
 
-    # associate the shakemap to the site collection
-    # TODO: forbid IDL crossing
+    # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sitecol = sitecol.within_bbox(bbox)
     data = geo.utils.GeographicObjects(array, LON, LAT)
-    dic = data.assoc(sitecol, assoc_dist)
-    sids = sorted(dic)
-    return sitecol.filtered(sids), numpy.array([dic[sid] for sid in sids])
+    d = data.assoc(sitecol.within_bbox(bbox), assoc_dist)
+    return sitecol.filtered(d), numpy.array([d[sid] for sid in sorted(d)])
 
 
 # Here is the explanation of USGS for the units they are using:

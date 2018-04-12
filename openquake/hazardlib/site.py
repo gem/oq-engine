@@ -350,11 +350,11 @@ class SiteCollection(object):
                              'not supported yet')
         mask = numpy.array([min_lon < rec['lons'] < max_lon and
                             min_lat < rec['lats'] < max_lat
-                            for rec in self.array])
+                            for rec in self.array[self.indices]])
         if not mask.any():
             raise Exception('There are no sites within the boundind box %s'
                             % str(bbox))
-        return self.complete.filter(mask)
+        return self.filter(mask)
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)

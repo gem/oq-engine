@@ -603,7 +603,7 @@ class RiskCalculator(HazardCalculator):
         E = oq.number_of_ground_motion_fields
         haz_sitecol = self.datastore.parent['sitecol']
         self.sitecol, shakemap = get_sitecol_shakemap(
-            oq.shakemap_id, haz_sitecol.complete, oq.asset_hazard_distance)
+            oq.shakemap_id, haz_sitecol, oq.asset_hazard_distance)
         site_effects = True
         gmfs = to_gmfs(shakemap, site_effects, oq.truncation_level, E,
                        oq.random_seed)
