@@ -600,11 +600,17 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
         haz_sitecol = self.datastore.parent['sitecol']
-        array = numpy.load(oq.inputs['shakemap'])
-        self.sitecol, shakemap = get_sitecol_shakemap(
-            array, haz_sitecol, oq.asset_hazard_distance)
-        gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
-                       oq.random_seed)
+        logging.info('Getting/reducing shakemap')
+        with self.monitor('getting/reducing shakemap'):
+            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
+                oq.inputs['shakemap'])
+            self.sitecol, shakemap = get_sitecol_shakemap(
+                smap, haz_sitecol, oq.asset_hazard_distance)
+
+        logging.info('Building GMFs')
+        with self.monitor('building GMFs'):
+            gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
+                           oq.random_seed)
         save_gmf_data(self.datastore, self.sitecol, gmfs)
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = numpy.arange(E, dtype=U64)
