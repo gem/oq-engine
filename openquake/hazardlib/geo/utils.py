@@ -91,7 +91,7 @@ class GeographicObjects(object):
         :param: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'error', 'warn' or 'ignore'
-        :returns: two arrays (site_ids, associated objects)
+        :returns: (filtered site collection, filtered objects)
         """
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
@@ -113,8 +113,8 @@ class GeographicObjects(object):
         if not dic and mode == 'error':
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        sids = sorted(dic)
-        return numpy.array(sids, U32), numpy.array([dic[sid] for sid in sids])
+        return (sitecol.filtered(dic),
+                numpy.array([dic[sid] for sid in sorted(dic)]))
 
 
 def clean_points(points):
