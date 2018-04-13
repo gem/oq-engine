@@ -18,61 +18,61 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from celery import Celery
+try:
+    from celery import Celery
+except ImportError:
+    pass
+else:
+    from openquake.baselib import sap
+    from openquake.engine.celeryconfig import broker_url, result_backend
 
-from openquake.baselib import sap
-from openquake.engine.celeryconfig import broker_url, result_backend
+    def status():
+        app = Celery('openquake', backend=result_backend, broker=broker_url)
+        ins = app.control.inspect()
 
+        total_workers = 0
+        num_active_tasks = 0
 
-def status():
-    app = Celery('openquake', backend=result_backend, broker=broker_url)
-    ins = app.control.inspect()
+        all_stats = ins.stats()
+        if all_stats is None:
+            print("No active workers")
+            sys.exit(0)
 
-    total_workers = 0
-    num_active_tasks = 0
+        hostnames = []
 
-    all_stats = ins.stats()
-    if all_stats is None:
-        print("No active workers")
-        sys.exit(0)
+        for hostname, stats in all_stats.items():
+            num_procs = len(stats['pool']['processes'])
+            total_workers += num_procs
+            hostnames.append(hostname)
 
-    hostnames = []
+        ping = ins.ping()
+        active = ins.active()
 
-    for hostname, stats in all_stats.items():
-        num_procs = len(stats['pool']['processes'])
-        total_workers += num_procs
-        hostnames.append(hostname)
+        for host in hostnames:
+            print('==========')
+            print('Host: %s' % host)
+            if ping[host]['ok'] == 'pong':
+                print('Status: Online')
+            else:
+                print('Status: Not Responding')
+            print('Worker processes: %s' % len(
+                all_stats[host]['pool']['processes']))
 
-    ping = ins.ping()
-    active = ins.active()
+            worker_activity = active.get(host)
+            if worker_activity is not None:
+                print('Active tasks: %s' % len(worker_activity))
+                num_active_tasks += len(worker_activity)
 
-    for host in hostnames:
-        print('==========')
-        print('Host: %s' % host)
-        if ping[host]['ok'] == 'pong':
-            print('Status: Online')
-        else:
-            print('Status: Not Responding')
-        print('Worker processes: %s' % len(
-            all_stats[host]['pool']['processes']))
+        print('==========\n')
+        print('Total workers:       %s' % total_workers)
+        print('Active tasks:        %s' % num_active_tasks)
+        print('Cluster utilization: %.2f%%' % (
+            (float(num_active_tasks) / total_workers) * 100))
 
-        worker_activity = active.get(host)
-        if worker_activity is not None:
-            print('Active tasks: %s' % len(worker_activity))
-            num_active_tasks += len(worker_activity)
+    @sap.Script
+    def celery(cmd):
+        if cmd == 'status':
+            status()
 
-    print('==========\n')
-    print('Total workers:       %s' % total_workers)
-    print('Active tasks:        %s' % num_active_tasks)
-    print('Cluster utilization: %.2f%%' % (
-        (float(num_active_tasks) / total_workers) * 100))
-
-
-@sap.Script
-def celery(cmd):
-    if cmd == 'status':
-        status()
-
-
-celery.arg('cmd', 'celery command',
-           choices='status'.split())
+    celery.arg('cmd', 'celery command',
+               choices='status'.split())
