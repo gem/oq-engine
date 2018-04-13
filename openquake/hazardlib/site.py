@@ -60,20 +60,18 @@ class Site(object):
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
                  backarc=False):
+        if not vs30 > 0:
+            raise ValueError('vs30 must be positive')
+        if not z1pt0 > 0:
+            raise ValueError('z1pt0 must be positive')
+        if not z2pt5 > 0:
+            raise ValueError('z2pt5 must be positive')
         self.location = location
         self.vs30 = vs30
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
-
-    @property
-    def lon(self):
-        return self.location.x
-
-    @property
-    def lat(self):
-        return self.location.y
 
     def __str__(self):
         """
@@ -207,8 +205,10 @@ class SiteCollection(object):
 
     def filtered(self, indices):
         """
+        :param indices:
+           a subset of indices in the range [0 .. tot_sites - 1]
         :returns:
-           a filtered SiteCollection instance if indices is a proper subset
+           a filtered SiteCollection instance if `indices` is a proper subset
            of the available indices, otherwise returns the full SiteCollection
         """
         if len(indices) == len(self.complete):
@@ -301,10 +301,8 @@ class SiteCollection(object):
         one at a time.
         """
         for i, location in enumerate(self.mesh):
-            site = Site(location, self.vs30[i], self.vs30measured[i],
-                        self.z1pt0[i], self.z2pt5[i], self.backarc[i])
-            site.sid = i
-            yield site
+            yield Site(location, self.vs30[i], self.vs30measured[i],
+                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def filter(self, mask):
         """
@@ -366,6 +364,12 @@ class SiteCollection(object):
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)
 
+    def __getitem__(self, sid):
+        """
+        Return a site record
+        """
+        return self.array[sid]
+
     def __getattr__(self, name):
         if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
                         'depths sids'):
@@ -376,15 +380,9 @@ class SiteCollection(object):
             idx = self.indices
         return self.array[idx][name]
 
-    def __getitem__(self, site_id):
-        """
-        :returns: a site record
-        """
-        return self.array[site_id]
-
     def __len__(self):
         """
-        :returns: the number of sites in the collection
+        Return the number of sites in the collection.
         """
         return (len(self.indices) if self.indices is not None
                 else len(self.array))
