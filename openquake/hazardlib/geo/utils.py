@@ -121,6 +121,7 @@ class _GeographicObjects(object):
 
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
+        :param mode: 'strict' or 'error'
         :returns: (filtered site collection, filtered assets by site)
         """
         self.objects.filtered  # self.objects must be a SiteCollection
@@ -146,10 +147,17 @@ class _GeographicObjects(object):
         return self.objects.filtered(sids), assets_by_site
 
 
-def assoc(objects, sitecol, assoc_dist, mode='error'):
+def assoc(objects, sitecol, assoc_dist, mode):
     """
     Associate geographic objects to a site collection.
 
+    :param objects:
+        an array with fields lon, lat or a list of geographic objects
+    :param assoc_dist:
+        the maximum distance for association
+    :param mode:
+        if 'strict' fail if at least one site is not associated
+        if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray):
