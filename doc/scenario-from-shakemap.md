@@ -30,9 +30,12 @@ America. To that aim we will need a `job_hazard.ini` file like this one:
    gsim = ZhaoEtAl2006SInter
 ```
    
-The `gsim` is actually ignored, so you can put everything there. In the future
-I would like to remove the `gsim` but for the moment is necessary even if it
-will not be used.
+The `site_params` are needed, even if they will not be used (in particular
+the vs30 will be read from the shakemap).
+
+The `gsim` is also ignored, so you can put everything there. In the future
+I would like to remove the `gsim` and the site parameters but for the moment
+they are necessary even they will not be used :-(
 
 By running the calculation
 
