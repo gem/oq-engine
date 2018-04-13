@@ -328,12 +328,10 @@ def get_site_collection(oqparam):
             return site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm)
         # associate the site parameters to the mesh
-        site_model_params = geo.utils.GeographicObjects(
-            sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths)
-        sc, params = site_model_params.assoc(
-            sitecol, oqparam.max_site_model_distance, 'warn')
+        sc, params = geo.utils.assoc(
+            sm, sitecol, oqparam.max_site_model_distance, 'warn')
         for sid, param in zip(sc.sids, params):
             for name in site_model_dt.names[2:]:  # all names except lon, lat
                 sitecol.array[sid][name] = param[name]
@@ -635,34 +633,17 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         haz_distance = oqparam.asset_hazard_distance
 
     if haz_sitecol.mesh != exposure.mesh:
-        all_sids = haz_sitecol.complete.sids
-        sids = set(haz_sitecol.sids)
         # associate the assets to the hazard sites
-        siteobjects = geo.utils.GeographicObjects(
-            Site(sid, lon, lat) for sid, lon, lat in
-            zip(haz_sitecol.sids, haz_sitecol.lons, haz_sitecol.lats))
-        assets_by_sid = AccumDict(accum=[])
-        tot_assets = 0
-        for assets in exposure.assets_by_site:
-            tot_assets += len(assets)
-            lon, lat = assets[0].location
-            obj, distance = siteobjects.get_closest(lon, lat)
-            if obj.sid in sids and distance <= haz_distance:
-                # keep the assets, otherwise discard them
-                assets_by_sid += {obj.sid: list(assets)}
-        if not assets_by_sid:
-            raise geo.utils.SiteAssociationError(
-                'Could not associate any site to any assets within the '
-                'asset_hazard_distance of %s km' % haz_distance)
-        mask = numpy.array(
-            [sid in assets_by_sid for sid in all_sids])
-        exposure.assets_by_site = [
-            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
-            for sid in all_sids]
-        num_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        sitecol = haz_sitecol.complete.filter(mask)
-        logging.info('Associated %d assets to %d sites',
-                     num_assets, len(sitecol))
+        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
+        sitecol, assets_by_site = geo.utils.assoc(
+            exposure.assets_by_site, haz_sitecol, haz_distance)
+        exposure.assets_by_site = [[] for _ in sitecol.complete.sids]
+        num_assets = 0
+        for sid, assets in zip(sitecol.sids, assets_by_site):
+            exposure.assets_by_site[sid] = assets
+            num_assets += len(assets)
+        logging.info(
+            'Associated %d assets to %d sites', num_assets, len(sitecol))
         if num_assets < tot_assets:
             msg = ('Discarded %d assets outside the asset_hazard_distance of '
                    '%d km') % (tot_assets - num_assets, haz_distance)
@@ -683,6 +664,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         exposure.cost_calculator,
         oqparam.time_event,
         occupancy_periods=exposure.occupancy_periods)
+
     return sitecol, assetcol
 
 

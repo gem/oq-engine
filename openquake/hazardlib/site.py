@@ -205,8 +205,14 @@ class SiteCollection(object):
 
     def filtered(self, indices):
         """
-        :returns: a filtered SiteCollection instance
+        :param indices:
+           a subset of indices in the range [0 .. tot_sites - 1]
+        :returns:
+           a filtered SiteCollection instance if `indices` is a proper subset
+           of the available indices, otherwise returns the full SiteCollection
         """
+        if len(indices) == len(self.complete):
+            return self.complete
         new = object.__new__(self.__class__)
         new.indices = numpy.uint32(sorted(indices))
         new.array = self.array
@@ -357,6 +363,12 @@ class SiteCollection(object):
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)
+
+    def __getitem__(self, sid):
+        """
+        Return a site record
+        """
+        return self.array[sid]
 
     def __getattr__(self, name):
         if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
