@@ -640,9 +640,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         # associate the assets to the hazard sites
         siteobjects = geo.utils.GeographicObjects(haz_sitecol)
         assets_by_sid = collections.defaultdict(list)
-        tot_assets = 0
         for assets in exposure.assets_by_site:
-            tot_assets += len(assets)
             lon, lat = assets[0].location
             obj, distance = siteobjects.get_closest(lon, lat)
             if obj.sid in sids and distance <= haz_distance:
@@ -652,14 +650,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % haz_distance)
-        mask = numpy.array(
-            [sid in assets_by_sid for sid in all_sids])
+        tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         exposure.assets_by_site = [
             sorted(assets_by_sid.get(sid, []),
                    key=operator.attrgetter('ordinal'))
             for sid in all_sids]
         num_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        sitecol = haz_sitecol.complete.filter(mask)
+        sitecol = haz_sitecol.filtered(assets_by_sid)
         logging.info('Associated %d assets to %d sites',
                      num_assets, len(sitecol))
         if num_assets < tot_assets:
@@ -682,6 +679,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         exposure.cost_calculator,
         oqparam.time_event,
         occupancy_periods=exposure.occupancy_periods)
+
     return sitecol, assetcol
 
 
