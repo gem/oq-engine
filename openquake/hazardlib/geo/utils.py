@@ -45,24 +45,22 @@ class SiteAssociationError(Exception):
 
 class GeographicObjects(object):
     """
-    Store a collection of geographic objects, i.e. objects with longitudes
-    and latitudes. By default extracts the coordinates from the attributes
-    .lon and .lat, but you can provide your own getters. It is possible
-    to extract the closest object to a given location by calling the
-    method .get_closest(lon, lat).
+    Store a collection of geographic objects, i.e. objects with lons, lats.
+    It is possible to extract the closest object to a given location by
+    calling the method .get_closest(lon, lat).
     """
-    def __init__(self, objects, getlon=operator.attrgetter('lon'),
-                 getlat=operator.attrgetter('lat')):
-        self.objects = list(objects)
-        lons, lats = [], []
-        for i, obj in enumerate(self.objects):
-            lon, lat = getlon(obj), getlat(obj)
-            lons.append(lon)
-            lats.append(lat)
-        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
+    def __init__(self, objects):
+        self.objects = objects
+        if hasattr(objects, 'lons'):
+            self.lons = objects.lons
+            self.lats = objects.lats
+        elif isinstance(objects, numpy.ndarray):
+            self.lons = objects['lon']
+            self.lats = objects['lat']
         if rtree:
             self.index = rtree.index.Index()
-            self.proj = OrthographicProjection.from_lons_lats(lons, lats)
+            self.proj = OrthographicProjection.from_lons_lats(
+                self.lons, self.lats)
             xs, ys = self.proj(self.lons, self.lats)
             for i, (x, y) in enumerate(zip(xs, ys)):
                 self.index.insert(i, (x, y, x, y))
@@ -88,7 +86,7 @@ class GeographicObjects(object):
 
     def assoc(self, sitecol, assoc_dist, mode='error'):
         """
-        :param: a (filtered) site collection
+        :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'error', 'warn' or 'ignore'
         :returns: (filtered site collection, filtered objects)
@@ -115,6 +113,45 @@ class GeographicObjects(object):
                 'No sites could be associated within %s km' % assoc_dist)
         return (sitecol.filtered(dic),
                 numpy.array([dic[sid] for sid in sorted(dic)]))
+
+    def assoc_assets(self, assets_by_site, assoc_dist):
+        """
+        Associated a list of assets by site to the site collection used
+        to instantiate GeographicObjects.
+
+        :param assets_by_sites: a list of lists of assets
+        :param assoc_dist: the maximum distance for association
+        :returns: (filtered site collection, filtered assets by site)
+        """
+        self.objects.filtered  # self.objects must be a SiteCollection
+        assets_by_sid = collections.defaultdict(list)
+        for assets in assets_by_site:
+            lon, lat = assets[0].location
+            obj, distance = self.get_closest(lon, lat)
+            if distance <= assoc_dist:
+                # keep the assets, otherwise discard them
+                assets_by_sid[obj['sids']].extend(assets)
+        sids = sorted(assets_by_sid)
+        if not sids:
+            raise SiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % assoc_dist)
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in sids]
+        return self.objects.filtered(sids), assets_by_site
+
+
+def assoc(objects, sitecol, assoc_dist, mode='error'):
+    """
+    Associate geographic objects to a site collection.
+
+    :returns: (filtered site collection, filtered objects)
+    """
+    if isinstance(objects, numpy.ndarray):
+        return GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
+    else:
+        return GeographicObjects(sitecol).assoc_assets(objects, assoc_dist)
 
 
 def clean_points(points):
