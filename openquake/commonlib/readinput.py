@@ -647,8 +647,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
             obj, distance = siteobjects.get_closest(lon, lat)
             if obj.sid in sids and distance <= haz_distance:
                 # keep the assets, otherwise discard them
-                #assets.sort(key=operator.attrgetter('ordinal'))
                 assets_by_sid[obj.sid].extend(assets)
+                assets.sort(key=operator.attrgetter('ordinal'))
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
                 'Could not associate any site to any assets within the '
