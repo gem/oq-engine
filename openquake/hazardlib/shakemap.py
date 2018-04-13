@@ -39,9 +39,6 @@ UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 
-LON = operator.itemgetter('lon')
-LAT = operator.itemgetter('lat')
-
 
 class DownloadFailed(Exception):
     """Raised by shakemap.download"""
@@ -112,8 +109,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     sitecol_within = sitecol.within_bbox(bbox)
     logging.info('Associating %d GMVs to %d sites',
                  len(array), len(sitecol_within))
-    data = geo.utils.GeographicObjects(array, LON, LAT)
-    return data.assoc(sitecol_within, assoc_dist)
+    return geo.utils.assoc(array, sitecol_within, assoc_dist)
 
 
 # Here is the explanation of USGS for the units they are using:

@@ -376,9 +376,15 @@ class SiteCollection(object):
             idx = self.indices
         return self.array[idx][name]
 
+    def __getitem__(self, site_id):
+        """
+        :returns: a site record
+        """
+        return self.array[site_id]
+
     def __len__(self):
         """
-        Return the number of sites in the collection.
+        :returns: the number of sites in the collection
         """
         return (len(self.indices) if self.indices is not None
                 else len(self.array))
