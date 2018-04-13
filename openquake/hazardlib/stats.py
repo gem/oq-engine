@@ -73,7 +73,7 @@ def max_curve(values, weights=None):
     The values can be arrays and then the maximum is taken pointwise:
 
     >>> max_curve([numpy.array([.3, .2]), numpy.array([.1, .4])])
-    array([ 0.3,  0.4])
+    array([0.3, 0.4])
     """
     return numpy.max(values, axis=0)
 
@@ -167,8 +167,7 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> a1 = numpy.array([([1, 2], 3)], dt)
     >>> a2 = numpy.array([([4, 5], 6)], dt)
     >>> apply_stat(mean_curve, [a1, a2])
-    array([([2.5, 3.5], 4.5)], 
-          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
     dtype = arraylist[0].dtype
     shape = arraylist[0].shape

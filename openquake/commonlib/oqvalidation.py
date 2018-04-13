@@ -127,7 +127,8 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
-    shakemap_id = valid.Param(valid.simple_id, None)
+    shakemap_id = valid.Param(valid.nice_string, None)
+    site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_per_tile = valid.Param(valid.positiveint, 30000)  # by M. Simionato
@@ -470,6 +471,12 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
+    def is_valid_shakemap(self):
+        """
+        hazard_calculation_id must be set if shakemap_id is set
+        """
+        return self.hazard_calculation_id if self.shakemap_id else True
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
@@ -663,7 +670,7 @@ class OqParam(valid.ParamSet):
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                'rupture_model' in self.inputs):
+                self.calculation_mode.startswith('scenario')):
             return
         if 'source' not in self.inputs and not self.hazard_calculation_id:
             raise ValueError('Missing source_model_logic_tree in %s '
