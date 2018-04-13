@@ -60,18 +60,20 @@ class Site(object):
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
                  backarc=False):
-        if not vs30 > 0:
-            raise ValueError('vs30 must be positive')
-        if not z1pt0 > 0:
-            raise ValueError('z1pt0 must be positive')
-        if not z2pt5 > 0:
-            raise ValueError('z2pt5 must be positive')
         self.location = location
         self.vs30 = vs30
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
+
+    @property
+    def lon(self):
+        return self.location.x
+
+    @property
+    def lat(self):
+        return self.location.y
 
     def __str__(self):
         """
@@ -295,8 +297,10 @@ class SiteCollection(object):
         one at a time.
         """
         for i, location in enumerate(self.mesh):
-            yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
+            site = Site(location, self.vs30[i], self.vs30measured[i],
+                        self.z1pt0[i], self.z2pt5[i], self.backarc[i])
+            site.sid = i
+            yield site
 
     def filter(self, mask):
         """
