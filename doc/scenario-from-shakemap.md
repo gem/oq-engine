@@ -99,4 +99,5 @@ Clearly in situations in which the number of hazard sites is too large,
 approximations will have to be made, like neglecting the correlation
 effects. Viceversa, if the correlation effects are important, we will
 have to increase the `region_grid_spacing` until the computation become
-possible.
+possible. Also the performance of the procedure associating the shakemap
+sites to the hazard sites will be critical.
