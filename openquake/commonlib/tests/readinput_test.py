@@ -127,7 +127,7 @@ export_dir = %s
         try:
             source = general.writetmp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -148,9 +148,8 @@ export_dir = %s
 
             expected_params = {
                 'export_dir': TMP,
-                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
-                'calculation_mode': 'classical',
+                'calculation_mode': 'scenario',
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': 1.0},
@@ -165,7 +164,7 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source, hc_id=1))
+            params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -175,7 +174,7 @@ export_dir = %s
             'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
         source = general.writetmp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -191,7 +190,7 @@ intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
-        oq = readinput.get_oqparam(source, hc_id=1)
+        oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
