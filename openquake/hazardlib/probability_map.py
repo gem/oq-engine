@@ -49,7 +49,7 @@ class ProbabilityCurve(object):
     >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
-    [ 0.405  0.32   0.245  0.5    0.5  ]>
+    [0.405 0.32  0.245 0.5   0.5  ]>
     """
     def __init__(self, array):
         self.array = array

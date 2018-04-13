@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 from shapely import geometry
-from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
@@ -350,8 +349,11 @@ class SiteCollection(object):
                              'not supported yet')
         mask = numpy.array([min_lon < rec['lons'] < max_lon and
                             min_lat < rec['lats'] < max_lat
-                            for rec in self.array])
-        return self.complete.filter(mask)
+                            for rec in self.array[self.indices]])
+        if not mask.any():
+            raise Exception('There are no sites within the boundind box %s'
+                            % str(bbox))
+        return self.filter(mask)
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)

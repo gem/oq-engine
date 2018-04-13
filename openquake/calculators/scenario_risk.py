@@ -95,7 +95,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        eids, self.R = base.get_gmfs(self)
+        if self.oqparam.shakemap_id or 'shakemap' in self.oqparam.inputs:
+            self.read_shakemap()
+            self.R = 1
+        else:
+            _, self.R = base.get_gmfs(self)
         self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
