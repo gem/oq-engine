@@ -151,6 +151,7 @@ import mock
 import time
 import socket
 import signal
+import pickle
 import inspect
 import logging
 import operator
@@ -167,7 +168,6 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
@@ -361,8 +361,8 @@ if OQ_DISTRIBUTE.startswith('celery'):
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    app = Celery('openquake')
+    app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
 
@@ -643,9 +643,6 @@ class Starmap(object):
     def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
-            if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                # work around a celery/rabbitmq bug
-                del app.backend._cache[task_id]
             yield result_dict['result']
 
     def _iter_celery(self):

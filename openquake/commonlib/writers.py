@@ -174,7 +174,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float64':
+        if numpytype != 'float64' and not numpytype.startswith('|S'):
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -189,7 +189,7 @@ def extract_from(data, fields):
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
     >>> extract_from(a, ['PGA'])
-    array([[ 1.,  2.,  3.]])
+    array([[1., 2., 3.]])
 
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
@@ -198,7 +198,7 @@ def extract_from(data, fields):
     >>> extract_from(b, ['idx'])
     array([8], dtype=uint32)
     >>> extract_from(b, ['B', 'PGV'])
-    array([[ 3.,  5.,  6.,  7.]])
+    array([[3., 5., 6., 7.]])
     """
     for f in fields:
         data = data[f]
@@ -428,9 +428,9 @@ def read_array(fname, sep=','):
 
     >>> from openquake.baselib.general import writetmp
     >>> print(read_array(writetmp('.1 .2, .3 .4, .5 .6\n')))
-    [[[ 0.1  0.2]
-      [ 0.3  0.4]
-      [ 0.5  0.6]]]
+    [[[0.1 0.2]
+      [0.3 0.4]
+      [0.5 0.6]]]
     """
     with open(fname) as f:
         records = []
