@@ -52,9 +52,9 @@ def PolygonPatch(polygon, **kwargs):
 
     Example (using Shapely Point and a matplotlib axes):
 
-      >>> b = Point(0, 0).buffer(1.0)
-      >>> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
-      >>> axis.add_patch(patch)
+      >> b = Point(0, 0).buffer(1.0)
+      >> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
+      >> axis.add_patch(patch)
     """
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
