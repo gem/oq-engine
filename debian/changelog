@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Move to Celery 4. Celery support is removed from Windows.
+
   [Michele Simionato]
   * Implemented scenario_risk/scenario_damage from shakemap calculators
   * Exported the asset tags in the asset based risk outputs
