@@ -207,8 +207,12 @@ class SiteCollection(object):
 
     def filtered(self, indices):
         """
-        :returns: a filtered SiteCollection instance
+        :returns:
+           a filtered SiteCollection instance if indices is a proper subset
+           of the available indices, otherwise returns the full SiteCollection
         """
+        if len(indices) == len(self.complete):
+            return self.complete
         new = object.__new__(self.__class__)
         new.indices = numpy.uint32(sorted(indices))
         new.array = self.array
