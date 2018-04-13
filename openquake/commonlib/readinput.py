@@ -647,6 +647,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
             obj, distance = siteobjects.get_closest(lon, lat)
             if obj.sid in sids and distance <= haz_distance:
                 # keep the assets, otherwise discard them
+                #assets.sort(key=operator.attrgetter('ordinal'))
                 assets_by_sid[obj.sid].extend(assets)
         if not assets_by_sid:
             raise geo.utils.SiteAssociationError(
@@ -654,9 +655,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
                 'asset_hazard_distance of %s km' % haz_distance)
         mask = numpy.array(
             [sid in assets_by_sid for sid in all_sids])
-        exposure.assets_by_site = [
-            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
-            for sid in all_sids]
+        exposure.assets_by_site = [assets_by_sid[sid] for sid in all_sids]
         num_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol = haz_sitecol.complete.filter(mask)
         logging.info('Associated %d assets to %d sites',
