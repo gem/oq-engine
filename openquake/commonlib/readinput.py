@@ -24,7 +24,6 @@ import zlib
 import shutil
 import zipfile
 import logging
-import operator
 import tempfile
 import configparser
 import collections
@@ -636,7 +635,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by_site = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance)
+            exposure.assets_by_site, haz_sitecol, haz_distance, 'error')
         exposure.assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by_site):
