@@ -139,8 +139,6 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 # Make a zipped copy of each demo
 helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
-# FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}/%{_datadir}/openquake/engine/utils/celery-status
 
 %post
 %systemd_post openquake-dbserver.service
