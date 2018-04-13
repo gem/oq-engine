@@ -35,8 +35,7 @@ else:
 
         all_stats = ins.stats()
         if all_stats is None:
-            print("No active workers")
-            sys.exit(0)
+            sys.exit("No active workers")
 
         hostnames = []
 
