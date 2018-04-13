@@ -185,8 +185,6 @@ def make_report(isodate='today'):
 
     page = make_tabs(tag_ids, tag_status, tag_contents) + (
         'Report last updated: %s' % datetime.now())
-    if sys.version[0] == '2':  # Python 2
-        page = page.encode('utf-8')
     fname = 'jobs-%s.html' % isodate
     with open(fname, 'w') as f:
         f.write(PAGE_TEMPLATE % page)

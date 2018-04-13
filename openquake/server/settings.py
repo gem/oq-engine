@@ -100,7 +100,7 @@ USE_L10N = True
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
 )
@@ -202,7 +202,7 @@ if LOCKDOWN:
         # 'dpam.backends.PAMBackend',
     )
 
-    MIDDLEWARE_CLASSES += (
+    MIDDLEWARE += (
         'django.contrib.sessions.middleware.SessionMiddleware',
         'django.contrib.messages.middleware.MessageMiddleware',
         'django.contrib.auth.middleware.AuthenticationMiddleware',
