@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,18 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
-
-if os.path.isfile('/opt/openquake/bin/oq'):
-    # custom pythonpath is pushed in position 1 instead of 0 because
-    # sys.path[0] is populated at runtime by python itself. See:
-    # https://docs.python.org/2/library/sys.html#sys.path
-    sys.path.insert(1, '/opt/openquake/lib/python%d.%d/site-packages' %
-                    sys.version_info[:2])
-    os.environ['PYTHONPATH'] = ":".join(sys.path)
-
 from celery import Celery
+
+from openquake.baselib import sap
 from openquake.engine.celeryconfig import broker_url, result_backend
 
 
@@ -76,5 +68,11 @@ def status():
         (float(num_active_tasks) / total_workers) * 100))
 
 
-if __name__ == "__main__":
-    status()
+@sap.Script
+def celery(cmd):
+    if cmd == 'status':
+        status()
+
+
+celery.arg('cmd', 'celery command',
+           choices='status'.split())
