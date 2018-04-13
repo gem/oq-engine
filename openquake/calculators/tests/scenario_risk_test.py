@@ -219,4 +219,4 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_shakemap.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
-        self.assertEqual(len(sitecol), 1)
+        self.assertEqual(len(sitecol), 8)
