@@ -26,11 +26,12 @@ import zipfile
 import logging
 import operator
 import tempfile
+import configparser
 import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, DictArray, deprecated
-from openquake.baselib.python3compat import configparser, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
     calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -327,11 +328,11 @@ def get_site_collection(oqparam):
             sm, operator.itemgetter('lon'), operator.itemgetter('lat'))
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths)
-        dic = site_model_params.assoc(
+        sc, params = site_model_params.assoc(
             sitecol, oqparam.max_site_model_distance, 'warn')
-        for sid in dic:
+        for sid, param in zip(sc.sids, params):
             for name in site_model_dt.names[2:]:  # all names except lon, lat
-                sitecol.array[sid][name] = dic[sid][name]
+                sitecol.array[sid][name] = param[name]
         return sitecol
 
     # else use the default site params
@@ -735,7 +736,7 @@ def get_gmfs(oqparam):
     M = len(oqparam.imtls)
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
-        array = writers.read_composite_array(fname)
+        array = writers.read_composite_array(fname).array
         R = len(numpy.unique(array['rlzi']))
         if R > 1:
             raise InvalidFile('%s: found %d realizations, currently only one '

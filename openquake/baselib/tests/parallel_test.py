@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import mock
 import unittest
 import numpy
 from openquake.baselib import parallel
@@ -76,3 +78,17 @@ class StarmapTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
+
+
+class ThreadPoolTestCase(unittest.TestCase):
+    def test(self):
+        monitor = parallel.Monitor()
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
+            parallel.Starmap.init()
+            try:
+                res = parallel.Starmap.apply(
+                    get_length, (numpy.arange(10), monitor),
+                    concurrent_tasks=3).reduce()
+                self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
+            finally:
+                parallel.Starmap.shutdown()

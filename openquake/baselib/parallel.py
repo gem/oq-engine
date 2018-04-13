@@ -151,6 +151,7 @@ import mock
 import time
 import socket
 import signal
+import pickle
 import inspect
 import logging
 import operator
@@ -167,7 +168,6 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
@@ -177,7 +177,7 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'celery', 'zmq'):
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -361,8 +361,8 @@ if OQ_DISTRIBUTE.startswith('celery'):
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    app = Celery('openquake')
+    app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
 
@@ -498,7 +498,6 @@ def _wakeup(sec, mon):
 
 
 class Starmap(object):
-    pids = ()  # FIXME: we can probably remove the pids now
     task_ids = []
     calc_id = None
 
@@ -507,12 +506,13 @@ class Starmap(object):
         if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
-            self = cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
-            cls.pids = list(self)
+            cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
+        elif OQ_DISTRIBUTE == 'threadpool' and not hasattr(cls, 'pool'):
+            cls.pool = multiprocessing.dummy.Pool(poolsize)
 
     @classmethod
     def shutdown(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'processpool' and hasattr(cls, 'pool'):
+        if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
@@ -607,8 +607,8 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute == 'processpool':
-            it = self._iter_processes()
+        elif self.distribute in ('processpool', 'threadpool'):
+            it = self._iter_pool()
         elif self.distribute == 'celery':
             it = self._iter_celery()
         elif self.distribute == 'zmq':
@@ -633,7 +633,7 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args)
 
-    def _iter_processes(self):
+    def _iter_pool(self):
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
@@ -643,9 +643,6 @@ class Starmap(object):
     def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
-            if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                # work around a celery/rabbitmq bug
-                del app.backend._cache[task_id]
             yield result_dict['result']
 
     def _iter_celery(self):
