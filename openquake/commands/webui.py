@@ -25,8 +25,7 @@ from openquake.baselib import sap, config
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
-# syncdb is left for backward compatibility with Django 1.6
-commands = ['start', 'migrate', 'syncdb', 'createsuperuser', 'collectstatic']
+commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
 
 
 def rundjango(subcmd, hostport=None, skip_browser=False):
