@@ -29,11 +29,11 @@ if os.path.isfile('/opt/openquake/bin/oq'):
     os.environ['PYTHONPATH'] = ":".join(sys.path)
 
 from celery import Celery
-from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+from openquake.engine.celeryconfig import broker_url, result_backend
 
 
 def status():
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    app = Celery('openquake', backend=result_backend, broker=broker_url)
     ins = app.control.inspect()
 
     total_workers = 0
