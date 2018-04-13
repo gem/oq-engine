@@ -43,7 +43,7 @@ class SiteAssociationError(Exception):
     """Raised when there are no sites close enough"""
 
 
-class GeographicObjects(object):
+class _GeographicObjects(object):
     """
     Store a collection of geographic objects, i.e. objects with lons, lats.
     It is possible to extract the closest object to a given location by
@@ -84,7 +84,7 @@ class GeographicObjects(object):
             idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         return self.objects[idx], min_dist
 
-    def assoc(self, sitecol, assoc_dist, mode='error'):
+    def assoc(self, sitecol, assoc_dist, mode):
         """
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
@@ -114,7 +114,7 @@ class GeographicObjects(object):
         return (sitecol.filtered(dic),
                 numpy.array([dic[sid] for sid in sorted(dic)]))
 
-    def assoc_assets(self, assets_by_site, assoc_dist):
+    def assoc2(self, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -131,8 +131,12 @@ class GeographicObjects(object):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
         sids = sorted(assets_by_sid)
-        if not sids:
+        if not sids and mode == 'error':
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
@@ -149,9 +153,10 @@ def assoc(objects, sitecol, assoc_dist, mode='error'):
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray):
-        return GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
-    else:
-        return GeographicObjects(sitecol).assoc_assets(objects, assoc_dist)
+        # objects is a geo array with lon, lat fields
+        return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
+    else:  # objects is the list assets_by_site
+        return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
 
 
 def clean_points(points):
