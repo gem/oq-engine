@@ -19,7 +19,6 @@
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -29,7 +28,7 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28)
+    case_26, case_27, case_28, case_29)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -431,3 +430,9 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
             'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'], case_28.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_29(self):  # non parametric source
+        # check the high IMLs are zeros: this is a test for
+        # NonParametricProbabilisticRupture.get_probability_no_exceedance
+        self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)

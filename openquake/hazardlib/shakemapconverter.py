@@ -18,13 +18,14 @@
 """\
 A converter from Shakemap files (see https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2full_se/us/1465655085705/about_formats.html) to numpy composite arrays.
 """
+import io
 import numpy
 from openquake.baselib.node import node_from_xml
 
 
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSHA10 STDPSA30'
+    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
@@ -42,7 +43,11 @@ FIELDMAP = {
 
 
 def _get_shakemap_array(xml_file):
-    grid_node = node_from_xml(xml_file)
+    if hasattr(xml_file, 'read'):
+        data = io.BytesIO(xml_file.read())
+    else:
+        data = open(xml_file)
+    grid_node = node_from_xml(data)
     fields = grid_node.getnodes('grid_field')
     lines = grid_node.grid_data.text.strip().splitlines()
     rows = [line.split() for line in lines]
