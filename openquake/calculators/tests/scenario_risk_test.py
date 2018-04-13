@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, occupants, case_master)
+    case_6a, case_7, case_8, occupants, case_master, case_shakemap)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
@@ -171,6 +171,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+
+        # check realizations
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
@@ -207,3 +212,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_shakemap(self):
+        self.run_calc(case_shakemap.__file__, 'pre-job.ini')
+        self.run_calc(case_shakemap.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        sitecol = self.calc.datastore['sitecol']
+        self.assertEqual(len(sitecol), 1)

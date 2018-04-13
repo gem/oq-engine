@@ -223,6 +223,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
         prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+        prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):
