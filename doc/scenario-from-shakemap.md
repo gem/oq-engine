@@ -34,7 +34,7 @@ The `site_params` are needed, even if they will not be used (in particular
 the vs30 will be read from the shakemap).
 The `gsim` is also ignored, so you can put everything there. In the future
 I would like to remove the `gsim` and the `site_params` but for the moment
-they are necessary even they will not be used :-(
+they are artificially needed.
 
 By running the calculation
 
@@ -94,7 +94,7 @@ the shakemap has 506,142 sites, which seems a huge number. However,
 the extent of the shakemap in longitude and latitude is about 6 degrees,
 with a step of 10 km the grid contains around 65 x 65 sites;
 most of the sites are without assets because most of the
-grid is in the sea or on high montains, so actually there are
+grid is on the sea or on high montains, so actually there are
 around ~1000 effective sites. Computing a correlation matrix of size
 1000 x 1000 is actually possible, so the risk computation can be performed.
 Clearly in situations in which the number of hazard sites is too large,
