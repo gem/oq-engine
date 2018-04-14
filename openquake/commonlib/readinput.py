@@ -634,35 +634,30 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        sitecol, assets_by_site = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, 'error')
-        exposure.assets_by_site = [[] for _ in sitecol.complete.sids]
+        mode = 'strict' if oqparam.region_grid_spacing else 'warn'
+        sitecol, assets_by = geo.utils.assoc(
+            exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+        assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
-        for sid, assets in zip(sitecol.sids, assets_by_site):
-            exposure.assets_by_site[sid] = assets
+        for sid, assets in zip(sitecol.sids, assets_by):
+            assets_by_site[sid] = assets
             num_assets += len(assets)
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
         if num_assets < tot_assets:
-            msg = ('Discarded %d assets outside the asset_hazard_distance of '
-                   '%d km') % (tot_assets - num_assets, haz_distance)
-            if oqparam.region_grid_spacing:
-                raise geo.utils.SiteAssociationError(msg)
-            else:
-                logging.warn(msg)
+            logging.warn('Discarded %d assets outside the '
+                         'asset_hazard_distance of %d km',
+                         tot_assets - num_assets, haz_distance)
     else:
+        # asset sites and hazard sites are the same
         sitecol = haz_sitecol
+        assets_by_site = exposure.assets_by_site
 
     asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in exposure.assets_by_site
-                  for asset in assets]
+                  for assets in assets_by_site for asset in assets]
     assetcol = asset.AssetCollection(
-        asset_refs,
-        exposure.assets_by_site,
-        exposure.tagcol,
-        exposure.cost_calculator,
-        oqparam.time_event,
-        occupancy_periods=exposure.occupancy_periods)
+        asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
+        oqparam.time_event, exposure.occupancy_periods)
 
     return sitecol, assetcol
 
