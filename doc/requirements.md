@@ -1,5 +1,7 @@
 ## Technology Stack
 
+A 64bit operating system and 64bit capable hardware are required.
+
 ### Main dependencies
  
 * Python - Implementation language
