@@ -17,7 +17,7 @@ PSHA-based damage calculations.
 Expected runtime: 2 minutes  
 Number of sites: 2253  
 Number of logic tree realizations: 2  
-GMPEs: ChiouYoungs2008, 
+GMPEs: ChiouYoungs2008, AbrahamsonEtAl2014
 IMTs: PGA  
 Outputs: Hazard Curves, Seismic Source Groups, Realizations
 
