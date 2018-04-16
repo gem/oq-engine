@@ -504,6 +504,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
             if not psr.changed_sources:
+                # we can safely enable the optimization, since exactly the
+                # same sources have been read multiple times
                 oqparam.optimize_same_id_sources = True
 
 
