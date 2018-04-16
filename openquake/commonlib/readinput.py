@@ -500,13 +500,15 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     psr.check_nonparametric_sources(oqparam.investigation_time)
 
     # log if some source file is being used more than once
+    all_hits = 0
     for fname, hits in psr.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not psr.changed_sources:
-                # we can safely enable the optimization, since exactly the
-                # same sources have been read multiple times
-                oqparam.optimize_same_id_sources = True
+            all_hits += hits
+    if all_hits and not psr.changed_sources:
+        logging.warn('You are doing redundant calculations: please make sure '
+                     'that different sources have different IDs and set '
+                     'optimize_same_id_sources=true in your .ini file')
 
 
 def getid(src):
