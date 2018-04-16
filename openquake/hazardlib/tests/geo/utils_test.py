@@ -423,19 +423,4 @@ class PlaneFit(unittest.TestCase):
         self.assertAlmostEqual(self.c[-1], -sum(par*pnt), 2)
 
 
-class GeographicObjectsTest(unittest.TestCase):
-    def setUp(self):
-        p1 = Point(0.0, 0.1)
-        p2 = Point(0.0, 0.2)
-        p3 = Point(0.0, 0.3)
-        self.points = utils.GeographicObjects([p1, p2, p3])
-
-    def test_closest(self):
-        point, dist = self.points.get_closest(0.0, 0.21)
-        self.assertEqual(point, Point(0.0, 0.2))
-        point, dist = self.points.get_closest(0.0, 0.29)
-        self.assertEqual(point, Point(0.0, 0.3))
-
-    def test_exact_point(self):
-        point, dist = self.points.get_closest(0.0, 0.2)
-        self.assertEqual(point, Point(0.0, 0.2))
+# NB: utils.assoc is tested in the engine
