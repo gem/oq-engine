@@ -274,7 +274,6 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-
 site_model_dt = numpy.dtype([
     ('lon', numpy.float64),
     ('lat', numpy.float64),
@@ -504,6 +503,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     for fname, hits in psr.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
+            oqparam.optimize_same_id_sources = True
 
 
 def getid(src):
