@@ -266,8 +266,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing
-        self.run_calc(case_miriam.__file__, 'job2.ini')
-        sitecol = self.calc.datastore['sitecol']
+        out = self.run_calc(case_miriam.__file__, 'job2.ini')
+        hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
+        sitecol = self.calc.datastore['sitecol']  # filtered sitecol
+        self.assertEqual(len(hcurves), len(sitecol))
         assetcol = self.calc.datastore['assetcol']
         self.assertEqual(len(sitecol), 15)
         self.assertGreater(sitecol.vs30.sum(), 0)
