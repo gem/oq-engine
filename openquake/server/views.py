@@ -56,16 +56,11 @@ from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils, dbapi
 
 from django.conf import settings
+from django.http import FileResponse
+from wsgiref.util import FileWrapper
+
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-try:
-    from django.http import FileResponse  # Django >= 1.8
-except ImportError:
-    from django.http import StreamingHttpResponse as FileResponse
-try:
-    from wsgiref.util import FileWrapper  # Django >= 1.9
-except ImportError:
-    from django.core.servers.basehttp import FileWrapper
 
 
 METHOD_NOT_ALLOWED = 405

@@ -623,7 +623,7 @@ sudo supervisorctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
-        /usr/share/openquake/engine/utils/celery-status
+        oq celery status
         oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
 
         # Try to export a set of results AFTER the calculation

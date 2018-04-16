@@ -8,7 +8,7 @@ To run the Scenario Damage demo, users should navigate to the folder where the
 required files have been placed and employ following command:
 
 \begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
-user@ubuntu:~\$ oq engine --run job_hazard.ini,job_risk.ini
+user@ubuntu:~\$ oq engine --run job_hazard.ini && oq engine --run job_risk.ini --hc=-1
 \end{minted}
 
 The hazard calculation should produce the following outputs:
