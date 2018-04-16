@@ -503,7 +503,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     for fname, hits in psr.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            oqparam.optimize_same_id_sources = True
+            if not psr.changed_sources:
+                oqparam.optimize_same_id_sources = True
 
 
 def getid(src):
