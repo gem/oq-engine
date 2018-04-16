@@ -279,6 +279,7 @@ class SourceModelParser(object):
         self.converter = converter
         self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
 
     def parse_src_groups(self, fname, apply_uncertainties):
         """
@@ -299,6 +300,7 @@ class SourceModelParser(object):
                 if changed:
                     # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
+                    self.changed_sources += 1
         self.fname_hits[fname] += 1
         return groups
 

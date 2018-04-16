@@ -1,3 +1,10 @@
+  [Catalina Yepes]
+  * Revised/enhanced the risk demos
+
+  [Michele Simionato]
+  * Added a warning about the option `optimize_same_id_sources` when the user
+    should take advantage of it
+
   [Daniele Viganò]
   * `celery-status` script converted into `oq celery status` command
   * Removed Django < 1.10 backward compatibility
