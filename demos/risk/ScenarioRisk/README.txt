@@ -6,4 +6,4 @@ configuration file and were designed to be run together to form a complete
 end-to-end demonstration of the workflow.
 
 Expected runtime: 2 minutes  
-Outputs: Ground Motion Fields, Scenario Loss Maps, Aggregate Losses
+Outputs: Ground Motion Fields, Average Asset Losses, Aggregate Asset Losses, Aggregate Event Losses
