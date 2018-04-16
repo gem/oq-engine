@@ -41,7 +41,7 @@ Official support for Ubuntu 18.04 (Bionic) will be added in release 3.1.
 
 ### 32bit support
 
-The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Staring with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
+The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
 ***
 
