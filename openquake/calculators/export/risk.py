@@ -479,8 +479,7 @@ def get_paths(rlz):
 @export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol/array'].value
-    arefs = dstore['assetcol/asset_refs'].value
+    assets = get_assets(dstore)
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
@@ -490,16 +489,8 @@ def export_bcr_map(ekey, dstore):
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
-        rlz_data = bcr_data[:, t]
         path = dstore.build_fname('bcr', tag, 'csv')
-        data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
-                 'average_annual_loss_retrofitted', 'bcr']]
-        for aref, ass, value in zip(arefs, assetcol, rlz_data):
-            data.append((ass['lon'], ass['lat'], aref,
-                         value['annual_loss_orig'],
-                         value['annual_loss_retro'],
-                         value['bcr']))
-        writer.save(data, path)
+        writer.save(compose_arrays(assets, bcr_data[:, t]), path)
         fnames.append(path)
     return writer.getsaved()
 
