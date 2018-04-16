@@ -1,5 +1,18 @@
+  [Michele Simionato]
+  * Extended the BCR exporter to export the asset tags
+
+  [Catalina Yepes]
+  * Revised/enhanced the risk demos
+
+  [Michele Simionato]
+  * Added a warning about the option `optimize_same_id_sources` when the user
+    should take advantage of it
+
   [Daniele Viganò]
-  * Move to Celery 4. Celery support is removed from Windows.
+  * `celery-status` script converted into `oq celery status` command
+  * Removed Django < 1.10 backward compatibility
+  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+    Django 1.10+, Celery 4+)
 
   [Michele Simionato]
   * Implemented scenario_risk/scenario_damage from shakemap calculators
