@@ -40,7 +40,7 @@ urlpatterns = [
 for app in settings.STANDALONE_APPS:
     app_name = app.split('_')[1]
     urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
-                       namespace='%s' % app_name)))
+                           namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin
@@ -48,7 +48,7 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     urlpatterns += [
-        url(r'^admin/', include(admin.site.urls)),
+        url(r'^admin/', admin.site.urls),
         url(r'^accounts/login/$', login,
             {'template_name': 'account/login.html'}, name="login"),
         url(r'^accounts/logout/$', logout,
