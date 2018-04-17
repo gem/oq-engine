@@ -1,4 +1,4 @@
-ordinal,path,model,gsim,weight
+ordinal,branch_path,model,gsim,weight
 0,b11~b11,source_model1.xml,BooreAtkinson2008(),3.0000001e-01
 1,b11~b12,source_model1.xml,CampbellBozorgnia2008(),1.8000001e-01
 2,b11~b13,source_model1.xml,ChiouYoungs2008(),1.2000000e-01
