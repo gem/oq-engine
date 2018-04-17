@@ -36,6 +36,7 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
@@ -49,6 +50,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
+TWO16 = 2 ** 16
 
 
 class InvalidCalculationID(Exception):
@@ -324,7 +326,8 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        if self.oqparam.hazard_calculation_id and read_access:
+        if (self.oqparam.hazard_calculation_id and read_access
+                and 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
@@ -410,11 +413,11 @@ class HazardCalculator(BaseCalculator):
         """
         To be overridden to initialize the datasets needed by the calculation
         """
-        if not self.oqparam.imtls:
+        if not self.oqparam.risk_imtls:
             if self.datastore.parent:
                 self.oqparam.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-            else:
+            elif not self.oqparam.imtls:
                 raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
@@ -570,7 +573,18 @@ class HazardCalculator(BaseCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
+
         self.datastore['csm_info'] = self.csm.info
+        R = len(self.rlzs_assoc.realizations)
+        if self.is_stochastic and R >= TWO16:
+            # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
+            raise ValueError(
+                'The logic tree has %d realizations, the maximum '
+                'is %d' % (R, TWO16))
+        elif R > 10000:
+            logging.warn(
+                'The logic tree has %d realizations(!), please consider '
+                'sampling it', R)
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
             self.datastore.set_attrs(
@@ -588,6 +602,34 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+    def read_shakemap(self):
+        """
+        Enabled only if there is a shakemap_id parameter in the job.ini.
+        Download, unzip, parse USGS shakemap files and build a corresponding
+        set of GMFs which are then filtered with the hazard site collection
+        and stored in the datastore.
+        """
+        oq = self.oqparam
+        E = oq.number_of_ground_motion_fields
+        haz_sitecol = self.datastore.parent['sitecol']
+
+        logging.info('Getting/reducing shakemap')
+        with self.monitor('getting/reducing shakemap'):
+            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
+                oq.inputs['shakemap'])
+            self.sitecol, shakemap = get_sitecol_shakemap(
+                smap, haz_sitecol, oq.asset_hazard_distance or
+                oq.region_grid_spacing)
+
+        logging.info('Building GMFs')
+        with self.monitor('building/saving GMFs'):
+            gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
+                           oq.random_seed)
+            save_gmf_data(self.datastore, self.sitecol, gmfs)
+            events = numpy.zeros(E, readinput.stored_event_dt)
+            events['eid'] = numpy.arange(E, dtype=U64)
+            self.datastore['events'] = events
+
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
@@ -743,7 +785,7 @@ def get_gmfs(calculator):
     elif calculator.precalc:  # from previous step
         num_assocs = dstore['csm_info'].get_num_rlzs()
         E = oq.number_of_ground_motion_fields
-        eids = numpy.arange(E)
+        eids = numpy.arange(E, dtype=U64)
         gmfs = numpy.zeros((num_assocs, N, E, I))
         for g, gsim in enumerate(calculator.precalc.gsims):
             gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
@@ -758,7 +800,7 @@ def save_gmf_data(dstore, sitecol, gmfs):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmfs: an array of shape (R, N, E, I)
+    :param gmfs: an array of shape (R, N, E, M)
     """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
