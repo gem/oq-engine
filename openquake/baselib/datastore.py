@@ -344,7 +344,7 @@ class DataStore(collections.MutableMapping):
         if hasattr(postfix, 'sm_lt_path'):  # is a realization
             fname = '%s-rlz-%03d.%s' % (prefix, postfix.ordinal, fmt)
         else:
-            fname = '%s-%s.%s' % (prefix, postfix, fmt)
+            fname = prefix + ('-%s' % postfix if postfix else '') + '.' + fmt
         return self.export_path(fname, export_dir)
 
     def flush(self):
