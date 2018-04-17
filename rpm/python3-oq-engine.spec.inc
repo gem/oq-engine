@@ -75,6 +75,8 @@ Copyright (C) 2010-2018 GEM Foundation
 Summary: OpenQuake Engine multi-node cluster support (master node)
 Group: Applications/Engineering
 Requires: %{name} = %{version}-%{release} rabbitmq-server
+Obsoletes: python-oq-engine-master
+Provides: python-oq-engine-master
 
 %description master
 OpenQuake Engine multi-node cluster support (master node)
@@ -88,6 +90,8 @@ Copyright (C) 2010-2018 GEM Foundation
 Summary: OpenQuake Engine multi-node cluster support (worker node)
 Group: Applications/Engineering
 Requires: %{name} = %{version}-%{release}
+Obsoletes: python-oq-engine-worker
+Provides: python-oq-engine-worker
 
 %description worker
 OpenQuake Engine multi-node cluster support (worker node)
