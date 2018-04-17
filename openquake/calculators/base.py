@@ -576,15 +576,15 @@ class HazardCalculator(BaseCalculator):
 
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
-        if R > TWO16:
-            if self.is_stochastic:
-                raise ValueError(
-                    'The logic tree has %d realizations, the maximum '
-                    'is %d' % (R, TWO16))
-            else:
-                logging.warn(
-                    'The logic tree has %d realizations(!), please consider '
-                    'sampling it', R)
+        if self.is_stochastic and R >= TWO16:
+            # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
+            raise ValueError(
+                'The logic tree has %d realizations, the maximum '
+                'is %d' % (R, TWO16))
+        elif R > 10000:
+            logging.warn(
+                'The logic tree has %d realizations(!), please consider '
+                'sampling it', R)
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
             self.datastore.set_attrs(
