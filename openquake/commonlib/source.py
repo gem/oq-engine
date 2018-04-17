@@ -38,7 +38,6 @@ from openquake.commonlib import logictree
 
 MINWEIGHT = source.MINWEIGHT
 MAX_INT = 2 ** 31 - 1
-TWO16 = 2 ** 16
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -644,10 +643,6 @@ class CompositionInfo(object):
             rlzs = [all_rlzs[idx] for idx in idxs]
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(all_rlzs)
-        if len(rlzs) > TWO16:
-            raise ValueError(
-                'The source model %s has %d realizations, the maximum '
-                'is %d' % (smodel.names, len(rlzs), TWO16))
         return rlzs
 
     def __repr__(self):
