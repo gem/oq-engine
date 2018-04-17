@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced some changes to the `realizations` exporter (renamed field
+    `uid` -> `branch_path` and removed the `model` field)
   * Reduced the check on too many realizations to a warning, except for
     event based calculations
   * Improved the hazard exporter to exports only data for the filtered
