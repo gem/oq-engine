@@ -20,14 +20,8 @@ from __future__ import print_function
 import io
 import inspect
 import logging
-try:
-    # Python 3
-    from urllib.parse import quote_plus
-    from urllib.request import urlopen
-except ImportError:
-    # Python 2
-    from urllib import quote_plus
-    from urllib2 import urlopen
+from urllib.parse import quote_plus
+from urllib.request import urlopen
 
 import numpy
 from openquake.baselib import performance, sap, hdf5, datastore
