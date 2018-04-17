@@ -99,9 +99,9 @@ class Line(object):
         http://en.wikipedia.org/wiki/Mean_of_circular_quantities
 
         >>> from openquake.hazardlib.geo.point import Point as P
-        >>> str(Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth())
+        >>> '%.1f' % Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth()
         '45.0'
-        >>> str(Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]).average_azimuth())
+        >>> '%.1f' % Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]).average_azimuth()
         '45.0'
         >>> line = Line([P(0, 0), P(-2e-5, 0), P(-2e-5, 1.154e-5)])
         >>> '%.1f' % line.average_azimuth()

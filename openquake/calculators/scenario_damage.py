@@ -120,12 +120,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        eids, self.R = base.get_gmfs(self)
-        self.param['number_of_ground_motion_fields'] = (
-            self.oqparam.number_of_ground_motion_fields)
+        if self.oqparam.shakemap_id or 'shakemap' in self.oqparam.inputs:
+            self.read_shakemap()
+            self.R = 1
+        else:
+            _, self.R = base.get_gmfs(self)
+        E = self.oqparam.number_of_ground_motion_fields
+        self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs('gmf', num_events=len(eids))
+        self.riskinputs = self.build_riskinputs('gmf', num_events=E)
         self.param['tags'] = list(self.assetcol.tagcol)
 
     def post_execute(self, result):
