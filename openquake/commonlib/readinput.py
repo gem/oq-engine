@@ -555,11 +555,14 @@ def get_composite_source_model(oqparam, in_memory=True):
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
                                       oqparam.optimize_same_id_sources)
     for sm in csm.source_models:
-        srcs = []
+        counter = collections.Counter()
         for sg in sm.src_groups:
-            srcs.extend(map(getid, sg))
-        if len(set(srcs)) < len(srcs):
-            raise nrml.DuplicatedID('Found duplicated source IDs in %s' % sm)
+            for srcid in map(getid, sg):
+                counter[srcid] += 1
+        dupl = [srcid for srcid in counter if counter[srcid] > 1]
+        if dupl:
+            raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
+                                    % (sm, dupl))
     return csm
 
 
