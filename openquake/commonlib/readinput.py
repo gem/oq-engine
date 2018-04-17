@@ -559,8 +559,7 @@ def get_composite_source_model(oqparam, in_memory=True):
         for sg in sm.src_groups:
             srcs.extend(map(getid, sg))
         if len(set(srcs)) < len(srcs):
-            raise nrml.DuplicatedID(
-                'Found duplicated source IDs in %(job_ini)s' % oqparam.inputs)
+            raise nrml.DuplicatedID('Found duplicated source IDs in %s' % sm)
     return csm
 
 
