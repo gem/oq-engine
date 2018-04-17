@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq celery inspect`
   * Reduced the check on too many realizations to a warning, except for
     event based calculations
   * Improved the hazard exporter to exports only data for the filtered
