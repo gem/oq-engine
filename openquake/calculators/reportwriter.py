@@ -105,7 +105,8 @@ class ReportWriter(object):
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
-            if 'classical' in ds['task_info']:
+            tasks = set(ds['task_info'])
+            if 'classical' in tasks or 'count_ruptures' in tasks:
                 self.add('task_classical:0')
                 self.add('task_classical:-1')
             self.add('job_info')
