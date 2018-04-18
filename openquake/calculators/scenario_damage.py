@@ -168,7 +168,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_event'] = result['c_event']
+            self.datastore['losses_by_event'] = F32(result['c_event'])
 
         # save gmdata
         self.gmdata = result['gmdata']
