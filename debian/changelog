@@ -1,5 +1,26 @@
+  [Michele Simionato]
+  * Added a check to forbid duplicated GSIMs in the logic tree
+  * Introduced some changes to the `realizations` exporter (renamed field
+    `uid` -> `branch_path` and removed the `model` field)
+  * Added a command `oq celery inspect`
+  * Reduced the check on too many realizations to a warning, except for
+    event based calculations
+  * Improved the hazard exporter to exports only data for the filtered
+    site collection and not the full site collection
+  * Extended the BCR exporter to export the asset tags
+
+  [Catalina Yepes]
+  * Revised/enhanced the risk demos
+
+  [Michele Simionato]
+  * Added a warning about the option `optimize_same_id_sources` when the user
+    should take advantage of it
+
   [Daniele Viganò]
-  * Move to Celery 4. Celery support is removed from Windows.
+  * `celery-status` script converted into `oq celery status` command
+  * Removed Django < 1.10 backward compatibility
+  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+    Django 1.10+, Celery 4+)
 
   [Michele Simionato]
   * Implemented scenario_risk/scenario_damage from shakemap calculators

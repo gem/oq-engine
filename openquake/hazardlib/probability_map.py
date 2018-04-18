@@ -212,28 +212,30 @@ class ProbabilityMap(dict):
         return curves
 
     # used when exporting to npy
-    def convert_npy(self, imtls, nsites, idx=0):
+    def convert_npy(self, imtls, sids, idx=0):
         """
-        Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.dt`.
+        Convert a probability map into a composite array of dtype `imtls.dt`.
 
         :param imtls:
             DictArray instance
-        :param nsites:
-            the total number of sites
+        :param sids:
+            array of site IDs containing all the sites in the ProbabilityMap
         :param idx:
             index on the z-axis (default 0)
         """
         dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
                   for imt in imtls]
-        curves = numpy.zeros(nsites, dtlist)
-        for sid in self:
-            array = self[sid].array
+        curves = numpy.zeros(len(sids), dtlist)
+        for s, sid in enumerate(sids):
+            try:
+                array = self[sid].array
+            except KeyError:
+                continue
             for imt in imtls:
                 imls = curves.dtype[imt].names
                 values = array[imtls.slicedic[imt], idx]
                 for iml, val in zip(imls, values):
-                    curves[sid][imt][iml] = val
+                    curves[s][imt][iml] = val
         return curves
 
     def convert2(self, imtls, sids):
