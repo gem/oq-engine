@@ -146,7 +146,7 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt(numpy.float64)
+    loss_dt = dstore['oqparam'].loss_dt()
     all_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
