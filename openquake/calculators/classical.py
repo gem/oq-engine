@@ -83,6 +83,7 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
+    prefilter = True
 
     def agg_dicts(self, acc, pmap_by_grp):
         """
@@ -170,13 +171,17 @@ class PSHACalculator(base.HazardCalculator):
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            if num_tiles > 1:
-                logging.info('Prefiltering tile %d of %d', tile_i, len(tiles))
+            src_filter = SourceFilter(tile, oq.maximum_distance)
+            if self.prefilter:
+                if num_tiles > 1:
+                    logging.info('Prefiltering tile %d of %d', tile_i,
+                                 len(tiles))
+                else:
+                    logging.info('Prefiltering sources')
+                with self.monitor('prefiltering'):
+                    csm = self.csm.filter(src_filter)
             else:
-                logging.info('Prefiltering sources')
-            with self.monitor('prefiltering'):
-                src_filter = SourceFilter(tile, oq.maximum_distance)
-                csm = self.csm.filter(src_filter)
+                csm = self.csm
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(
                     weight, tasks_per_tile, minweight)
@@ -193,7 +198,7 @@ class PSHACalculator(base.HazardCalculator):
             for sg in csm.src_groups:
                 if sg.src_interdep == 'mutex':
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                    yield sg, csm.src_filter, gsims, param, monitor
+                    yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
             # NB: csm.get_sources_by_trt discards the mutex sources
@@ -239,6 +244,7 @@ class PSHACalculator(base.HazardCalculator):
                         sorted(data), grp_source_dt)
 
 
+# used in PreClassicalCalculator
 def count_ruptures(sources, srcfilter, gsims, param, monitor):
     """
     Count the number of ruptures contained in the given sources by applying a
@@ -269,6 +275,7 @@ class PreClassicalCalculator(PSHACalculator):
     Classical PSHA calculator
     """
     core_task = count_ruptures
+    prefilter = False
 
 
 def fix_ones(pmap):
