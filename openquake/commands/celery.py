@@ -68,10 +68,21 @@ else:
         print('Cluster utilization: %.2f%%' % (
             (float(num_active_tasks) / total_workers) * 100))
 
+    def inspect():
+        app = Celery('openquake', backend=result_backend, broker=broker_url)
+        actives = app.control.inspect().active()
+        if not actives:
+            print('There are no active tasks')
+        else:
+            for active in sum(actives.values(), []):
+                print(active['hostname'], active['args'])
+
     @sap.Script
     def celery(cmd):
-        if cmd == 'status':
-            status()
+        """
+        Return information about the celery workers
+        """
+        globals()[cmd]()
 
     celery.arg('cmd', 'celery command',
-               choices='status'.split())
+               choices='status inspect'.split())
