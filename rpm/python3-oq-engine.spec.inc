@@ -62,7 +62,7 @@ Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
 
-Obsoletes: python-oq-hazardlib python-oq-engine python2-oq-engine
+Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-hazardlib python-oq-engine
 
 %description
@@ -75,6 +75,8 @@ Copyright (C) 2010-2018 GEM Foundation
 Summary: OpenQuake Engine multi-node cluster support (master node)
 Group: Applications/Engineering
 Requires: %{name} = %{version}-%{release} rabbitmq-server
+Obsoletes: python-oq-engine-master
+Provides: python-oq-engine-master
 
 %description master
 OpenQuake Engine multi-node cluster support (master node)
@@ -88,6 +90,8 @@ Copyright (C) 2010-2018 GEM Foundation
 Summary: OpenQuake Engine multi-node cluster support (worker node)
 Group: Applications/Engineering
 Requires: %{name} = %{version}-%{release}
+Obsoletes: python-oq-engine-worker
+Provides: python-oq-engine-worker
 
 %description worker
 OpenQuake Engine multi-node cluster support (worker node)
@@ -139,8 +143,6 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 # Make a zipped copy of each demo
 helpers/zipdemos.sh %{buildroot}%{_datadir}/openquake/engine/demos
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
-# FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}/%{_datadir}/openquake/engine/utils/celery-status
 
 %post
 %systemd_post openquake-dbserver.service

@@ -2064,8 +2064,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>""")
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            'only uncertainties of type "gmpeModel" are allowed in gmpe '
-            'logic tree')
+            '<StringIO>: only uncertainties of type "gmpeModel" are allowed '
+            'in gmpe logic tree')
 
     def test_two_branchsets_in_one_level(self):
         xml = _make_nrml("""\
@@ -2094,8 +2094,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        self.parse_invalid(xml, logictree.InvalidLogicTree,
-                           'Branching level bl1 has multiple branchsets')
+        self.parse_invalid(
+            xml, logictree.InvalidLogicTree,
+            '<StringIO>: Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
         xml = _make_nrml("""\
@@ -2131,7 +2132,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree, "Duplicated branchSetID bs1")
+            xml, logictree.InvalidLogicTree,
+            "<StringIO>: Duplicated branchSetID bs1")
 
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
@@ -2184,7 +2186,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "Found duplicated applyToTectonicRegionType="
+            "<StringIO>: Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
     def test_SHARE(self):
