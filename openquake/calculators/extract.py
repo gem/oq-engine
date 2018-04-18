@@ -228,10 +228,11 @@ def extract_hcurves(dstore, what):
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
     oq = dstore['oqparam']
-    mesh = get_mesh(dstore['sitecol'])
+    sitecol = dstore['sitecol']
+    mesh = get_mesh(sitecol, complete=False)
     dic = {}
     for kind, hcurves in getters.PmapGetter(dstore).items(what):
-        dic[kind] = hcurves.convert_npy(oq.imtls, len(mesh))
+        dic[kind] = hcurves.convert_npy(oq.imtls, sitecol.sids)
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 

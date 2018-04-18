@@ -38,14 +38,13 @@ from openquake.commonlib import logictree
 
 MINWEIGHT = source.MINWEIGHT
 MAX_INT = 2 ** 31 - 1
-TWO16 = 2 ** 16
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
-rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
-                      ('gsims', 'S100'), ('weight', F32)])
+rlz_dt = numpy.dtype([
+    ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
 def split_sources(srcs):
@@ -533,11 +532,8 @@ class CompositionInfo(object):
         :returns: an array of realizations
         """
         realizations = self.get_rlzs_assoc().realizations
-        sm_by_rlz = self.get_sm_by_rlz(
-            realizations) or collections.defaultdict(lambda: 'NA')
         return numpy.array(
-            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
-             for r in realizations], rlz_dt)
+            [(r.uid, gsim_names(r), r.weight) for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
@@ -606,17 +602,6 @@ class CompositionInfo(object):
         """
         return [sg.id for sg in self.source_models[sm_id].src_groups]
 
-    def get_sm_by_rlz(self, realizations):
-        """
-        :returns: a dictionary rlz -> source model name
-        """
-        dic = {}
-        for sm in self.source_models:
-            for rlz in realizations:
-                if rlz.sm_lt_path == sm.path:
-                    dic[rlz] = sm.names
-        return dic
-
     def get_sm_by_grp(self):
         """
         :returns: a dictionary grp_id -> sm_id
@@ -644,10 +629,6 @@ class CompositionInfo(object):
             rlzs = [all_rlzs[idx] for idx in idxs]
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(all_rlzs)
-        if len(rlzs) > TWO16:
-            raise ValueError(
-                'The source model %s has %d realizations, the maximum '
-                'is %d' % (smodel.names, len(rlzs), TWO16))
         return rlzs
 
     def __repr__(self):
