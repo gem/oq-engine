@@ -154,7 +154,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt, self.assetcol.array['number'])
-        dmg_dt = [(ds, F64) for ds in self.riskmodel.damage_states]
+        dmg_dt = [(ds, F32) for ds in self.riskmodel.damage_states]
         d_event = numpy.zeros((E, R, L), dmg_dt)
         for d, ds in enumerate(self.riskmodel.damage_states):
             d_event[ds] = result['d_event'][:, :, :, d]
