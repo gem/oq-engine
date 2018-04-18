@@ -25,41 +25,14 @@ from openquake.baselib.python3compat import decode
 import os
 import sys
 import mock
-import time
-import numpy
-from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import PSHACalculator
+from openquake.calculators.classical import PSHACalculator, count_ruptures
 from openquake.calculators import views
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
-
-
-def count_ruptures(sources, srcfilter, gsims, param, monitor):
-    """
-    Count the number of ruptures contained in the given sources by applying a
-    raw source filtering on the integration distance. Return a dictionary
-    src_group_id -> {}.
-    All sources must belong to the same tectonic region type.
-    """
-    dic = groupby(sources, lambda src: src.src_group_ids[0])
-    acc = AccumDict({grp_id: {} for grp_id in dic})
-    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
-    for grp_id in dic:
-        for src in sources:
-            t0 = time.time()
-            src_id = src.source_id.split(':')[0]
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
-                acc.calc_times[src_id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
-    return acc
 
 
 class ReportWriter(object):
