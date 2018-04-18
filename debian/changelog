@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced some changes to the `realizations` exporter (renamed field
+    `uid` -> `branch_path` and removed the `model` field)
   * Added a command `oq celery inspect`
   * Reduced the check on too many realizations to a warning, except for
     event based calculations
