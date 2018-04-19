@@ -171,7 +171,6 @@ class PSHACalculator(base.HazardCalculator):
             num_tasks = 0
             num_sources = 0
             src_filter = SourceFilter(tile, oq.maximum_distance)
-            prefilter = not isinstance(self, PreCalculator) and num_tiles > 1
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
             prefilter = (num_tiles == 1 if isinstance(self, PreCalculator)
