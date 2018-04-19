@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-03-26T15:56:11
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:16
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -77,18 +77,18 @@ vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-VICM      AreaSource   2,430        0.010     0.013      90        30       
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+VICM      AreaSource   2,430        0.007     0.014      90        30        0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.010     1     
+AreaSource   0.007     1     
 ============ ========= ======
 
 Duplicated sources
@@ -97,10 +97,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.004 4.930E-04 0.003 0.004 8        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_ruptures     0.003 0.001  0.001 0.004 8        
+================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
@@ -114,13 +114,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.052     0.0       1     
-total count_ruptures           0.032     1.086     8     
-managing sources               0.015     0.0       1     
-splitting sources              0.013     0.0       1     
-store source_info              0.005     0.0       1     
-reading site collection        8.829E-04 0.0       1     
-unpickling count_ruptures      3.204E-04 0.0       8     
-aggregate curves               1.469E-04 0.0       8     
-saving probability maps        3.195E-05 0.0       1     
+reading composite source model 0.050     0.0       1     
+managing sources               0.033     0.0       1     
+total count_ruptures           0.025     2.230     8     
+splitting sources              0.015     0.0       1     
+store source_info              0.011     0.0       1     
+reading site collection        6.108E-04 0.0       1     
+unpickling count_ruptures      3.979E-04 0.0       8     
+aggregate curves               1.698E-04 0.0       8     
+saving probability maps        3.862E-05 0.0       1     
 ============================== ========= ========= ======
