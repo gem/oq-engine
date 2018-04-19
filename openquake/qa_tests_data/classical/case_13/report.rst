@@ -3,8 +3,8 @@ Classical PSHA QA test
 
 ============== ===================
 checksum32     2,024,827,974      
-date           2018-03-26T15:55:44
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:02:35
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 21, num_levels = 26
@@ -89,37 +89,37 @@ bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 2,057        2,706
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= =========
-source_id source_class              num_ruptures calc_time split_time num_sites num_split
-========= ========================= ============ ========= ========== ========= =========
-58_1      CharacteristicFaultSource 11           0.027     9.537E-07  17        2        
-56_0      CharacteristicFaultSource 11           0.027     1.192E-06  23        2        
-63_1      CharacteristicFaultSource 11           0.021     9.537E-07  17        1        
-57_0      CharacteristicFaultSource 11           0.020     1.192E-06  22        2        
-70_1      CharacteristicFaultSource 11           0.019     1.192E-06  31        2        
-38_0      CharacteristicFaultSource 11           0.014     1.192E-06  16        2        
-33_0      CharacteristicFaultSource 11           0.013     9.537E-07  30        2        
-42_0      CharacteristicFaultSource 11           0.012     1.192E-06  19        2        
-30_0      CharacteristicFaultSource 11           0.012     1.192E-06  14        2        
-53_0      CharacteristicFaultSource 11           0.012     9.537E-07  16        2        
-48_0      CharacteristicFaultSource 11           0.012     1.192E-06  10        2        
-45_0      CharacteristicFaultSource 11           0.012     1.192E-06  26        2        
-68_0      CharacteristicFaultSource 11           0.011     1.192E-06  28        2        
-36_1      CharacteristicFaultSource 11           0.011     1.192E-06  22        2        
-33_1      CharacteristicFaultSource 11           0.011     1.192E-06  30        2        
-38_1      CharacteristicFaultSource 11           0.010     1.192E-06  16        2        
-54_0      CharacteristicFaultSource 11           0.010     1.192E-06  10        2        
-39_0      CharacteristicFaultSource 11           0.010     9.537E-07  11        2        
-36_0      CharacteristicFaultSource 11           0.010     9.537E-07  22        2        
-39_1      CharacteristicFaultSource 11           0.010     1.192E-06  11        2        
-========= ========================= ============ ========= ========== ========= =========
+========= ========================= ============ ========= ========== ========= ========= ======
+source_id source_class              num_ruptures calc_time split_time num_sites num_split events
+========= ========================= ============ ========= ========== ========= ========= ======
+51_1      CharacteristicFaultSource 11           0.062     1.907E-06  22        2         0     
+44_1      CharacteristicFaultSource 11           0.050     1.907E-06  31        2         0     
+58_1      CharacteristicFaultSource 11           0.044     1.907E-06  17        2         0     
+47_0      CharacteristicFaultSource 11           0.038     1.907E-06  13        2         0     
+84_0      CharacteristicFaultSource 11           0.034     1.907E-06  21        2         0     
+49_1      CharacteristicFaultSource 11           0.032     1.669E-06  13        2         0     
+62_0      CharacteristicFaultSource 11           0.031     1.907E-06  18        1         0     
+111_1     CharacteristicFaultSource 11           0.031     1.907E-06  5         1         0     
+100_1     CharacteristicFaultSource 11           0.030     1.907E-06  26        2         0     
+30_0      CharacteristicFaultSource 11           0.028     1.669E-06  14        2         0     
+87_0      CharacteristicFaultSource 11           0.027     1.907E-06  26        2         0     
+40_1      CharacteristicFaultSource 11           0.027     1.907E-06  6         1         0     
+12_1      CharacteristicFaultSource 11           0.026     1.907E-06  18        2         0     
+80_1      CharacteristicFaultSource 11           0.026     1.669E-06  12        2         0     
+34_0      CharacteristicFaultSource 11           0.026     1.907E-06  29        2         0     
+73_0      CharacteristicFaultSource 11           0.026     1.907E-06  28        2         0     
+1_0       CharacteristicFaultSource 11           0.024     1.907E-06  15        2         0     
+55_1      CharacteristicFaultSource 11           0.022     1.907E-06  9         2         0     
+14_1      CharacteristicFaultSource 11           0.022     1.907E-06  23        2         0     
+81_1      CharacteristicFaultSource 11           0.022     1.907E-06  10        2         0     
+========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 1.448     246   
+CharacteristicFaultSource 1.918     246   
 ========================= ========= ======
 
 Duplicated sources
@@ -130,7 +130,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.027 0.014  0.003 0.060 58       
+count_ruptures     0.035 0.015  0.004 0.075 58       
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -145,13 +145,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.104     0.0       1     
-total count_ruptures           1.580     3.434     58    
-managing sources               0.640     0.0       1     
-store source_info              0.006     0.0       1     
-unpickling count_ruptures      0.003     0.0       58    
+reading composite source model 4.649     0.0       1     
+total count_ruptures           2.050     4.238     58    
+managing sources               1.305     0.0       1     
+store source_info              0.009     0.0       1     
+splitting sources              0.004     0.0       1     
+unpickling count_ruptures      0.004     0.0       58    
 aggregate curves               0.002     0.0       58    
-splitting sources              0.002     0.0       1     
-reading site collection        9.003E-04 0.0       1     
-saving probability maps        3.004E-05 0.0       1     
+reading site collection        8.333E-04 0.0       1     
+saving probability maps        3.767E-05 0.0       1     
 ============================== ========= ========= ======

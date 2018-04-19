@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     692,252,974        
-date           2018-03-26T15:56:34
-engine_version 2.10.0-git543cfb0  
+checksum32     3,424,054,410      
+date           2018-04-19T05:03:49
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 11, num_levels = 170
@@ -88,10 +88,10 @@ MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.000 0.0    1   1   2         2
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.034     0.0       1     
-reading exposure        0.034     0.0       1     
-reading site collection 2.403E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+building riskinputs     0.049    0.0       1     
+reading site collection 0.043    0.0       1     
+reading exposure        0.017    0.0       1     
+======================= ======== ========= ======
