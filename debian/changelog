@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Unified `region` and `region_constraint` parameters in the job.ini
+  * Added a check to forbid duplicated GSIMs in the logic tree
   * Introduced some changes to the `realizations` exporter (renamed field
     `uid` -> `branch_path` and removed the `model` field)
   * Added a command `oq celery inspect`

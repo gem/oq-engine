@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2018-03-26T15:56:13
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:19
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -97,22 +97,22 @@ source_model.xml 4      Active Shallow Crust 2,754        2,025
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-2         AreaSource   510          0.033     0.005      241       241      
-1         AreaSource   425          0.030     0.005      225       225      
-5         AreaSource   425          0.025     0.004      168       168      
-3         AreaSource   510          0.023     0.005      163       163      
-4         AreaSource   425          0.018     0.005      127       127      
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+1         AreaSource   425          0.061     0.008      225       225       0     
+5         AreaSource   425          0.054     0.007      168       168       0     
+2         AreaSource   510          0.042     0.009      241       241       0     
+4         AreaSource   425          0.033     0.008      127       127       0     
+3         AreaSource   510          0.022     0.009      163       163       0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.130     5     
+AreaSource   0.212     5     
 ============ ========= ======
 
 Duplicated sources
@@ -123,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.017 0.006  0.010 0.025 11       
+count_ruptures     0.025 0.012  0.011 0.040 11       
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -138,13 +138,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.188     0.0       1     
-total count_ruptures           0.183     2.023     11    
-splitting sources              0.124     0.0       1     
-managing sources               0.091     0.0       1     
-store source_info              0.005     0.0       1     
-unpickling count_ruptures      5.434E-04 0.0       11    
-reading site collection        3.266E-04 0.0       1     
-aggregate curves               3.245E-04 0.0       11    
-saving probability maps        3.195E-05 0.0       1     
+reading composite source model 0.452     0.0       1     
+splitting sources              0.282     0.0       1     
+total count_ruptures           0.278     2.605     11    
+managing sources               0.194     0.0       1     
+store source_info              0.007     0.0       1     
+unpickling count_ruptures      5.951E-04 0.0       11    
+aggregate curves               3.238E-04 0.0       11    
+reading site collection        2.480E-04 0.0       1     
+saving probability maps        3.886E-05 0.0       1     
 ============================== ========= ========= ======
