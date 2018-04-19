@@ -148,12 +148,13 @@ def export_losses_by_event(ekey, dstore):
     """
     loss_dt = dstore['oqparam'].loss_dt()
     all_losses = dstore[ekey[0]].value
+    eids = dstore['events']['eid']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         dest = dstore.build_fname('losses_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(loss_dt)
-        writer.save(data, dest)
+        data = all_losses[:, rlz.ordinal].copy().view(loss_dt).squeeze()
+        writer.save(compose_arrays(eids, data, 'event_id'), dest)
     return writer.getsaved()
 
 
@@ -371,12 +372,13 @@ def export_dmg_by_event(ekey, dstore):
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
     all_losses = dstore[ekey[0]].value
+    eids = dstore['events']['eid']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         dest = dstore.build_fname('dmg_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(damage_dt)
-        writer.save(data, dest)
+        data = all_losses[:, rlz.ordinal].copy().view(damage_dt).squeeze()
+        writer.save(compose_arrays(eids, data, 'event_id'), dest)
     return writer.getsaved()
 
 
