@@ -3,8 +3,8 @@ disaggregation with a complex logic tree
 
 ============== ===================
 checksum32     1,766,748,636      
-date           2018-03-26T15:57:46
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:04:20
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 2, num_levels = 102
@@ -96,20 +96,20 @@ source_model_2.xml 3      Stable Shallow Crust 5.000        1
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= =========
-source_id source_class              num_ruptures calc_time split_time num_sites num_split
-========= ========================= ============ ========= ========== ========= =========
-1         SimpleFaultSource         543          0.166     2.935E-04  60        30       
-2         CharacteristicFaultSource 1            0.014     3.576E-06  8         4        
-========= ========================= ============ ========= ========== ========= =========
+========= ========================= ============ ========= ========== ========= ========= ======
+source_id source_class              num_ruptures calc_time split_time num_sites num_split events
+========= ========================= ============ ========= ========== ========= ========= ======
+1         SimpleFaultSource         543          0.164     1.926E-04  60        30        0     
+2         CharacteristicFaultSource 1            0.023     6.199E-06  8         4         0     
+========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.014     1     
-SimpleFaultSource         0.166     1     
+CharacteristicFaultSource 0.023     1     
+SimpleFaultSource         0.164     1     
 ========================= ========= ======
 
 Duplicated sources
@@ -120,7 +120,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.010 0.003  0.004 0.021 23       
+count_ruptures     0.011 0.007  0.003 0.028 23       
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -135,13 +135,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.229     3.449     23    
-managing sources               0.066     0.0       1     
-reading composite source model 0.042     0.0       1     
+total count_ruptures           0.256     3.988     23    
+managing sources               0.052     0.0       1     
+reading composite source model 0.020     0.0       1     
 store source_info              0.005     0.0       1     
-splitting sources              0.001     0.0       1     
-unpickling count_ruptures      0.001     0.0       23    
-aggregate curves               5.569E-04 0.0       23    
-reading site collection        3.011E-04 0.0       1     
-saving probability maps        3.600E-05 0.0       1     
+splitting sources              9.654E-04 0.0       1     
+unpickling count_ruptures      9.210E-04 0.0       23    
+aggregate curves               3.996E-04 0.0       23    
+reading site collection        2.418E-04 0.0       1     
+saving probability maps        3.076E-05 0.0       1     
 ============================== ========= ========= ======
