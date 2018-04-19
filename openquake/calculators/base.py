@@ -496,8 +496,8 @@ class HazardCalculator(BaseCalculator):
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
-            if self.oqparam.region_constraint:
-                region = wkt.loads(self.oqparam.region_constraint)
+            if self.oqparam.region:
+                region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
                 assetcol = self.datastore.parent['assetcol']
                 self.assetcol = assetcol.reduce(self.sitecol.sids)

@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     2,061,302,359      
-date           2018-03-26T15:55:50
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:02:46
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -71,28 +71,27 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-======================================================================== ====== ==================== ============ ============
-source_model                                                             grp_id trt                  eff_ruptures tot_ruptures
-======================================================================== ====== ==================== ============ ============
-Alaska_asc_grid_NSHMP2007.xml
-                    extra_source_model.xml 1      Active Shallow Crust 276          1,104       
-======================================================================== ====== ==================== ============ ============
+==================================================== ====== ==================== ============ ============
+source_model                                         grp_id trt                  eff_ruptures tot_ruptures
+==================================================== ====== ==================== ============ ============
+Alaska_asc_grid_NSHMP2007.xml extra_source_model.xml 1      Active Shallow Crust 276          1,104       
+==================================================== ====== ==================== ============ ============
 
 Slowest sources
 ---------------
-========= ================ ============ ========= ========== ========= =========
-source_id source_class     num_ruptures calc_time split_time num_sites num_split
-========= ================ ============ ========= ========== ========= =========
-2         MultiPointSource 1,104        0.001     8.996E-04  4         3        
-1         MultiPointSource 160          0.0       3.328E-04  0         0        
-========= ================ ============ ========= ========== ========= =========
+========= ================ ============ ========= ========== ========= ========= ======
+source_id source_class     num_ruptures calc_time split_time num_sites num_split events
+========= ================ ============ ========= ========== ========= ========= ======
+2         MultiPointSource 1,104        9.644E-04 9.713E-04  4         3         0     
+1         MultiPointSource 160          0.0       2.458E-04  0         0         0     
+========= ================ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 0.001     2     
+MultiPointSource 9.644E-04 2     
 ================ ========= ======
 
 Duplicated sources
@@ -103,7 +102,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.003 NaN    0.003 0.003 1        
+count_ruptures     0.004 NaN    0.004 0.004 1        
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -118,13 +117,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.012     0.0       1     
-managing sources               0.008     0.0       1     
+reading composite source model 0.026     0.0       1     
+managing sources               0.023     0.0       1     
 store source_info              0.006     0.0       1     
-total count_ruptures           0.003     1.336     1     
+total count_ruptures           0.004     2.293     1     
 splitting sources              0.002     0.0       1     
-reading site collection        0.001     0.0       1     
-unpickling count_ruptures      8.368E-05 0.0       1     
-saving probability maps        4.673E-05 0.0       1     
-aggregate curves               3.386E-05 0.0       1     
+reading site collection        8.333E-04 0.0       1     
+unpickling count_ruptures      5.960E-05 0.0       1     
+saving probability maps        3.839E-05 0.0       1     
+aggregate curves               2.837E-05 0.0       1     
 ============================== ========= ========= ======

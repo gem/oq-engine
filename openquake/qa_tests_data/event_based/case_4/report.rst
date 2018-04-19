@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 4
 ==================================
 
 ============== ===================
-checksum32     2,872,781,101      
-date           2018-03-26T15:56:46
-engine_version 2.10.0-git543cfb0  
+checksum32     3,199,478,063      
+date           2018-04-19T05:04:06
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -18,10 +18,10 @@ maximum_distance                {'default': 200.0}
 investigation_time              1.0               
 ses_per_logic_tree_path         50                
 truncation_level                0.0               
-rupture_mesh_spacing            1.0               
-complex_fault_mesh_spacing      1.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                1.0               
-area_source_discretization      10.0              
+area_source_discretization      20.0              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -69,23 +69,23 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 10           10          
+source_model.xml 0      Active Shallow Crust 5.000        5           
 ================ ====== ==================== ============ ============
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= =========
-source_id source_class      num_ruptures calc_time split_time num_sites num_split
-========= ================= ============ ========= ========== ========= =========
-1         SimpleFaultSource 10           0.0       2.742E-05  0         0        
-========= ================= ============ ========= ========== ========= =========
+========= ================= ============ ========= ========== ========= ========= ======
+source_id source_class      num_ruptures calc_time split_time num_sites num_split events
+========= ================= ============ ========= ========== ========= ========= ======
+1         SimpleFaultSource 5            0.014     2.623E-05  1         1         56    
+========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.0       1     
+SimpleFaultSource 0.014     1     
 ================= ========= ======
 
 Duplicated sources
@@ -96,14 +96,14 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.041 NaN    0.041 0.041 1        
+compute_ruptures   0.023 NaN    0.023 0.023 1        
 ================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
 ================ ====================================================================== ========
 task             sent                                                                   received
-compute_ruptures sources=1.27 KB src_filter=722 B param=582 B monitor=330 B gsims=120 B 8.68 KB 
+compute_ruptures sources=1.25 KB src_filter=722 B param=582 B monitor=330 B gsims=120 B 6.05 KB 
 ================ ====================================================================== ========
 
 Slowest operations
@@ -111,14 +111,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.072     0.0       1     
-total compute_ruptures         0.041     4.125     1     
-making contexts                0.022     0.0       10    
-reading composite source model 0.012     0.0       1     
-saving ruptures                0.008     0.0       1     
-store source_info              0.007     0.0       1     
-setting event years            0.003     0.0       1     
-unpickling compute_ruptures    8.624E-04 0.0       1     
-splitting sources              6.535E-04 0.0       1     
-reading site collection        3.240E-04 0.0       1     
+managing sources               0.042     0.0       1     
+total compute_ruptures         0.023     4.520     1     
+making contexts                0.009     0.0       5     
+reading composite source model 0.004     0.0       1     
+saving ruptures                0.004     0.0       1     
+store source_info              0.004     0.0       1     
+setting event years            0.001     0.0       1     
+splitting sources              5.546E-04 0.0       1     
+unpickling compute_ruptures    3.557E-04 0.0       1     
+reading site collection        2.389E-04 0.0       1     
 ============================== ========= ========= ======
