@@ -24,7 +24,6 @@ import re
 import ast
 import logging
 import collections
-from decimal import Decimal
 import numpy
 
 from openquake.baselib.python3compat import with_metaclass
