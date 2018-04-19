@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2018-03-26T15:56:12
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:17
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -74,18 +74,18 @@ source_model.xml 0      Active Shallow Crust 49           49
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-1         ComplexFaultSource 49           0.005     7.391E-06  1         1        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+1         ComplexFaultSource 49           0.003     5.722E-06  1         1         0     
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.005     1     
+ComplexFaultSource 0.003     1     
 ================== ========= ======
 
 Duplicated sources
@@ -96,7 +96,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.007 NaN    0.007 0.007 1        
+count_ruptures     0.005 NaN    0.005 0.005 1        
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -111,13 +111,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.215     0.0       1     
-total count_ruptures           0.007     3.320     1     
-managing sources               0.004     0.0       1     
-store source_info              0.004     0.0       1     
-splitting sources              3.493E-04 0.0       1     
-reading site collection        2.985E-04 0.0       1     
-unpickling count_ruptures      4.840E-05 0.0       1     
-saving probability maps        3.052E-05 0.0       1     
-aggregate curves               2.217E-05 0.0       1     
+reading composite source model 0.183     0.0       1     
+managing sources               0.013     0.0       1     
+total count_ruptures           0.005     3.738     1     
+store source_info              0.005     0.0       1     
+splitting sources              6.280E-04 0.0       1     
+reading site collection        2.422E-04 0.0       1     
+unpickling count_ruptures      5.698E-05 0.0       1     
+saving probability maps        3.791E-05 0.0       1     
+aggregate curves               2.718E-05 0.0       1     
 ============================== ========= ========= ======

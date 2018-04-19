@@ -3,8 +3,8 @@ Scenario QA Test, Case 9, Multiple GSIMs
 
 ============== ===================
 checksum32     572,372,510        
-date           2018-03-26T15:54:48
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:02:00
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -61,5 +61,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 4.005E-05 0.0       1     
+reading site collection 7.319E-05 0.0       1     
 ======================= ========= ========= ======
