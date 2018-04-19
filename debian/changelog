@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Extended the scenario_damage calculator to export `dmg_by_event`
+    outputs as well as `losses_by_event` outputs if there is a consequence
+    model
   * Unified `region` and `region_constraint` parameters in the job.ini
   * Added a check to forbid duplicated GSIMs in the logic tree
   * Introduced some changes to the `realizations` exporter (renamed field
