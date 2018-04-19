@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============== ===================
-checksum32     3,465,256,954      
-date           2018-03-26T15:55:10
-engine_version 2.10.0-git543cfb0  
+checksum32     637,033,953        
+date           2018-04-19T05:02:18
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 14, num_levels = 91
@@ -21,7 +21,7 @@ truncation_level                3.0
 rupture_mesh_spacing            4.0               
 complex_fault_mesh_spacing      4.0               
 width_of_mfd_bin                0.1               
-area_source_discretization      10.0              
+area_source_discretization      20.0              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     323               
@@ -48,21 +48,21 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-======================== ====== ====================== ================
-smlt_path                weight gsim_logic_tree        num_realizations
-======================== ====== ====================== ================
-AreaSource               0.500  complex(2,1,4,0,5,4,4) 4/4             
-FaultSourceAndBackground 0.200  complex(2,1,4,0,5,4,4) 4/4             
-SeiFaCrust               0.300  complex(2,1,4,0,5,4,4) 0/0             
-======================== ====== ====================== ================
+======================== ====== ===================== ================
+smlt_path                weight gsim_logic_tree       num_realizations
+======================== ====== ===================== ================
+AreaSource               0.500  simple(0,4,0,0,0,0,0) 4/4             
+FaultSourceAndBackground 0.200  simple(0,4,0,0,0,0,0) 4/4             
+SeiFaCrust               0.300  simple(0,4,0,0,0,0,0) 0/0             
+======================== ====== ===================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ========================================================================== ================= ======================= ============================
 grp_id gsims                                                                      distances         siteparams              ruptparams                  
 ====== ========================================================================== ================= ======================= ============================
-5      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-9      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+0      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+1      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
 ====== ========================================================================== ================= ======================= ============================
 
 Realizations per (TRT, GSIM)
@@ -71,30 +71,30 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  5,AkkarBommer2010(): [0]
-  5,CauzziFaccioli2008(): [1]
-  5,ChiouYoungs2008(): [2]
-  5,ZhaoEtAl2006Asc(): [3]
-  9,AkkarBommer2010(): [4]
-  9,CauzziFaccioli2008(): [5]
-  9,ChiouYoungs2008(): [6]
-  9,ZhaoEtAl2006Asc(): [7]>
+  0,AkkarBommer2010(): [0]
+  0,CauzziFaccioli2008(): [1]
+  0,ChiouYoungs2008(): [2]
+  0,ZhaoEtAl2006Asc(): [3]
+  1,AkkarBommer2010(): [4]
+  1,CauzziFaccioli2008(): [5]
+  1,ChiouYoungs2008(): [6]
+  1,ZhaoEtAl2006Asc(): [7]>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ===================== ====== ==================== ============ ============
 source_model          grp_id trt                  eff_ruptures tot_ruptures
 ===================== ====== ==================== ============ ============
-../src/as_model.xml   5      Active Shallow Crust 38,280       324,842     
-../src/fsbg_model.xml 9      Active Shallow Crust 4,341        84,623      
+../src/as_model.xml   0      Active Shallow Crust 8,946        8,946       
+../src/fsbg_model.xml 1      Active Shallow Crust 216          324         
 ===================== ====== ==================== ============ ============
 
-============= =======
-#TRT models   2      
-#eff_ruptures 42,621 
-#tot_ruptures 409,465
-#tot_weight   0      
-============= =======
+============= =====
+#TRT models   2    
+#eff_ruptures 9,162
+#tot_ruptures 9,270
+#tot_weight   0    
+============= =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -125,41 +125,27 @@ SAM_4S   1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ================= ============ ========= ========== ========= =========
-source_id    source_class      num_ruptures calc_time split_time num_sites num_split
-============ ================= ============ ========= ========== ========= =========
-FSBG_TRCS284 SimpleFaultSource 23           0.0       6.747E-05  0         0        
-FSBG_GRCS583 SimpleFaultSource 16           0.0       6.390E-05  0         0        
-FSBG_TRCS374 SimpleFaultSource 64           0.0       9.012E-05  0         0        
-FSBG_DEAS155 AreaSource        5,472        0.0       0.045      0         0        
-FSBG_GRCS250 SimpleFaultSource 79           0.0       8.297E-05  0         0        
-AS_GRAS369   AreaSource        7,956        0.0       0.026      0         0        
-AS_ITAS297   AreaSource        1,632        0.0       0.006      0         0        
-FSBG_TRCS437 SimpleFaultSource 193          0.0       8.416E-05  0         0        
-FSBG_DEAS972 AreaSource        3,144        0.0       0.023      0         0        
-AS_CHAS092   AreaSource        3,690        0.0       0.016      0         0        
-FSBG_TRCS141 SimpleFaultSource 116          0.0       1.028E-04  0         0        
-FSBG_TRCS090 SimpleFaultSource 245          0.0       1.640E-04  0         0        
-FSBG_TRCS223 SimpleFaultSource 7            0.0       5.054E-05  0         0        
-FSBG_GRCS100 SimpleFaultSource 120          0.0       1.080E-04  0         0        
-AS_ITAS327   AreaSource        6,045        0.0       0.038      0         0        
-FSBG_ARAS462 AreaSource        2,397        0.0       0.019      0         0        
-FSBG_NOAS056 AreaSource        15,156       0.0       0.060      0         0        
-FSBG_RSCS014 SimpleFaultSource 73           0.0       8.273E-05  0         0        
-FSBG_TRCS417 SimpleFaultSource 23           0.0       6.819E-05  0         0        
-AS_YUAS221   AreaSource        5,445        0.0       0.025      0         0        
-============ ================= ============ ========= ========== ========= =========
+============ ============ ============ ========= ========== ========= ========= ======
+source_id    source_class num_ruptures calc_time split_time num_sites num_split events
+============ ============ ============ ========= ========== ========= ========= ======
+AS_TRAS334   AreaSource   2,280        2.257     0.045      280       38        49    
+AS_TRAS360   AreaSource   1,872        1.528     0.024      117       39        102   
+AS_TRAS346   AreaSource   1,581        1.289     0.034      95        31        45    
+AS_TRAS458   AreaSource   1,197        1.156     0.044      44        21        39    
+AS_TRAS395   AreaSource   1,296        1.107     0.024      88        27        72    
+AS_TRAS410   AreaSource   720          0.764     0.005      84        12        1     
+FSBG_TRBG989 AreaSource   324          0.221     0.006      14        8         12    
+100041       PointSource  27           0.0       4.530E-06  0         0         0     
+============ ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================== ========= ======
-source_class       calc_time counts
-================== ========= ======
-AreaSource         0.0       71    
-ComplexFaultSource 0.0       1     
-PointSource        0.0       1     
-SimpleFaultSource  0.0       75    
-================== ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   8.320     7     
+PointSource  0.0       1     
+============ ========= ======
 
 Duplicated sources
 ------------------
@@ -169,30 +155,30 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.350 0.284  0.009 0.740 72       
+compute_ruptures   0.764 0.262  0.225 0.999 11       
 ================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
-================ ==================================================================================== ========
-task             sent                                                                                 received
-compute_ruptures sources=524.58 KB src_filter=100.34 KB param=96.12 KB gsims=27.42 KB monitor=23.2 KB 80.68 KB
-================ ==================================================================================== ========
+================ ================================================================================ ========
+task             sent                                                                             received
+compute_ruptures sources=92.5 KB src_filter=15.33 KB param=14.68 KB gsims=4.19 KB monitor=3.54 KB 62.05 KB
+================ ================================================================================ ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         25        2.645     72    
-reading composite source model 12        0.0       1     
-splitting sources              6.132     30        1     
-managing sources               4.257     0.0       1     
-saving ruptures                0.094     0.0       72    
-making contexts                0.046     0.0       32    
-store source_info              0.034     0.0       1     
-reading exposure               0.027     0.0       1     
-unpickling compute_ruptures    0.006     0.0       72    
-setting event years            0.001     0.0       1     
-reading site collection        4.673E-05 0.0       1     
-============================== ========= ========= ======
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+total compute_ruptures         8.408    3.012     11    
+managing sources               1.080    0.0       1     
+reading composite source model 0.212    0.0       1     
+splitting sources              0.198    0.0       1     
+store source_info              0.157    0.0       1     
+making contexts                0.099    0.0       31    
+reading site collection        0.039    0.0       1     
+saving ruptures                0.030    0.0       11    
+reading exposure               0.005    0.0       1     
+unpickling compute_ruptures    0.004    0.0       11    
+setting event years            0.002    0.0       1     
+============================== ======== ========= ======

@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     852,550,231        
-date           2018-03-26T15:54:59
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:02:11
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -95,18 +95,18 @@ tax1     1.000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= =========
-source_id source_class      num_ruptures calc_time split_time num_sites num_split
-========= ================= ============ ========= ========== ========= =========
-1         SimpleFaultSource 482          0.0       3.471E-04  0         0        
-========= ================= ============ ========= ========== ========= =========
+========= ================= ============ ========= ========== ========= ========= ======
+source_id source_class      num_ruptures calc_time split_time num_sites num_split events
+========= ================= ============ ========= ========== ========= ========= ======
+1         SimpleFaultSource 482          1.494     3.748E-04  105       15        705   
+========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.0       1     
+SimpleFaultSource 1.494     1     
 ================= ========= ======
 
 Duplicated sources
@@ -117,30 +117,30 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.151 0.072  0.068 0.257 6        
+compute_ruptures   0.267 0.067  0.189 0.351 6        
 ================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
-================ ============================================================================ ========
-task             sent                                                                         received
-compute_ruptures sources=10.89 KB src_filter=6.15 KB param=3.3 KB monitor=1.93 KB gsims=786 B 288.8 KB
-================ ============================================================================ ========
+================ ============================================================================ =========
+task             sent                                                                         received 
+compute_ruptures sources=10.89 KB src_filter=6.15 KB param=3.3 KB monitor=1.93 KB gsims=786 B 294.86 KB
+================ ============================================================================ =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.906     4.312     6     
-making contexts                0.656     0.0       259   
-managing sources               0.311     0.0       1     
-saving ruptures                0.035     0.0       6     
+total compute_ruptures         1.602     4.965     6     
+making contexts                1.209     0.0       259   
+managing sources               0.467     0.0       1     
+saving ruptures                0.031     0.0       6     
 unpickling compute_ruptures    0.016     0.0       6     
-reading composite source model 0.012     0.0       1     
-reading exposure               0.010     0.0       1     
-setting event years            0.007     0.0       1     
-store source_info              0.007     0.0       1     
-splitting sources              8.843E-04 0.0       1     
-reading site collection        4.840E-05 0.0       1     
+reading site collection        0.008     0.0       1     
+reading composite source model 0.008     0.0       1     
+store source_info              0.006     0.0       1     
+reading exposure               0.005     0.0       1     
+setting event years            0.003     0.0       1     
+splitting sources              8.852E-04 0.0       1     
 ============================== ========= ========= ======

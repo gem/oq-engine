@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
 ============== ===================
-checksum32     1,539,504,509      
-date           2018-03-26T15:56:42
-engine_version 2.10.0-git543cfb0  
+checksum32     1,685,911,934      
+date           2018-04-19T05:04:04
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -21,7 +21,7 @@ truncation_level                None
 rupture_mesh_spacing            2.0               
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.1               
-area_source_discretization      10.0              
+area_source_discretization      20.0              
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -74,18 +74,18 @@ source_model.xml 0      Active Shallow Crust 1.000        1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-1         PointSource  1            0.0       7.629E-06  0         0        
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+1         PointSource  1            0.032     6.914E-06  2         1         22,566
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.0       1     
+PointSource  0.032     1     
 ============ ========= ======
 
 Duplicated sources
@@ -96,14 +96,14 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.033 NaN    0.033 0.033 1        
+compute_ruptures   0.037 NaN    0.037 0.037 1        
 ================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
 ================ ====================================================================== =========
 task             sent                                                                   received 
-compute_ruptures sources=1.31 KB src_filter=776 B param=558 B monitor=330 B gsims=131 B 398.87 KB
+compute_ruptures sources=1.31 KB src_filter=776 B param=558 B monitor=330 B gsims=131 B 575.21 KB
 ================ ====================================================================== =========
 
 Slowest operations
@@ -111,14 +111,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.167     0.0       1     
-setting event years            0.150     0.0       1     
-saving ruptures                0.114     0.0       1     
-total compute_ruptures         0.033     3.008     1     
-reading composite source model 0.005     0.0       1     
+managing sources               0.145     0.0       1     
+saving ruptures                0.090     0.0       1     
+total compute_ruptures         0.037     3.324     1     
+setting event years            0.036     0.0       1     
+reading composite source model 0.004     0.0       1     
 store source_info              0.004     0.0       1     
 making contexts                0.001     0.0       1     
-unpickling compute_ruptures    9.310E-04 0.0       1     
-splitting sources              6.309E-04 0.0       1     
-reading site collection        3.262E-04 0.0       1     
+unpickling compute_ruptures    6.669E-04 0.0       1     
+splitting sources              4.232E-04 0.0       1     
+reading site collection        2.413E-04 0.0       1     
 ============================== ========= ========= ======
