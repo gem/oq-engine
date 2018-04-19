@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced a `preclassical` calculator
   * Extended the scenario_damage calculator to export `dmg_by_event`
     outputs as well as `losses_by_event` outputs if there is a consequence
     model

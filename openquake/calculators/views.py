@@ -621,7 +621,11 @@ def view_task_classical(token, dstore):
      $ oq show task_classical:0  # the fastest task
      $ oq show task_classical:-1  # the slowest task
     """
-    data = dstore['task_info/classical'].value
+    tasks = set(dstore['task_info'])
+    if 'classical' in tasks:
+        data = dstore['task_info/classical'].value
+    else:
+        data = dstore['task_info/count_ruptures'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
