@@ -83,7 +83,6 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    prefilter = True
 
     def agg_dicts(self, acc, pmap_by_grp):
         """
@@ -172,13 +171,18 @@ class PSHACalculator(base.HazardCalculator):
             num_tasks = 0
             num_sources = 0
             src_filter = SourceFilter(tile, oq.maximum_distance)
+            prefilter = not isinstance(self, PreCalculator) and num_tiles > 1
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            if self.prefilter:
+            prefilter = (num_tiles == 1 if isinstance(self, PreCalculator)
+                         else True)
+            if prefilter:
                 with self.monitor('prefiltering'):
+                    logging.info('Prefiltering sources')
                     csm = self.csm.filter(src_filter)
             else:
                 csm = self.csm
+
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(
                     weight, tasks_per_tile, minweight)
@@ -267,12 +271,12 @@ def count_ruptures(sources, srcfilter, gsims, param, monitor):
 
 
 @base.calculators.add('preclassical')
-class PreClassicalCalculator(PSHACalculator):
+class PreCalculator(PSHACalculator):
     """
-    Classical PSHA calculator
+    Calculator to filter the sources and compute the number of effective
+    ruptures
     """
     core_task = count_ruptures
-    prefilter = False
 
 
 def fix_ones(pmap):
