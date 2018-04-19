@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     3,909,444,611      
-date           2018-03-26T15:56:07
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:11
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -125,22 +125,22 @@ source_model.xml 11     Active Shallow Crust 179          86
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= =========
-source_id source_class              num_ruptures calc_time split_time num_sites num_split
-========= ========================= ============ ========= ========== ========= =========
-SFLT1     SimpleFaultSource         58           0.209     3.028E-05  46        46       
-CHAR1     CharacteristicFaultSource 1            0.074     1.669E-06  23        23       
-COMFLT1   ComplexFaultSource        62           0.073     1.669E-06  12        12       
-========= ========================= ============ ========= ========== ========= =========
+========= ========================= ============ ========= ========== ========= ========= ======
+source_id source_class              num_ruptures calc_time split_time num_sites num_split events
+========= ========================= ============ ========= ========== ========= ========= ======
+SFLT1     SimpleFaultSource         58           0.235     4.959E-05  46        46        0     
+CHAR1     CharacteristicFaultSource 1            0.100     2.861E-06  23        23        0     
+COMFLT1   ComplexFaultSource        62           0.043     2.384E-06  12        12        0     
+========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.074     1     
-ComplexFaultSource        0.073     1     
-SimpleFaultSource         0.209     1     
+CharacteristicFaultSource 0.100     1     
+ComplexFaultSource        0.043     1     
+SimpleFaultSource         0.235     1     
 ========================= ========= ======
 
 Duplicated sources
@@ -151,7 +151,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.016 0.011  0.002 0.034 25       
+count_ruptures     0.017 0.015  0.003 0.050 25       
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -166,13 +166,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.810     0.0       1     
-total count_ruptures           0.411     3.445     25    
-managing sources               0.068     0.0       1     
-store source_info              0.006     0.0       1     
+reading composite source model 1.979     0.0       1     
+total count_ruptures           0.430     4.363     25    
+managing sources               0.105     0.0       1     
+store source_info              0.008     0.0       1     
+splitting sources              0.002     0.0       1     
 unpickling count_ruptures      0.001     0.0       25    
-splitting sources              0.001     0.0       1     
-aggregate curves               7.010E-04 0.0       25    
-reading site collection        3.192E-04 0.0       1     
-saving probability maps        3.815E-05 0.0       1     
+aggregate curves               6.018E-04 0.0       25    
+reading site collection        2.193E-04 0.0       1     
+saving probability maps        3.886E-05 0.0       1     
 ============================== ========= ========= ======

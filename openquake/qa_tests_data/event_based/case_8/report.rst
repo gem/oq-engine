@@ -2,9 +2,9 @@ Event Based from NonParametric source
 =====================================
 
 ============== ===================
-checksum32     3,617,901,848      
-date           2018-03-26T15:56:46
-engine_version 2.10.0-git543cfb0  
+checksum32     103,533,850        
+date           2018-04-19T05:04:06
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -16,12 +16,12 @@ calculation_mode                'event_based_rupture'
 number_of_logic_tree_samples    0                    
 maximum_distance                {'default': 500.0}   
 investigation_time              50.0                 
-ses_per_logic_tree_path         1                    
+ses_per_logic_tree_path         2                    
 truncation_level                3.0                  
 rupture_mesh_spacing            5.0                  
 complex_fault_mesh_spacing      5.0                  
 width_of_mfd_bin                0.3                  
-area_source_discretization      10.0                 
+area_source_discretization      20.0                 
 ground_motion_correlation_model None                 
 minimum_intensity               {}                   
 random_seed                     23                   
@@ -69,7 +69,7 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.048     0.0       1     
-splitting sources              3.016E-04 0.0       1     
-reading site collection        6.008E-05 0.0       1     
+reading composite source model 0.070     0.0       1     
+splitting sources              3.664E-04 0.0       1     
+reading site collection        1.178E-04 0.0       1     
 ============================== ========= ========= ======
