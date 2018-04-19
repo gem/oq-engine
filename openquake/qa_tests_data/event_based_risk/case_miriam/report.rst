@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     4,221,156,752      
-date           2018-03-26T15:55:35
-engine_version 2.10.0-git543cfb0  
+checksum32     2,561,387,143      
+date           2018-04-19T05:02:22
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 281, num_levels = 50
@@ -116,19 +116,19 @@ PCR-SLSB-1 1.000 0.0    1   1   3         3
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-D         ComplexFaultSource 3,945        0.0       4.268E-04  0         0        
-F         ComplexFaultSource 2,558        0.0       3.581E-04  0         0        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+D         ComplexFaultSource 3,945        18        0.001      13,207    47        2,172 
+F         ComplexFaultSource 2,558        10        8.264E-04  9,835     35        267   
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.0       2     
+ComplexFaultSource 29        2     
 ================== ========= ======
 
 Duplicated sources
@@ -139,14 +139,14 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.596 0.591  1.094 2.929 10       
+compute_ruptures   3.112 1.058  1.539 5.634 10       
 ================== ===== ====== ===== ===== =========
 
 Informational data
 ------------------
 ================ ============================================================================= ========
 task             sent                                                                          received
-compute_ruptures src_filter=962.95 KB sources=49 KB param=9.41 KB monitor=3.22 KB gsims=1.3 KB 3.41 MB 
+compute_ruptures src_filter=962.95 KB sources=49 KB param=9.41 KB monitor=3.22 KB gsims=1.3 KB 3.44 MB 
 ================ ============================================================================= ========
 
 Slowest operations
@@ -154,15 +154,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         15       4.367     10    
-managing sources               3.049    0.0       1     
-making contexts                1.030    0.0       489   
-reading composite source model 0.289    0.0       1     
-reading site collection        0.230    0.0       1     
-reading exposure               0.206    0.0       1     
-saving ruptures                0.053    0.0       10    
-unpickling compute_ruptures    0.034    0.0       10    
-setting event years            0.008    0.0       1     
-store source_info              0.007    0.0       1     
-splitting sources              0.001    0.0       1     
+total compute_ruptures         31       11        10    
+managing sources               5.910    0.0       1     
+making contexts                1.871    0.0       489   
+reading site collection        0.494    0.0       1     
+reading composite source model 0.357    0.0       1     
+reading exposure               0.265    0.0       1     
+saving ruptures                0.052    0.0       10    
+unpickling compute_ruptures    0.027    0.0       10    
+store source_info              0.006    0.0       1     
+setting event years            0.003    0.0       1     
+splitting sources              0.003    0.0       1     
 ============================== ======== ========= ======

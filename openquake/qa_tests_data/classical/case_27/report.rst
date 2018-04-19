@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     1,195,921,690      
-date           2018-03-26T15:56:06
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:09
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 6
@@ -74,32 +74,32 @@ source_model.xml 0      Subduction Interface 19           19
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= =========
-source_id source_class               num_ruptures calc_time split_time num_sites num_split
-========= ========================== ============ ========= ========== ========= =========
-case_01   NonParametricSeismicSource 1            0.005     0.0        1         1        
-case_02   NonParametricSeismicSource 1            0.003     0.0        1         1        
-case_03   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_04   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_05   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_06   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_07   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_08   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_09   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_10   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_11   NonParametricSeismicSource 1            0.002     0.0        1         1        
-case_13   NonParametricSeismicSource 2            0.002     0.0        1         1        
-case_15   NonParametricSeismicSource 2            0.002     0.0        1         1        
-case_14   NonParametricSeismicSource 2            0.002     0.0        1         1        
-case_12   NonParametricSeismicSource 2            0.002     0.0        1         1        
-========= ========================== ============ ========= ========== ========= =========
+========= ========================== ============ ========= ========== ========= ========= ======
+source_id source_class               num_ruptures calc_time split_time num_sites num_split events
+========= ========================== ============ ========= ========== ========= ========= ======
+case_01   NonParametricSeismicSource 1            0.004     0.0        1         1         0     
+case_03   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_02   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_04   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_05   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_11   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_12   NonParametricSeismicSource 2            0.002     0.0        1         1         0     
+case_09   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_07   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_15   NonParametricSeismicSource 2            0.002     0.0        1         1         0     
+case_14   NonParametricSeismicSource 2            0.002     0.0        1         1         0     
+case_13   NonParametricSeismicSource 2            0.002     0.0        1         1         0     
+case_08   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_06   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+case_10   NonParametricSeismicSource 1            0.002     0.0        1         1         0     
+========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 0.036     15    
+NonParametricSeismicSource 0.030     15    
 ========================== ========= ======
 
 Duplicated sources
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.042 NaN    0.042 0.042 1        
+count_ruptures     0.036 NaN    0.036 0.036 1        
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -125,13 +125,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.373     0.0       1     
-total count_ruptures           0.042     3.254     1     
-managing sources               0.025     0.0       1     
-store source_info              0.005     0.0       1     
-reading site collection        3.917E-04 0.0       1     
-splitting sources              3.748E-04 0.0       1     
-unpickling count_ruptures      8.821E-05 0.0       1     
-aggregate curves               8.798E-05 0.0       1     
-saving probability maps        3.290E-05 0.0       1     
+reading composite source model 0.871     0.0       1     
+total count_ruptures           0.036     4.246     1     
+managing sources               0.032     0.0       1     
+store source_info              0.006     0.0       1     
+splitting sources              6.034E-04 0.0       1     
+reading site collection        2.468E-04 0.0       1     
+unpickling count_ruptures      1.192E-04 0.0       1     
+aggregate curves               8.559E-05 0.0       1     
+saving probability maps        3.934E-05 0.0       1     
 ============================== ========= ========= ======
