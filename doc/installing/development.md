@@ -190,15 +190,15 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: extra features, like celery and rtree support can be installed running:*
+*<a name="note1">[1]</a>: extra features, like celery and pam support can be installed running:*
 
 ```bash
-# oq-engine with Rtree support
-pip install -e oq-engine/[Rtree]
 # oq-engine with celery support
 pip install -e oq-engine/[celery]
+# oq-engine with pam support
+pip install -e oq-engine/[pam]
 # oq-engine with support for both
-pip install -e oq-engine/[rtree,celery]
+pip install -e oq-engine/[celery,pam]
 ```
 
 *<a name="note2">[2]</a>: unsupported systems:*
