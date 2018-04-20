@@ -23,16 +23,12 @@ to several geographical primitives and some other low-level spatial operations.
 import logging
 import operator
 import collections
-try:
-    import rtree
-except:
-    rtree = None
+import rtree
 import numpy
 import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.geodetic import (
-    EARTH_RADIUS, geodetic_distance, min_idx_dst)
+from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, geodetic_distance
 from openquake.baselib.slots import with_slots
 
 U32 = numpy.uint32
@@ -57,13 +53,13 @@ class _GeographicObjects(object):
         elif isinstance(objects, numpy.ndarray):
             self.lons = objects['lon']
             self.lats = objects['lat']
-        if rtree:
-            self.index = rtree.index.Index()
-            self.proj = OrthographicProjection.from_lons_lats(
-                self.lons, self.lats)
-            xs, ys = self.proj(self.lons, self.lats)
-            for i, (x, y) in enumerate(zip(xs, ys)):
-                self.index.insert(i, (x, y, x, y))
+
+        self.proj = OrthographicProjection.from_lons_lats(
+            self.lons, self.lats)
+        xs, ys = self.proj(self.lons, self.lats)
+        self.index = rtree.index.Index(
+            (i, (x, y, x, y), (x, y, x, y))
+            for i, (x, y) in enumerate(zip(xs, ys)))
 
     def get_closest(self, lon, lat):
         """
@@ -74,14 +70,10 @@ class _GeographicObjects(object):
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
-        if rtree:
-            x, y = self.proj(lon, lat)
-            idx = list(self.index.nearest((x, y, x, y), 1))[0]
-            min_dist = geodetic_distance(
-                lon, lat, self.lons[idx], self.lats[idx])
-        else:
-            zeros = numpy.zeros_like(self.lons)
-            idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
+        x, y = self.proj(lon, lat)
+        idx = list(self.index.nearest((x, y, x, y), 1))[0]
+        min_dist = geodetic_distance(
+            lon, lat, self.lons[idx], self.lats[idx])
         return self.objects[idx], min_dist
 
     def assoc(self, sitecol, assoc_dist, mode):
@@ -147,12 +139,23 @@ class _GeographicObjects(object):
         return self.objects.filtered(sids), assets_by_site
 
 
+def get_min_distance(mesh1, mesh2):
+    """
+    Get the minimum distance between 2D meshes by using rtree
+    """
+    go = _GeographicObjects(mesh1)
+    min_dist = min(go.get_closest(lon, lat)[1]
+                   for lon, lat in zip(mesh2.lons, mesh2.lats))
+    return min_dist
+
+
 def assoc(objects, sitecol, assoc_dist, mode):
     """
     Associate geographic objects to a site collection.
 
     :param objects:
-        an array with fields lon, lat or a list of geographic objects
+        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
+        of objects with a .location attribute (i.e. assets_by_site)
     :param assoc_dist:
         the maximum distance for association
     :param mode:
@@ -160,8 +163,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    if isinstance(objects, numpy.ndarray):
-        # objects is a geo array with lon, lat fields
+    if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
+        # objects is a geo array with lon, lat fields or a mesh-like instance
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
