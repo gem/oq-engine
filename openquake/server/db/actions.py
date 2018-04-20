@@ -670,6 +670,18 @@ def get_results(db, job_id):
 
 # ############################### db commands ########################### #
 
+def get_executing_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, user_name, start_time) tuples
+    """
+    query = '''-- executing jobs
+SELECT id, user_name, start_time
+FROM job WHERE status='executing' ORDER BY id desc'''
+    return db(query)
+
 def get_longest_jobs(db):
     """
     :param db:
