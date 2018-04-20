@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Optimize the rtree index generation
+  * Now sites and exposure can be set at the same time in the job.ini
+  * Optimized the rtree index generation
   * Introduced a `preclassical` calculator
   * Extended the scenario_damage calculator to export `dmg_by_event`
     outputs as well as `losses_by_event` outputs if there is a consequence
