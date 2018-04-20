@@ -124,9 +124,9 @@ pip install -r oq-engine/requirements-py35-macos.txt
 ```
 
 ```bash
-pip install -e oq-engine/
+pip install -e oq-engine/[dev]
 ```
-To install extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
+The `dev` extra feature will install some extra dependencies that will help in debugging the code. To install other extra features see [1](#note1). If your system does not support the provided binary dependencies you'll need to manually install them, using tools provided by your python distribution [2](#note2).
 
 Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` code will be reflected in the environment.
 
@@ -194,11 +194,11 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ```bash
 # oq-engine with celery support
-pip install -e oq-engine/[celery]
+pip install -e oq-engine/[dev,celery]
 # oq-engine with pam support
-pip install -e oq-engine/[pam]
+pip install -e oq-engine/[dev,pam]
 # oq-engine with support for both
-pip install -e oq-engine/[celery,pam]
+pip install -e oq-engine/[dev,celery,pam]
 ```
 
 *<a name="note2">[2]</a>: unsupported systems:*
@@ -206,7 +206,7 @@ pip install -e oq-engine/[celery,pam]
 If your system does not support the provided binary dependencies (python wheels)
 
 ```bash
-pip install -e oq-engine/
+pip install -e oq-engine/[dev]
 ```
 
 will try to download the required dependencies from [pypi](http://pypi.python.org/). This may require some extra work to get all the external C dependencies resolved.
