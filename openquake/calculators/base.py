@@ -435,7 +435,6 @@ class HazardCalculator(BaseCalculator):
         Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
         """
-        logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol)
