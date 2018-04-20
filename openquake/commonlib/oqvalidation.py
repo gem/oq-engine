@@ -496,8 +496,7 @@ class OqParam(valid.ParamSet):
         """
         It is possible to infer the geometry only if exactly
         one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
-        region and exposure_file is set. You did set more than
-        one, or nothing.
+        region is set. You did set more than one, or nothing.
         """
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
@@ -513,12 +512,11 @@ class OqParam(valid.ParamSet):
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmfs_csv=self.inputs.get('gmfs', 0),
-            region=bool(self.region and self.region_grid_spacing),
-            exposure=self.inputs.get('exposure', 0))
+            region=bool(self.region and self.region_grid_spacing))
         # NB: below we check that all the flags
         # are mutually exclusive
         return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
-            'site_model')
+            'exposure') or self.inputs.get('site_model')
 
     def is_valid_poes(self):
         """
