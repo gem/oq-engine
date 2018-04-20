@@ -62,19 +62,18 @@ def surface_to_mesh(surface):
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         n = len(surface.surfaces)
-        arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                           for s in surface.surfaces]).reshape(n, 2, 2)
-    else:
-        mesh = surface.mesh
-        if mesh is None:  # planar surface
-            arr = build_array([[surface.corner_lons,
-                                surface.corner_lats,
-                                surface.corner_depths]]).reshape(1, 2, 2)
-        else:  # general surface
-            shp = (1,) + mesh.lons.shape
-            arr = build_array(
-                [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
-    return arr
+        return build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
+                            for s in surface.surfaces]).reshape(n, 2, 2)
+    mesh = surface.mesh
+    if mesh is None:  # planar surface
+        return build_array([[surface.corner_lons,
+                             surface.corner_lats,
+                             surface.corner_depths]]).reshape(1, 2, 2)
+    if len(mesh.lons.shape) == 1:  # 1D mesh
+        shp = (1, 1) + mesh.lons.shape
+    else:  # 2D mesh
+        shp = (1,) + mesh.lons.shape
+    return build_array([[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
 
 
 class Mesh(object):
@@ -431,8 +430,13 @@ class Mesh(object):
             *geo_utils.get_spherical_bounding_box(self.lons.flatten(),
                                                   self.lats.flatten())
         )
-        mesh2d = numpy.array(proj(self.lons.transpose(),
-                                  self.lats.transpose())).transpose()
+        if len(self.lons.shape) == 1:  # 1D mesh
+            lons = self.lons.reshape(len(self.lons), 1)
+            lats = self.lats.reshape(len(self.lats), 1)
+        else:  # 2D mesh
+            lons = self.lons.T
+            lats = self.lats.T
+        mesh2d = numpy.array(proj(lons, lats)).T
         lines = iter(mesh2d)
         # we iterate over horizontal stripes, keeping the "previous"
         # line of points. we keep it reversed, such that together
