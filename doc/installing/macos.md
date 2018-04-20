@@ -3,7 +3,7 @@
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
 - this distribution uses Python 3.5 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-354/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
-    - pip, numpy, scipy, h5py, django, shapely, and few more
+    - pip, numpy, scipy, h5py, django, shapely, rtree and few more
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
 - currently does not support Celery (and will never do)
