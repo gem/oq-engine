@@ -335,82 +335,6 @@ class Mesh(object):
         polygon2d = multipoint.convex_hull
         return proj, polygon2d
 
-    def _get_proj_enclosing_polygon(self):
-        """
-        Create a projection centered in the center of this mesh and define
-        a minimum polygon in that projection, enveloping all the points
-        of the mesh.
-
-        In :class:`Mesh` this is equivalent to :meth:`_get_proj_convex_hull`.
-        """
-        return self._get_proj_convex_hull()
-
-    def get_convex_hull(self):
-        """
-        Get a convex polygon object that contains projections of all the points
-        of the mesh.
-
-        :returns:
-            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon` that
-            is a convex hull around all the points in this mesh. If the
-            original mesh had only one point, the resulting polygon has a
-            square shape with a side length of 10 meters. If there were only
-            two points, resulting polygon is a stripe 10 meters wide.
-        """
-        proj, polygon2d = self._get_proj_convex_hull()
-        # if mesh had only one point, the convex hull is a point. if there
-        # were two, it is a line string. we need to return a convex polygon
-        # object, so extend that area-less geometries by some arbitrarily
-        # small distance.
-        if isinstance(polygon2d, (shapely.geometry.LineString,
-                                  shapely.geometry.Point)):
-            polygon2d = polygon2d.buffer(self.DIST_TOLERANCE, 1)
-
-        # avoid circular imports
-        from openquake.hazardlib.geo.polygon import Polygon
-        return Polygon._from_2d(polygon2d, proj)
-
-
-class RectangularMesh(Mesh):
-    """
-    A specification of :class:`Mesh` that requires coordinate numpy-arrays
-    to be two-dimensional.
-
-    Rectangular mesh is meant to represent not just an unordered collection
-    of points but rather a sort of table of points, where index of the point
-    in a mesh is related to it's position with respect to neighbouring points.
-    """
-    def __init__(self, lons, lats, depths=None):
-        super(RectangularMesh, self).__init__(lons, lats, depths)
-        assert lons.ndim == 2
-
-    @classmethod
-    def from_points_list(cls, points):
-        """
-        Create a rectangular mesh object from a list of lists of points.
-        Lists in a list are supposed to have the same length.
-
-        :param point:
-            List of lists of :class:`~openquake.hazardlib.geo.point.Point`
-            objects.
-        """
-        assert points is not None and len(points) > 0 and len(points[0]) > 0, \
-            'list of at least one non-empty list of points is required'
-        lons = numpy.zeros((len(points), len(points[0])), dtype=float)
-        lats = lons.copy()
-        depths = lons.copy()
-        num_cols = len(points[0])
-        for i, row in enumerate(points):
-            assert len(row) == num_cols, \
-                   'lists of points are not of uniform length'
-            for j, point in enumerate(row):
-                lons[i][j] = point.longitude
-                lats[i][j] = point.latitude
-                depths[i][j] = point.depth
-        if not depths.any():
-            depths = None
-        return cls(lons, lats, depths)
-
     def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore distance to each point of ``mesh``.
@@ -500,9 +424,8 @@ class RectangularMesh(Mesh):
             Same structure as :meth:`Mesh._get_proj_convex_hull`.
         """
         if self.lons.size < 4:
-            # the mesh doesn't contain even a single cell, use :class:`Mesh`
-            # method implementation (which would dilate the point or the line)
-            return super(RectangularMesh, self)._get_proj_enclosing_polygon()
+            # the mesh doesn't contain even a single cell
+            return self._get_proj_convex_hull()
 
         proj = geo_utils.get_orthographic_projection(
             *geo_utils.get_spherical_bounding_box(self.lons.flatten(),
@@ -546,6 +469,72 @@ class RectangularMesh(Mesh):
             polygon = shapely.ops.cascaded_union(polygons) \
                                  .simplify(self.DIST_TOLERANCE)
         return proj, polygon
+
+    def get_convex_hull(self):
+        """
+        Get a convex polygon object that contains projections of all the points
+        of the mesh.
+
+        :returns:
+            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon` that
+            is a convex hull around all the points in this mesh. If the
+            original mesh had only one point, the resulting polygon has a
+            square shape with a side length of 10 meters. If there were only
+            two points, resulting polygon is a stripe 10 meters wide.
+        """
+        proj, polygon2d = self._get_proj_convex_hull()
+        # if mesh had only one point, the convex hull is a point. if there
+        # were two, it is a line string. we need to return a convex polygon
+        # object, so extend that area-less geometries by some arbitrarily
+        # small distance.
+        if isinstance(polygon2d, (shapely.geometry.LineString,
+                                  shapely.geometry.Point)):
+            polygon2d = polygon2d.buffer(self.DIST_TOLERANCE, 1)
+
+        # avoid circular imports
+        from openquake.hazardlib.geo.polygon import Polygon
+        return Polygon._from_2d(polygon2d, proj)
+
+
+class RectangularMesh(Mesh):
+    """
+    A specification of :class:`Mesh` that requires coordinate numpy-arrays
+    to be two-dimensional.
+
+    Rectangular mesh is meant to represent not just an unordered collection
+    of points but rather a sort of table of points, where index of the point
+    in a mesh is related to it's position with respect to neighbouring points.
+    """
+    def __init__(self, lons, lats, depths=None):
+        super(RectangularMesh, self).__init__(lons, lats, depths)
+        assert lons.ndim == 2
+
+    @classmethod
+    def from_points_list(cls, points):
+        """
+        Create a rectangular mesh object from a list of lists of points.
+        Lists in a list are supposed to have the same length.
+
+        :param point:
+            List of lists of :class:`~openquake.hazardlib.geo.point.Point`
+            objects.
+        """
+        assert points is not None and len(points) > 0 and len(points[0]) > 0, \
+            'list of at least one non-empty list of points is required'
+        lons = numpy.zeros((len(points), len(points[0])), dtype=float)
+        lats = lons.copy()
+        depths = lons.copy()
+        num_cols = len(points[0])
+        for i, row in enumerate(points):
+            assert len(row) == num_cols, \
+                   'lists of points are not of uniform length'
+            for j, point in enumerate(row):
+                lons[i][j] = point.longitude
+                lats[i][j] = point.latitude
+                depths[i][j] = point.depth
+        if not depths.any():
+            depths = None
+        return cls(lons, lats, depths)
 
     def get_middle_point(self):
         """

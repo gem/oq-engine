@@ -26,7 +26,7 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh
 
 
 class GriddedSurface(BaseSurface):
@@ -69,7 +69,7 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
-        return cls(RectangularMesh.from_points_list([points]))
+        return cls(Mesh.from_points_list(points))
 
     def get_bounding_box(self):
         """
@@ -215,13 +215,12 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        # the mesh has shape (1, N)
-        lon_bar = np.mean(self.mesh.lons[0])
-        lat_bar = np.mean(self.mesh.lats[0])
-        idx = np.argmin((self.mesh.lons[0] - lon_bar)**2 +
-                        (self.mesh.lats[0] - lat_bar)**2)
-        return Point(self.mesh.lons[0, idx], self.mesh.lats[0, idx],
-                     self.mesh.depths[0, idx])
+        lon_bar = np.mean(self.mesh.lons)
+        lat_bar = np.mean(self.mesh.lats)
+        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
+                        (self.mesh.lats - lat_bar)**2)
+        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
+                     self.mesh.depths[idx])
 
     def get_ry0_distance(self, mesh):
         """
