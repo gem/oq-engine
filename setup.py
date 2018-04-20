@@ -61,7 +61,7 @@ install_requires = [
     'scipy >=1.0.1, <1.1',
     'pyzmq <18.0',
     'psutil >=1.2, <5.5',
-    'rtree == 0.8.3',
+    'rtree ==0.8.3',
     'shapely >=1.3, <1.7',
     'docutils >=0.11, <0.15',
     'decorator >=3.4',
