@@ -43,7 +43,7 @@ class GriddedSurface(BaseSurface):
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
     def __init__(self, mesh):
-        self.mesh = mesh
+        self.mesh = mesh  # can be a 1D mesh or a squeezable 2D mesh
 
     @property
     def surface_nodes(self):
@@ -215,12 +215,13 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        lon_bar = np.mean(self.mesh.lons)
-        lat_bar = np.mean(self.mesh.lats)
-        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
-                        (self.mesh.lats - lat_bar)**2)
-        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
-                     self.mesh.depths[idx])
+        lons = self.mesh.lons.squeeze()
+        lats = self.mesh.lats.squeeze()
+        depths = self.mesh.depths.squeeze()
+        lon_bar = lons.mean()
+        lat_bar = lats.mean()
+        idx = np.argmin((lons - lon_bar)**2 + (lats - lat_bar)**2)
+        return Point(lons[idx], lats[idx], depths[idx])
 
     def get_ry0_distance(self, mesh):
         """
