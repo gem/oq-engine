@@ -55,8 +55,8 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'mock >=1.0, <2.1',
-    'h5py >=2.6, <2.9',
     'nose >=1.3, <1.4',
+    'h5py >=2.6, <2.9',
     'numpy >=1.14, <1.15',
     'scipy >=1.0.1, <1.1',
     'pyzmq <18.0',
@@ -80,6 +80,10 @@ extras_require = {
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
+    ],
+    'dev':  [
+        'flake8 >=3.5, <3.6',
+        'pdbpp',
     ]
 }
 
