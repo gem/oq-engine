@@ -490,21 +490,25 @@ class HazardCalculator(BaseCalculator):
         logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
+        if oq.shakemap_id or 'shakemap' in oq.inputs:
+            self.read_shakemap()
+            self.R = 1
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
-            if self.oqparam.region:
+            assetcol = self.datastore.parent['assetcol']
+            if oq.region:
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
-                assetcol = self.datastore.parent['assetcol']
                 self.assetcol = assetcol.reduce(self.sitecol.sids)
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('There are %d/%d assets in the region',
                              len(self.assetcol), len(assetcol))
             else:
-                self.assetcol = self.datastore.parent['assetcol']
+                self.assetcol = assetcol.reduce(self.sitecol.sids)
+                self.datastore['assetcol'] = self.assetcol
             self.load_riskmodel()
         else:  # no exposure
             self.load_riskmodel()
