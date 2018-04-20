@@ -23,10 +23,7 @@ to several geographical primitives and some other low-level spatial operations.
 import logging
 import operator
 import collections
-try:
-    import rtree
-except:
-    rtree = None
+import rtree
 import numpy
 import shapely.geometry
 
@@ -57,13 +54,13 @@ class _GeographicObjects(object):
         elif isinstance(objects, numpy.ndarray):
             self.lons = objects['lon']
             self.lats = objects['lat']
-        if rtree:
-            self.index = rtree.index.Index()
-            self.proj = OrthographicProjection.from_lons_lats(
-                self.lons, self.lats)
-            xs, ys = self.proj(self.lons, self.lats)
-            for i, (x, y) in enumerate(zip(xs, ys)):
-                self.index.insert(i, (x, y, x, y))
+
+        self.proj = OrthographicProjection.from_lons_lats(
+            self.lons, self.lats)
+        xs, ys = self.proj(self.lons, self.lats)
+        self.index = rtree.index.Index(
+            (i, (x, y, x, y), (x, y, x, y))
+            for i, (x, y) in enumerate(zip(xs, ys)))
 
     def get_closest(self, lon, lat):
         """
