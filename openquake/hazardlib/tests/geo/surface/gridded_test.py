@@ -75,5 +75,4 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertEqual((0.0, 1.0, 1.0, 0.0), self.surf.get_bounding_box())
 
     def test_get_middle_point(self):
-        raise unittest.SkipTest(
-            'surface.get_middle_point() has to be implemented')
+        self.assertEqual(POINTS[0], self.surf.get_middle_point())
