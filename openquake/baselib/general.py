@@ -851,7 +851,7 @@ def not_equal(array_or_none1, array_or_none2):
         return True
     if array_or_none1.shape != array_or_none2.shape:
         return True
-    return not (array_or_none1 == array_or_none2).all()
+    return (array_or_none1 != array_or_none2).any()
 
 
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
