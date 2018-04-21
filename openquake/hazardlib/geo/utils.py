@@ -80,7 +80,7 @@ class _GeographicObjects(object):
         """
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict', 'error', 'warn' or 'ignore'
+        :param mode: 'strict', 'error', 'warn' or 'skip'
         :returns: (filtered site collection, filtered objects)
         """
         dic = {}
@@ -94,7 +94,7 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate outside
                 logging.warn('Association to %s km from site (%s %s)',
                              distance, lon, lat)
-            elif mode == 'ignore':
+            elif mode == 'skip':
                 pass  # do not associate
             elif mode == 'strict':
                 raise SiteAssociationError(
