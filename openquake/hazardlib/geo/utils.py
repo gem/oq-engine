@@ -57,9 +57,10 @@ class _GeographicObjects(object):
         self.proj = OrthographicProjection.from_lons_lats(
             self.lons, self.lats)
         xs, ys = self.proj(self.lons, self.lats)
-        self.index = rtree.index.Index(
-            (i, (x, y, x, y), (x, y, x, y))
-            for i, (x, y) in enumerate(zip(xs, ys)))
+        self.index = rtree.index.Index()
+        # no http://toblerity.org/rtree/performance.html#use-stream-loading!
+        for i, (x, y) in enumerate(zip(xs, ys)):
+            self.index.insert(i, (x, y, x, y))
 
     def get_closest(self, lon, lat):
         """
