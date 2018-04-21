@@ -15,7 +15,7 @@ America. To that aim we will need a `job_hazard.ini` file like this one:
    [general]
    description = Full South America
    calculation_mode = scenario
-   region_grid_spacing = 10
+   sites_csv = south_america.csv
    exposure_file = full_exposure_model.xml
    structural_vulnerability_file = structural_vulnerability_model.xml
    
@@ -46,16 +46,15 @@ you will store in the database the exposure and the risk functions. In
 this example there are only vulnerability functions for the loss type
 `structural`, but there could be more, and even fragility functions.
 This is a particular kind of hazard calculation in which the only output
-generated will be the hazard site collection, a grid enclosing the exposure
-with a grid spacing of 10 km and the sites where there are no close assets
-discarded. "Close" here means within the region grid spacing.
+generated will be the hazard site collection, coming from the sites_csv
+file provided by the hazard team.
 
 Let's suppose that the calculation ID of this hazard calculation is 1000.
 The hazard has to be prepared only once, so it is not a problem if the
 preparation is slow. The slowness will due to the procedure associating
-the assets to the hazard sites, which will involve millions of asset
+the assets to the hazard sites, which will involve millions of assets
 for South America. However, since it uses the rtree library which is very
-fast, it should not take long (< 1 hour?)
+fast, it should take just minutes.
 
 Having prepared the hazard, we can now run the risk on a given shakemap.
 For that, one need a `job_risk.ini` file like the following::
@@ -95,11 +94,8 @@ the extent of the shakemap in longitude and latitude is about 6 degrees,
 with a step of 10 km the grid contains around 65 x 65 sites;
 most of the sites are without assets because most of the
 grid is on the sea or on high montains, so actually there are
-around ~1000 effective sites. Computing a correlation matrix of size
-1000 x 1000 is actually possible, so the risk computation can be performed.
+around ~500 effective sites. Computing a correlation matrix of size
+500 x 500 is actually possible, so the risk computation can be performed.
 Clearly in situations in which the number of hazard sites is too large,
 approximations will have to be made, like neglecting the correlation
-effects. Viceversa, if the correlation effects are important, we will
-have to increase the `region_grid_spacing` until the computation become
-possible. Also the performance of the procedure associating the shakemap
-sites to the hazard sites will be critical.
+effects.
