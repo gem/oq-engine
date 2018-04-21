@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     576,018,697        
-date           2018-03-26T15:56:13
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:03:18
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -46,8 +46,8 @@ Composite source model
 ============================= ====== =============== ================
 smlt_path                     weight gsim_logic_tree num_realizations
 ============================= ====== =============== ================
-smoothed_model_m_m0.2_b_e0.0  0.500  simple(4,0,0)   4/4             
-smoothed_model_m_m0.2_b_m0.05 0.500  simple(4,0,0)   4/4             
+smoothed_model_m_m0.2_b_e0.0  0.500  simple(0,0,4)   4/4             
+smoothed_model_m_m0.2_b_m0.05 0.500  simple(0,0,4)   4/4             
 ============================= ====== =============== ================
 
 Required parameters per tectonic region type
@@ -92,11 +92,11 @@ GridSources.xml 1      Tectonic_type_b 260          260
 
 Slowest sources
 ---------------
-========= ================ ============ ========= ========== ========= =========
-source_id source_class     num_ruptures calc_time split_time num_sites num_split
-========= ================ ============ ========= ========== ========= =========
-21        MultiPointSource 260          0.002     2.818E-04  4         4        
-========= ================ ============ ========= ========== ========= =========
+========= ================ ============ ========= ========== ========= ========= ======
+source_id source_class     num_ruptures calc_time split_time num_sites num_split events
+========= ================ ============ ========= ========== ========= ========= ======
+21        MultiPointSource 260          0.002     3.908E-04  4         4         0     
+========= ================ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
@@ -112,10 +112,10 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.003 0.001  0.002 0.004 2        
-================== ===== ====== ===== ===== =========
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_ruptures     0.003 8.058E-05 0.003 0.003 2        
+================== ===== ========= ===== ===== =========
 
 Informational data
 ------------------
@@ -129,13 +129,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.006     0.0       1     
-total count_ruptures           0.006     1.645     2     
-store source_info              0.006     0.0       1     
-managing sources               0.006     0.0       1     
+reading composite source model 0.025     0.0       1     
+store source_info              0.013     0.0       1     
+managing sources               0.008     0.0       1     
+total count_ruptures           0.006     2.105     2     
 splitting sources              0.001     0.0       1     
-reading site collection        5.186E-04 0.0       1     
-unpickling count_ruptures      1.130E-04 0.0       2     
-aggregate curves               4.220E-05 0.0       2     
-saving probability maps        3.242E-05 0.0       1     
+reading site collection        6.101E-04 0.0       1     
+unpickling count_ruptures      1.225E-04 0.0       2     
+aggregate curves               5.031E-05 0.0       2     
+saving probability maps        3.934E-05 0.0       1     
 ============================== ========= ========= ======

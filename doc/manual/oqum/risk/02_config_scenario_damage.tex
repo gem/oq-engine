@@ -174,14 +174,7 @@ examples.
 
 
 Now, the above calculations described by the two configuration files
-``job\_hazard.ini'' and ``job\_damage.ini'' can be run sequentially using the
-command line as follows:
-
-\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
-user@ubuntu:~\$ oq engine --run job_hazard.ini,job_damage.ini
-\end{minted}
-
-The hazard and risk calculations can also be run separately. In that case, the
+``job\_hazard.ini'' and ``job\_damage.ini'' can be run separately. The
 calculation id for the hazard calculation should be
 provided to the \glsdesc{acr:oqe} while running the risk calculation using the
 option \Verb+--hazard-calculation-id+ (or \Verb+--hc+). This is shown below:

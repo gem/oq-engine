@@ -23,6 +23,7 @@ from openquake.qa_tests_data.scenario_risk import (
     case_6a, case_7, case_8, occupants, case_master, case_shakemap)
 
 from openquake.baselib.general import writetmp
+from openquake.commonlib.logictree import InvalidLogicTree
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -147,6 +148,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # testing the npz export runs
         export(('all_losses-rlzs', 'npz'), self.calc.datastore)
 
+        # two equal gsims
+        with self.assertRaises(InvalidLogicTree):
+            self.run_calc(case_6a.__file__, 'job_haz.ini',
+                          gsim_logic_tree_file='wrong_gmpe_logic_tree.xml')
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
@@ -219,4 +225,4 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_shakemap.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
-        self.assertEqual(len(sitecol), 1)
+        self.assertEqual(len(sitecol), 8)
