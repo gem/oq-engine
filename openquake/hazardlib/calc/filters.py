@@ -93,7 +93,7 @@ def context(src):
     """
     try:
         yield
-    except:
+    except Exception:
         etype, err, tb = sys.exc_info()
         msg = 'An error occurred with source id=%s. Error: %s'
         msg %= (src.source_id, err)
@@ -324,7 +324,7 @@ class SourceFilter(object):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     :param use_rtree:
-        by default True, i.e. try to use the rtree module if available
+        by default True, i.e. use the rtree module
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
         self.integration_distance = (
@@ -336,12 +336,11 @@ class SourceFilter(object):
             integration_distance and sitecol is not None and
             sitecol.at_sea_level())
         if self.use_rtree:
-            self.index = rtree.index.Index(
-                (sid, (lon, lat, lon, lat), (lon, lat, lon, lat))
-                for sid, lon, lat in zip(
-                        sitecol.sids, sitecol.lons, sitecol.lats))
-        if sitecol is not None and rtree is None:
-            logging.info('Using distance filtering [no rtree]')
+            self.index = rtree.index.Index()
+            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+                self.index.insert(sid, (lon, lat, lon, lat))
+            # http://toblerity.org/rtree/performance.html#use-stream-loading
+            # causes all kind of indefined behavior!
 
     def get_affected_box(self, src):
         """
@@ -398,12 +397,9 @@ class SourceFilter(object):
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
-                    # MS: sanity check against rtree bugs; what happened to me
-                    # is that by following the advice in http://toblerity.org/rtree/performance.html#use-stream-loading
-                    # self.index.intersection(box) started reporting duplicate
-                    # and wrong sids! the current rtree version is fine though
+                    # MS: sanity check against rtree bugs
                     raise ValueError('sids=%s' % sids)
-                if len(sids):
+                elif len(sids):
                     src.nsites = len(sids)
                     yield src, sites.filtered(sids)
             else:  # normal filtering, used in the workers
