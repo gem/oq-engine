@@ -828,6 +828,32 @@ def get_array(array, **kw):
     return array
 
 
+def not_equal(array_or_none1, array_or_none2):
+    """
+    Compare two arrays that can also be None or have diffent shapes
+    and returns a boolean.
+
+    >>> a1 = numpy.array([1])
+    >>> a2 = numpy.array([2])
+    >>> a3 = numpy.array([2, 3])
+    >>> not_equal(a1, a2)
+    True
+    >>> not_equal(a1, a3)
+    True
+    >>> not_equal(a1, None)
+    True
+    """
+    if array_or_none1 is None and array_or_none2 is None:
+        return False
+    elif array_or_none1 is None and array_or_none2 is not None:
+        return True
+    elif array_or_none1 is not None and array_or_none2 is None:
+        return True
+    if array_or_none1.shape != array_or_none2.shape:
+        return True
+    return not (array_or_none1 == array_or_none2).all()
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format
