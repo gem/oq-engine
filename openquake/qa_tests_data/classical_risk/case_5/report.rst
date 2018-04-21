@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2018-03-26T15:54:47
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:01:57
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -87,12 +87,12 @@ source_model.xml 1      Subduction Interface 23           23
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-A         PointSource  23           6.950E-04 6.199E-06  1         1        
-B         PointSource  23           5.932E-04 2.384E-06  1         1        
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+A         PointSource  23           5.584E-04 4.768E-06  1         1         0     
+B         PointSource  23           5.209E-04 2.623E-06  1         1         0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
@@ -110,7 +110,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.002 2.397E-04 0.002 0.002 2        
+count_ruptures     0.002 4.215E-05 0.002 0.002 2        
 ================== ===== ========= ===== ===== =========
 
 Informational data
@@ -125,13 +125,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.007     0.0       1     
-store source_info              0.006     0.0       1     
-managing sources               0.005     0.0       1     
-total count_ruptures           0.004     2.023     2     
-splitting sources              5.898E-04 0.0       1     
-reading site collection        2.060E-04 0.0       1     
-unpickling count_ruptures      1.128E-04 0.0       2     
-aggregate curves               5.627E-05 0.0       2     
-saving probability maps        4.005E-05 0.0       1     
+store source_info              0.007     0.0       1     
+reading composite source model 0.006     0.0       1     
+total count_ruptures           0.005     1.793     2     
+managing sources               0.004     0.0       1     
+splitting sources              5.205E-04 0.0       1     
+reading site collection        2.451E-04 0.0       1     
+unpickling count_ruptures      1.061E-04 0.0       2     
+aggregate curves               5.221E-05 0.0       2     
+saving probability maps        3.839E-05 0.0       1     
 ============================== ========= ========= ======

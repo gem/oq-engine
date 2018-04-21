@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2018-03-26T15:55:41
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:02:33
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -97,20 +97,20 @@ source_model_2.xml 3      Active Shallow Crust     495          240
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-1         AreaSource   240          0.018     0.004      297       99       
-2         PointSource  15           8.204E-04 2.623E-06  3         1        
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+1         AreaSource   240          0.029     0.004      297       99        0     
+2         PointSource  15           5.827E-04 2.861E-06  3         1         0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.018     1     
-PointSource  8.204E-04 1     
+AreaSource   0.029     1     
+PointSource  5.827E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -121,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.013 0.014  0.003 0.023 2        
+count_ruptures     0.018 0.022  0.003 0.033 2        
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -136,13 +136,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.026     1.773     2     
-reading composite source model 0.023     0.0       1     
-managing sources               0.012     0.0       1     
-splitting sources              0.009     0.0       1     
-store source_info              0.007     0.0       1     
-reading site collection        3.660E-04 0.0       1     
-unpickling count_ruptures      1.292E-04 0.0       2     
-aggregate curves               6.628E-05 0.0       2     
-saving probability maps        4.172E-05 0.0       1     
+managing sources               0.044     0.0       1     
+total count_ruptures           0.036     2.246     2     
+reading composite source model 0.029     0.0       1     
+splitting sources              0.026     0.0       1     
+store source_info              0.008     0.0       1     
+reading site collection        2.668E-04 0.0       1     
+unpickling count_ruptures      1.087E-04 0.0       2     
+aggregate curves               5.770E-05 0.0       2     
+saving probability maps        3.743E-05 0.0       1     
 ============================== ========= ========= ======
