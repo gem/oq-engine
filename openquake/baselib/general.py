@@ -699,8 +699,8 @@ class DictArray(collections.Mapping):
     ...      f['d'] = d
     ...      f['d']
     <DictArray
-    PGA: [ 0.01  0.02  0.04]
-    PGV: [ 0.1  0.2]>
+    PGA: [0.01 0.02 0.04]
+    PGV: [0.1 0.2]>
 
     The DictArray maintains the lexicographic order of the keys.
     """

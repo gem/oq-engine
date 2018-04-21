@@ -361,8 +361,8 @@ if OQ_DISTRIBUTE.startswith('celery'):
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
-    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
+    app = Celery('openquake')
+    app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
 
@@ -643,9 +643,6 @@ class Starmap(object):
     def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
             self.task_ids.remove(task_id)
-            if CELERY_RESULT_BACKEND.startswith('rpc:'):
-                # work around a celery/rabbitmq bug
-                del app.backend._cache[task_id]
             yield result_dict['result']
 
     def _iter_celery(self):

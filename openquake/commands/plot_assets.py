@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import shapely.wkt
 from openquake.baselib import sap, datastore
 
 
@@ -26,16 +27,22 @@ def plot_assets(calc_id=-1):
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
+    from openquake.hmtk.plotting.patch import PolygonPatch
     dstore = datastore.read(calc_id)
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     assetcol = dstore['assetcol'].array
     fig = p.figure()
     ax = fig.add_subplot(111)
-    ax.grid(True)
-    p.scatter(assetcol['lon'], assetcol['lat'], marker='.')
-    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='+',
+    if oq.region:
+        pp = PolygonPatch(shapely.wkt.loads(oq.region), alpha=0.01)
+        ax.add_patch(pp)
+    else:
+        ax.grid(True)
+    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
               color='gray')
-    p.scatter(sitecol.lons, sitecol.lats, marker='o', color='red')
+    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
+    p.scatter(sitecol.lons, sitecol.lats, marker='o', color='black')
     p.show()
 
 plot_assets.arg('calc_id', 'a computation id', type=int)

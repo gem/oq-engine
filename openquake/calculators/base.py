@@ -50,6 +50,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
+TWO16 = 2 ** 16
 
 
 class InvalidCalculationID(Exception):
@@ -434,7 +435,6 @@ class HazardCalculator(BaseCalculator):
         Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
         """
-        logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol)
@@ -495,8 +495,8 @@ class HazardCalculator(BaseCalculator):
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
-            if self.oqparam.region_constraint:
-                region = wkt.loads(self.oqparam.region_constraint)
+            if self.oqparam.region:
+                region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
                 assetcol = self.datastore.parent['assetcol']
                 self.assetcol = assetcol.reduce(self.sitecol.sids)
@@ -572,7 +572,18 @@ class HazardCalculator(BaseCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
+
         self.datastore['csm_info'] = self.csm.info
+        R = len(self.rlzs_assoc.realizations)
+        if self.is_stochastic and R >= TWO16:
+            # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
+            raise ValueError(
+                'The logic tree has %d realizations, the maximum '
+                'is %d' % (R, TWO16))
+        elif R > 10000:
+            logging.warn(
+                'The logic tree has %d realizations(!), please consider '
+                'sampling it', R)
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
             self.datastore.set_attrs(

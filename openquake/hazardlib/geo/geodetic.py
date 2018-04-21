@@ -22,11 +22,6 @@ transformations, optimized for massive calculations.
 """
 from __future__ import division
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
-
 from openquake.baselib.python3compat import round
 
 #: Earth radius in km.
