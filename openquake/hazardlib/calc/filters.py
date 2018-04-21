@@ -340,7 +340,7 @@ class SourceFilter(object):
             for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
             # http://toblerity.org/rtree/performance.html#use-stream-loading
-            # causes all kind of indefined behavior!
+            # causes undefined behavior, with wrong associations being made
 
     def get_affected_box(self, src):
         """
