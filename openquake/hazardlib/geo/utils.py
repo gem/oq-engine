@@ -132,7 +132,8 @@ class _GeographicObjects(object):
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
             elif mode == 'warn':
-                logging.warn('Discarding %s', assets)
+                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
+                             assets, lon, lat)
         sids = sorted(assets_by_sid)
         if not sids:
             raise SiteAssociationError(
