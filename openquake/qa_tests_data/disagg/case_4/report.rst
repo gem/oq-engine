@@ -3,8 +3,8 @@ Disaggregation with sampling
 
 ============== ===================
 checksum32     1,553,247,118      
-date           2018-03-26T15:57:46
-engine_version 2.10.0-git543cfb0  
+date           2018-04-19T05:04:20
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 2, num_levels = 38
@@ -74,22 +74,22 @@ source_model.xml 0      Active Shallow Crust 1,619        2,236
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-4         ComplexFaultSource 164          0.040     2.213E-04  10        10       
-2         AreaSource         1,440        0.021     0.017      96        96       
-1         PointSource        15           0.001     4.768E-06  1         1        
-3         SimpleFaultSource  617          0.0       1.893E-04  0         0        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+4         ComplexFaultSource 164          0.064     2.210E-04  10        10        0     
+2         AreaSource         1,440        0.022     0.016      96        96        0     
+1         PointSource        15           0.001     6.199E-06  1         1         0     
+3         SimpleFaultSource  617          0.0       1.853E-04  0         0         0     
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.021     1     
-ComplexFaultSource 0.040     1     
+AreaSource         0.022     1     
+ComplexFaultSource 0.064     1     
 PointSource        0.001     1     
 SimpleFaultSource  0.0       1     
 ================== ========= ======
@@ -102,7 +102,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.010 0.008  0.004 0.028 8        
+count_ruptures     0.016 0.008  0.009 0.035 8        
 ================== ===== ====== ===== ===== =========
 
 Informational data
@@ -117,13 +117,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.092     0.0       1     
-total count_ruptures           0.081     3.504     8     
+total count_ruptures           0.127     3.863     8     
 managing sources               0.041     0.0       1     
-splitting sources              0.018     0.0       1     
+reading composite source model 0.039     0.0       1     
+splitting sources              0.016     0.0       1     
 store source_info              0.004     0.0       1     
-unpickling count_ruptures      3.080E-04 0.0       8     
-reading site collection        2.801E-04 0.0       1     
-aggregate curves               1.454E-04 0.0       8     
-saving probability maps        2.980E-05 0.0       1     
+unpickling count_ruptures      3.211E-04 0.0       8     
+reading site collection        2.391E-04 0.0       1     
+aggregate curves               1.452E-04 0.0       8     
+saving probability maps        3.147E-05 0.0       1     
 ============================== ========= ========= ======
