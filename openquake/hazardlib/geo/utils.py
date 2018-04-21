@@ -58,7 +58,7 @@ class _GeographicObjects(object):
             self.lons, self.lats)
         xs, ys = self.proj(self.lons, self.lats)
         self.index = rtree.index.Index()
-        # NB: the fast way of building the index is bugged
+        # no http://toblerity.org/rtree/performance.html#use-stream-loading!
         for i, (x, y) in enumerate(zip(xs, ys)):
             self.index.insert(i, (x, y, x, y))
 
