@@ -360,6 +360,7 @@ _devtest_innervm_run () {
             popd
         elif [ "$dep_type" = "deb" ]; then
             add_local_pkg_repo "$dep" "$dep_pkg"
+            ssh "$lxc_ip" sudo apt-cache policy "${dep_pkg}"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
@@ -473,6 +474,7 @@ _builddoc_innervm_run () {
             popd
         elif [ "$dep_type" = "deb" ]; then
             add_local_pkg_repo "$dep" "$dep_pkg"
+            ssh "$lxc_ip" sudo apt-cache policy "${dep_pkg}"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
