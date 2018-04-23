@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,11 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-try:
-    raw_input
-except NameError:  # Python 3
-    raw_input = input
-
 
 def confirm(prompt):
     """
@@ -28,7 +23,7 @@ def confirm(prompt):
     """
     while True:
         try:
-            answer = raw_input(prompt)
+            answer = input(prompt)
         except KeyboardInterrupt:
             # the user presses ctrl+c, just say 'no'
             return False

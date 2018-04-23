@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,14 +38,13 @@ from openquake.commonlib import logictree
 
 MINWEIGHT = source.MINWEIGHT
 MAX_INT = 2 ** 31 - 1
-TWO16 = 2 ** 16
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 weight = operator.attrgetter('weight')
-rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
-                      ('gsims', 'S100'), ('weight', F32)])
+rlz_dt = numpy.dtype([
+    ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
 def split_sources(srcs):
@@ -381,7 +380,7 @@ class CompositionInfo(object):
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = logictree.SourceModel(
-            'fake', weight,  'b1',
+            'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
@@ -533,11 +532,8 @@ class CompositionInfo(object):
         :returns: an array of realizations
         """
         realizations = self.get_rlzs_assoc().realizations
-        sm_by_rlz = self.get_sm_by_rlz(
-            realizations) or collections.defaultdict(lambda: 'NA')
         return numpy.array(
-            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
-             for r in realizations], rlz_dt)
+            [(r.uid, gsim_names(r), r.weight) for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
@@ -606,17 +602,6 @@ class CompositionInfo(object):
         """
         return [sg.id for sg in self.source_models[sm_id].src_groups]
 
-    def get_sm_by_rlz(self, realizations):
-        """
-        :returns: a dictionary rlz -> source model name
-        """
-        dic = {}
-        for sm in self.source_models:
-            for rlz in realizations:
-                if rlz.sm_lt_path == sm.path:
-                    dic[rlz] = sm.names
-        return dic
-
     def get_sm_by_grp(self):
         """
         :returns: a dictionary grp_id -> sm_id
@@ -644,10 +629,6 @@ class CompositionInfo(object):
             rlzs = [all_rlzs[idx] for idx in idxs]
         else:  # full enumeration
             rlzs = logictree.get_effective_rlzs(all_rlzs)
-        if len(rlzs) > TWO16:
-            raise ValueError(
-                'The source model %s has %d realizations, the maximum '
-                'is %d' % (smodel.names, len(rlzs), TWO16))
         return rlzs
 
     def __repr__(self):
@@ -801,6 +782,14 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 yield src_group
+
+    def get_nonparametric_sources(self):
+        """
+        :returns: list of non parametric sources in the composite source model
+        """
+        return [src for sm in self.source_models
+                for src_group in sm.src_groups
+                for src in src_group if hasattr(src, 'data')]
 
     def check_dupl_sources(self):  # used in print_csm_info
         """
@@ -965,7 +954,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text.strip()
+                    smfname = ' '.join(br.uncertaintyModel.text.split())
                     if smfname:
                         yield smfname
 
@@ -981,6 +970,7 @@ class SourceInfo(object):
         ('split_time', numpy.float32),     # 4
         ('num_sites', numpy.uint32),       # 5
         ('num_split',  numpy.uint32),      # 6
+        ('events', numpy.uint32),          # 7
     ])
 
     def __init__(self, src, calc_time=0, split_time=0, num_split=0):
@@ -991,3 +981,4 @@ class SourceInfo(object):
         self.calc_time = calc_time
         self.split_time = split_time
         self.num_split = num_split
+        self.events = 0  # set in event based

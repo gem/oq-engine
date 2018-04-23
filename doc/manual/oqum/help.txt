@@ -1,29 +1,29 @@
-usage: oq engine [--help]
-                 [--log-level {debug, info, warn, error, critical}]
+usage: oq engine [-h]
                  [--log-file LOG_FILE]
-                 [--show-log CALCULATION_ID]
-                 [--config-file CONFIG_FILE]
-                 [--db-version]
-                 [--upgrade-db]
-                 [--what-if-I-upgrade]
-                 [--run CONFIG_FILE]
                  [--no-distribute]
-                 [--yes]
+                 [-y]
+                 [-c CONFIG_FILE]
+                 [--make-html-report YYYY-MM-DD|today]
+                 [-u]
+                 [-d]
+                 [-w]
+                 [--run CONFIG_FILE]
                  [--list-hazard-calculations]
                  [--list-risk-calculations]
                  [--delete-calculation CALCULATION_ID]
                  [--delete-uncompleted-calculations]
                  [--hazard-calculation-id HAZARD_CALCULATION_ID]
                  [--list-outputs CALCULATION_ID]
-                 [--exports]
+                 [--show-log CALCULATION_ID]
                  [--export-output OUTPUT_ID TARGET_DIR]
                  [--export-outputs CALCULATION_ID TARGET_DIR]
-                 [--make-html-report YYYY-MM-DD|today]
+                 [-e]
+                 [-l {debug, info, warn, error, critical}]
 
 Run a calculation using the traditional command line API
 
 optional arguments:
-  --help, -h            Show this help message and exit
+  -h, --help            show this help message and exit
   --log-file LOG_FILE, -L LOG_FILE
                         Location where to store log messages; if not
                         specified, log messages will be printed to the console
@@ -32,24 +32,24 @@ optional arguments:
                         Disable calculation task distribution and run the
                         computation in a single process. This is intended for
                         use in debugging and profiling.
-  --yes, -y             Automatically answer "yes" when asked to confirm an
+  -y, --yes             Automatically answer "yes" when asked to confirm an
                         action
-  --config-file CONFIG_FILE, -c CONFIG_FILE
+  -c CONFIG_FILE, --config-file CONFIG_FILE
                         Custom openquake.cfg file, to override default
                         configurations
   --make-html-report YYYY-MM-DD|today, -r YYYY-MM-DD|today
                         Build an HTML report of the computation at the given
                         date
-  --upgrade-db, -u      Upgrade the openquake database
-  --db-version, -d      Show the current version of the openquake database
-  --what-if-I-upgrade, -w
+  -u, --upgrade-db      Upgrade the openquake database
+  -d, --db-version      Show the current version of the openquake database
+  -w, --what-if-I-upgrade
                         Show what will happen to the openquake database if you
                         upgrade
   --run CONFIG_FILE     Run a job with the specified config file
   --list-hazard-calculations, --lhc
-                        List risk calculation information
-  --list-risk-calculations, --lrc
                         List hazard calculation information
+  --list-risk-calculations, --lrc
+                        List risk calculation information
   --delete-calculation CALCULATION_ID, --dc CALCULATION_ID
                         Delete a calculation and all associated outputs
   --delete-uncompleted-calculations, --duc
@@ -65,7 +65,7 @@ optional arguments:
   --export-outputs CALCULATION_ID TARGET_DIR, --eos CALCULATION_ID TARGET_DIR
                         Export all of the calculation outputs to the specified
                         directory
-  --exports, -e         Comma-separated string specifing the export formats,
+  -e , --exports        Comma-separated string specifing the export formats,
                         in order of priority
-  --log-level {debug, info, warn, error, critical}, -l {debug, info, warn, error, critical}
-                        Defaults to "info"
+  -l {debug, info, warn, error, critical}, --log-level {debug, info, warn, 
+                        error, critical} Defaults to "info"

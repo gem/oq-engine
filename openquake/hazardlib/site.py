@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 from shapely import geometry
-from openquake.baselib.python3compat import range
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
@@ -206,8 +205,14 @@ class SiteCollection(object):
 
     def filtered(self, indices):
         """
-        :returns: a filtered SiteCollection instance
+        :param indices:
+           a subset of indices in the range [0 .. tot_sites - 1]
+        :returns:
+           a filtered SiteCollection instance if `indices` is a proper subset
+           of the available indices, otherwise returns the full SiteCollection
         """
+        if len(indices) == len(self.complete):
+            return self.complete
         new = object.__new__(self.__class__)
         new.indices = numpy.uint32(sorted(indices))
         new.array = self.array
@@ -350,11 +355,20 @@ class SiteCollection(object):
                              'not supported yet')
         mask = numpy.array([min_lon < rec['lons'] < max_lon and
                             min_lat < rec['lats'] < max_lat
-                            for rec in self.array])
-        return self.complete.filter(mask)
+                            for rec in self.array[self.indices]])
+        if not mask.any():
+            raise Exception('There are no sites within the boundind box %s'
+                            % str(bbox))
+        return self.filter(mask)
 
     def __getstate__(self):
         return dict(array=self.array, indices=self.indices)
+
+    def __getitem__(self, sid):
+        """
+        Return a site record
+        """
+        return self.array[sid]
 
     def __getattr__(self, name):
         if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '

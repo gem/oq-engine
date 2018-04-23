@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ import platform
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore, parallel
+from openquake.baselib import performance, datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -66,6 +66,10 @@ class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
     edir = None  # will be set to a temporary directory
 
+    @classmethod
+    def setUpClass(cls):
+        cls.duration = general.AccumDict()
+
     def get_calc(self, testfile, job_ini, **kw):
         """
         Return the outputs of the calculation as a dictionary
@@ -87,28 +91,27 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Return the outputs of the calculation as a dictionary
         """
-        parallel.Starmap.init()
-        try:
-            inis = job_ini.split(',')
-            assert len(inis) in (1, 2), inis
-            self.calc = self.get_calc(testfile, inis[0], **kw)
-            self.edir = tempfile.mkdtemp()
+        inis = job_ini.split(',')
+        assert len(inis) in (1, 2), inis
+        self.calc = self.get_calc(testfile, inis[0], **kw)
+        self.edir = tempfile.mkdtemp()
+        with self.calc._monitor:
+            result = self.calc.run(export_dir=self.edir)
+        duration = {inis[0]: self.calc._monitor.duration}
+        if len(inis) == 2:
+            hc_id = self.calc.datastore.calc_id
+            self.calc = self.get_calc(
+                testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
+            # run the second job.ini with zero tasks to avoid fork issues
             with self.calc._monitor:
-                result = self.calc.run(export_dir=self.edir)
-            if len(inis) == 2:
-                hc_id = self.calc.datastore.calc_id
-                self.calc = self.get_calc(
-                    testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-                # run the second job.ini with zero tasks to avoid fork issues
-                with self.calc._monitor:
-                    exported = self.calc.run(export_dir=self.edir,
-                                             concurrent_tasks=0)
-                    result.update(exported)
-            # reopen datastore, since some tests need to export from it
-            dstore = datastore.read(self.calc.datastore.calc_id)
-            self.calc.datastore = dstore
-        finally:
-            parallel.Starmap.shutdown()
+                exported = self.calc.run(export_dir=self.edir,
+                                         concurrent_tasks=0)
+                result.update(exported)
+            duration[inis[1]] = self.calc._monitor.duration
+        # reopen datastore, since some tests need to export from it
+        dstore = datastore.read(self.calc.datastore.calc_id)
+        self.calc.datastore = dstore
+        self.__class__.duration += duration
         return result
 
     def execute(self, testfile, job_ini):
@@ -140,6 +143,9 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
+            expected_dir = os.path.dirname(expected)
+            if not os.path.exists(expected_dir):
+                os.makedirs(expected_dir)
             open(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
@@ -179,3 +185,7 @@ class CalculatorTestCase(unittest.TestCase):
         if self.edir and not issues:
             shutil.rmtree(self.edir)
         return res
+
+    @classmethod
+    def tearDownClass(cls):
+        print('durations =', cls.duration)

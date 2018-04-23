@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,12 +22,7 @@ transformations, optimized for massive calculations.
 """
 from __future__ import division
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
-
-from openquake.baselib.python3compat import range, round
+from openquake.baselib.python3compat import round
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0

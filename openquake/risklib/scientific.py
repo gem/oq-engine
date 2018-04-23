@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,11 +49,11 @@ def fine_graining(points, steps):
     >>> fine_graining([0, 1], steps=1)
     [0, 1]
     >>> fine_graining([0, 1], steps=2)
-    array([ 0. ,  0.5,  1. ])
+    array([0. , 0.5, 1. ])
     >>> fine_graining([0, 1], steps=3)
-    array([ 0.        ,  0.33333333,  0.66666667,  1.        ])
+    array([0.        , 0.33333333, 0.66666667, 1.        ])
     >>> fine_graining([0, 0.5, 0.7, 1], steps=2)
-    array([ 0.  ,  0.25,  0.5 ,  0.6 ,  0.7 ,  0.85,  1.  ])
+    array([0.  , 0.25, 0.5 , 0.6 , 0.7 , 0.85, 1.  ])
 
     N points become S * (N - 1) + 1 points with S > 0
     """
@@ -534,6 +534,8 @@ class FragilityFunctionDiscrete(object):
         """
         highest_iml = self.imls[-1]
         imls = numpy.array(imls)
+        if imls.sum() == 0.0:
+            return numpy.zeros_like(imls)
         imls[imls > highest_iml] = highest_iml
         result = self.interp(imls)
         if self.no_damage_limit:
@@ -1084,8 +1086,8 @@ def insured_loss_curve(curve, deductible, insured_limit):
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
     >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
-    array([[  3.        ,  20.        ],
-           [  0.85294118,   0.5       ]])
+    array([[ 3.        , 20.        ],
+           [ 0.85294118,  0.5       ]])
     """
     losses, poes = curve[:, curve[0] <= insured_limit]
     limit_poe = interpolate.interp1d(
@@ -1258,7 +1260,8 @@ def return_periods(eff_time, num_losses):
     >>> return_periods(100, 2)
     array([ 50, 100], dtype=uint32)
     >>> return_periods(1000, 1000)
-    array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000], dtype=uint32)
+    array([   1,    2,    5,   10,   20,   50,  100,  200,  500, 1000],
+          dtype=uint32)
     """
     assert eff_time >= 2, 'eff_time too small: %s' % eff_time
     assert num_losses >= 2, 'num_losses too small: %s' % num_losses
@@ -1294,7 +1297,7 @@ def losses_by_period(losses, return_periods, num_events, eff_time):
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
-    array([  nan,   nan,   0. ,   3.5,   8. ,  13. ,  23. ])
+    array([ nan,  nan,  0. ,  3.5,  8. , 13. , 23. ])
     """
     if num_events < len(losses):
         raise ValueError(

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,6 @@ import unittest
 
 import numpy
 from copy import deepcopy
-from openquake.baselib.python3compat import range
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture

@@ -2,9 +2,9 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     272,505,614        
-date           2018-02-25T06:41:58
-engine_version 2.10.0-git1f7c0c0  
+checksum32     4,202,240,792      
+date           2018-04-19T05:01:58
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 26
@@ -57,13 +57,6 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons False           
-================ ================
-
 Exposure model
 --------------
 =============== ========
@@ -80,12 +73,12 @@ Wood     1.000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-saving gmfs             0.004     0.0       1     
-building riskinputs     0.003     0.0       1     
-computing gmfs          0.002     0.0       1     
-reading exposure        7.491E-04 0.0       1     
-reading site collection 2.129E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+building riskinputs     0.027    0.0       1     
+saving gmfs             0.021    0.0       1     
+reading exposure        0.003    0.0       1     
+computing gmfs          0.003    0.0       1     
+reading site collection 0.003    0.0       1     
+======================= ======== ========= ======

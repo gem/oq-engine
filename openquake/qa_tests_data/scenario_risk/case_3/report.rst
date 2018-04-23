@@ -2,9 +2,9 @@ Scenario QA Test 3
 ==================
 
 ============== ===================
-checksum32     3,085,599,105      
-date           2018-02-25T06:44:27
-engine_version 2.10.0-git1f7c0c0  
+checksum32     775,322,845        
+date           2018-04-19T05:04:17
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -57,13 +57,6 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons False           
-================ ================
-
 Exposure model
 --------------
 =============== ========
@@ -86,10 +79,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-saving gmfs             0.032     0.0       1     
-building riskinputs     0.023     0.0       1     
-computing gmfs          0.005     0.0       1     
-reading exposure        0.001     0.0       1     
-building epsilons       6.754E-04 0.0       1     
-reading site collection 5.722E-06 0.0       1     
+saving gmfs             0.033     0.0       1     
+building riskinputs     0.024     0.0       1     
+computing gmfs          0.007     0.0       1     
+reading site collection 0.003     0.0       1     
+reading exposure        0.003     0.0       1     
+building epsilons       7.620E-04 0.0       1     
 ======================= ========= ========= ======

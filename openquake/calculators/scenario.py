@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import collections
+import logging
 import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -37,21 +38,26 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         super(ScenarioCalculator, self).pre_execute()
         oq = self.oqparam
-        trunc_level = oq.truncation_level
-        correl_model = oq.get_correl_model()
+        gsim_lt = readinput.get_gsim_lt(oq)
+        cinfo = source.CompositionInfo.fake(gsim_lt)
+        self.datastore['csm_info'] = cinfo
+        self.datastore['oqparam'] = oq
+        self.rlzs_assoc = cinfo.get_rlzs_assoc()
+        if 'rupture_model' not in oq.inputs:
+            logging.warn('There is no rupture_model, the calculator will just '
+                         'import data without performing any calculation')
+            return
         ebr, self.sitecol = readinput.get_rupture_sitecol(oq, self.sitecol)
         self.gsims = readinput.get_gsims(oq)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
         rupser.close()
+        trunc_level = oq.truncation_level
+        correl_model = oq.get_correl_model()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, ContextMaker(self.gsims),
             trunc_level, correl_model)
-        gsim_lt = readinput.get_gsim_lt(oq)
-        cinfo = source.CompositionInfo.fake(gsim_lt)
-        self.datastore['csm_info'] = cinfo
-        self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
     def init(self):
         pass
@@ -61,6 +67,8 @@ class ScenarioCalculator(base.HazardCalculator):
         Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
         self.gmfa = collections.OrderedDict()
+        if 'rupture_model' not in self.oqparam.inputs:
+            return self.gmfa
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
@@ -69,7 +77,8 @@ class ScenarioCalculator(base.HazardCalculator):
         return self.gmfa
 
     def post_execute(self, dummy):
-        with self.monitor('saving gmfs', autoflush=True):
-            base.save_gmf_data(
-                self.datastore, self.sitecol,
-                numpy.array(list(self.gmfa.values())))
+        if self.gmfa:
+            with self.monitor('saving gmfs', autoflush=True):
+                base.save_gmf_data(
+                    self.datastore, self.sitecol,
+                    numpy.array(list(self.gmfa.values())))
