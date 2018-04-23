@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public License
@@ -47,9 +47,11 @@ Module to produce cumulative moment plot
 
 import numpy as np
 import matplotlib.pyplot as plt
+from openquake.hmtk.plotting.seismicity.catalogue_plots import _save_image
 
 
-def plot_cumulative_moment(year, mag):
+def plot_cumulative_moment(year, mag, figure_size=(8, 6),
+                           filename=None, filetype='png', dpi=300, ax=None):
     '''Calculation of Mmax using aCumulative Moment approach, adapted from
     the cumulative strain energy method of Makropoulos & Burton (1983)
     :param year: Year of Earthquake
@@ -77,11 +79,17 @@ def plot_cumulative_moment(year, mag):
     # Average moment rate vector
     exp_morate = np.cumsum(ave_morate * np.ones(nyr))
 
-    plt.step(year_range, np.cumsum(morate), 'b-', linewidth=2)
-    plt.plot(year_range, exp_morate, 'r-', linewidth=2)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figure_size)
+    else:
+        fig = ax.get_figure()
+
+    ax.step(year_range, np.cumsum(morate), 'b-', linewidth=2)
+    ax.plot(year_range, exp_morate, 'r-', linewidth=2)
     # Get offsets
     upper_morate = exp_morate + (np.max(np.cumsum(morate) - exp_morate))
     lower_morate = exp_morate + (np.min(np.cumsum(morate) - exp_morate))
-    plt.plot(year_range, upper_morate, 'r--', linewidth=1)
-    plt.plot(year_range, lower_morate, 'r--', linewidth=1)
-    plt.axis([np.min(year), np.max(year), 0.0, np.sum(morate)])
+    ax.plot(year_range, upper_morate, 'r--', linewidth=1)
+    ax.plot(year_range, lower_morate, 'r--', linewidth=1)
+    ax.axis([np.min(year), np.max(year), 0.0, np.sum(morate)])
+    _save_image(fig, filename, filetype, dpi)

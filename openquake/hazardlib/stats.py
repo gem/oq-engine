@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (c) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Utilities to compute mean and quantile curves
 """
@@ -73,7 +73,7 @@ def max_curve(values, weights=None):
     The values can be arrays and then the maximum is taken pointwise:
 
     >>> max_curve([numpy.array([.3, .2]), numpy.array([.1, .4])])
-    array([ 0.3,  0.4])
+    array([0.3, 0.4])
     """
     return numpy.max(values, axis=0)
 
@@ -167,8 +167,7 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> a1 = numpy.array([([1, 2], 3)], dt)
     >>> a2 = numpy.array([([4, 5], 6)], dt)
     >>> apply_stat(mean_curve, [a1, a2])
-    array([([2.5, 3.5], 4.5)], 
-          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
     dtype = arraylist[0].dtype
     shape = arraylist[0].shape

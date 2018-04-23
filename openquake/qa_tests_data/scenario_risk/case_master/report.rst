@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     1,697,824,437      
-date           2018-02-25T06:44:28
-engine_version 2.10.0-git1f7c0c0  
+checksum32     3,937,057,297      
+date           2018-04-19T05:04:18
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -63,13 +63,6 @@ Realizations per (TRT, GSIM)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
-
 Exposure model
 --------------
 =============== ========
@@ -92,10 +85,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.018     0.0       1     
-computing gmfs          0.012     0.0       1     
+building riskinputs     0.035     0.0       1     
+computing gmfs          0.013     0.0       1     
+reading site collection 0.007     0.0       1     
 saving gmfs             0.007     0.0       1     
-reading exposure        0.002     0.0       1     
-building epsilons       3.786E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
+reading exposure        0.004     0.0       1     
+building epsilons       7.646E-04 0.0       1     
 ======================= ========= ========= ======

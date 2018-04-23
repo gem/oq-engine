@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,41 +25,14 @@ from openquake.baselib.python3compat import decode
 import os
 import sys
 import mock
-import time
-import numpy
-from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import PSHACalculator
+from openquake.calculators.classical import PSHACalculator, count_ruptures
 from openquake.calculators import views
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
-
-
-def count_ruptures(sources, srcfilter, gsims, param, monitor):
-    """
-    Count the number of ruptures contained in the given sources by applying a
-    raw source filtering on the integration distance. Return a dictionary
-    src_group_id -> {}.
-    All sources must belong to the same tectonic region type.
-    """
-    dic = groupby(sources, lambda src: src.src_group_ids[0])
-    acc = AccumDict({grp_id: {} for grp_id in dic})
-    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
-    for grp_id in dic:
-        for src in sources:
-            t0 = time.time()
-            src_id = src.source_id.split(':')[0]
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
-                acc.calc_times[src_id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
-    return acc
 
 
 class ReportWriter(object):
@@ -81,8 +54,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'short_source_info': 'Slowest sources',
-        'task:0': 'Fastest task',
-        'task:-1': 'Slowest task',
+        'task_classical:0': 'Fastest task',
+        'task_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -114,14 +87,12 @@ class ReportWriter(object):
             self.add(name)
         if 'csm_info' in ds:
             self.add('csm_info')
-            if ds['csm_info'].source_models[0].name != 'fake':
+            if ds['csm_info'].source_models[0].name != 'scenario':
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'source_info' in ds:
             self.add('ruptures_per_trt')
-        if 'job_info' in ds:
-            self.add('job_info')
         if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
@@ -134,9 +105,11 @@ class ReportWriter(object):
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
-            if 'classical' in ds['task_info']:
-                self.add('task:0')
-                self.add('task:-1')
+            tasks = set(ds['task_info'])
+            if 'classical' in tasks or 'count_ruptures' in tasks:
+                self.add('task_classical:0')
+                self.add('task_classical:-1')
+            self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text

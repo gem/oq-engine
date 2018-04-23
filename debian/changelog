@@ -1,4 +1,78 @@
   [Michele Simionato]
+  * Now sites and exposure can be set at the same time in the job.ini
+  * Introduced a `preclassical` calculator
+  * Extended the scenario_damage calculator to export `dmg_by_event`
+    outputs as well as `losses_by_event` outputs if there is a consequence
+    model
+  * Unified `region` and `region_constraint` parameters in the job.ini
+  * Added a check to forbid duplicated GSIMs in the logic tree
+  * Introduced some changes to the `realizations` exporter (renamed field
+    `uid` -> `branch_path` and removed the `model` field)
+  * Added a command `oq celery inspect`
+  * Reduced the check on too many realizations to a warning, except for
+    event based calculations
+  * Improved the hazard exporter to exports only data for the filtered
+    site collection and not the full site collection
+  * Extended the BCR exporter to export the asset tags
+
+  [Catalina Yepes]
+  * Revised/enhanced the risk demos
+
+  [Michele Simionato]
+  * Added a warning about the option `optimize_same_id_sources` when the user
+    should take advantage of it
+
+  [Daniele Viganò]
+  * `celery-status` script converted into `oq celery status` command
+  * Removed Django < 1.10 backward compatibility
+  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+    Django 1.10+, Celery 4+)
+
+  [Michele Simionato]
+  * Implemented scenario_risk/scenario_damage from shakemap calculators
+  * Exported the asset tags in the asset based risk outputs
+  * Fixed a numeric issue for nonparametric sources causing the hazard curves
+    to saturate at high intensities
+  * Added an utility to download shakemaps
+  * Added an XML exporter for the site model
+  * Slight change to the correlation module to fix a bug in the SMTK
+  * Added a distribution mechanism `threadpool`
+
+python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug with newlines in the logic tree path breaking the CSV exporter
+    for the realizations output
+  * When setting the event year, each stochastic event set is now considered
+    independent
+  * Fixed a bug in the HMTK plotting libraries and added the ability to
+    customize the figure size
+  * Fixed bug in the datastore: now we automatically look for the attributes
+    in the parent dataset, if the dataset is missing in the child datastore
+  * Extended extract_losses_by_asset to the event based risk calculator
+  * Stored in source_info the number of events generated per source
+  * Added a script utils/reduce_sm to reduce the source model of a calculation
+    by removing all the sources not affecting the hazard
+  * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
+  * Fixed the export of ruptures with a GriddedSurface geometry
+  * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
+  * Fixed the issue of slow tasks in event_based_risk from precomputed GMFs
+    for sites without events
+  * Now the engine automatically associates the exposure to a grid if
+    `region_grid_spacing` is given and the sites are not specified otherwise
+  * Extracting the site mesh from the exposure before looking at the site model
+  * Added a check on probs_occur summing up to 1 in the SourceWriter
+  * `oq show job_info` now shows the received data amount while the
+    calculation is progressing
+
+  [Daniele Viganò]
+  * Removed support for Python 2 in `setup.py`
+  * Removed files containing Python 2 dependencies
+  * Added support for WebUI groups/permissions on the
+    export outputs and datastore API endpoints
+
+  [Michele Simionato]
+  * Fixed `oq show` for multiuser with parent calculations
   * Fixed `get_spherical_bounding_box` for griddedSurfaces
   * Implemented disaggregation by source only for the case
     of a single realization in the logic tree (experimental)
@@ -61,6 +135,8 @@
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 09 Apr 2018 09:52:32 +0200
 
 python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
 

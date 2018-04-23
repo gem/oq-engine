@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,9 +18,11 @@
 
 import os
 import re
+import ast
 import logging
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
+from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
 from openquake.baselib.python3compat import encode
@@ -91,6 +93,9 @@ htranslator = HeaderTranslator(
     '(imti):uint8',
     '(gmv_.+):float32',
     '(aid):uint32',
+    '(annual_loss_orig):float32',
+    '(annual_loss_retro):float32',
+    '(bcr):float32',
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
@@ -172,7 +177,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float64':
+        if numpytype != 'float64' and not numpytype.startswith('|S'):
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -187,7 +192,7 @@ def extract_from(data, fields):
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
     >>> extract_from(a, ['PGA'])
-    array([[ 1.,  2.,  3.]])
+    array([[1., 2., 3.]])
 
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
@@ -196,7 +201,7 @@ def extract_from(data, fields):
     >>> extract_from(b, ['idx'])
     array([8], dtype=uint32)
     >>> extract_from(b, ['B', 'PGV'])
-    array([[ 3.,  5.,  6.,  7.]])
+    array([[3., 5., 6., 7.]])
     """
     for f in fields:
         data = data[f]
@@ -348,19 +353,47 @@ def _cast(col, ntype, shape, lineno, fname):
         return ntype(col)
 
 
+def parse_comment(comment):
+    """
+    Parse a comment of the form
+    # investigation_time=50.0, imt="PGA", ...
+    and returns it as pairs of strings:
+
+    >>> parse_comment('''path=('b1',), time=50.0, imt="PGA"''')
+    [('path', ('b1',)), ('time', 50.0), ('imt', 'PGA')]
+    """
+    names, vals = [], []
+    pieces = comment.split('=')
+    for i, piece in enumerate(pieces):
+        if i == 0:  # first line
+            names.append(piece.strip())
+        elif i == len(pieces) - 1:  # last line
+            vals.append(ast.literal_eval(piece))
+        else:
+            val, name = piece.rsplit(',', 1)
+            vals.append(ast.literal_eval(val))
+            names.append(name.strip())
+    return list(zip(names, vals))
+
+
 # NB: this only works with flat composite arrays
 def read_composite_array(fname, sep=','):
     r"""
-    Convert a CSV file with header into a numpy array of records.
+    Convert a CSV file with header into an ArrayWrapper object.
 
     >>> from openquake.baselib.general import writetmp
     >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
-    >>> print(read_composite_array(fname))  # array of shape (1,)
+    >>> print(read_composite_array(fname).array)  # array of shape (1,)
     [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
     """
     with open(fname) as f:
         header = next(f)
+        if header.startswith('#'):  # the first line is a comment, skip it
+            attrs = dict(parse_comment(header[1:]))
+            header = next(f)
+        else:
+            attrs = {}
         transheader = htranslator.read(header.split(sep))
         fields, dtype = parse_header(transheader)
         ts_pairs = []  # [(type, shape), ...]
@@ -388,7 +421,7 @@ def read_composite_array(fname, sep=','):
                     'Could not cast %r in file %s, line %d, column %d '
                     'using %s: %s' % (col, fname, i, col_id,
                                       (ntype.__name__,) + shape, e))
-        return numpy.array(records, dtype)
+        return ArrayWrapper(numpy.array(records, dtype), attrs)
 
 
 # this is simple and without error checking for the moment
@@ -398,9 +431,9 @@ def read_array(fname, sep=','):
 
     >>> from openquake.baselib.general import writetmp
     >>> print(read_array(writetmp('.1 .2, .3 .4, .5 .6\n')))
-    [[[ 0.1  0.2]
-      [ 0.3  0.4]
-      [ 0.5  0.6]]]
+    [[[0.1 0.2]
+      [0.3 0.4]
+      [0.5 0.6]]]
     """
     with open(fname) as f:
         records = []

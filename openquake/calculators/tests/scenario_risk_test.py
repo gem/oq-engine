@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,9 +20,10 @@ from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, occupants, case_master)
+    case_6a, case_7, case_8, occupants, case_master, case_shakemap)
 
 from openquake.baselib.general import writetmp
+from openquake.commonlib.logictree import InvalidLogicTree
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -78,6 +79,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # time_event not specified in job_h.ini but specified in job_r.ini
         out = self.run_calc(case_2d.__file__, 'job_h.ini,job_r.ini',
                             exports='csv')
+        # this is also a case with a single site but an exposure grid,
+        # to test the corner case
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
@@ -145,6 +148,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # testing the npz export runs
         export(('all_losses-rlzs', 'npz'), self.calc.datastore)
 
+        # two equal gsims
+        with self.assertRaises(InvalidLogicTree):
+            self.run_calc(case_6a.__file__, 'job_haz.ini',
+                          gsim_logic_tree_file='wrong_gmpe_logic_tree.xml')
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
@@ -169,6 +177,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         # a case with two GSIMs
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+
+        # check realizations
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
@@ -205,3 +218,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_shakemap(self):
+        self.run_calc(case_shakemap.__file__, 'pre-job.ini')
+        self.run_calc(case_shakemap.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        sitecol = self.calc.datastore['sitecol']
+        self.assertEqual(len(sitecol), 8)
