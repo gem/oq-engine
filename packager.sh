@@ -359,7 +359,7 @@ _devtest_innervm_run () {
             git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
             popd
         elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep" "$deb_pkg"
+            add_local_pkg_repo "$dep" "$dep_pkg"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
@@ -472,7 +472,7 @@ _builddoc_innervm_run () {
             git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
             popd
         elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep" "dep_pkg"
+            add_local_pkg_repo "$dep" "$dep_pkg"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
@@ -553,7 +553,7 @@ _pkgtest_innervm_run () {
         if [ "$dep_type" == "cust" -o "$dep_type" == "sub" ]; then
             continue
         else
-            add_local_pkg_repo "$dep" "$deb_pkg"
+            add_local_pkg_repo "$dep" "$dep_pkg"
         fi
     done
     IFS="$old_ifs"
