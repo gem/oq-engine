@@ -24,7 +24,7 @@ POINTS = [Point(0, 0, 0.1), Point(0, 1, 0), Point(1, 1, 0.1),
           Point(1, 0, 0.1)]
 
 POINTSIDL = [Point(179.5, 0, 0.1), Point(179.5, 1, 0), Point(-179.5, 1, 0.1),
-        Point(-179.5, 0, 0.1)]
+             Point(-179.5, 0, 0.1)]
 
 
 class GriddedSurfaceTestCase(unittest.TestCase):
@@ -32,8 +32,6 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
-        self.meshA = Mesh(np.array([1., 2.]), np.array([2., 2.]),
-                          np.array([3., 2.]))
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
@@ -78,8 +76,10 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertEqual((0.0, 1.0, 1.0, 0.0), self.surf.get_bounding_box())
 
     def test_get_middle_point(self):
-        raise unittest.SkipTest(
-            'surface.get_middle_point() has to be implemented')
+        point = self.surf.get_middle_point()
+        self.assertEqual(point.x, 0)
+        self.assertEqual(point.y, 0)
+        self.assertEqual(point.z, 0.1)
 
 
 class GriddedSurfaceTestCaseIDL(unittest.TestCase):
@@ -87,8 +87,6 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTSIDL)
         self.mesh = Mesh(np.array([-179.5]), np.array([2.]), np.array([3.]))
-        self.meshA = Mesh(np.array([-179.5, -178.5]), np.array([2., 2.]),
-                          np.array([3., 2.]))
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
@@ -106,32 +104,11 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
         expected = np.array([111.19493])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
-    def test_get_rx_distance(self):
-        self.assertRaises(NotImplementedError, self.surf.get_rx_distance,
-                          self.surf)
-
-    def test_get_top_edge_depth(self):
-        self.assertRaises(NotImplementedError, self.surf.get_top_edge_depth)
-
-    def test_get_ry0_distance(self):
-        self.assertRaises(NotImplementedError, self.surf.get_ry0_distance,
-                          self.mesh)
-
-    def test_get_strike(self):
-        self.assertRaises(NotImplementedError, self.surf.get_strike)
-
-    def test_get_dip(self):
-        self.assertRaises(NotImplementedError, self.surf.get_dip)
-
-    def test_get_width(self):
-        self.assertRaises(NotImplementedError, self.surf.get_width)
-
-    def test_get_area(self):
-        self.assertRaises(NotImplementedError, self.surf.get_area)
-
     def test_get_bounding_box(self):
         self.assertEqual((179.5, -179.5, 1., 0.), self.surf.get_bounding_box())
 
     def test_get_middle_point(self):
-        raise unittest.SkipTest(
-            'surface.get_middle_point() has to be implemented')
+        point = self.surf.get_middle_point()
+        self.assertEqual(point.x, 179.5)
+        self.assertEqual(point.y, 0)
+        self.assertEqual(point.z, 0.1)
