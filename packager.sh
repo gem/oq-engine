@@ -299,8 +299,8 @@ _pkgbuild_innervm_run () {
 
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
 
-    if [ -f _jenkins_deps_info ]; then
-        source _jenkins_deps_info
+    if [ -f ../../_jenkins_deps_info ]; then
+        source ../../_jenkins_deps_info
     fi
     
     old_ifs="$IFS"
