@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 2
 ==================================
 
 ============== ===================
-checksum32     2,642,290,083      
-date           2018-02-25T06:43:27
-engine_version 2.10.0-git1f7c0c0  
+checksum32     2,964,792,741      
+date           2018-04-19T05:03:50
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -18,10 +18,10 @@ maximum_distance                {'default': 200.0}
 investigation_time              1.0               
 ses_per_logic_tree_path         600               
 truncation_level                0.0               
-rupture_mesh_spacing            1.0               
-complex_fault_mesh_spacing      1.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                0.001             
-area_source_discretization      10.0              
+area_source_discretization      20.0              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -72,36 +72,20 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 3,000        3,000       
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-========================= ===========================================================================
-compute_ruptures.received max_per_task 4.81 KB, tot 4.81 KB                                          
-compute_ruptures.sent     sources 13.05 KB, src_filter 722 B, param 591 B, monitor 330 B, gsims 120 B
-hazard.input_weight       300.0                                                                      
-hazard.n_imts             1                                                                          
-hazard.n_levels           4                                                                          
-hazard.n_realizations     1                                                                          
-hazard.n_sites            1                                                                          
-hazard.n_sources          1                                                                          
-hazard.output_weight      6.0                                                                        
-hostname                  tstation.gem.lan                                                           
-require_epsilons          False                                                                      
-========================= ===========================================================================
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-1         PointSource  3,000        0.0       1         0        
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+1         PointSource  3,000        6.171     8.345E-06  1         1         3     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.0       1     
+PointSource  6.171     1     
 ============ ========= ======
 
 Duplicated sources
@@ -112,20 +96,29 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   2.542 NaN    2.542 2.542 1        
+compute_ruptures   6.175 NaN    6.175 6.175 1        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+================ ======================================================================= ========
+task             sent                                                                    received
+compute_ruptures sources=13.05 KB src_filter=722 B param=591 B monitor=330 B gsims=120 B 4.17 KB 
+================ ======================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.557     0.0       1     
-total compute_ruptures         2.542     0.0       1     
-reading composite source model 0.011     0.0       1     
-store source_info              0.003     0.0       1     
-saving ruptures                0.002     0.0       1     
-making contexts                0.001     0.0       3     
-setting event years            0.001     0.0       1     
-reading site collection        5.603E-05 0.0       1     
+managing sources               6.215     0.0       1     
+total compute_ruptures         6.175     3.449     1     
+reading composite source model 0.023     0.0       1     
+store source_info              0.006     0.0       1     
+saving ruptures                0.005     0.0       1     
+splitting sources              0.005     0.0       1     
+making contexts                0.003     0.0       3     
+setting event years            0.002     0.0       1     
+unpickling compute_ruptures    4.864E-04 0.0       1     
+reading site collection        2.630E-04 0.0       1     
 ============================== ========= ========= ======

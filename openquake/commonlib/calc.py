@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -269,7 +269,7 @@ def fix_minimum_intensity(min_iml, imts):
 
     >>> min_iml = {'PGA': 0.1, 'default': 0.05}
     >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([ 0.1 ,  0.05], dtype=float32)
+    array([0.1 , 0.05], dtype=float32)
     >>> sorted(min_iml.items())
     [('PGA', 0.1), ('PGV', 0.05)]
     """

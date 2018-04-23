@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -47,6 +47,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
+    RUPTURE_WEIGHT = 20  # really heavy
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \

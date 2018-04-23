@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-02-25T06:43:08
-engine_version 2.10.0-git1f7c0c0  
+date           2018-04-19T05:03:16
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -75,36 +75,20 @@ source_model              grp_id trt                  eff_ruptures tot_ruptures
 vancouver_area_source.xml 0      Active Shallow Crust 2,430        2,430       
 ========================= ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= ==================================================================================
-count_ruptures.received tot 6.46 KB, max_per_task 829 B                                                   
-count_ruptures.sent     gsims 1.22 MB, sources 15.87 KB, srcfilter 6.48 KB, param 6.46 KB, monitor 2.58 KB
-hazard.input_weight     243.0                                                                             
-hazard.n_imts           3                                                                                 
-hazard.n_levels         36                                                                                
-hazard.n_realizations   3                                                                                 
-hazard.n_sites          3                                                                                 
-hazard.n_sources        1                                                                                 
-hazard.output_weight    108.0                                                                             
-hostname                tstation.gem.lan                                                                  
-require_epsilons        False                                                                             
-======================= ==================================================================================
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-VICM      AreaSource   2,430        0.006     91        30       
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+VICM      AreaSource   2,430        0.007     0.014      90        30        0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.006     1     
+AreaSource   0.007     1     
 ============ ========= ======
 
 Duplicated sources
@@ -115,19 +99,28 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.002  0.003 0.008 8        
+count_ruptures     0.003 0.001  0.001 0.004 8        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ============================================================================== ========
+task           sent                                                                           received
+count_ruptures gsims=1.22 MB sources=14.87 KB srcfilter=6.48 KB param=6.46 KB monitor=2.58 KB 2.87 KB 
+============== ============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.038     0.223     8     
-reading composite source model 0.022     0.0       1     
-managing sources               0.015     0.0       1     
-store source_info              0.003     0.0       1     
-reading site collection        1.523E-04 0.0       1     
-aggregate curves               1.082E-04 0.0       8     
-saving probability maps        2.480E-05 0.0       1     
+reading composite source model 0.050     0.0       1     
+managing sources               0.033     0.0       1     
+total count_ruptures           0.025     2.230     8     
+splitting sources              0.015     0.0       1     
+store source_info              0.011     0.0       1     
+reading site collection        6.108E-04 0.0       1     
+unpickling count_ruptures      3.979E-04 0.0       8     
+aggregate curves               1.698E-04 0.0       8     
+saving probability maps        3.862E-05 0.0       1     
 ============================== ========= ========= ======

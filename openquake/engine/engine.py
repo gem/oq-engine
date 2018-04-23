@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,8 +31,9 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+from urllib.request import urlopen, Request
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import urlopen, Request, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
 from openquake.commonlib.oqvalidation import OqParam
@@ -291,8 +292,9 @@ def check_obsolete_version(calculation_mode='WebUI'):
         # avoid flooding our API server with requests from CI systems
         return
 
-    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s' %
-               (__version__, calculation_mode, platform.platform())}
+    headers = {'User-Agent': 'OpenQuake Engine %s;%s;%s;%s' %
+               (__version__, calculation_mode, platform.platform(),
+                config.distribution.oq_distribute)}
     try:
         req = Request(OQ_API + '/engine/latest', headers=headers)
         # NB: a timeout < 1 does not work

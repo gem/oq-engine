@@ -25,6 +25,7 @@ class OpenQuake(object):
     """
     def __init__(self):
         from openquake.baselib.datastore import read
+        from openquake.hazardlib.geo.geodetic import geodetic_distance
         from openquake.commonlib import readinput, calc
         from openquake.calculators.extract import extract
         self.extract = extract
@@ -35,6 +36,7 @@ class OpenQuake(object):
         self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
+        self.geodetic_distance = geodetic_distance
         # TODO: more utilities when be added when deemed useful
 
 

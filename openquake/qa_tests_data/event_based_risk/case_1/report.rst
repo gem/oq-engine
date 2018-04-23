@@ -2,9 +2,9 @@ Event Based Risk QA Test 1
 ==========================
 
 ============== ===================
-checksum32     261,398,150        
-date           2018-02-25T06:42:45
-engine_version 2.10.0-git1f7c0c0  
+checksum32     747,735,378        
+date           2018-04-19T05:02:30
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 25
@@ -77,25 +77,9 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 18           18          
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-========================= ==============================================================================
-compute_ruptures.received tot 16.12 KB, max_per_task 5.4 KB                                             
-compute_ruptures.sent     sources 4.04 KB, param 3.04 KB, src_filter 2.43 KB, monitor 990 B, gsims 648 B
-hazard.input_weight       1.8000000000000003                                                            
-hazard.n_imts             5                                                                             
-hazard.n_levels           25                                                                            
-hazard.n_realizations     2                                                                             
-hazard.n_sites            3                                                                             
-hazard.n_sources          3                                                                             
-hazard.output_weight      75.0                                                                          
-hostname                  tstation.gem.lan                                                              
-require_epsilons          True                                                                          
-========================= ==============================================================================
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 2 realization(s) x 2 loss type(s) x 1 losses x 8 bytes x 20 tasks = 2.5 KB
+4 asset(s) x 2 realization(s) x 2 loss type(s) x 1 losses x 8 bytes x 60 tasks = 7.5 KB
 
 Exposure model
 --------------
@@ -116,20 +100,20 @@ W        1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-3         PointSource  6            0.0       1         0        
-1         PointSource  6            0.0       1         0        
-2         PointSource  6            0.0       1         0        
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+2         PointSource  6            0.023     2.623E-06  1         1         14    
+1         PointSource  6            0.009     5.245E-06  1         1         8     
+3         PointSource  6            0.007     1.907E-06  1         1         20    
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.0       3     
+PointSource  0.039     3     
 ============ ========= ======
 
 Duplicated sources
@@ -140,21 +124,30 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.012 0.001  0.010 0.013 3        
+compute_ruptures   0.044 NaN    0.044 0.044 1        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+================ ======================================================================== ========
+task             sent                                                                     received
+compute_ruptures sources=2.17 KB param=1.01 KB src_filter=830 B monitor=330 B gsims=216 B 11.83 KB
+================ ======================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.035     0.0       1     
-total compute_ruptures         0.035     0.0       3     
-making contexts                0.012     0.0       9     
-saving ruptures                0.007     0.0       3     
-store source_info              0.004     0.0       1     
-reading composite source model 0.003     0.0       1     
-reading exposure               0.001     0.0       1     
-setting event years            0.001     0.0       1     
-reading site collection        5.889E-05 0.0       1     
+managing sources               0.080     0.0       1     
+total compute_ruptures         0.044     2.887     1     
+making contexts                0.027     0.0       9     
+store source_info              0.022     0.0       1     
+reading composite source model 0.005     0.0       1     
+saving ruptures                0.005     0.0       1     
+reading exposure               0.004     0.0       1     
+reading site collection        0.004     0.0       1     
+setting event years            0.002     0.0       1     
+unpickling compute_ruptures    9.871E-04 0.0       1     
+splitting sources              5.002E-04 0.0       1     
 ============================== ========= ========= ======

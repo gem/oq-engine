@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -70,12 +70,14 @@ export_dir = %s
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
+        source_model_input = general.writetmp(dir=temp_dir)
         site_model_input = general.writetmp(dir=temp_dir, content="foo")
         job_config = general.writetmp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [site]
 sites = 0 0
+source_model_file = %s
 site_model_file = %s
 maximum_distance=1
 truncation_level=0
@@ -83,7 +85,8 @@ random_seed=0
 intensity_measure_types = PGA
 investigation_time = 50
 export_dir = %s
-        """ % (os.path.basename(site_model_input), TMP))
+        """ % (os.path.basename(source_model_input),
+               os.path.basename(site_model_input), TMP))
 
         try:
             exp_base_path = os.path.dirname(job_config)
@@ -96,25 +99,26 @@ export_dir = %s
                 'random_seed': 0,
                 'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
-                           'site_model': site_model_input},
+                           'site_model': site_model_input,
+                           'source': [source_model_input],
+                           'source_model': source_model_input},
                 'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
 
-            with mock.patch('logging.warn') as warn:
-                params = getparams(readinput.get_oqparam(job_config, hc_id=1))
-                for key in expected_params:
-                    self.assertEqual(expected_params[key], params[key])
-                items = sorted(params['inputs'].items())
-                keys, values = zip(*items)
-                self.assertEqual(('job_ini', 'site_model'), keys)
-                self.assertEqual((job_config, site_model_input), values)
+            params = getparams(readinput.get_oqparam(job_config))
+            for key in expected_params:
+                self.assertEqual(expected_params[key], params[key])
+            items = sorted(params['inputs'].items())
+            keys, values = zip(*items)
+            self.assertEqual(('job_ini', 'site_model', 'source',
+                              'source_model'), keys)
+            self.assertEqual((job_config, site_model_input,
+                              [source_model_input], source_model_input),
+                             values)
 
-                # checking that warnings work
-                self.assertIn('Please remove site_model_file from',
-                              warn.call_args[0][0])
         finally:
             shutil.rmtree(temp_dir)
 
@@ -123,7 +127,7 @@ export_dir = %s
         try:
             source = general.writetmp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -144,9 +148,8 @@ export_dir = %s
 
             expected_params = {
                 'export_dir': TMP,
-                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
-                'calculation_mode': 'classical',
+                'calculation_mode': 'scenario',
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': 1.0},
@@ -161,7 +164,7 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source, hc_id=1))
+            params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -171,7 +174,7 @@ export_dir = %s
             'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
         source = general.writetmp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -187,7 +190,7 @@ intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
-        oq = readinput.get_oqparam(source, hc_id=1)
+        oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
@@ -208,8 +211,9 @@ reference_depth_to_2pt5km_per_sec = 5.0
 reference_depth_to_1pt0km_per_sec = 100.0
 intensity_measure_types = PGA
 investigation_time = 50.
+source_model_file = fake.xml
 """)
-        oqparam = readinput.get_oqparam(source, hc_id=1)
+        oqparam = readinput.get_oqparam(source)
         with self.assertRaises(ValueError) as ctx:
             readinput.get_site_collection(oqparam)
         self.assertIn('Could not discretize region', str(ctx.exception))
@@ -249,6 +253,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
         oqparam.max_site_model_distance = 5
@@ -399,7 +404,7 @@ class ExposureTestCase(unittest.TestCase):
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['occupants']
         oqparam.inputs = {'exposure': self.exposure}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -415,7 +420,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
         oqparam.inputs = {'exposure': self.exposure0}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -432,7 +437,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure1}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -449,7 +454,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insured_losses = True
         oqparam.inputs = {'exposure': self.exposure,
                           'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -464,7 +469,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,
                           'structural_vulnerability': None}
@@ -480,7 +485,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure3}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.insured_losses = False
@@ -766,6 +771,11 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
+
+    def test_reduce_source_model(self):
+        case2 = os.path.dirname(case_2.__file__)
+        smlt = os.path.join(case2, 'source_model_logic_tree.xml')
+        readinput.reduce_source_model(smlt, [])
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):

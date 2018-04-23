@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,19 +27,12 @@ import subprocess
 import threading
 import signal
 import zlib
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
+import pickle
+import urllib.parse as urlparse
 import re
 import numpy
 import psutil
-try:
-    # Python 3
-    from urllib.parse import unquote_plus
-except ImportError:
-    # Python 2
-    from urllib import unquote_plus
+from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -50,7 +43,6 @@ from django.shortcuts import render
 
 from openquake.baselib import datastore
 from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle, encode
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -64,16 +56,11 @@ from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils, dbapi
 
 from django.conf import settings
+from django.http import FileResponse
+from wsgiref.util import FileWrapper
+
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-try:
-    from django.http import FileResponse  # Django >= 1.8
-except ImportError:
-    from django.http import StreamingHttpResponse as FileResponse
-try:
-    from wsgiref.util import FileWrapper  # Django >= 1.9
-except ImportError:
-    from django.core.servers.basehttp import FileWrapper
 
 
 METHOD_NOT_ALLOWED = 405
@@ -268,13 +255,13 @@ def validate_nrml(request):
         exc_msg = exc.args[0]
         if isinstance(exc_msg, bytes):
             exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
-        elif isinstance(exc_msg, unicode):
+        elif isinstance(exc_msg, str):
             pass
         else:
             # if it is another kind of object, it is not obvious a priori how
             # to extract the error line from it
             return _make_response(
-                error_msg=unicode(exc_msg), error_line=None, valid=False)
+                error_msg=str(exc_msg), error_line=None, valid=False)
         # if the line is not mentioned, the whole message is taken
         error_msg = exc_msg.split(', line')[0]
         # check if the exc_msg contains a line number indication
@@ -499,8 +486,7 @@ def run_calc(request):
 
 
 RUNCALC = '''\
-import os, sys
-from openquake.baselib.python3compat import pickle
+import os, sys, pickle
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
@@ -520,7 +506,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
     tmp_py = writetmp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
-    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    devnull = subprocess.DEVNULL
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
@@ -691,7 +677,16 @@ def extract(request, calc_id, what):
             array, attrs = obj.__toh5__()
         else:  # assume obj is an array
             array, attrs = obj, {}
-        numpy.savez_compressed(fname, array=array, **attrs)
+        a = {}
+        for key, val in attrs.items():
+            if isinstance(key, bytes):
+                key = key.decode('utf-8')
+            if isinstance(val, str):
+                # without this oq extract would fail
+                a[key] = numpy.array(val.encode('utf-8'))
+            else:
+                a[key] = val
+        numpy.savez_compressed(fname, array=array, **a)
 
     # stream the data back
     stream = FileWrapper(open(fname, 'rb'))

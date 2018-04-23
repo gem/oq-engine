@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -164,18 +164,6 @@ class Monitor(object):
         "To be overridden in subclasses"
         if self.autoflush:
             self.flush()
-
-    def save_info(self, dic):
-        """
-        Save (name, value) information in the associated hdf5path
-        """
-        if self.hdf5path:
-            if 'hostname' not in dic:
-                dic['hostname'] = socket.gethostname()
-            data = numpy.array(
-                _pairs(dic.items()),
-                [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])
-            hdf5.extend3(self.hdf5path, 'job_info', data)
 
     def flush(self):
         """

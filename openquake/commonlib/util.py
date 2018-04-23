@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,6 @@ import numpy
 from openquake.baselib import config
 
 F32 = numpy.float32
-
-# NB: using hdf5.vstr does not work with h5py <= 2.2.1
-asset_dt = numpy.dtype([('asset_ref', (bytes, 100)),
-                        ('taxonomy', (bytes, 100)),
-                        ('lon', F32), ('lat', F32)])
 
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
@@ -122,16 +117,20 @@ def compose_arrays(a1, a2, firstfield='etag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
+    :returns: an array of records (asset_ref, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
-    taxo = dstore['assetcol/tagcol/taxonomy'].value
+    tag = {t: getattr(assetcol.tagcol, t) for t in assetcol.tagnames}
+    dtlist = [('asset_ref', (bytes, 100))]
+    for tagname in assetcol.tagnames:
+        dtlist.append((tagname, (bytes, 100)))
+    dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
-    for aref, a, t in zip(
-            assetcol.asset_refs, assetcol.array, assetcol.taxonomies):
-        data = (aref, '"%s"' % taxo[t], a['lon'], a['lat'])
-        asset_data.append(data)
-    return numpy.array(asset_data, asset_dt)
+    for aref, a in zip(assetcol.asset_refs, assetcol.array):
+        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8')
+                    for t in assetcol.tagnames)
+        asset_data.append((aref,) + tup + (a['lon'], a['lat']))
+    return numpy.array(asset_data, dtlist)
 
 
 def shared_dir_on():

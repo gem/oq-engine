@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (c) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
 import numpy
 
@@ -49,7 +49,7 @@ class ProbabilityCurve(object):
     >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
-    [ 0.405  0.32   0.245  0.5    0.5  ]>
+    [0.405 0.32  0.245 0.5   0.5  ]>
     """
     def __init__(self, array):
         self.array = array
@@ -212,28 +212,30 @@ class ProbabilityMap(dict):
         return curves
 
     # used when exporting to npy
-    def convert_npy(self, imtls, nsites, idx=0):
+    def convert_npy(self, imtls, sids, idx=0):
         """
-        Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.dt`.
+        Convert a probability map into a composite array of dtype `imtls.dt`.
 
         :param imtls:
             DictArray instance
-        :param nsites:
-            the total number of sites
+        :param sids:
+            array of site IDs containing all the sites in the ProbabilityMap
         :param idx:
             index on the z-axis (default 0)
         """
         dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
                   for imt in imtls]
-        curves = numpy.zeros(nsites, dtlist)
-        for sid in self:
-            array = self[sid].array
+        curves = numpy.zeros(len(sids), dtlist)
+        for s, sid in enumerate(sids):
+            try:
+                array = self[sid].array
+            except KeyError:
+                continue
             for imt in imtls:
                 imls = curves.dtype[imt].names
                 values = array[imtls.slicedic[imt], idx]
                 for iml, val in zip(imls, values):
-                    curves[sid][imt][iml] = val
+                    curves[s][imt][iml] = val
         return curves
 
     def convert2(self, imtls, sids):

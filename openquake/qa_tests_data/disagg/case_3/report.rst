@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     583,572,055        
-date           2018-03-01T10:45:01
-engine_version 2.10.0-git18f5063  
+date           2018-04-19T05:04:19
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -14,7 +14,7 @@ Parameters
 =============================== ============================================================================================================================================
 calculation_mode                'disaggregation'                                                                                                                            
 number_of_logic_tree_samples    0                                                                                                                                           
-maximum_distance                {'Subduction Inslab': 200.0, 'Volcanic': 100.0, 'Subduction Interface': 200.0, 'Stable Shallow Crust': 200.0, 'Active Shallow Crust': 200.0}
+maximum_distance                {'Stable Shallow Crust': 200.0, 'Subduction Inslab': 200.0, 'Volcanic': 100.0, 'Active Shallow Crust': 200.0, 'Subduction Interface': 200.0}
 investigation_time              50.0                                                                                                                                        
 ses_per_logic_tree_path         1                                                                                                                                           
 truncation_level                3.0                                                                                                                                         
@@ -46,8 +46,8 @@ Composite source model
 ========= ====== ================= ================
 smlt_path weight gsim_logic_tree   num_realizations
 ========= ====== ================= ================
-complex   0.330  simple(0,3,0,0,0) 3/3             
-point     0.670  simple(0,3,0,0,0) 3/3             
+complex   0.330  simple(0,0,0,3,0) 3/3             
+point     0.670  simple(0,0,0,3,0) 3/3             
 ========= ====== ================= ================
 
 Required parameters per tectonic region type
@@ -88,33 +88,25 @@ source_model_test_point.xml   1      Active Shallow Crust 624          624
 #tot_weight   27,883
 ============= ======
 
-Informational data
-------------------
-========================== ==================================================================================
-count_ruptures.received    tot 6.26 KB, max_per_task 568 B                                                   
-count_ruptures.sent        param 36.87 KB, sources 21.4 KB, srcfilter 14.09 KB, monitor 5.48 KB, gsims 4.7 KB
-hostname                   tstation.gem.lan                                                                  
-========================== ==================================================================================
-
 Slowest sources
 ---------------
-========= ================== ============ ========= ========= =========
-source_id source_class       num_ruptures calc_time num_sites num_split
-========= ================== ============ ========= ========= =========
-f1        ComplexFaultSource 2,308        0.061     26        25       
-p1        PointSource        156          4.845E-04 2         1        
-p2        PointSource        156          1.245E-04 2         1        
-p3        PointSource        156          1.166E-04 2         1        
-p4        PointSource        156          1.152E-04 2         1        
-========= ================== ============ ========= ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+f1        ComplexFaultSource 2,308        0.166     5.581E-04  37        37        0     
+p1        PointSource        156          4.613E-04 6.914E-06  1         1         0     
+p2        PointSource        156          8.965E-05 1.907E-06  1         1         0     
+p4        PointSource        156          8.488E-05 1.192E-06  1         1         0     
+p3        PointSource        156          8.416E-05 1.192E-06  1         1         0     
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.061     1     
-PointSource        8.407E-04 4     
+ComplexFaultSource 0.166     1     
+PointSource        7.200E-04 4     
 ================== ========= ======
 
 Duplicated sources
@@ -125,20 +117,28 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.005 0.002  0.003 0.013 17       
+count_ruptures     0.007 0.005  0.002 0.024 34       
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ================================================================================ ========
+task           sent                                                                             received
+count_ruptures param=73.74 KB sources=38.58 KB srcfilter=28.19 KB monitor=10.96 KB gsims=9.4 KB 12.32 KB
+============== ================================================================================ ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.492     0.0       1     
-reading composite source model 0.325     0.0       1     
-total count_ruptures           0.083     3.660     17    
-store source_info              0.024     0.0       1     
-unpickling count_ruptures      8.650E-04 0.0       17    
-aggregate curves               3.824E-04 0.0       17    
-reading site collection        7.439E-05 0.0       1     
-saving probability maps        3.910E-05 0.0       1     
+total count_ruptures           0.239     3.801     34    
+reading composite source model 0.090     0.0       1     
+managing sources               0.052     0.0       1     
+store source_info              0.005     0.0       1     
+unpickling count_ruptures      0.002     0.0       34    
+splitting sources              0.001     0.0       1     
+aggregate curves               7.370E-04 0.0       34    
+reading site collection        2.129E-04 0.0       1     
+saving probability maps        3.171E-05 0.0       1     
 ============================== ========= ========= ======
