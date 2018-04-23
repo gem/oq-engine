@@ -22,7 +22,6 @@ import re
 import math
 import zipfile
 import logging
-import operator
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -251,7 +250,7 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     """
     std = shakemap['std']
     imts = [imt.from_string(name) for name in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
+    val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in std.dtype.names}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts)
@@ -269,7 +268,7 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
+    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1) / PCTG
 
 """
 here is an example for Tanzania:
