@@ -306,8 +306,7 @@ class Mesh(object):
             self.lons.reshape(self.lons.shape + (1, )),
             self.lats.reshape(self.lats.shape + (1, )),
             self.lons,
-            self.lats
-        )
+            self.lats)
         return numpy.matrix(distances, copy=False)
 
     def _get_proj_convex_hull(self):
@@ -323,16 +322,15 @@ class Mesh(object):
         """
         # create a projection centered in the center of points collection
         proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
-        )
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
         coords = numpy.transpose(proj(self.lons.flatten(),
                                       self.lats.flatten())).copy()
         multipoint = shapely.geometry.MultiPoint(coords)
-        # create a 2d polygon from a convex hull around that multipoint.
-        polygon2d = multipoint.convex_hull
-        return proj, polygon2d
+        # create a 2d polygon from a convex hull around that multipoint
+        return proj, multipoint.convex_hull
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -427,9 +425,7 @@ class Mesh(object):
             return self._get_proj_convex_hull()
 
         proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(self.lons.flatten(),
-                                                  self.lats.flatten())
-        )
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
             lats = self.lats.reshape(len(self.lats), 1)
