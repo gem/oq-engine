@@ -240,12 +240,12 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except:
+        except BaseException:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
                 logs.dbcmd('finish', job_id, 'failed')
-            except:  # an OperationalError may always happen
+            except BaseException:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
         finally:
@@ -255,7 +255,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             try:
                 if OQ_DISTRIBUTE.startswith('celery'):
                     celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
-            except:
+            except BaseException:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
