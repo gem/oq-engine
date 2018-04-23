@@ -76,7 +76,7 @@ def form(value):
         elif value < .001:
             return '%.3E' % value
         elif value < 10 and isinstance(value, FLOAT):
-            return '%.3f' % value
+            return '%.5f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
         elif numpy.isnan(value):

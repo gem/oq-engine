@@ -39,10 +39,10 @@ def plot_assets(calc_id=-1):
         ax.add_patch(pp)
     else:
         ax.grid(True)
-    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='black')
-    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='+',
+    p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
               color='gray')
-    p.scatter(sitecol.lons, sitecol.lats, marker='o', color='gray')
+    p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
+    p.scatter(sitecol.lons, sitecol.lats, marker='o', color='black')
     p.show()
 
 plot_assets.arg('calc_id', 'a computation id', type=int)
