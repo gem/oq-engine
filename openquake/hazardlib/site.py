@@ -248,10 +248,7 @@ class SiteCollection(object):
     def __eq__(self, other):
         if not_equal(self.indices, other.indices):
             return False
-        arr = self.array == other.array
-        if isinstance(arr, numpy.ndarray):
-            return arr.all()
-        return arr
+        return (self.array == other.array).all()
 
     def __ne__(self, other):
         return not self.__eq__(other)
