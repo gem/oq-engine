@@ -55,12 +55,13 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'mock >=1.0, <2.1',
-    'h5py >=2.6, <2.9',
     'nose >=1.3, <1.4',
+    'h5py >=2.6, <2.9',
     'numpy >=1.14, <1.15',
     'scipy >=1.0.1, <1.1',
     'pyzmq <18.0',
     'psutil >=1.2, <5.5',
+    'rtree ==0.8.3',
     'shapely >=1.3, <1.7',
     'docutils >=0.11, <0.15',
     'decorator >=3.4',
@@ -74,12 +75,15 @@ install_requires = [
 extras_require = {
     'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
-    'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=4.0, <4.2"],
     'pam': ["python-pam", "django-pam"],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
+    ],
+    'dev':  [
+        'flake8 >=3.5, <3.6',
+        'pdbpp',
     ]
 }
 
