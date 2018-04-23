@@ -195,11 +195,9 @@ def amplify_gmfs(imts, vs30s, gmfs):
     Amplify the ground shaking depending on the vs30s
     """
     n = len(vs30s)
-    for i, im in enumerate(imts):
-        for iloc in range(n):
-            gmfs[i * n + iloc] = amplify_ground_shaking(
-                im.period, vs30s[iloc], gmfs[i * n + iloc])
-    return gmfs
+    out = [amplify_ground_shaking(im.period, vs30s[i], gmfs[m * n + i])
+           for m, im in enumerate(imts) for i in range(n)]
+    return numpy.array(out)
 
 
 def amplify_ground_shaking(T, vs30, gmvs):
