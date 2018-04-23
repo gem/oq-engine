@@ -18,7 +18,8 @@ CDIR = os.path.dirname(__file__)
 
 def mean_gmf(shakemap):
     gmfs = to_gmfs(
-        shakemap, site_effects=True, trunclevel=3, num_gmfs=10, seed=42)
+        shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+        num_gmfs=10, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
 
@@ -83,6 +84,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
 
         gmfs = to_gmfs(
-            shakemap, site_effects=True, trunclevel=3, num_gmfs=2, seed=42)
+            shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+            num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=1), [[0.4101717, 0.6240185]])  # PGA
         aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)
