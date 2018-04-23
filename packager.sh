@@ -234,7 +234,7 @@ add_custom_pkg_repo () {
 }
 
 add_local_pkg_repo () {
-    local dep="$1"
+    local dep="$1" dep_pkg="$2"
 
     var_pfx="$(dep2var "$dep")"
     var_repo="${var_pfx}_REPO"
@@ -256,10 +256,10 @@ add_local_pkg_repo () {
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
     fi
-    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}.${!var_commit:0:7}"
+    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${dep_pkg}.${!var_commit:0:7}"
     time_start="$(date +%s)"
     while true; do
-        if scp -r "$from_dir" "$lxc_ip:repo/python3-${dep}"; then
+        if scp -r "$from_dir" "$lxc_ip:repo/${dep_pkg}"; then
             break
         fi
         if [ "$dep_branch" = "$branch" ]; then
@@ -274,12 +274,12 @@ add_local_pkg_repo () {
             # NOTE: in the other case dep branch is 'master' and package branch isn't
             #       so we try to get the correct commit package and if it isn't yet built
             #       it fallback to the latest builded
-            from_dir="$(ls -drt "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python3-${dep}"* | tail -n 1)"
-            scp -r "$from_dir" "$lxc_ip:repo/python3-${dep}"
+            from_dir="$(ls -drt "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${dep_pkg}"* | tail -n 1)"
+            scp -r "$from_dir" "$lxc_ip:repo/${dep_pkg}"
             break
         fi
     done
-    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/python3-${dep} ./\"
+    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${dep_pkg} ./\"
     ssh "$lxc_ip" sudo apt-get update
 }
 
@@ -359,7 +359,7 @@ _devtest_innervm_run () {
             git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
             popd
         elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep"
+            add_local_pkg_repo "$dep" "$deb_pkg"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
@@ -472,7 +472,7 @@ _builddoc_innervm_run () {
             git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
             popd
         elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep"
+            add_local_pkg_repo "$dep" "dep_pkg"
             ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
@@ -553,7 +553,7 @@ _pkgtest_innervm_run () {
         if [ "$dep_type" == "cust" -o "$dep_type" == "sub" ]; then
             continue
         else
-            add_local_pkg_repo "$dep"
+            add_local_pkg_repo "$dep" "$deb_pkg"
         fi
     done
     IFS="$old_ifs"
