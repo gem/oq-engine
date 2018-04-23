@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 from shapely import geometry
-from openquake.baselib.general import split_in_blocks
+from openquake.baselib.general import split_in_blocks, not_equal
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -246,10 +246,9 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        arr = self.array == other.array
-        if isinstance(arr, numpy.ndarray):
-            return arr.all()
-        return arr
+        if not_equal(self.indices, other.indices):
+            return False
+        return (self.array == other.array).all()
 
     def __ne__(self, other):
         return not self.__eq__(other)
