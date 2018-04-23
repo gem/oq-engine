@@ -142,6 +142,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save engine_version
         """
+        if ('hazard_calculation_id' in kw and
+                kw['hazard_calculation_id'] is None):
+            del kw['hazard_calculation_id']
         vars(self.oqparam).update(**kw)
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         attrs = self.datastore['/'].attrs
