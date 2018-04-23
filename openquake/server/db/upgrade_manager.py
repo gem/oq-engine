@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2017 GEM Foundation
+# Copyright (C) 2016-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import sys
 import re
 import time
 import runpy
-import urllib
+import urllib.request
 import logging
 import importlib
 import sqlite3
@@ -293,7 +293,7 @@ class UpgradeManager(object):
         Extract the OpenQuake upgrade scripts from the links in the GitHub page
         """
         link_pattern = '>\s*{0}\s*<'.format(self.pattern[1:-1])
-        page = urllib.urlopen(self.upgrades_url).read()
+        page = urllib.request.urlopen(self.upgrades_url).read()
         for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()
             yield self.parse_script_name(scriptname)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,7 +36,7 @@ def get_user(request):
     returns the default user (from settings, or as reported by the OS).
     """
     if settings.LOCKDOWN and hasattr(request, 'user'):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             user = request.user.username
         else:
             # This may happen with crafted requests
@@ -54,10 +54,10 @@ def get_valid_users(request):
     """
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
-        if request.user.is_authenticated():
-            groups = request.user.groups.values_list('name', flat=True)
+        if request.user.is_authenticated:
+            groups = request.user.groups.all()
             if groups:
-                users = list(User.objects.filter(groups__name=groups)
+                users = list(User.objects.filter(groups__name__in=groups)
                              .values_list('username', flat=True))
         else:
             # This may happen with crafted requests

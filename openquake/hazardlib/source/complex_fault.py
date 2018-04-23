@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,6 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
-from openquake.baselib.python3compat import range
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,8 +98,22 @@ RM       4,000
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_4b(self):
-        self.assert_ok(case_4b, 'job_haz.ini,job_risk.ini', exports='csv',
-                       kind='losses')
+        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
+
+        fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # one per realization
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # one per realization
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # one per realization
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_wrong_gsim_lt(self):

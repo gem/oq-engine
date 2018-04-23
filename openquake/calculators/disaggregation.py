@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -311,6 +311,10 @@ producing too small PoEs.'''
         Save disagg-bins
         """
         b = self.bin_edges
+        for sid in self.sitecol.sids:
+            logging.info(
+                'disagg_matrix_shape=%s, site=#%d',
+                str(disagg.get_shape(b, sid) + (len(self.trts),)), sid)
         self.datastore['disagg-bins/mags'] = b[0]
         self.datastore['disagg-bins/dists'] = b[1]
         for sid in self.sitecol.sids:

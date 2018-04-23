@@ -2,9 +2,9 @@ Scenario QA Test, Case 1
 ========================
 
 ============== ===================
-checksum32     3,130,447,207      
-date           2018-02-25T06:41:59
-engine_version 2.10.0-git1f7c0c0  
+checksum32     125,955,823        
+date           2018-04-19T05:02:01
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -57,8 +57,8 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-reading site collection 0.001    0.0       1     
-======================= ======== ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+reading site collection 5.164E-04 0.0       1     
+======================= ========= ========= ======

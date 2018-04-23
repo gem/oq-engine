@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017 GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,11 +19,11 @@
 import os
 import sys
 import collections
-from openquake.baselib.python3compat import configparser
+import configparser
 from openquake.baselib.general import git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '2.10.0'
+__version__ = '3.1.0'
 __version__ += git_suffix(__file__)
 
 

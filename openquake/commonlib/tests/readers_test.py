@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,7 +57,7 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
         dest = tempfile.NamedTemporaryFile().name
         write_csv(dest, written)
         read = read_composite_array(dest)
-        numpy.testing.assert_equal(read, written)
+        numpy.testing.assert_equal(read.array, written)
 
     def test_read_ok(self):
         got = read_composite_array(fname)
@@ -67,7 +67,7 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
              (b'a2', 85.7477, 0.0, 27.9015, 0.0, 653.871),
              (b'a3', 85.7477, 0.0, 27.9015, 0.0, 806.2714)],
             got.dtype)
-        numpy.testing.assert_equal(got, expected)
+        numpy.testing.assert_equal(got.array, expected)
 
     def test_read_err1(self):
         with self.assertRaises(InvalidFile) as ctx:

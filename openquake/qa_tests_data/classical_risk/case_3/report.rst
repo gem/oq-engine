@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============== ===================
-checksum32     2,143,483,537      
-date           2018-02-25T06:41:46
-engine_version 2.10.0-git1f7c0c0  
+checksum32     177,006,542        
+date           2018-04-19T05:01:41
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 12, num_levels = 19
@@ -75,22 +75,6 @@ source_model     grp_id trt                  eff_ruptures tot_ruptures
 source_model.xml 0      Active Shallow Crust 1,638        33,831      
 ================ ====== ==================== ============ ============
 
-Informational data
-------------------
-======================= =============================================================================
-count_ruptures.received tot 1.68 KB, max_per_task 897 B                                              
-count_ruptures.sent     sources 32.6 KB, srcfilter 2.58 KB, param 1.07 KB, monitor 660 B, gsims 254 B
-hazard.input_weight     3383.1000000000004                                                           
-hazard.n_imts           1                                                                            
-hazard.n_levels         19                                                                           
-hazard.n_realizations   1                                                                            
-hazard.n_sites          12                                                                           
-hazard.n_sources        15                                                                           
-hazard.output_weight    228.0                                                                        
-hostname                tstation.gem.lan                                                             
-require_epsilons        True                                                                         
-======================= =============================================================================
-
 Exposure model
 --------------
 =============== ========
@@ -111,32 +95,32 @@ UFB      1.000 0.0    1   1   2         2
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-232       AreaSource   1,612        0.019     587       124      
-225       AreaSource   520          3.395E-04 3         2        
-57        AreaSource   840          0.0       1         0        
-137       AreaSource   2,072        0.0       1         0        
-359       AreaSource   2,314        0.0       1         0        
-59        AreaSource   750          0.0       1         0        
-253       AreaSource   3,058        0.0       1         0        
-306       AreaSource   1,768        0.0       1         0        
-299       AreaSource   710          0.0       1         0        
-101       AreaSource   559          0.0       1         0        
-135       AreaSource   3,285        0.0       1         0        
-42        AreaSource   1,755        0.0       1         0        
-125       AreaSource   8,274        0.0       1         0        
-27        AreaSource   1,482        0.0       1         0        
-8         AreaSource   4,832        0.0       1         0        
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+232       AreaSource   1,612        0.035     0.056      586       124       0     
+225       AreaSource   520          3.855E-04 0.018      2         2         0     
+57        AreaSource   840          0.0       0.025      0         0         0     
+299       AreaSource   710          0.0       0.027      0         0         0     
+125       AreaSource   8,274        0.0       0.384      0         0         0     
+359       AreaSource   2,314        0.0       0.092      0         0         0     
+27        AreaSource   1,482        0.0       0.058      0         0         0     
+8         AreaSource   4,832        0.0       1.006      0         0         0     
+59        AreaSource   750          0.0       0.026      0         0         0     
+42        AreaSource   1,755        0.0       0.055      0         0         0     
+135       AreaSource   3,285        0.0       0.186      0         0         0     
+137       AreaSource   2,072        0.0       0.111      0         0         0     
+101       AreaSource   559          0.0       0.029      0         0         0     
+253       AreaSource   3,058        0.0       0.119      0         0         0     
+306       AreaSource   1,768        0.0       0.093      0         0         0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.019     15    
+AreaSource   0.036     15    
 ============ ========= ======
 
 Duplicated sources
@@ -147,20 +131,29 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.018 0.011  0.010 0.026 2        
+count_ruptures     0.023 0.022  0.007 0.039 2        
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ========================================================================== ========
+task           sent                                                                       received
+count_ruptures sources=30.27 KB srcfilter=2.58 KB param=1.07 KB monitor=660 B gsims=254 B 803 B   
+============== ========================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.714     0.0       1     
-managing sources               1.688     0.0       1     
-total count_ruptures           0.036     1.789     2     
-store source_info              0.004     0.0       1     
-reading exposure               0.002     0.0       1     
-aggregate curves               3.886E-05 0.0       2     
-saving probability maps        2.694E-05 0.0       1     
-reading site collection        6.437E-06 0.0       1     
+splitting sources              2.290     1.461     1     
+reading composite source model 2.047     0.0       1     
+managing sources               0.460     0.0       1     
+total count_ruptures           0.046     2.516     2     
+reading exposure               0.021     0.0       1     
+store source_info              0.006     0.0       1     
+reading site collection        0.006     0.0       1     
+unpickling count_ruptures      1.063E-04 0.0       2     
+aggregate curves               5.436E-05 0.0       2     
+saving probability maps        3.910E-05 0.0       1     
 ============================== ========= ========= ======

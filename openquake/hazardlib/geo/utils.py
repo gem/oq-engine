@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,18 +23,15 @@ to several geographical primitives and some other low-level spatial operations.
 import logging
 import operator
 import collections
-try:
-    import rtree
-except:
-    rtree = None
+import rtree
 import numpy
 import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.geodetic import (
-    EARTH_RADIUS, geodetic_distance, min_idx_dst)
+from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, geodetic_distance
 from openquake.baselib.slots import with_slots
 
+U32 = numpy.uint32
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
@@ -42,29 +39,28 @@ class SiteAssociationError(Exception):
     """Raised when there are no sites close enough"""
 
 
-class GeographicObjects(object):
+class _GeographicObjects(object):
     """
-    Store a collection of geographic objects, i.e. objects with longitudes
-    and latitudes. By default extracts the coordinates from the attributes
-    .lon and .lat, but you can provide your own getters. It is possible
-    to extract the closest object to a given location by calling the
-    method .get_closest(lon, lat).
+    Store a collection of geographic objects, i.e. objects with lons, lats.
+    It is possible to extract the closest object to a given location by
+    calling the method .get_closest(lon, lat).
     """
-    def __init__(self, objects, getlon=operator.attrgetter('lon'),
-                 getlat=operator.attrgetter('lat')):
-        self.objects = list(objects)
-        lons, lats = [], []
-        for i, obj in enumerate(self.objects):
-            lon, lat = getlon(obj), getlat(obj)
-            lons.append(lon)
-            lats.append(lat)
-        self.lons, self.lats = numpy.array(lons), numpy.array(lats)
-        if rtree:
-            self.index = rtree.index.Index()
-            self.proj = OrthographicProjection.from_lons_lats(lons, lats)
-            xs, ys = self.proj(self.lons, self.lats)
-            for i, (x, y) in enumerate(zip(xs, ys)):
-                self.index.insert(i, (x, y, x, y))
+    def __init__(self, objects):
+        self.objects = objects
+        if hasattr(objects, 'lons'):
+            self.lons = objects.lons
+            self.lats = objects.lats
+        elif isinstance(objects, numpy.ndarray):
+            self.lons = objects['lon']
+            self.lats = objects['lat']
+
+        self.proj = OrthographicProjection.from_lons_lats(
+            self.lons, self.lats)
+        xs, ys = self.proj(self.lons, self.lats)
+        self.index = rtree.index.Index()
+        # no http://toblerity.org/rtree/performance.html#use-stream-loading!
+        for i, (x, y) in enumerate(zip(xs, ys)):
+            self.index.insert(i, (x, y, x, y))
 
     def get_closest(self, lon, lat):
         """
@@ -75,22 +71,18 @@ class GeographicObjects(object):
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
-        if rtree:
-            x, y = self.proj(lon, lat)
-            idx = list(self.index.nearest((x, y, x, y), 1))[0]
-            min_dist = geodetic_distance(
-                lon, lat, self.lons[idx], self.lats[idx])
-        else:
-            zeros = numpy.zeros_like(self.lons)
-            idx, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
+        x, y = self.proj(lon, lat)
+        idx = list(self.index.nearest((x, y, x, y), 1))[0]
+        min_dist = geodetic_distance(
+            lon, lat, self.lons[idx], self.lats[idx])
         return self.objects[idx], min_dist
 
-    def assoc(self, sitecol, assoc_dist, mode='error'):
+    def assoc(self, sitecol, assoc_dist, mode):
         """
-        :param: a (filtered) site collection
+        :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'error', 'warn' or 'ignore'
-        :returns: a dictionary site_id -> array of associated objects
+        :returns: (filtered site collection, filtered objects)
         """
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
@@ -112,7 +104,71 @@ class GeographicObjects(object):
         if not dic and mode == 'error':
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return dic
+        return (sitecol.filtered(dic),
+                numpy.array([dic[sid] for sid in sorted(dic)]))
+
+    def assoc2(self, assets_by_site, assoc_dist, mode):
+        """
+        Associated a list of assets by site to the site collection used
+        to instantiate GeographicObjects.
+
+        :param assets_by_sites: a list of lists of assets
+        :param assoc_dist: the maximum distance for association
+        :param mode: 'strict' or 'error'
+        :returns: (filtered site collection, filtered assets by site)
+        """
+        self.objects.filtered  # self.objects must be a SiteCollection
+        assets_by_sid = collections.defaultdict(list)
+        for assets in assets_by_site:
+            lon, lat = assets[0].location
+            obj, distance = self.get_closest(lon, lat)
+            if distance <= assoc_dist:
+                # keep the assets, otherwise discard them
+                assets_by_sid[obj['sids']].extend(assets)
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
+        sids = sorted(assets_by_sid)
+        if not sids and mode == 'error':
+            raise SiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % assoc_dist)
+        assets_by_site = [
+            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
+            for sid in sids]
+        return self.objects.filtered(sids), assets_by_site
+
+
+def get_min_distance(mesh1, mesh2):
+    """
+    Get the minimum distance between 2D meshes by using rtree
+    """
+    go = _GeographicObjects(mesh1)
+    min_dist = min(go.get_closest(lon, lat)[1]
+                   for lon, lat in zip(mesh2.lons, mesh2.lats))
+    return min_dist
+
+
+def assoc(objects, sitecol, assoc_dist, mode):
+    """
+    Associate geographic objects to a site collection.
+
+    :param objects:
+        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
+        of objects with a .location attribute (i.e. assets_by_site)
+    :param assoc_dist:
+        the maximum distance for association
+    :param mode:
+        if 'strict' fail if at least one site is not associated
+        if 'error' fail if all sites are not associated
+    :returns: (filtered site collection, filtered objects)
+    """
+    if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
+        # objects is a geo array with lon, lat fields or a mesh-like instance
+        return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
+    else:  # objects is the list assets_by_site
+        return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
 
 
 def clean_points(points):
@@ -207,7 +263,8 @@ def get_spherical_bounding_box(lons, lats):
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
-        lons = lons.flatten()  # fixes an issue with GriddedSurfaces
+        if hasattr(lons, 'flatten'):
+            lons = lons.flatten()  # fixes an issue with GriddedSurfaces
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
         if not all((get_longitudinal_extent(west, lon) >= 0

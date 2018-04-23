@@ -14,18 +14,12 @@ LOCKDOWN = True
 Upgrade the database to host users and sessions:
 
 ```bash
-# Django < 1.8
-$ oq webui syncdb 
-# Django >= 1.8
 $ oq webui migrate 
 ```
 
 if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
 
 ```bash
-# Django < 1.8
-$ python -m openquake.server.manage syncdb 
-# Django >= 1.8
 $ python -m openquake.server.manage migrate 
 ```
 

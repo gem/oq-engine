@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-02-25T06:42:50
-engine_version 2.10.0-git1f7c0c0  
+date           2018-04-19T05:02:43
+engine_version 3.1.0-git9c5da5b   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -147,73 +147,57 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 720          296         
-source_model.xml 1      Active Shallow Crust 632          296         
-source_model.xml 2      Active Shallow Crust 668          296         
-source_model.xml 3      Active Shallow Crust 682          296         
-source_model.xml 4      Active Shallow Crust 596          296         
-source_model.xml 5      Active Shallow Crust 656          296         
-source_model.xml 6      Active Shallow Crust 753          296         
-source_model.xml 7      Active Shallow Crust 665          296         
-source_model.xml 8      Active Shallow Crust 725          296         
-source_model.xml 9      Active Shallow Crust 720          296         
-source_model.xml 10     Active Shallow Crust 632          296         
-source_model.xml 11     Active Shallow Crust 692          296         
-source_model.xml 12     Active Shallow Crust 716          296         
-source_model.xml 13     Active Shallow Crust 628          296         
-source_model.xml 14     Active Shallow Crust 688          296         
-source_model.xml 15     Active Shallow Crust 720          296         
-source_model.xml 16     Active Shallow Crust 632          296         
-source_model.xml 17     Active Shallow Crust 692          296         
-source_model.xml 18     Active Shallow Crust 753          296         
-source_model.xml 19     Active Shallow Crust 626          296         
-source_model.xml 20     Active Shallow Crust 686          296         
-source_model.xml 21     Active Shallow Crust 780          296         
-source_model.xml 22     Active Shallow Crust 692          296         
-source_model.xml 23     Active Shallow Crust 554          296         
-source_model.xml 24     Active Shallow Crust 714          296         
-source_model.xml 25     Active Shallow Crust 562          296         
-source_model.xml 26     Active Shallow Crust 620          296         
+source_model.xml 0      Active Shallow Crust 444          296         
+source_model.xml 1      Active Shallow Crust 268          296         
+source_model.xml 2      Active Shallow Crust 207          296         
+source_model.xml 3      Active Shallow Crust 534          296         
+source_model.xml 4      Active Shallow Crust 298          296         
+source_model.xml 5      Active Shallow Crust 239          296         
+source_model.xml 6      Active Shallow Crust 474          296         
+source_model.xml 7      Active Shallow Crust 238          296         
+source_model.xml 8      Active Shallow Crust 204          296         
+source_model.xml 9      Active Shallow Crust 498          296         
+source_model.xml 10     Active Shallow Crust 198          296         
+source_model.xml 11     Active Shallow Crust 172          296         
+source_model.xml 12     Active Shallow Crust 465          296         
+source_model.xml 13     Active Shallow Crust 229          296         
+source_model.xml 14     Active Shallow Crust 197          296         
+source_model.xml 15     Active Shallow Crust 500          296         
+source_model.xml 16     Active Shallow Crust 202          296         
+source_model.xml 17     Active Shallow Crust 174          296         
+source_model.xml 18     Active Shallow Crust 483          296         
+source_model.xml 19     Active Shallow Crust 247          296         
+source_model.xml 20     Active Shallow Crust 188          296         
+source_model.xml 21     Active Shallow Crust 582          296         
+source_model.xml 22     Active Shallow Crust 346          296         
+source_model.xml 23     Active Shallow Crust 287          296         
+source_model.xml 24     Active Shallow Crust 516          296         
+source_model.xml 25     Active Shallow Crust 280          296         
+source_model.xml 26     Active Shallow Crust 221          296         
 ================ ====== ==================== ============ ============
 
-============= ======
-#TRT models   27    
-#eff_ruptures 18,204
-#tot_ruptures 7,992 
-#tot_weight   8,175 
-============= ======
-
-Informational data
-------------------
-======================= ===================================================================================
-count_ruptures.received tot 19.82 KB, max_per_task 927 B                                                   
-count_ruptures.sent     sources 34.49 KB, srcfilter 16.92 KB, param 9.98 KB, monitor 7.73 KB, gsims 2.81 KB
-hazard.input_weight     8175.0                                                                             
-hazard.n_imts           1                                                                                  
-hazard.n_levels         4                                                                                  
-hazard.n_realizations   27                                                                                 
-hazard.n_sites          1                                                                                  
-hazard.n_sources        54                                                                                 
-hazard.output_weight    4.0                                                                                
-hostname                tstation.gem.lan                                                                   
-require_epsilons        False                                                                              
-======================= ===================================================================================
+============= =====
+#TRT models   27   
+#eff_ruptures 8,691
+#tot_ruptures 7,992
+#tot_weight   8,175
+============= =====
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========= =========
-source_id source_class      num_ruptures calc_time num_sites num_split
-========= ================= ============ ========= ========= =========
-SFLT1     SimpleFaultSource 132          0.288     134       133      
-SFLT2     SimpleFaultSource 89           0.187     64        63       
-========= ================= ============ ========= ========= =========
+========= ================= ============ ========= ========== ========= ========= ======
+source_id source_class      num_ruptures calc_time split_time num_sites num_split events
+========= ================= ============ ========= ========== ========= ========= ======
+SFLT2     SimpleFaultSource 89           0.207     5.579E-05  61        61        0     
+SFLT1     SimpleFaultSource 132          0.116     7.868E-06  32        32        0     
+========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.475     2     
+SimpleFaultSource 0.324     2     
 ================= ========= ======
 
 Duplicated sources
@@ -224,19 +208,28 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.024 0.030  0.004 0.153 24       
+count_ruptures     0.007 0.008  0.003 0.041 65       
 ================== ===== ====== ===== ===== =========
+
+Informational data
+------------------
+============== ================================================================================= ========
+task           sent                                                                              received
+count_ruptures sources=72.88 KB srcfilter=45.83 KB param=27.04 KB monitor=20.95 KB gsims=7.62 KB 23.89 KB
+============== ================================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.565     0.242     24    
-reading composite source model 0.367     0.0       1     
-managing sources               0.059     0.0       1     
+reading composite source model 0.842     0.0       1     
+total count_ruptures           0.474     3.926     65    
+managing sources               0.172     0.0       1     
 store source_info              0.011     0.0       1     
-aggregate curves               4.344E-04 0.0       24    
-saving probability maps        4.935E-05 0.0       1     
-reading site collection        4.315E-05 0.0       1     
+splitting sources              0.003     0.0       1     
+unpickling count_ruptures      0.003     0.0       65    
+aggregate curves               0.001     0.0       65    
+reading site collection        2.499E-04 0.0       1     
+saving probability maps        4.244E-05 0.0       1     
 ============================== ========= ========= ======
