@@ -828,6 +828,22 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                              (11.12, -11.12), (-11.12, -11.12)]
         numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
                                           decimal=2)
+    def test_idl(self):
+        lons = numpy.array([[179.9, -179.9],
+                            [179.9, -179.9]])
+        lats = numpy.array([[-0.1, -0.1],
+                            [0.1, 0.1]])
+        depths = numpy.array([[2., 3.],
+                              [8., 9.]])
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
+                           (-179.9, -0.1), (179.9, -0.1)]
+        polygon = self._test(lons, lats, depths, expected_coords)
+
+        coords2d = numpy.array(polygon.exterior.coords)
+        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
+                             (11.12, -11.12), (-11.12, -11.12)]
+        numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
+                                          decimal=2)
 
     def test_4_cells_by_4_cells(self):
         lons, lats = numpy.meshgrid(numpy.arange(-2, 3) / 10.,
