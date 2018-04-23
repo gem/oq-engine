@@ -297,6 +297,12 @@ _pkgbuild_innervm_run () {
 
     add_custom_pkg_repo
 
+    ssh "$lxc_ip" "sudo apt-get upgrade -y"
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+    
     old_ifs="$IFS"
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
@@ -1390,7 +1396,7 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
     _wait_ssh "$lxc_ip"
 
     set +e
-    _pkgbuild_innervm_run "$lxc_ip" "$DPBP_FLAG"
+    _pkgbuild_innervm_run "$lxc_ip" "$branch" "$DPBP_FLAG"
     inner_ret=$?
     sudo $LXC_TERM -n "$lxc_name"
     set -e
