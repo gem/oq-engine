@@ -57,6 +57,8 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 3)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
+    cross_correlation = valid.Param(valid.Choice('cross', 'no correlation'),
+                                    'cross')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
