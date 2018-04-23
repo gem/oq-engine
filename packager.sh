@@ -41,7 +41,14 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-python3.5|deb oq-libs|deb oq-libs-extra|sub"
+
+# FIXME: probably we must to add them:
+# liboq-python3.5-minimal
+# liboq-python3.5-stdlib
+# oq-python3.5
+# oq-python3.5-minimal
+
+GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -339,7 +346,8 @@ _devtest_innervm_run () {
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
 
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
@@ -352,17 +360,16 @@ _devtest_innervm_run () {
             popd
         elif [ "$dep_type" = "deb" ]; then
             add_local_pkg_repo "$dep"
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
         fi
-
     done
     IFS="$old_ifs"
 
@@ -452,7 +459,8 @@ _builddoc_innervm_run () {
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
 
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
@@ -465,12 +473,12 @@ _builddoc_innervm_run () {
             popd
         elif [ "$dep_type" = "deb" ]; then
             add_local_pkg_repo "$dep"
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "cust" ]; then
             add_custom_pkg_repo
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         elif [ "$dep_type" = "sub" ]; then
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "python3-${dep}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -539,7 +547,8 @@ _pkgtest_innervm_run () {
     IFS=" $NL"
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
         # if the deb is a subpackage we skip source check
         if [ "$dep_type" == "cust" -o "$dep_type" == "sub" ]; then
             continue
@@ -702,12 +711,13 @@ deps_list() {
         skip=0
         for d_item in $(echo "$GEM_DEPENDS" | sed 's/ /,/g'); do
             d="$(echo "$d_item" | cut -d '|' -f 1)"
-            d_type="$(echo "$d_item" | cut -d '|' -f 2)"
+            d_pkg="$(echo "$d_item" | cut -d '|' -f 2)"
+            d_type="$(echo "$d_item" | cut -d '|' -f 3)"
 
             if [ "$d_type" != "src" ]; then
                 continue
             fi
-            if [ "$pkg_name" = "python3-${d}" ]; then
+            if [ "$pkg_name" = "${d_pkg}" ]; then
                 skip=1
                 break
             fi
@@ -827,7 +837,8 @@ devtest_run () {
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
         # if the deb is a subpackage we skip source check
         if [ "$dep_type" == "sub" ]; then
             continue
@@ -934,7 +945,8 @@ builddoc_run () {
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
         if [ "$dep_type" != "src" ]; then
             continue
         fi
@@ -1281,10 +1293,11 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cp debian/control debian/control.orig
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
         if [ "$dep" = "oq-libs" ]; then
-            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+            sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
         else
-            sed -i "s/\(python3-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+            sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
         fi
     done
 
