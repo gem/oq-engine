@@ -297,6 +297,38 @@ _pkgbuild_innervm_run () {
 
     add_custom_pkg_repo
 
+    old_ifs="$IFS"
+    IFS=" "
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
+
+        if [ "$dep_type" = "src" ]; then
+            # extract dependencies for source dependencies
+            pkgs_list="$(deps_list "deprec" "_jenkins_deps/$dep/debian")"
+            ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
+
+            # install source dependencies
+            pushd "_jenkins_deps/$dep"
+            git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
+            popd
+        elif [ "$dep_type" = "deb" ]; then
+            add_local_pkg_repo "$dep" "$dep_pkg"
+            ssh "$lxc_ip" sudo apt-cache policy "${dep_pkg}"
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
+        elif [ "$dep_type" = "cust" ]; then
+            add_custom_pkg_repo
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
+        elif [ "$dep_type" = "sub" ]; then
+            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
+        else
+            echo "Dep type $dep_type not supported"
+            exit 1
+        fi
+    done
+    IFS="$old_ifs"
+    
     ssh "$lxc_ip" sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
