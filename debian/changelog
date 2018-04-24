@@ -1,6 +1,10 @@
+python3-oq-engine (3.0.1-1~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed a numeric bug affecting nonparametric sources and causing saturating
     hazard curves at high intensity
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 24 Apr 2018 10:10:41 +0200
 
 python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
 
