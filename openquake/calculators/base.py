@@ -629,8 +629,8 @@ class RiskCalculator(HazardCalculator):
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
-            gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
-                           oq.random_seed)
+            gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
+                           oq.truncation_level, E, oq.random_seed)
             save_gmf_data(self.datastore, self.sitecol, gmfs)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
