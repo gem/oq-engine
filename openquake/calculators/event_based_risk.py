@@ -223,7 +223,8 @@ class EbriskCalculator(base.RiskCalculator):
                 fname = oq.inputs['gmfs']
                 sids = self.sitecol.complete.sids
                 if fname.endswith('.xml'):  # old approach
-                    self.eids, self.R = base.get_gmfs(self)
+                    base.set_gmfs(self)  # set self.R
+                    self.eids = self.datastore['events']['eid']
                 else:  # import csv
                     self.eids, self.R, self.gmdata = base.import_gmfs(
                         self.datastore, fname, sids)
