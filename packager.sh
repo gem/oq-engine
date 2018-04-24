@@ -41,13 +41,6 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-
-# FIXME: probably we must to add them:
-# liboq-python3.5-minimal
-# liboq-python3.5-stdlib
-# oq-python3.5
-# oq-python3.5-minimal
-
 GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
@@ -283,27 +276,13 @@ add_local_pkg_repo () {
     ssh "$lxc_ip" sudo apt-get update
 }
 
-_pkgbuild_innervm_run () {
-    local lxc_ip="$1"
-    local branch="$2"
-    local DPBP_FLAG="$3"
+_depends_resolver () {
+    local je_deps_base="$1"
 
-    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
-
-    ssh "$lxc_ip" mkdir build-deb
-    scp -r ./* "$lxc_ip:build-deb"
-    gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
-    ssh "$lxc_ip" sudo apt-get update
-    ssh "$lxc_ip" sudo apt-get -y upgrade
-
-    add_custom_pkg_repo
-
-    ssh "$lxc_ip" "sudo apt-get upgrade -y"
-
-    if [ -f ../../_jenkins_deps_info ]; then
-        source ../../_jenkins_deps_info
+    if [ -f "${je_deps_base}_jenkins_deps_info" ]; then
+        source "${je_deps_base}_jenkins_deps_info"
     fi
-    
+
     old_ifs="$IFS"
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
@@ -313,11 +292,11 @@ _pkgbuild_innervm_run () {
 
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
-            pkgs_list="$(deps_list "deprec" "_jenkins_deps/$dep/debian")"
+            pkgs_list="$(deps_list "deprec" "${je_deps_base}_jenkins_deps/$dep/debian")"
             ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
             # install source dependencies
-            pushd "_jenkins_deps/$dep"
+            pushd "${je_deps_base}_jenkins_deps/$dep"
             git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
             popd
         elif [ "$dep_type" = "deb" ]; then
@@ -335,7 +314,27 @@ _pkgbuild_innervm_run () {
         fi
     done
     IFS="$old_ifs"
-    
+}
+
+_pkgbuild_innervm_run () {
+    local lxc_ip="$1"
+    local branch="$2"
+    local DPBP_FLAG="$3"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh "$lxc_ip" mkdir build-deb
+    scp -r ./* "$lxc_ip:build-deb"
+    gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
+    ssh "$lxc_ip" sudo apt-get update
+    ssh "$lxc_ip" sudo apt-get -y upgrade
+
+    add_custom_pkg_repo
+
+    ssh "$lxc_ip" "sudo apt-get upgrade -y"
+
+    _depends_resolver "../../"
+
     ssh "$lxc_ip" sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
