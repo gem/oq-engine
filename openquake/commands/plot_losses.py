@@ -32,16 +32,16 @@ def make_figure(losses_by_rlzi, loss_types):
     fig = plt.figure()
     for rlz in losses_by_rlzi:
         rlzi = int(rlz[4:])  # strip rlz-
-        losses = losses_by_rlzi[rlz]
+        losses = losses_by_rlzi[rlz]['loss']
         print('%s, num_events=%d' % (rlz, len(losses)))
         for lti, lt in enumerate(loss_types):
-            if numpy.isnan(losses[lt]).all():
+            ls = losses[:, lti]
+            if numpy.isnan(ls).all():
                 continue
             ax = fig.add_subplot(R, L, rlzi * L + lti + 1)
             ax.set_xlabel('%s, loss_type=%s' % (rlz, lt))
-            ax.hist(losses[lt], 7, rwidth=.9)
-            ax.set_title('loss=%.5e$\pm$%.5e' %
-                         (losses[lt].mean(), losses[lt].std(ddof=1)))
+            ax.hist(ls, 7, rwidth=.9)
+            ax.set_title('loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
     return plt
 
 
