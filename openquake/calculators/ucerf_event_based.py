@@ -35,7 +35,7 @@ from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.event_based_risk import (
-    EbriskCalculator, event_based_risk)
+    EbrCalculator, event_based_risk)
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -861,7 +861,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
 
 
 @base.calculators.add('ucerf_risk')
-class UCERFRiskCalculator(EbriskCalculator):
+class UCERFRiskCalculator(EbrCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
