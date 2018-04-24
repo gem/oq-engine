@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Change the `losses_by_event` output to export a single .csv file with
+  * Changed the `losses_by_event` output to export a single .csv file with
     all realizations
   * Added a `cross_correlation` parameter used when working with shakemaps
   * Now sites and exposure can be set at the same time in the job.ini
