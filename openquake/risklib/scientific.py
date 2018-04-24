@@ -1406,7 +1406,7 @@ class LossesByPeriodBuilder(object):
             num_events = self.num_events[r]
             losses = dic[r]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, lti].flatten()  # flatten only in ucerf
+                ls = losses[:, lti].squeeze()  # squeeze only in ucerf
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
                 array[:, r][lt] = lbp
