@@ -20,7 +20,7 @@ from openquake.baselib import sap, datastore
 from openquake.calculators.extract import extract
 
 
-def make_figure(losses_by_rlzi, loss_types):
+def make_figure(losses_by_rlzi, loss_types, nbins):
     """
     :param losses_by_event: composite array (eid, rlzi, losses)
     :param loss_types: list of loss types
@@ -40,13 +40,13 @@ def make_figure(losses_by_rlzi, loss_types):
                 continue
             ax = fig.add_subplot(R, L, rlzi * L + lti + 1)
             ax.set_xlabel('%s, loss_type=%s' % (rlz, lt))
-            ax.hist(ls, 7, rwidth=.9)
+            ax.hist(ls, nbins, rwidth=.9)
             ax.set_title('loss=%.5e$\pm$%.5e' % (ls.mean(), ls.std(ddof=1)))
     return plt
 
 
 @sap.Script
-def plot_losses(calc_id):
+def plot_losses(calc_id, bins=7):
     """
     losses_by_event plotter
     """
@@ -54,7 +54,8 @@ def plot_losses(calc_id):
     dstore = datastore.read(calc_id)
     losses_by_rlzi = dict(extract(dstore, 'losses_by_event'))
     oq = dstore['oqparam']
-    plt = make_figure(losses_by_rlzi, oq.loss_dt().names)
+    plt = make_figure(losses_by_rlzi, oq.loss_dt().names, bins)
     plt.show()
 
 plot_losses.arg('calc_id', 'a computation id', type=int)
+plot_losses.opt('bins', 'number of histogram bins', type=int)
