@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a numeric bug affecting nonparametric sources and causing saturating
+    hazard curves at high intensity
+
 python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
 
   [Michele Simionato]
