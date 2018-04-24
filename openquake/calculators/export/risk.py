@@ -221,7 +221,7 @@ def export_agg_losses_ebr(ekey, dstore):
         logging.warn('There are no ruptures in the datastore')
         return []
     name, ext = export.keyfunc(ekey)
-    agg_losses = dstore[name]
+    agg_losses = dstore['losses_by_event']
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),
