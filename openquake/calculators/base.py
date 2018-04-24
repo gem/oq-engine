@@ -495,7 +495,6 @@ class HazardCalculator(BaseCalculator):
                      if self.datastore.parent else None)
         if oq.shakemap_id or 'shakemap' in oq.inputs:
             self.read_shakemap()
-            self.R = 1
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
@@ -608,6 +607,17 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+    @property
+    def R(self):
+        """
+        :returns: the number of realizations as read from `csm_info`
+        """
+        try:
+            return self._R
+        except AttributeError:
+            self._R = self.datastore['csm_info'].get_num_rlzs()
+            return self._R
+
     def read_shakemap(self):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.
@@ -750,31 +760,29 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def set_gmfs(calculator):
+def save_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
     :returns: a pair (eids, R) where R is the number of realizations
     """
     dstore = calculator.datastore
     oq = calculator.oqparam
-    if 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        eids, gmfs = readinput.get_gmfs(oq)
-        E = len(eids)
-        if hasattr(oq, 'number_of_ground_motion_fields'):
-            if oq.number_of_ground_motion_fields != E:
-                raise RuntimeError(
-                    'Expected %d ground motion fields, found %d' %
-                    (oq.number_of_ground_motion_fields, E))
-        else:  # set the number of GMFs from the file
-            oq.number_of_ground_motion_fields = E
-        # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
-        haz_sitecol = readinput.get_site_collection(oq)
-        R, N, E, I = gmfs.shape
-        idx = (slice(None) if haz_sitecol.indices is None
-               else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
-    calculator.R = dstore['csm_info'].get_num_rlzs()
+    logging.info('Reading gmfs from file')
+    eids, gmfs = readinput.get_gmfs(oq)
+    E = len(eids)
+    if hasattr(oq, 'number_of_ground_motion_fields'):
+        if oq.number_of_ground_motion_fields != E:
+            raise RuntimeError(
+                'Expected %d ground motion fields, found %d' %
+                (oq.number_of_ground_motion_fields, E))
+    else:  # set the number of GMFs from the file
+        oq.number_of_ground_motion_fields = E
+    # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
+    haz_sitecol = readinput.get_site_collection(oq)
+    R, N, E, I = gmfs.shape
+    idx = (slice(None) if haz_sitecol.indices is None
+           else haz_sitecol.indices)
+    save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
 
 
 def save_gmf_data(dstore, sitecol, gmfs, eids=()):
