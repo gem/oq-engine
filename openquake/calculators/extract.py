@@ -36,7 +36,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def squeeze(loss_array, loss_dt):
+def cast(loss_array, loss_dt):
     return loss_array.copy().view(loss_dt).squeeze()
 
 
@@ -399,19 +399,19 @@ def extract_losses_by_asset(dstore, what):
         losses_by_asset = dstore['losses_by_asset'].value
         for rlz in rlzs:
             # I am exporting the 'mean' and ignoring the 'stddev'
-            losses = squeeze(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
+            losses = cast(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'].value
         stats = dstore['avg_losses-stats'].attrs['stats'].split()
         for s, stat in enumerate(stats):
-            losses = squeeze(avg_losses[:, s], loss_dt)
+            losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
         avg_losses = dstore['avg_losses-rlzs'].value
-        losses = squeeze(avg_losses, loss_dt)
+        losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
 
