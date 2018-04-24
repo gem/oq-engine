@@ -277,7 +277,8 @@ add_local_pkg_repo () {
 }
 
 _depends_resolver () {
-    local je_deps_base="$1"
+    local deps_action="$1" je_deps_base="$2"
+    local old_ifs dep_item dep dep_pkg dep_type
 
     if [ -f "${je_deps_base}_jenkins_deps_info" ]; then
         source "${je_deps_base}_jenkins_deps_info"
@@ -292,7 +293,7 @@ _depends_resolver () {
 
         if [ "$dep_type" = "src" ]; then
             # extract dependencies for source dependencies
-            pkgs_list="$(deps_list "deprec" "${je_deps_base}_jenkins_deps/$dep/debian")"
+            pkgs_list="$(deps_list "$deps_action" "${je_deps_base}_jenkins_deps/$dep/debian")"
             ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
 
             # install source dependencies
@@ -333,7 +334,7 @@ _pkgbuild_innervm_run () {
 
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
 
-    _depends_resolver "../../"
+    _depends_resolver build "../../"
 
     ssh "$lxc_ip" sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
@@ -362,7 +363,7 @@ _pkgbuild_innervm_run () {
 #      <branch>   name of the tested branch
 #
 _devtest_innervm_run () {
-    local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
+    local pkgs_list lxc_ip="$1" branch="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -376,41 +377,7 @@ _devtest_innervm_run () {
 
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
 
-    if [ -f _jenkins_deps_info ]; then
-        source _jenkins_deps_info
-    fi
-
-    old_ifs="$IFS"
-    IFS=" "
-    for dep_item in $GEM_DEPENDS; do
-        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
-
-        if [ "$dep_type" = "src" ]; then
-            # extract dependencies for source dependencies
-            pkgs_list="$(deps_list "deprec" "_jenkins_deps/$dep/debian")"
-            ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
-
-            # install source dependencies
-            pushd "_jenkins_deps/$dep"
-            git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
-            popd
-        elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep" "$dep_pkg"
-            ssh "$lxc_ip" sudo apt-cache policy "${dep_pkg}"
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        elif [ "$dep_type" = "cust" ]; then
-            add_custom_pkg_repo
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        elif [ "$dep_type" = "sub" ]; then
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        else
-            echo "Dep type $dep_type not supported"
-            exit 1
-        fi
-    done
-    IFS="$old_ifs"
+    _depends_resolver deprec ""
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
@@ -474,7 +441,7 @@ _devtest_innervm_run () {
 }
 
 _builddoc_innervm_run () {
-    local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
+    local pkgs_list lxc_ip="$1" branch="$2"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
@@ -488,43 +455,9 @@ _builddoc_innervm_run () {
     # install package to manage repository properly
     # ssh "$lxc_ip" sudo apt-get install -y python-software-properties
 
-    if [ -f _jenkins_deps_info ]; then
-        source _jenkins_deps_info
-    fi
-
     ssh "$lxc_ip" mkdir -p "repo"
 
-    old_ifs="$IFS"
-    IFS=" "
-    for dep_item in $GEM_DEPENDS; do
-        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
-        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
-
-        if [ "$dep_type" = "src" ]; then
-            # extract dependencies for source dependencies
-            pkgs_list="$(deps_list "build" "_jenkins_deps/$dep/debian")"
-            ssh "$lxc_ip" sudo apt-get install -y ${pkgs_list}
-
-            # install source dependencies
-            pushd "_jenkins_deps/$dep"
-            git archive --prefix "${dep}/" HEAD | ssh "$lxc_ip" "tar xv"
-            popd
-        elif [ "$dep_type" = "deb" ]; then
-            add_local_pkg_repo "$dep" "$dep_pkg"
-            ssh "$lxc_ip" sudo apt-cache policy "${dep_pkg}"
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        elif [ "$dep_type" = "cust" ]; then
-            add_custom_pkg_repo
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        elif [ "$dep_type" = "sub" ]; then
-            ssh "$lxc_ip" sudo apt-get install "$APT_FORCE_YES" -y "${dep_pkg}"
-        else
-            echo "Dep type $dep_type not supported"
-            exit 1
-        fi
-    done
-    IFS="$old_ifs"
+    _depends_resolver build ""
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "build" debian)"
