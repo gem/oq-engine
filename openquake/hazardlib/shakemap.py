@@ -22,7 +22,6 @@ import re
 import math
 import zipfile
 import logging
-import operator
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
@@ -243,19 +242,19 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
+def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed):
     """
     :returns: an array of GMFs of shape (R, N, E, M)
     """
     std = shakemap['std']
     imts = [imt.from_string(name) for name in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
+    val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in std.dtype.names}
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts)
     stddev = [std[imt] for imt in std.dtype.names]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    cross_corr = cross_correlation_matrix(imts)
+    cross_corr = cross_correlation_matrix(imts, crosscorr)
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in std.dtype.names for j in range(N)])
@@ -267,9 +266,4 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     gmfs = numpy.exp(numpy.dot(L, Z) + mu)
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
-
-"""
-here is an example for Tanzania:
-https://earthquake.usgs.gov/archive/product/shakemap/us10006nkx/us/1480920466172/download/grid.xml
-"""
+    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1) / PCTG
