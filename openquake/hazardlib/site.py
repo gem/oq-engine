@@ -352,9 +352,9 @@ class SiteCollection(object):
         if cross_idl(min_lon, max_lon):
             raise ValueError('Crossing the International Date Line is '
                              'not supported yet')
+        recs = self.array if self.indices is None else self.array[self.indices]
         mask = numpy.array([min_lon < rec['lons'] < max_lon and
-                            min_lat < rec['lats'] < max_lat
-                            for rec in self.array[self.indices]])
+                            min_lat < rec['lats'] < max_lat for rec in recs])
         if not mask.any():
             raise Exception('There are no sites within the boundind box %s'
                             % str(bbox))
