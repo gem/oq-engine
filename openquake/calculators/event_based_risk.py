@@ -217,18 +217,17 @@ class EbriskCalculator(base.RiskCalculator):
             self.eids = sorted(parent['events']['eid'])
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
-            self.R = len(self.rlzs_assoc.realizations)
         else:  # read the GMFs from a file
             with self.monitor('reading GMFs', measuremem=True):
                 fname = oq.inputs['gmfs']
                 sids = self.sitecol.complete.sids
                 if fname.endswith('.xml'):  # old approach
-                    base.set_gmfs(self)  # set self.R
+                    base.save_gmfs(self)
                     self.eids = self.datastore['events']['eid']
                 else:  # import csv
-                    self.eids, self.R, self.gmdata = base.import_gmfs(
+                    self.eids, num_rlzs, self.gmdata = base.import_gmfs(
                         self.datastore, fname, sids)
-                    event_based.save_gmdata(self, self.R)
+                    event_based.save_gmdata(self, num_rlzs)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
@@ -412,7 +411,6 @@ class EbriskCalculator(base.RiskCalculator):
         :returns: the total number of events
         """
         oq = self.oqparam
-        self.R = num_rlzs
         self.A = len(self.assetcol)
         if oq.asset_loss_table:
             # save all_loss_ratios
@@ -421,13 +419,13 @@ class EbriskCalculator(base.RiskCalculator):
 
         if oq.avg_losses:
             self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
+                'avg_losses-rlzs', F32, (self.A, num_rlzs, self.L * self.I))
 
         num_events = collections.Counter()
         self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 2, F32))
         self.taskno = 0
         self.start = 0
-        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        self.num_losses = numpy.zeros((self.A, num_rlzs), U32)
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
@@ -621,7 +619,6 @@ class EbrPostCalculator(base.RiskCalculator):
         self._monitor = calc._monitor
         self.riskmodel = calc.riskmodel
         self.loss_builder = get_loss_builder(calc.datastore)
-        self.R = calc.R
         P = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
 
