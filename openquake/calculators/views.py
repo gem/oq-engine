@@ -364,7 +364,7 @@ def ebr_data_transfer(token, dstore):
     """
     Display the data transferred in an event based risk calculation
     """
-    attrs = dstore['agg_loss_table'].attrs
+    attrs = dstore['losses_by_event'].attrs
     sent = humansize(attrs['sent'])
     received = humansize(attrs['tot_received'])
     return 'Event Based Risk: sent %s, received %s' % (sent, received)
@@ -394,7 +394,7 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
     R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
@@ -782,7 +782,7 @@ def view_elt(token, dstore):
     """
     oq = dstore['oqparam']
     R = len(dstore['csm_info'].rlzs)
-    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
     header = oq.loss_dt().names
     tbl = []
     for rlzi in range(R):
