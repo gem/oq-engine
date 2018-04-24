@@ -146,9 +146,10 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dest = dstore.build_fname('losses_by_event', '', 'csv')
-    writer.save(dstore['losses_by_event'].value, dest)
+    writer.save(dstore['losses_by_event'].value.view(dtlist), dest)
     return writer.getsaved()
 
 
