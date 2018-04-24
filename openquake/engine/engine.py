@@ -160,6 +160,8 @@ def raiseMasterKilled(signum, _stack):
     parallel.Starmap.shutdown()
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
+    elif signum == signal.SIGHUP:
+        msg = 'The openquake master lost its controlling terminal'
     else:
         msg = 'Received a signal %d' % signum
     raise MasterKilled(msg)
@@ -172,6 +174,7 @@ def raiseMasterKilled(signum, _stack):
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
+    signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 
