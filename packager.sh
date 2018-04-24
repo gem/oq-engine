@@ -285,7 +285,8 @@ add_local_pkg_repo () {
 
 _pkgbuild_innervm_run () {
     local lxc_ip="$1"
-    local DPBP_FLAG="$2"
+    local branch="$2"
+    local DPBP_FLAG="$3"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
