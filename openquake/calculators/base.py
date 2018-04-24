@@ -757,13 +757,6 @@ def set_gmfs(calculator):
     """
     dstore = calculator.datastore
     oq = calculator.oqparam
-    sitecol = calculator.sitecol
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # S sites
-    else:
-        haz_sitecol = sitecol  # N sites
-    N = len(haz_sitecol.complete)
-    I = len(oq.imtls)
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         eids, gmfs = readinput.get_gmfs(oq)
@@ -776,30 +769,20 @@ def set_gmfs(calculator):
         else:  # set the number of GMFs from the file
             oq.number_of_ground_motion_fields = E
         # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
-        haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
+        haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
         idx = (slice(None) if haz_sitecol.indices is None
                else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx])
-
-        # store the events, useful when read the GMFs from a file
-        events = numpy.zeros(E, readinput.stored_event_dt)
-        events['eid'] = eids
-        dstore['events'] = events
-        calculator.R = len(gmfs)
-
-    elif calculator.precalc:  # from previous step
-        calculator.R = dstore['csm_info'].get_num_rlzs()
-
-    else:  # with --hc option
-        calculator.R = calculator.datastore['csm_info'].get_num_rlzs()
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
+    calculator.R = dstore['csm_info'].get_num_rlzs()
 
 
-def save_gmf_data(dstore, sitecol, gmfs):
+def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param gmfs: an array of shape (R, N, E, M)
+    :param eids: E event IDs or the empty tuple
     """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
@@ -812,6 +795,10 @@ def save_gmf_data(dstore, sitecol, gmfs):
         offset += n
     dstore.save_vlen('gmf_data/indices', lst)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+    if len(eids):  # store the events
+        events = numpy.zeros(len(eids), readinput.stored_event_dt)
+        events['eid'] = eids
+        dstore['events'] = events
 
 
 def import_gmfs(dstore, fname, sids):
