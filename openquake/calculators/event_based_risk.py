@@ -217,17 +217,6 @@ class EbriskCalculator(base.RiskCalculator):
             self.eids = sorted(parent['events']['eid'])
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
-        else:  # read the GMFs from a file
-            with self.monitor('reading GMFs', measuremem=True):
-                fname = oq.inputs['gmfs']
-                sids = self.sitecol.complete.sids
-                if fname.endswith('.xml'):  # old approach
-                    base.save_gmfs(self)
-                    self.eids = self.datastore['events']['eid']
-                else:  # import csv
-                    self.eids, num_rlzs, self.gmdata = base.import_gmfs(
-                        self.datastore, fname, sids)
-                    event_based.save_gmdata(self, num_rlzs)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
@@ -449,7 +438,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.datastore.set_attrs(
                 'all_loss_ratios/num_losses', nbytes=self.num_losses.nbytes)
         del self.num_losses
-        event_based.save_gmdata(self, num_rlzs)
+        base.save_gmdata(self, num_rlzs)
         return num_events
 
     def save_losses(self, dic, offset=0):
