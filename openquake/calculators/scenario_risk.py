@@ -25,7 +25,8 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.calculators import base
 
-
+U16 = numpy.uint16
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
@@ -115,6 +116,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         loss_dt = self.oqparam.loss_dt()
+        dtlist = [('eid', U64), ('rlzi', U16)] + self.oqparam.loss_dt_list()
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
@@ -137,7 +139,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses-rlzs'] = agglosses
 
             # losses by event
-            self.datastore['losses_by_event'] = res  # shape (E, R, LI)
+            lbe = numpy.fromiter(
+                ((eid, rlzi) + tuple(res[eid, rlzi])
+                 for rlzi in range(R) for eid in range(E)), dtlist)
+            self.datastore['losses_by_event'] = lbe
 
             # all losses
             if self.oqparam.asset_loss_table:
