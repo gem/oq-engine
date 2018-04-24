@@ -15,32 +15,33 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import numpy
+from openquake.baselib import sap, datastore
+from openquake.calculators.extract import extract
 
-from __future__ import print_function
-from openquake.baselib import sap, datastore, general
 
-
-def make_figure(losses_by_event, loss_types):
+def make_figure(losses_by_rlzi, loss_types):
     """
     :param losses_by_event: composite array (eid, rlzi, losses)
     :param loss_types: list of loss types
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
-    losses_by_rlzi = general.group_array(losses_by_event, 'rlzi')
     R = len(losses_by_rlzi)
-    L = losses_by_rlzi[0]['loss'].shape[1]
+    L = len(loss_types)
     fig = plt.figure()
-    for rlzi in losses_by_rlzi:
-        loss_array = losses_by_rlzi[rlzi]['loss']
-        print('rlzi=%d, num_events=%d' % (rlzi, len(loss_array)))
+    for rlz in losses_by_rlzi:
+        rlzi = int(rlz[4:])  # strip rlz-
+        losses = losses_by_rlzi[rlz]
+        print('%s, num_events=%d' % (rlz, len(losses)))
         for lti, lt in enumerate(loss_types):
-            losses = loss_array[:, lti]
+            if numpy.isnan(losses[lt]).all():
+                continue
             ax = fig.add_subplot(R, L, rlzi * L + lti + 1)
-            ax.set_xlabel('rlz=%d, loss_type=%s' % (rlzi, lt))
-            ax.hist(losses, 7, rwidth=.9)
+            ax.set_xlabel('%s, loss_type=%s' % (rlz, lt))
+            ax.hist(losses[lt], 7, rwidth=.9)
             ax.set_title('loss=%.5e$\pm$%.5e' %
-                         (losses.mean(), losses.std(ddof=1)))
+                         (losses[lt].mean(), losses[lt].std(ddof=1)))
     return plt
 
 
@@ -51,8 +52,9 @@ def plot_losses(calc_id):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
+    losses_by_rlzi = dict(extract(dstore, 'losses_by_event'))
     oq = dstore['oqparam']
-    plt = make_figure(dstore['agg_loss_table'].value, oq.loss_dt().names)
+    plt = make_figure(losses_by_rlzi, oq.loss_dt().names)
     plt.show()
 
 plot_losses.arg('calc_id', 'a computation id', type=int)

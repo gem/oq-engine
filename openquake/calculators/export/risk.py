@@ -146,15 +146,9 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt()
-    all_losses = dstore[ekey[0]].value
-    eids = dstore['events']['eid']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(loss_dt).squeeze()
-        writer.save(compose_arrays(eids, data, 'event_id'), dest)
+    dest = dstore.build_fname('losses_by_event', '', 'csv')
+    writer.save(dstore['losses_by_event'].value, dest)
     return writer.getsaved()
 
 

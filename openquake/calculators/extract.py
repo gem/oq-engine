@@ -36,6 +36,10 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def squeeze(loss_array, loss_dt):
+    return loss_array.copy().view(loss_dt).squeeze()
+
+
 def barray(iterlines):
     """
     Array of bytes
@@ -410,6 +414,13 @@ def extract_losses_by_asset(dstore, what):
         losses = avg_losses[:, 0].copy()
         data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
         yield 'rlz-000', data
+
+
+@extract.add('losses_by_event')
+def extract_losses_by_event(dstore, what):
+    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
+    for rlzi in dic:
+        yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
 def _gmf_scenario(data, num_sites, imts):
