@@ -116,7 +116,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         loss_dt = self.oqparam.loss_dt()
-        dtlist = [('eid', U64), ('rlzi', U16)] + self.oqparam.loss_dt_list()
+        LI = len(loss_dt.names)
+        dtlist = [('eid', U64), ('rlzi', U16), ('loss', (F32, LI))]
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
@@ -126,12 +127,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             E, R, LI = res.shape
             L = LI // I
             mean, std = scientific.mean_std(res)  # shape (R, LI)
-            agglosses = numpy.zeros((R, L * I), stat_dt)
+            agglosses = numpy.zeros((R, LI), stat_dt)
             agglosses['mean'] = F32(mean)
             agglosses['stddev'] = F32(std)
 
             # losses by asset
-            losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
+            losses_by_asset = numpy.zeros((A, R, LI), stat_dt)
             for (l, r, aid, stat) in result['avg']:
                 for i in range(I):
                     losses_by_asset[aid, r, l + L * i] = stat[i]
@@ -140,7 +141,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # losses by event
             lbe = numpy.fromiter(
-                ((eid, rlzi) + tuple(res[eid, rlzi])
+                ((eid, rlzi, res[eid, rlzi])
                  for rlzi in range(R) for eid in range(E)), dtlist)
             self.datastore['losses_by_event'] = lbe
 
