@@ -104,12 +104,12 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
-        idx = riskinput.hazard_getter.eid2idx
+        eid2idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
             if loss_ratios is None:  # for GMFs below the minimum_intensity
                 continue
             loss_type = riskmodel.loss_types[l]
-            indices = numpy.array([idx[eid] for eid in out.eids])
+            indices = numpy.array([eid2idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
@@ -177,7 +177,7 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
 
 
 @base.calculators.add('event_based_risk')
-class EbriskCalculator(base.RiskCalculator):
+class EbrCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
     """
