@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, block_splitter, humansize, split_in_slices)
+    AccumDict, block_splitter, split_in_slices)
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -313,27 +313,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
     return results
 
 
-def save_gmdata(calc, n_rlzs):
-    """
-    Save a composite array `gmdata` in the datastore.
-
-    :param calc: a calculator with a dictionary .gmdata {rlz: data}
-    :param n_rlzs: the total number of realizations
-    """
-    n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
-              [('events', U32), ('nbytes', U32)])
-    array = numpy.zeros(n_rlzs, dtlist)
-    for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
-        events = data[-2]
-        nbytes = data[-1]
-        gmv = data[:-2] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events, nbytes)
-    calc.datastore['gmdata'] = array
-    logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
-
-
 def update_nbytes(dstore, key, array):
     nbytes = dstore.get_attr(key, 'nbytes', 0)
     dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
@@ -465,7 +444,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.precalc.result.clear()
         acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
-        save_gmdata(self, R)
+        base.save_gmdata(self, R)
         if self.indices:
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
