@@ -399,20 +399,20 @@ def extract_losses_by_asset(dstore, what):
         losses_by_asset = dstore['losses_by_asset'].value
         for rlz in rlzs:
             # I am exporting the 'mean' and ignoring the 'stddev'
-            losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
-            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            losses = squeeze(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
+            data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'].value
         stats = dstore['avg_losses-stats'].attrs['stats'].split()
         for s, stat in enumerate(stats):
-            losses = avg_losses[:, s].copy()
-            data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+            losses = squeeze(avg_losses[:, s], loss_dt)
+            data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
         avg_losses = dstore['avg_losses-rlzs'].value
-        losses = avg_losses[:, 0].copy()
-        data = util.compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        losses = squeeze(avg_losses, loss_dt)
+        data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
 
 
