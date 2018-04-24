@@ -242,7 +242,7 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
+def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed):
     """
     :returns: an array of GMFs of shape (R, N, E, M)
     """
@@ -254,7 +254,7 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     spatial_corr = spatial_correlation_array(dmatrix, imts)
     stddev = [std[imt] for imt in std.dtype.names]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    cross_corr = cross_correlation_matrix(imts)
+    cross_corr = cross_correlation_matrix(imts, crosscorr)
     M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
                       for imt in std.dtype.names for j in range(N)])
@@ -267,8 +267,3 @@ def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
     return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1) / PCTG
-
-"""
-here is an example for Tanzania:
-https://earthquake.usgs.gov/archive/product/shakemap/us10006nkx/us/1480920466172/download/grid.xml
-"""
