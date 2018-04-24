@@ -57,7 +57,7 @@ def get_valid_users(request):
         if request.user.is_authenticated:
             groups = request.user.groups.all()
             if groups:
-                users = list(User.objects.filter(groups__name__in=groups)
+                users = list(User.objects.filter(groups__in=groups)
                              .values_list('username', flat=True))
         else:
             # This may happen with crafted requests
