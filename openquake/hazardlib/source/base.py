@@ -67,7 +67,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         :returns: the number of sites affected by this source
         """
         try:
-            return len(self.sids)
+            return len(self.indices)
         except AttributeError:
             return 1
 
