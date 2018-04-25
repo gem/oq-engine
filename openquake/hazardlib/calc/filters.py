@@ -300,6 +300,14 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
+def get_indices(sites):
+    """
+    :returns the indices from a SiteCollection
+    """
+    return (numpy.arange(len(sites), dtype=numpy.float32)
+            if sites.indices is None else sites.indices)
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -337,8 +345,8 @@ class SourceFilter(object):
             sitecol.at_sea_level())
         if self.use_rtree:
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-                self.index.insert(sid, (lon, lat, lon, lat))
+            for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
+                self.index.insert(i, (lon, lat, lon, lat))
             # http://toblerity.org/rtree/performance.html#use-stream-loading
             # causes undefined behavior, with wrong associations being made
 
@@ -387,21 +395,21 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if hasattr(src, 'sids'):  # already filtered
-                yield src, sites.filtered(src.sids)
+            if hasattr(src, 'indices'):  # already filtered
+                yield src, sites.filtered(src.indices)
             elif not self.integration_distance:  # do not filter
                 if sites is not None:
-                    src.sids = sites.sids
+                    src.indices = get_indices(sites)
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(src)
-                sids = numpy.array(sorted(self.index.intersection(box)))
-                if len(set(sids)) < len(sids):
+                indices = numpy.array(sorted(self.index.intersection(box)))
+                if len(set(indices)) < len(indices):
                     # MS: sanity check against rtree bugs
-                    raise ValueError('sids=%s' % sids)
-                elif len(sids):
-                    src.sids = sids
-                    yield src, sites.filtered(sids)
+                    raise ValueError('indices=%s' % indices)
+                elif len(indices):
+                    src.indices = indices
+                    yield src, sites.filtered(indices)
             else:  # normal filtering
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
@@ -410,7 +418,7 @@ class SourceFilter(object):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    src.sids = s_sites.sids
+                    src.indices = get_indices(s_sites)
                     yield src, s_sites
 
     def __getstate__(self):

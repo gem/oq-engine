@@ -206,7 +206,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
             # cleanup filtering information for the next tile
             for src in csm.get_sources():
-                del src.sids
+                del src.indices
         self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
