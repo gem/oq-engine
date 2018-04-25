@@ -142,6 +142,7 @@ class SiteCollection(object):
         ('z2pt5', numpy.float64),
         ('backarc', numpy.bool),
     ])
+    offset = 0  # different from 0 if there are tiles
 
     @classmethod
     def from_shakemap(cls, shakemap_array):
@@ -216,6 +217,7 @@ class SiteCollection(object):
         new = object.__new__(self.__class__)
         new.indices = numpy.uint32(sorted(indices))
         new.array = self.array
+        new.offset = self.offset
         return new
 
     def __init__(self, sites):
@@ -287,11 +289,14 @@ class SiteCollection(object):
         :param hint: hint for how many tiles to generate
         """
         tiles = []
+        offset = 0
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.indices = None
             sc.array = self.array[numpy.array(seq, int)]
+            sc.offset = offset
             tiles.append(sc)
+            offset += len(seq)
         return tiles
 
     def __iter__(self):
@@ -388,4 +393,6 @@ class SiteCollection(object):
 
     def __repr__(self):
         total_sites = len(self.array)
-        return '<SiteCollection with %d/%d sites>' % (len(self), total_sites)
+        offset = ', offset=%d' % self.offset if self.offset else ''
+        return '<SiteCollection with %d/%d sites%s>' % (
+            len(self), total_sites, offset)
