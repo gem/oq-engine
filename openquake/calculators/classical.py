@@ -173,14 +173,9 @@ class PSHACalculator(base.HazardCalculator):
             src_filter = SourceFilter(tile, oq.maximum_distance)
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            prefilter = (num_tiles == 1 if isinstance(self, PreCalculator)
-                         else True)
-            if prefilter:
-                with self.monitor('prefiltering'):
-                    logging.info('Prefiltering sources')
-                    csm = self.csm.filter(src_filter)
-            else:
-                csm = self.csm
+            with self.monitor('prefiltering'):
+                logging.info('Prefiltering sources')
+                csm = self.csm.filter(src_filter)
 
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(
@@ -209,6 +204,9 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+            # cleanup filtering information for the next tile
+            for src in csm.get_sources():
+                del src.sids
         self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
