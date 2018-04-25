@@ -387,22 +387,22 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if hasattr(src, 'sites'):  # already filtered
-                yield src, src.sites
+            if hasattr(src, 'sids'):  # already filtered
+                yield src, sites.filtered(src.sids)
             elif not self.integration_distance:  # do not filter
                 if sites is not None:
-                    src.nsites = len(sites)
+                    src.sids = sites.sids
                 yield src, sites
-            elif self.use_rtree:  # Rtree filtering, used in the controller
+            elif self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
                     # MS: sanity check against rtree bugs
                     raise ValueError('sids=%s' % sids)
                 elif len(sids):
-                    src.nsites = len(sids)
+                    src.sids = sids
                     yield src, sites.filtered(sids)
-            else:  # normal filtering, used in the workers
+            else:  # normal filtering
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)
@@ -410,7 +410,7 @@ class SourceFilter(object):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    src.nsites = len(s_sites)
+                    src.sids = s_sites.sids
                     yield src, s_sites
 
     def __getstate__(self):
