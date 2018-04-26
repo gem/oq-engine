@@ -75,6 +75,7 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
+    serial = 0
 
     @classmethod
     def init(cls):
@@ -583,7 +584,7 @@ class EBRupture(object):
         """
         Serial number of the rupture
         """
-        return getattr(self.rupture, 'serial', 0)
+        return self.rupture.serial
 
     @property
     def grp_id(self):
