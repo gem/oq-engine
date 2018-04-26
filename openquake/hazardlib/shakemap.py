@@ -203,10 +203,10 @@ def amplify_ground_shaking(T, vs30, gmvs):
     """
     :param T: period
     :param vs30: velocity
-    :param gmvs: ground motion values for the current site
+    :param gmvs: ground motion values for the current site in units of g
     """
     interpolator = interpolate.interp1d(
-        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [0, 0.1, 0.2, 0.3, 0.4, 10],
         [(760 / vs30)**0.35,
          (760 / vs30)**0.35,
          (760 / vs30)**0.25,
@@ -214,7 +214,7 @@ def amplify_ground_shaking(T, vs30, gmvs):
          (760 / vs30)**-0.05,
          (760 / vs30)**-0.05],
     ) if T <= 0.3 else interpolate.interp1d(
-        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [0, 0.1, 0.2, 0.3, 0.4, 10],
         [(760 / vs30)**0.65,
          (760 / vs30)**0.65,
          (760 / vs30)**0.60,
@@ -263,7 +263,7 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed):
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                       size=(M * N, num_gmfs), random_state=seed)
     # Z has shape (M * N, E)
-    gmfs = numpy.exp(numpy.dot(L, Z) + mu)
+    gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
         gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1) / PCTG
+    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
