@@ -449,7 +449,7 @@ class RuptureConverter(object):
             coll[grp_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
-                rupid = int(node['id'])
+                rup.serial = int(node['id'])
                 sesnodes = node.stochasticEventSets
                 events = []
                 for sesnode in sesnodes:
@@ -458,7 +458,7 @@ class RuptureConverter(object):
                         for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
-                    rup, (), numpy.array(events, event_dt), rupid)
+                    rup, (), numpy.array(events, event_dt))
                 ebrs.append(ebr)
         return coll
 
