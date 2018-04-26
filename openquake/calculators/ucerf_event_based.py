@@ -709,6 +709,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     background_sids, src_filter, seed)
             with filt_mon:
                 for rup, n_occ in zip(rups, n_occs):
+                    rup.serial = serial
                     rup.seed = seed
                     try:
                         r_sites, rrup = idist.get_closest(sitecol, rup)
@@ -721,8 +722,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         events.append((0, src.src_group_id, ses_idx, sample))
                     if events:
                         evs = numpy.array(events, stochastic.event_dt)
-                        ebruptures.append(
-                            EBRupture(rup, indices, evs, serial))
+                        ebruptures.append(EBRupture(rup, indices, evs))
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
     res[src.src_group_id] = ebruptures
