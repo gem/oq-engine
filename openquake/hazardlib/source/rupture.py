@@ -75,7 +75,7 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
-    serial = 0
+    serial = 0  # set to a value > 0 by the engine
 
     @classmethod
     def init(cls):
