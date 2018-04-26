@@ -994,3 +994,13 @@ def println(msg):
     sys.stdout.flush()
     sys.stdout.write('\x08' * len(msg))
     sys.stdout.flush()
+
+
+def debug(templ, *args):
+    """
+    Append a debug line to the file /tmp/debug.txt
+    """
+    msg = templ % args if args else templ
+    tmp = tempfile.gettempdir()
+    with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
+        f.write(msg + '\n')
