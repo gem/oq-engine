@@ -50,13 +50,13 @@ def build_rup_loss_table(dstore):
     events = dstore['events']
     rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     losses_by_rup = {}
-    for rec in dstore['agg_loss_table'].value:  # .value is essential for speed
+    for rec in dstore['losses_by_event'].value:  # call .value for speed
         rupid = rup_by_eid[rec['eid']]
         if rupid in losses_by_rup:
             losses_by_rup[rupid] += rec['loss']
         else:
             losses_by_rup[rupid] = rec['loss']
-    assert losses_by_rup, 'Empty agg_loss_table'
+    assert losses_by_rup, 'Empty losses_by_event'
     serials = dstore['ruptures']['serial']
     tbl = numpy.zeros(len(serials), oq.loss_dt())
     for i, serial in enumerate(serials):
@@ -104,12 +104,12 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
-        idx = riskinput.hazard_getter.eid2idx
+        eid2idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
             if loss_ratios is None:  # for GMFs below the minimum_intensity
                 continue
             loss_type = riskmodel.loss_types[l]
-            indices = numpy.array([idx[eid] for eid in out.eids])
+            indices = numpy.array([eid2idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
@@ -177,7 +177,7 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
 
 
 @base.calculators.add('event_based_risk')
-class EbriskCalculator(base.RiskCalculator):
+class EbrCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
     """
@@ -223,7 +223,8 @@ class EbriskCalculator(base.RiskCalculator):
                 fname = oq.inputs['gmfs']
                 sids = self.sitecol.complete.sids
                 if fname.endswith('.xml'):  # old approach
-                    self.eids, self.R = base.get_gmfs(self)
+                    base.set_gmfs(self)  # set self.R
+                    self.eids = self.datastore['events']['eid']
                 else:  # import csv
                     self.eids, self.R, self.gmdata = base.import_gmfs(
                         self.datastore, fname, sids)
@@ -473,7 +474,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.agglosses[idx] += agg
             else:  # event_based_risk
                 agglosses['rlzi'] += offset
-                self.datastore.extend('agg_loss_table', agglosses)
+                self.datastore.extend('losses_by_event', agglosses)
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for (a, r), num in dic.pop('num_losses').items():
@@ -521,7 +522,7 @@ class EbriskCalculator(base.RiskCalculator):
                      for e, losses in zip(self.eids, self.agglosses)
                      for r, loss in enumerate(losses) if loss.sum()),
                     self.param['elt_dt'])
-                self.datastore['agg_loss_table'] = agglosses
+                self.datastore['losses_by_event'] = agglosses
         else:
             num_events = result
             # gmv[:-2] are the total gmv per each IMT
@@ -530,15 +531,15 @@ class EbriskCalculator(base.RiskCalculator):
                 raise RuntimeError('No GMFs were generated, perhaps they were '
                                    'all below the minimum_intensity threshold')
 
-            if 'agg_loss_table' not in self.datastore:
+            if 'losses_by_event' not in self.datastore:
                 logging.warning(
                     'No losses were generated: most likely there is an error '
                     'in y our input files or the GMFs were below the minimum '
                     'intensity')
             else:
-                self.datastore.set_nbytes('agg_loss_table')
+                self.datastore.set_nbytes('losses_by_event')
                 E = sum(num_events.values())
-                agglt = self.datastore['agg_loss_table']
+                agglt = self.datastore['losses_by_event']
                 agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
         self.postproc()
@@ -568,13 +569,13 @@ class EbriskCalculator(base.RiskCalculator):
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
-            array, array_stats = b.build(dstore['agg_loss_table'].value, stats)
+            array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
         self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.units(loss_types=array.dtype.names)
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=b.return_periods, units=units)
-        if array_stats is not None:
-            self.datastore['agg_curves-stats'] = array_stats
+        if arr_stats is not None:
+            self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats], units=units)

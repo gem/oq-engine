@@ -81,9 +81,10 @@ class _GeographicObjects(object):
         """
         :param sitecol: a (filtered) site collection
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict', 'error', 'warn' or 'ignore'
+        :param mode: 'strict', 'warn' or 'filter'
         :returns: (filtered site collection, filtered objects)
         """
+        assert mode in 'strict warn filter', mode
         dic = {}
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
@@ -95,13 +96,13 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate outside
                 logging.warn('Association to %s km from site (%s %s)',
                              distance, lon, lat)
-            elif mode == 'ignore':
+            elif mode == 'filter':
                 pass  # do not associate
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-        if not dic and mode == 'error':
+        if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
         return (sitecol.filtered(dic),
@@ -114,9 +115,10 @@ class _GeographicObjects(object):
 
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict' or 'error'
+        :param mode: 'strict' or 'warn'
         :returns: (filtered site collection, filtered assets by site)
         """
+        assert mode in 'strict warn', mode
         self.objects.filtered  # self.objects must be a SiteCollection
         assets_by_sid = collections.defaultdict(list)
         for assets in assets_by_site:
@@ -129,8 +131,11 @@ class _GeographicObjects(object):
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
+            elif mode == 'warn':
+                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
+                             assets, lon, lat)
         sids = sorted(assets_by_sid)
-        if not sids and mode == 'error':
+        if not sids:
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
