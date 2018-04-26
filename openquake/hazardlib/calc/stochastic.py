@@ -206,6 +206,7 @@ def _build_eb_ruptures(
     yield pairs (rupture, <list of associated EBRuptures>)
     """
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
+        rup.serial = rup.seed - random_seed + 1
         with rup_mon:
             try:
                 rup.ctx = cmaker.make_contexts(s_sites, rup)
@@ -216,7 +217,6 @@ def _build_eb_ruptures(
                 continue
 
         # creating EBRuptures
-        serial = rup.seed - random_seed + 1
         events = []
         for (sam_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
@@ -225,5 +225,4 @@ def _build_eb_ruptures(
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx, sam_idx))
         if events:
-            yield EBRupture(rup, indices, numpy.array(events, event_dt),
-                            serial)
+            yield EBRupture(rup, indices, numpy.array(events, event_dt))
