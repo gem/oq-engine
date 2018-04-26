@@ -828,6 +828,32 @@ def get_array(array, **kw):
     return array
 
 
+def not_equal(array_or_none1, array_or_none2):
+    """
+    Compare two arrays that can also be None or have diffent shapes
+    and returns a boolean.
+
+    >>> a1 = numpy.array([1])
+    >>> a2 = numpy.array([2])
+    >>> a3 = numpy.array([2, 3])
+    >>> not_equal(a1, a2)
+    True
+    >>> not_equal(a1, a3)
+    True
+    >>> not_equal(a1, None)
+    True
+    """
+    if array_or_none1 is None and array_or_none2 is None:
+        return False
+    elif array_or_none1 is None and array_or_none2 is not None:
+        return True
+    elif array_or_none1 is not None and array_or_none2 is None:
+        return True
+    if array_or_none1.shape != array_or_none2.shape:
+        return True
+    return (array_or_none1 != array_or_none2).any()
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format
@@ -968,3 +994,13 @@ def println(msg):
     sys.stdout.flush()
     sys.stdout.write('\x08' * len(msg))
     sys.stdout.flush()
+
+
+def debug(templ, *args):
+    """
+    Append a debug line to the file /tmp/debug.txt
+    """
+    msg = templ % args if args else templ
+    tmp = tempfile.gettempdir()
+    with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
+        f.write(msg + '\n')
