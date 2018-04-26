@@ -512,6 +512,7 @@ class RuptureGetter(object):
             rupture_cls, surface_cls, source_cls = BaseRupture.types[
                 rec['code']]
             rupture = object.__new__(rupture_cls)
+            rupture.serial = serial
             rupture.surface = object.__new__(surface_cls)
             # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
             if 'Complex' in surface_cls.__name__:
@@ -545,7 +546,7 @@ class RuptureGetter(object):
                     m = mesh[0]
                     rupture.surface.mesh = RectangularMesh(
                         m['lon'], m['lat'], m['depth'])
-            ebr = EBRupture(rupture, (), evs, serial)
+            ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
