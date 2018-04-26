@@ -45,6 +45,8 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PPID = os.getppid()
+
 if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default():
@@ -157,6 +159,11 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
+    # Check if SIGHUP is raised by died parent. If not do not
+    # kill everything and keep computation running instead
+    if signum == signal.SIGHUP and os.getppid() == _PPID:
+        return
+
     parallel.Starmap.shutdown()
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
