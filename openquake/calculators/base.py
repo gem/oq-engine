@@ -493,21 +493,25 @@ class HazardCalculator(BaseCalculator):
         logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
+        if oq.shakemap_id or 'shakemap' in oq.inputs:
+            self.read_shakemap()
+            self.R = 1
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
-            if self.oqparam.region:
+            assetcol = self.datastore.parent['assetcol']
+            if oq.region:
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
-                assetcol = self.datastore.parent['assetcol']
+            if general.not_equal(self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol.sids)
                 self.datastore['assetcol'] = self.assetcol
-                logging.info('There are %d/%d assets in the region',
+                logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             else:
-                self.assetcol = self.datastore.parent['assetcol']
+                self.assetcol = assetcol
             self.load_riskmodel()
         else:  # no exposure
             self.load_riskmodel()
@@ -625,8 +629,8 @@ class RiskCalculator(HazardCalculator):
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
-            gmfs = to_gmfs(shakemap, oq.site_effects, oq.truncation_level, E,
-                           oq.random_seed)
+            gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
+                           oq.truncation_level, E, oq.random_seed)
             save_gmf_data(self.datastore, self.sitecol, gmfs)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
@@ -746,7 +750,7 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def get_gmfs(calculator):
+def set_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
     :returns: a pair (eids, R) where R is the number of realizations
@@ -782,20 +786,13 @@ def get_gmfs(calculator):
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = eids
         dstore['events'] = events
-        return eids, len(gmfs)
+        calculator.R = len(gmfs)
 
     elif calculator.precalc:  # from previous step
-        num_assocs = dstore['csm_info'].get_num_rlzs()
-        E = oq.number_of_ground_motion_fields
-        eids = numpy.arange(E, dtype=U64)
-        gmfs = numpy.zeros((num_assocs, N, E, I))
-        for g, gsim in enumerate(calculator.precalc.gsims):
-            gmfs[g, sitecol.sids] = calculator.precalc.gmfa[gsim]
-        return eids, len(gmfs)
+        calculator.R = dstore['csm_info'].get_num_rlzs()
 
     else:  # with --hc option
-        return (calculator.datastore['events']['eid'],
-                calculator.datastore['csm_info'].get_num_rlzs())
+        calculator.R = calculator.datastore['csm_info'].get_num_rlzs()
 
 
 def save_gmf_data(dstore, sitecol, gmfs):

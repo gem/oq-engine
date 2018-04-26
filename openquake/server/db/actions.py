@@ -260,8 +260,7 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'dmg_by_asset': 'Average Asset Damages',
-    # 'damages_by_asset': 'Average Asset Damages',
-    # 'damages_by_event': 'Aggregate Event Damages',
+    'dmg_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'damages-rlzs': 'Asset Damage Distribution',
@@ -681,6 +680,7 @@ def get_executing_jobs(db):
 SELECT id, user_name, start_time
 FROM job WHERE status='executing' ORDER BY id desc'''
     return db(query)
+
 
 def get_longest_jobs(db):
     """
