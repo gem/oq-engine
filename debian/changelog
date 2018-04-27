@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a parameter `filter_sources_with_rtree`
   * Removed the prefiltering on the workers, resulting in a huge speedup
     for gridded ruptures at the cost of a larger data transfer
   * Changed the `losses_by_event` output to export a single .csv file with
