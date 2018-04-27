@@ -67,6 +67,7 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
+    filter_sources_with_rtree = valid.Param(valid.boolean, True)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
@@ -119,7 +120,6 @@ class OqParam(valid.ParamSet):
     optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
-    use_rtree = valid.Param(valid.boolean, True)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
