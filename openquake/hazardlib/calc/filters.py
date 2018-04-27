@@ -60,7 +60,6 @@ the index can be compensed. Finally, there is a function
 """
 import sys
 import math
-import logging
 import collections
 from contextlib import contextmanager
 import numpy
@@ -300,6 +299,14 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
+def get_indices(sites):
+    """
+    :returns the indices from a SiteCollection
+    """
+    return (numpy.arange(len(sites), dtype=numpy.float32)
+            if sites.indices is None else sites.indices)
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -327,6 +334,8 @@ class SourceFilter(object):
         by default True, i.e. use the rtree module
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
+        if sitecol is not None and len(sitecol) < len(sitecol.complete):
+            raise ValueError('%s is not complete!' % sitecol)
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
@@ -337,8 +346,8 @@ class SourceFilter(object):
             sitecol.at_sea_level())
         if self.use_rtree:
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-                self.index.insert(sid, (lon, lat, lon, lat))
+            for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
+                self.index.insert(i, (lon, lat, lon, lat))
             # http://toblerity.org/rtree/performance.html#use-stream-loading
             # causes undefined behavior, with wrong associations being made
 
@@ -387,22 +396,22 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if hasattr(src, 'sites'):  # already filtered
-                yield src, src.sites
+            if hasattr(src, 'indices'):  # already filtered
+                yield src, sites.filtered(src.indices)
             elif not self.integration_distance:  # do not filter
                 if sites is not None:
-                    src.nsites = len(sites)
+                    src.indices = get_indices(sites)
                 yield src, sites
-            elif self.use_rtree:  # Rtree filtering, used in the controller
+            elif self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(src)
-                sids = numpy.array(sorted(self.index.intersection(box)))
-                if len(set(sids)) < len(sids):
+                indices = numpy.array(sorted(self.index.intersection(box)))
+                if len(set(indices)) < len(indices):
                     # MS: sanity check against rtree bugs
-                    raise ValueError('sids=%s' % sids)
-                elif len(sids):
-                    src.nsites = len(sids)
-                    yield src, sites.filtered(sids)
-            else:  # normal filtering, used in the workers
+                    raise ValueError('indices=%s' % indices)
+                elif len(indices):
+                    src.indices = indices
+                    yield src, sites.filtered(indices)
+            else:  # slow filtering for sitecol not at sea level
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)
@@ -410,7 +419,7 @@ class SourceFilter(object):
                     s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    src.nsites = len(s_sites)
+                    src.indices = get_indices(s_sites)
                     yield src, s_sites
 
     def __getstate__(self):
