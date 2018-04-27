@@ -191,7 +191,7 @@ class PSHACalculator(base.HazardCalculator):
                 logging.warn('Found %d duplicated sources',
                              csm.has_dupl_sources)
             for sg in csm.src_groups:
-                if sg.src_interdep == 'mutex':
+                if sg.src_interdep == 'mutex' and len(sg) > 0:
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
