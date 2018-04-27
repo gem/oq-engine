@@ -159,7 +159,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  oq.use_rtree)
+                                  oq.filter_sources_with_rtree)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
