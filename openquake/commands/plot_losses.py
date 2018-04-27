@@ -32,7 +32,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     fig = plt.figure()
     for rlz in losses_by_rlzi:
         rlzi = int(rlz[4:])  # strip rlz-
-        losses = losses_by_rlzi[rlz]['loss']
+        losses = losses_by_rlzi[rlz]['loss'].reshape(-1, L)
         print('%s, num_events=%d' % (rlz, len(losses)))
         for lti, lt in enumerate(loss_types):
             ls = losses[:, lti]
