@@ -29,6 +29,8 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 
+aae = numpy.testing.assert_almost_equal
+
 
 def tot_loss(dstore):
     all_losses = dstore['all_losses-rlzs'].value  # shape (A, E, R)
@@ -86,7 +88,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agglosses/occupants')
-        numpy.testing.assert_almost_equal(tot.array, 0.01355099)
+        aae(tot.array, 0.01355099)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agglosses/occupants?taxonomy=*')
@@ -185,8 +187,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
-        numpy.testing.assert_almost_equal(
-            agglosses, [[1981.4678955, 2363.5800781],
+        aae(agglosses, [[1981.4678955, 2363.5800781],
                         [712.8535156, 924.7561646],
                         [986.706604, 1344.0371094]])
 
@@ -195,8 +196,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        numpy.testing.assert_almost_equal(
-            obj.array, [[1316.3723145, 1569.1348877]])
+        aae(obj.array, [[1316.3723145, 1569.1348877]])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):
@@ -206,7 +206,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
         tot20 = tot_loss(self.calc.datastore)
         for name in tot10.dtype.names:
-            numpy.testing.assert_almost_equal(tot10[name], tot20[name])
+            aae(tot10[name], tot20[name])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_8(self):
@@ -214,7 +214,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
         agglosses = extract(self.calc.datastore, 'agglosses/structural')
-        numpy.testing.assert_almost_equal(agglosses.array, [984065.75])
+        aae(agglosses.array, [984065.75])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
@@ -226,3 +226,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
         self.assertEqual(len(sitecol), 8)
+        agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
+        aae(agglosses['mean'], numpy.array([[314017.34]], numpy.float32))
+        aae(agglosses['stddev'], numpy.array([[263641.7]], numpy.float32))
