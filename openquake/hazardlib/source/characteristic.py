@@ -106,7 +106,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         west, east, north, south = self.surface.get_bounding_box()
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, (north + south) / 2)
-        return west - a2, south - a1, west + a2, north + a1
+        return west - a2, south - a1, east + a2, north + a1
 
     def iter_ruptures(self):
         """
