@@ -263,7 +263,7 @@ def get_spherical_bounding_box(lons, lats):
     """
     north, south = numpy.max(lats), numpy.min(lats)
     west, east = numpy.min(lons), numpy.max(lons)
-    assert (-180 <= west <= 180) and (-180 <= east <= 180)
+    assert (-180 <= west <= 180) and (-180 <= east <= 180), (west, east)
     if get_longitudinal_extent(west, east) < 0:
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive

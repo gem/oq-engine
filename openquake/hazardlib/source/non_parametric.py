@@ -23,6 +23,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
+from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 
@@ -96,6 +97,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         max_mag = max(rup.mag for rup, pmf in self.data)
         return min_mag, max_mag
 
+    # this is probably wrong too
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
         Create instance of
@@ -124,3 +126,20 @@ class NonParametricSeismicSource(BaseSeismicSource):
         poly = mesh.get_convex_hull()
 
         return poly if dilation == 0 else poly.dilate(dilation)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all surfaces, enlarged by the maximum distance
+        """
+        surfaces = []
+        for rup, _ in self.data:
+            if isinstance(rup.surface, MultiSurface):
+                for s in rup.surface.surfaces:
+                    surfaces.append(s)
+            else:
+                surfaces.append(rup.surface)
+        multi_surf = MultiSurface(surfaces)
+        west, east, north, south = multi_surf.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, (north + south) / 2)
+        return west - a2, south - a1, west + a2, north + a1
