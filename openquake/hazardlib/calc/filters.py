@@ -72,10 +72,18 @@ DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 
 
-def angular_distance(km, lat):
+def angular_distance(km, lat, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
+
+    >>> '%.3f' % angular_distance(100, lat=40)
+    '1.174'
+    >>> '%.3f' % angular_distance(100, lat=80)
+    '5.179'
     """
+    if lat2 is not None:
+        # use the largest latitude to compute the angular distance
+        lat = max(abs(lat), abs(lat2))
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
