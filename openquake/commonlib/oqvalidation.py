@@ -119,6 +119,7 @@ class OqParam(valid.ParamSet):
     optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
+    use_rtree = valid.Param(valid.boolean, True)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
