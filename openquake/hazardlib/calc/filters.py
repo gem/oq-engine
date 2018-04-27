@@ -411,7 +411,7 @@ class SourceFilter(object):
                 elif len(indices):
                     src.indices = indices
                     yield src, sites.filtered(indices)
-            else:  # normal filtering
+            else:  # slow filtering for sitecol not at sea level
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)
