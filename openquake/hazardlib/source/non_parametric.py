@@ -141,5 +141,5 @@ class NonParametricSeismicSource(BaseSeismicSource):
         multi_surf = MultiSurface(surfaces)
         west, east, north, south = multi_surf.get_bounding_box()
         a1 = maxdist * KM_TO_DEGREES
-        a2 = angular_distance(maxdist, (north + south) / 2)
+        a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
