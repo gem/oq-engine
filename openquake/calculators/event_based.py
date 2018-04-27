@@ -158,7 +158,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
+                                  oq.filter_sources_with_rtree)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
