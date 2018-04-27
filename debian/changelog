@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the prefiltering on the workers, resulting in a huge speedup
+    for gridded ruptures at the cost of a larger data transfer
   * Changed the `losses_by_event` output to export a single .csv file with
     all realizations
   * Added a `cross_correlation` parameter used when working with shakemaps
