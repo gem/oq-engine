@@ -307,6 +307,32 @@ def get_indices(sites):
             if sites.indices is None else sites.indices)
 
 
+def normalize_lons(lon1, lon2):
+    """
+    An international date line safe way of returning a range of longitudes.
+
+    >>> normalize_lons(20, 30)  # no IDL within the range
+    [(20, 30)]
+    >>> normalize_lons(-17, +17)  # no IDL within the range
+    [(-17, 17)]
+    >>> normalize_lons(-178, +179)
+    [(-180, -178), (179, 180)]
+    >>> normalize_lons(178, +181)
+    [(178, 180), (-180, -179)]
+    >>> normalize_lons(-181, -179)
+    [(179, 180), (-179, -180)]
+    """
+    delta = lon2 - lon1
+    assert delta >= 0, (lon1, lon2)
+    if lon1 < 0 and lon2 > 0 and delta > 180:
+        return [(-180, lon1), (lon2, 180)]
+    elif lon1 > 0 and lon2 > 180 and delta < 180:
+        return [(lon1, 180), (-180, lon2 - 360)]
+    elif lon1 < -180 and lon2 < 0 and delta < 180:
+        return [(lon1 + 360, 180), (lon2, -180)]
+    return [(lon1, lon2)]
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -403,12 +429,16 @@ class SourceFilter(object):
                     src.indices = get_indices(sites)
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering
-                box = self.get_affected_box(src)
-                indices = numpy.array(sorted(self.index.intersection(box)))
-                if len(set(indices)) < len(indices):
-                    # MS: sanity check against rtree bugs
-                    raise ValueError('indices=%s' % indices)
-                elif len(indices):
+                lon1, lat1, lon2, lat2 = self.get_affected_box(src)
+                set_ = set()
+                for l1, l2 in normalize_lons(lon1, lon2):
+                    box = (l1, lat1, l2, lat2)
+                    set_ |= set(self.index.intersection(box))
+                if set_:
+                    indices = numpy.array(sorted(set_))
+                    if len(set(indices)) < len(indices):
+                        # MS: sanity check against rtree bugs
+                        raise ValueError('indices=%s' % indices)
                     src.indices = indices
                     yield src, sites.filtered(indices)
             else:  # slow filtering for sitecol not at sea level
