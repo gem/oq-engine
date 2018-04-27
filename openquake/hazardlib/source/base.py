@@ -67,8 +67,11 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         :returns: the number of sites affected by this source
         """
         try:
+            # the engine sets self.indices when filtering the sources
             return len(self.indices)
         except AttributeError:
+            # this happens in several hazardlib tests, therefore we return
+            # a fake number of affected sites to avoid changing all tests
             return 1
 
     @property
