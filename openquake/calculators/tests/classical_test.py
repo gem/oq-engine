@@ -440,5 +440,4 @@ hazard_uhs-mean.csv
 
     @attr('qa', 'hazard', 'classical')
     def test_case_30(self):  # point on the international data line
-        raise unittest.SkipTest
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)
