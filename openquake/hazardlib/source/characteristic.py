@@ -24,6 +24,7 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 
 
 @with_slots
@@ -70,6 +71,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         self.surface = surface
         self.rake = rake
 
+    # NB: this looks completely wrong??
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
         Uses :meth:
@@ -97,6 +99,15 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         dpoly = poly.dilate(dilation)
         return dpoly
 
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all points, enlarged by the maximum distance
+        """
+        west, east, north, south = self.surface.get_bounding_box()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, (north + south) / 2)
+        return west - a2, south - a1, west + a2, north + a1
+
     def iter_ruptures(self):
         """
         See :meth:
@@ -110,8 +121,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self), occurrence_rate,
-                self.temporal_occurrence_model
-            )
+                self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
