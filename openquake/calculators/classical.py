@@ -163,7 +163,7 @@ class PSHACalculator(base.HazardCalculator):
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
-            tiles = [self.sitecol]
+            tiles = [self.sitecol.complete]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         totweight = 0

@@ -48,7 +48,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
-    RUPTURE_WEIGHT = 4.0  # heavy as ComplexFaultSources
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
