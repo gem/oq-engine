@@ -41,7 +41,6 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
-    nsites = 1  # FIXME: remove this and fix all hazardlib tests
     ngsims = 1
 
     @abc.abstractproperty
@@ -61,6 +60,19 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         # than linear and I am using a sqrt here (totally made up but good)
         return (self.num_ruptures * self.RUPTURE_WEIGHT *
                 math.sqrt(self.nsites) * self.ngsims)
+
+    @property
+    def nsites(self):
+        """
+        :returns: the number of sites affected by this source
+        """
+        try:
+            # the engine sets self.indices when filtering the sources
+            return len(self.indices)
+        except AttributeError:
+            # this happens in several hazardlib tests, therefore we return
+            # a fake number of affected sites to avoid changing all tests
+            return 1
 
     @property
     def src_group_ids(self):
