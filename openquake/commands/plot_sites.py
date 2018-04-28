@@ -44,6 +44,8 @@ def plot_sites(calc_id=-1):
     ax.grid(True)
     for src in csm.get_sources():
         llcorner, width, height = srcfilter.get_rectangle(src)
+        if llcorner[0] < -170:  # hack for IDL
+            llcorner = (llcorner[0] + 360, llcorner[1])
         ax.add_patch(Rectangle(llcorner, width, height, fill=False))
     if sitecol.lons.max() < -170:  # hack for IDL
         sitecol.lons = sitecol.lons + 360
