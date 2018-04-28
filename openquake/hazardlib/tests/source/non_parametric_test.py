@@ -70,31 +70,6 @@ class NonParametricSourceTestCase(unittest.TestCase):
     def test_creation(self):
         self.make_non_parametric_source()
 
-    def test_get_rupture_enclosing_polygon(self):
-        source, _ = self.make_non_parametric_source()
-
-        poly = source.get_rupture_enclosing_polygon(dilation=0)
-        expected_poly = Polygon(
-            [Point(-1, -1), Point(-1, 1), Point(1, 1), Point(1, -1)]
-        )
-        numpy.testing.assert_equal(poly.lons, expected_poly.lons)
-        numpy.testing.assert_equal(poly.lats, expected_poly.lats)
-
-        poly = source.get_rupture_enclosing_polygon(dilation=200)
-        poly._init_polygon2d()
-        expected_poly = expected_poly.dilate(200)
-        expected_poly._init_polygon2d()
-
-        # we check that the percent difference between the two polygons is
-        # almost zero
-        # in this case the area of the difference is ~ 8 km**2, with
-        # respect to area of the computed polygon (~ 352795 km**2) and the area
-        # of the predicted polygon (~ 352803 km**2)
-        diff = 100 * poly._polygon2d.\
-            symmetric_difference(expected_poly._polygon2d).area
-        diff /= expected_poly._polygon2d.area
-        self.assertAlmostEqual(diff, 0, places=2)
-
     def test_iter_ruptures(self):
         source, kwargs = self.make_non_parametric_source()
         for i, rup in enumerate(source.iter_ruptures()):
