@@ -186,24 +186,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Uses :meth:`openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.surface_projection_from_fault_data`
-        for getting the fault's surface projection and then calls
-        its :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate`
-        method passing in ``dilation`` parameter.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
-        """
-        polygon = ComplexFaultSurface.surface_projection_from_fault_data(
-            self.edges)
-        if dilation:
-            return polygon.dilate(dilation)
-        else:
-            return polygon
-
     def iter_ruptures(self):
         """
         See :meth:
