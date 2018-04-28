@@ -36,7 +36,8 @@ def plot_sites(calc_id=-1):
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    srcfilter = SourceFilter(sitecol, oq.maximum_distance)
+    srcfilter = SourceFilter(sitecol, oq.maximum_distance,
+                             oq.filter_sources_with_rtree)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
     fig = p.figure()
     ax = fig.add_subplot(111)
