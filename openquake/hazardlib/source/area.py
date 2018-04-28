@@ -22,6 +22,7 @@ from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 
@@ -70,8 +71,11 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
-    def get_bounding_box(self, dilation):
-        raise NotImplemented
+    def get_bounding_box(self, maxdist):
+        bbox = self.polygon.get_bbox()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, bbox[1], bbox[3])
+        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
     def iter_ruptures(self):
         """
