@@ -50,9 +50,8 @@ should also perform reasonably fast (filtering stage that takes longer than
 the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
-filter function (see :func:`filter_sites_by_distance_to_rupture`) as well as
-a "no operation" filter (`source_site_noop_filter`). There is
-a class `SourceFilter` to determine the sites
+filter function as well as a "no operation" filter (`source_site_noop_filter`).
+There is a class `SourceFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed. Finally, there is a function
@@ -125,9 +124,7 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     :returns:
         Filtered :class:`~openquake.hazardlib.site.SiteCollection`.
 
-    This function is similar to :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`.
-    The same notes about filtering criteria apply. Site
-    should not be filtered out if it is not further than the integration
+    Sites should not be filtered out if it is not further than the integration
     distance from the rupture's surface projection along the great
     circle arc (this is known as Joyner-Boore distance, :meth:`
     openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`).
@@ -377,9 +374,7 @@ class SourceFilter(object):
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
     :param integration_distance:
-        Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
-        which is what is actually used for filtering.
+        Threshold distance in km
     :param use_rtree:
         by default True, i.e. use the rtree module
     """
@@ -392,8 +387,7 @@ class SourceFilter(object):
             else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and (
-            integration_distance and sitecol is not None and
-            sitecol.at_sea_level())
+            integration_distance and sitecol is not None)
         if self.use_rtree:
             self.index = rtree.index.Index()
             for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
@@ -448,10 +442,6 @@ class SourceFilter(object):
         for src in sources:
             if hasattr(src, 'indices'):  # already filtered
                 yield src, sites.filtered(src.indices)
-            elif not self.integration_distance:  # do not filter
-                if sites is not None:
-                    src.indices = get_indices(sites)
-                yield src, sites
             elif self.use_rtree:  # Rtree filtering
                 lon1, lat1, lon2, lat2 = self.get_affected_box(src)
                 set_ = set()
@@ -465,16 +455,10 @@ class SourceFilter(object):
                         raise ValueError('indices=%s' % indices)
                     src.indices = indices
                     yield src, sites.filtered(indices)
-            else:  # slow filtering for sitecol not at sea level
-                _, maxmag = src.get_min_max_mag()
-                maxdist = self.integration_distance(
-                    src.tectonic_region_type, maxmag)
-                with context(src):
-                    s_sites = src.filter_sites_by_distance_to_source(
-                        maxdist, sites)
-                if s_sites is not None:
-                    src.indices = get_indices(s_sites)
-                    yield src, s_sites
+            else:  # do not filter
+                if sites is not None:
+                    src.indices = get_indices(sites)
+                yield src, sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,

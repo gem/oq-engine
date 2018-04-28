@@ -246,40 +246,6 @@ class ComplexFaultSourceIterRupturesTestCase(
         self._test_ruptures(test_data.TEST4_RUPTURES, source)
 
 
-class ComplexFaultSourceRupEnclPolyTestCase(
-        simple_fault_test.SimpleFaultRupEncPolyTestCase):
-    # test that complex fault sources of simple geometry behave
-    # exactly the same as simple fault sources of the same geometry
-    def _make_source(self, mfd, aspect_ratio, fault_trace, dip):
-        sf = super(ComplexFaultSourceRupEnclPolyTestCase, self)._make_source(
-            mfd, aspect_ratio, fault_trace, dip
-        )
-        # create an equivalent top and bottom edges
-        vdist_top = sf.upper_seismogenic_depth
-        vdist_bottom = sf.lower_seismogenic_depth
-
-        hdist_top = vdist_top / numpy.tan(numpy.radians(dip))
-        hdist_bottom = vdist_bottom / numpy.tan(numpy.radians(dip))
-
-        strike = fault_trace[0].azimuth(fault_trace[-1])
-        azimuth = (strike + 90.0) % 360
-
-        top_edge = []
-        bottom_edge = []
-        for point in fault_trace.points:
-            top_edge.append(point.point_at(hdist_top, vdist_top, azimuth))
-            bottom_edge.append(point.point_at(hdist_bottom, vdist_bottom,
-                                              azimuth))
-        edges = [Line(top_edge), Line(bottom_edge)]
-
-        return ComplexFaultSource(
-            sf.source_id, sf.name, sf.tectonic_region_type,
-            sf.mfd, sf.rupture_mesh_spacing,
-            sf.magnitude_scaling_relationship, sf.rupture_aspect_ratio,
-            sf.temporal_occurrence_model, edges, sf.rake
-        )
-
-
 class FloatRupturesTestCase(unittest.TestCase):
     def test_reshaping_along_length(self):
         cell_area = numpy.array([[1, 1, 1],
