@@ -419,7 +419,7 @@ class SourceFilter(object):
                 if set_:
                     src.indices = numpy.array(sorted(set_))
                     yield src, sites.filtered(src.indices)
-            else:  # slow filtering
+            else:  # numpy filtering
                 s_sites = sites.within_bbox(self.get_affected_box(src))
                 if s_sites is not None:
                     src.indices = get_indices(s_sites)
