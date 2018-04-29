@@ -418,12 +418,8 @@ class SourceFilter(object):
                     box = (l1, lat1, l2, lat2)
                     set_ |= set(self.index.intersection(box))
                 if set_:
-                    indices = numpy.array(sorted(set_))
-                    if len(set(indices)) < len(indices):
-                        # MS: sanity check against rtree bugs
-                        raise ValueError('indices=%s' % indices)
-                    src.indices = indices
-                    yield src, sites.filtered(indices)
+                    src.indices = numpy.array(sorted(set_))
+                    yield src, sites.filtered(src.indices)
             else:  # slow filtering for sitecol not at sea level
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(

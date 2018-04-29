@@ -19,8 +19,13 @@
 from __future__ import division
 import logging
 from openquake.baselib import sap, datastore
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import readinput
+
+
+def cross(lonlat, width, height):
+    return cross_idl(lonlat[0], lonlat[0] + width)
 
 
 @sap.Script
@@ -36,20 +41,22 @@ def plot_sites(calc_id=-1):
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
+    lons, lats = sitecol.lons, sitecol.lats
     srcfilter = SourceFilter(sitecol, oq.maximum_distance,
                              oq.filter_sources_with_rtree)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
-    fig = p.figure()
-    ax = fig.add_subplot(111)
+    fig, ax = p.subplots()
     ax.grid(True)
-    for src in csm.get_sources():
-        llcorner, width, height = srcfilter.get_rectangle(src)
-        if llcorner[0] < -170:  # hack for IDL
-            llcorner = (llcorner[0] + 360, llcorner[1])
-        ax.add_patch(Rectangle(llcorner, width, height, fill=False))
-    if sitecol.lons.max() < -170:  # hack for IDL
-        sitecol.lons = sitecol.lons + 360
-    p.scatter(sitecol.lons, sitecol.lats, marker='+')
+    idl = cross_idl(lons.min(), lons.max())
+    rects = [srcfilter.get_rectangle(src) for src in csm.get_sources()]
+    any_idl = idl or any(cross(*rect) for rect in rects)
+    if any_idl:
+        lons = lons % 360
+    for (lon, lat), width, height in rects:
+        if any_idl:
+            lon = lon % 360
+        ax.add_patch(Rectangle((lon, lat), width, height, fill=False))
+    p.scatter(lons, lats, marker='+')
     p.show()
 
 
