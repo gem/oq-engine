@@ -531,6 +531,20 @@ def point_to_polygon_distance(polygon, pxx, pyy):
     return result.reshape(pxx.shape)
 
 
+def fix_lon(lon):
+    """
+    :returns: a valid longitude in the range -180 <= lon < 180
+
+    >>> fix_lon(11)
+    11
+    >>> fix_lon(181)
+    -179
+    >>> fix_lon(-182)
+    178
+    """
+    return (lon + 180) % 360 - 180
+
+
 def cross_idl(lon1, lon2):
     """
     Return True if two longitude values define line crossing international date
@@ -553,24 +567,11 @@ def cross_idl(lon1, lon2):
     >>> cross_idl(-180, 180)
     True
     """
+    lon1 = fix_lon(lon1)
+    lon2 = fix_lon(lon2)
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
     return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
-
-
-def fix_lon(lon):
-    """
-    :returns: a valid longitude in the range -180 <= lon < 180
-
-    >>> fix_lon(11)
-    11
-    >>> fix_lon(181)
-    -179
-    >>> fix_lon(-182)
-    178
-    """
-    lon = lon % 360
-    return lon if lon < 180 else lon - 360
 
 
 def normalize_lons(lon1, lon2):
