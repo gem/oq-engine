@@ -558,6 +558,52 @@ def cross_idl(lon1, lon2):
     return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
 
 
+def fix_lon(lon):
+    """
+    :returns: a valid longitude in the range -180 <= lon < 180
+
+    >>> fix_lon(11)
+    11
+    >>> fix_lon(181)
+    -179
+    >>> fix_lon(-182)
+    178
+    """
+    lon = lon % 360
+    return lon if lon < 180 else lon - 360
+
+
+def normalize_lons(lon1, lon2):
+    """
+    An international date line safe way of returning a range of longitudes.
+
+    >>> normalize_lons(20, 30)  # no IDL within the range
+    [(20, 30)]
+    >>> normalize_lons(-17, +17)  # no IDL within the range
+    [(-17, 17)]
+    >>> normalize_lons(-178, +179)
+    [(-180, -178), (179, 180)]
+    >>> normalize_lons(178, +181)
+    [(-180, -179), (178, 180)]
+    >>> normalize_lons(-181, -179)
+    [(-180, -179), (179, 180)]
+    >>> normalize_lons(-183, -176)
+    [(-180, -176), (177, 180)]
+    """
+    l1, l2 = fix_lon(lon1), fix_lon(lon2)
+    if l1 > l2:  # exchange lons
+        l1, l2 = l2, l1
+    delta = l2 - l1
+    assert delta >= 0, (lon1, lon2)
+    if l1 < 0 and l2 > 0 and delta > 180:
+        return [(-180, l1), (l2, 180)]
+    elif l1 > 0 and l2 > 180 and delta < 180:
+        return [(l1, 180), (-180, l2 - 360)]
+    elif l1 < -180 and l2 < 0 and delta < 180:
+        return [(l1 + 360, 180), (l2, -180)]
+    return [(l1, l2)]
+
+
 def plane_fit(points):
     """
     This fits an n-dimensional plane to a set of points. See
