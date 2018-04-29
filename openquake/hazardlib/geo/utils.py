@@ -548,7 +548,7 @@ def fix_lon(lon):
 def cross_idl(lon1, lon2):
     """
     Return True if two longitude values define line crossing international date
-    line. NB: a longitude of +180 degrees is normalized to -180 degrees.
+    line.
 
     >>> cross_idl(-45, 45)
     False
