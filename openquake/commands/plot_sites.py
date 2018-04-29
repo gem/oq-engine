@@ -53,9 +53,8 @@ def plot_sites(calc_id=-1):
     if any_idl:
         lons = lons % 360
     for (lon, lat), width, height in rects:
-        if any_idl:
-            lon = lon % 360
-        ax.add_patch(Rectangle((lon, lat), width, height, fill=False))
+        lonlat = (lon % 360 if any_idl else lon, lat)
+        ax.add_patch(Rectangle(lonlat, width, height, fill=False))
     p.scatter(lons, lats, marker='+')
     p.show()
 
