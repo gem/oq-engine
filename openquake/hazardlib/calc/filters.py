@@ -351,8 +351,7 @@ class SourceFilter(object):
             else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and (
-            integration_distance and sitecol is not None and
-            sitecol.at_sea_level())
+            integration_distance and sitecol is not None)
         if self.use_rtree:
             self.index = rtree.index.Index()
             for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
@@ -420,7 +419,7 @@ class SourceFilter(object):
                 if set_:
                     src.indices = numpy.array(sorted(set_))
                     yield src, sites.filtered(src.indices)
-            else:  # slow filtering for sitecol not at sea level
+            else:  # slow filtering
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)
