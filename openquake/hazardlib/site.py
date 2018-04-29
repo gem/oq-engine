@@ -350,8 +350,10 @@ class SiteCollection(object):
 
     def within_bbox(self, bbox):
         """
-        :param bbox: a quartet (min_lon, min_lat, max_lon, max_lat)
-        :returns: a filtered SiteCollection strictly within the bounding box
+        :param bbox:
+            a quartet (min_lon, min_lat, max_lon, max_lat)
+        :returns:
+            a filtered SiteCollection within the bounding box or None
         """
         min_lon, min_lat, max_lon, max_lat = bbox
         arr = self.array if self.indices is None else self.array[self.indices]
@@ -361,9 +363,6 @@ class SiteCollection(object):
             min_lon, max_lon = min_lon % 360, max_lon % 360
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
-        if not mask.any():
-            raise Exception('There are no sites within the boundind box %s'
-                            % str(bbox))
         return self.filter(mask)
 
     def __getstate__(self):
