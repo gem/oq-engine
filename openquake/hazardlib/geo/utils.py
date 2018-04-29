@@ -593,7 +593,6 @@ def normalize_lons(lon1, lon2):
     if l1 > l2:  # exchange lons
         l1, l2 = l2, l1
     delta = l2 - l1
-    assert delta >= 0, (lon1, lon2)
     if l1 < 0 and l2 > 0 and delta > 180:
         return [(-180, l1), (l2, 180)]
     elif l1 > 0 and l2 > 180 and delta < 180:
