@@ -43,7 +43,7 @@ def plot_sites(calc_id=-1):
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     srcfilter = SourceFilter(sitecol, oq.maximum_distance,
-                             oq.filter_sources_with_rtree)
+                             oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
     fig, ax = p.subplots()
     ax.grid(True)
