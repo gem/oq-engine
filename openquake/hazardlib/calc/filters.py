@@ -414,8 +414,9 @@ class SourceFilter(object):
                     yield src, sites.filtered(src.indices)
             else:  # numpy filtering
                 s_sites = sites.within_bbox(self.get_affected_box(src))
-                src.indices = get_indices(s_sites)
-                yield src, s_sites
+                if s_sites is not None:
+                    src.indices = get_indices(s_sites)
+                    yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
