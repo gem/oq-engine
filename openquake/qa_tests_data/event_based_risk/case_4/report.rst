@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============== ===================
-checksum32     637,033,953        
-date           2018-04-19T05:02:18
-engine_version 3.1.0-git9c5da5b   
+checksum32     3,253,033,277      
+date           2018-04-30T11:21:39
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 14, num_levels = 91
@@ -48,13 +48,13 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-======================== ====== ===================== ================
-smlt_path                weight gsim_logic_tree       num_realizations
-======================== ====== ===================== ================
-AreaSource               0.500  simple(0,4,0,0,0,0,0) 4/4             
-FaultSourceAndBackground 0.200  simple(0,4,0,0,0,0,0) 4/4             
-SeiFaCrust               0.300  simple(0,4,0,0,0,0,0) 0/0             
-======================== ====== ===================== ================
+======================== ======= ===================== ================
+smlt_path                weight  gsim_logic_tree       num_realizations
+======================== ======= ===================== ================
+AreaSource               0.50000 simple(4,0,0,0,0,0,0) 4/4             
+FaultSourceAndBackground 0.20000 simple(4,0,0,0,0,0,0) 4/4             
+SeiFaCrust               0.30000 simple(4,0,0,0,0,0,0) 0/0             
+======================== ======= ===================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -109,33 +109,33 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-RC_LR    1.000 0.0    1   1   3         3         
-RC_MR    1.000 NaN    1   1   1         1         
-RC_HR    1.000 NaN    1   1   1         1         
-URM_1S   1.000 0.0    1   1   2         2         
-URM_2S   1.000 0.0    1   1   2         2         
-SAM_1S   1.000 NaN    1   1   1         1         
-SAM_2S   1.000 0.0    1   1   2         2         
-SAM_3S   1.000 NaN    1   1   1         1         
-SAM_4S   1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   14        14        
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+RC_LR    1.00000 0.0    1   1   3         3         
+RC_MR    1.00000 NaN    1   1   1         1         
+RC_HR    1.00000 NaN    1   1   1         1         
+URM_1S   1.00000 0.0    1   1   2         2         
+URM_2S   1.00000 0.0    1   1   2         2         
+SAM_1S   1.00000 NaN    1   1   1         1         
+SAM_2S   1.00000 0.0    1   1   2         2         
+SAM_3S   1.00000 NaN    1   1   1         1         
+SAM_4S   1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   14        14        
+======== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ============ ============ ========= ========== ========= ========= ======
 source_id    source_class num_ruptures calc_time split_time num_sites num_split events
 ============ ============ ============ ========= ========== ========= ========= ======
-AS_TRAS334   AreaSource   2,280        2.257     0.045      280       38        49    
-AS_TRAS360   AreaSource   1,872        1.528     0.024      117       39        102   
-AS_TRAS346   AreaSource   1,581        1.289     0.034      95        31        45    
-AS_TRAS458   AreaSource   1,197        1.156     0.044      44        21        39    
-AS_TRAS395   AreaSource   1,296        1.107     0.024      88        27        72    
-AS_TRAS410   AreaSource   720          0.764     0.005      84        12        1     
-FSBG_TRBG989 AreaSource   324          0.221     0.006      14        8         12    
-100041       PointSource  27           0.0       4.530E-06  0         0         0     
+AS_TRAS334   AreaSource   2,280        1.44651   0.01898    308       38        49    
+AS_TRAS360   AreaSource   1,872        0.91277   0.00887    132       39        102   
+AS_TRAS395   AreaSource   1,296        0.78730   0.00713    109       27        72    
+AS_TRAS346   AreaSource   1,581        0.70398   0.01361    128       31        45    
+AS_TRAS458   AreaSource   1,197        0.58516   0.01537    46        21        39    
+AS_TRAS410   AreaSource   720          0.42469   0.00363    84        12        1     
+FSBG_TRBG989 AreaSource   324          0.14148   0.00498    14        8         12    
+100041       PointSource  27           0.0       3.576E-06  0         0         0     
 ============ ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -143,7 +143,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   8.320     7     
+AreaSource   5.00190   7     
 PointSource  0.0       1     
 ============ ========= ======
 
@@ -153,32 +153,32 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.764 0.262  0.225 0.999 11       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+compute_ruptures   0.52659 0.19319 0.14417 0.69573 11       
+================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
-================ ================================================================================ ========
-task             sent                                                                             received
-compute_ruptures sources=92.5 KB src_filter=15.33 KB param=14.68 KB gsims=4.19 KB monitor=3.54 KB 62.05 KB
-================ ================================================================================ ========
+================ ================================================================================== ========
+task             sent                                                                               received
+compute_ruptures sources=104.18 KB src_filter=15.26 KB param=14.62 KB gsims=4.19 KB monitor=3.54 KB 61.7 KB 
+================ ================================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         8.408    3.012     11    
-managing sources               1.080    0.0       1     
-reading composite source model 0.212    0.0       1     
-splitting sources              0.198    0.0       1     
-store source_info              0.157    0.0       1     
-making contexts                0.099    0.0       31    
-reading site collection        0.039    0.0       1     
-saving ruptures                0.030    0.0       11    
-reading exposure               0.005    0.0       1     
-unpickling compute_ruptures    0.004    0.0       11    
-setting event years            0.002    0.0       1     
+total compute_ruptures         5.79247  4.87500   11    
+managing sources               0.73515  0.0       1     
+reading composite source model 0.09026  0.0       1     
+reading site collection        0.08789  0.0       1     
+splitting sources              0.07323  0.0       1     
+store source_info              0.04296  0.0       1     
+making contexts                0.03393  0.0       31    
+saving ruptures                0.02366  0.0       11    
+reading exposure               0.00342  0.0       1     
+unpickling compute_ruptures    0.00293  0.0       11    
+setting event years            0.00138  0.0       1     
 ============================== ======== ========= ======
