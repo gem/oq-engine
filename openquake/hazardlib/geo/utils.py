@@ -269,7 +269,8 @@ def get_spherical_bounding_box(lons, lats):
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
         if hasattr(lons, 'flatten'):
-            lons = lons.flatten()  # fixes an issue with GriddedSurfaces
+            # fixes test_surface_crossing_international_date_line
+            lons = lons.flatten()
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
         if not all((get_longitudinal_extent(west, lon) >= 0
@@ -531,6 +532,20 @@ def point_to_polygon_distance(polygon, pxx, pyy):
     return result.reshape(pxx.shape)
 
 
+def fix_lon(lon):
+    """
+    :returns: a valid longitude in the range -180 <= lon < 180
+
+    >>> fix_lon(11)
+    11
+    >>> fix_lon(181)
+    -179
+    >>> fix_lon(-182)
+    178
+    """
+    return (lon + 180) % 360 - 180
+
+
 def cross_idl(lon1, lon2):
     """
     Return True if two longitude values define line crossing international date
@@ -556,6 +571,36 @@ def cross_idl(lon1, lon2):
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
     return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
+
+
+def normalize_lons(lon1, lon2):
+    """
+    An international date line safe way of returning a range of longitudes.
+
+    >>> normalize_lons(20, 30)  # no IDL within the range
+    [(20, 30)]
+    >>> normalize_lons(-17, +17)  # no IDL within the range
+    [(-17, 17)]
+    >>> normalize_lons(-178, +179)
+    [(-180, -178), (179, 180)]
+    >>> normalize_lons(178, +181)
+    [(-180, -179), (178, 180)]
+    >>> normalize_lons(-181, -179)
+    [(-180, -179), (179, 180)]
+    >>> normalize_lons(-183, -176)
+    [(-180, -176), (177, 180)]
+    """
+    l1, l2 = fix_lon(lon1), fix_lon(lon2)
+    if l1 > l2:  # exchange lons
+        l1, l2 = l2, l1
+    delta = l2 - l1
+    if l1 < 0 and l2 > 0 and delta > 180:
+        return [(-180, l1), (l2, 180)]
+    elif l1 > 0 and l2 > 180 and delta < 180:
+        return [(l1, 180), (-180, l2 - 360)]
+    elif l1 < -180 and l2 < 0 and delta < 180:
+        return [(l1 + 360, 180), (l2, -180)]
+    return [(l1, l2)]
 
 
 def plane_fit(points):
