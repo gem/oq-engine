@@ -269,7 +269,8 @@ def get_spherical_bounding_box(lons, lats):
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
         if hasattr(lons, 'flatten'):
-            lons = lons.flatten()  # fixes an issue with GriddedSurfaces
+            # fixes test_surface_crossing_international_date_line
+            lons = lons.flatten()
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
         if not all((get_longitudinal_extent(west, lon) >= 0
