@@ -66,16 +66,25 @@ import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.geo.utils import normalize_lons
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 
 
-def angular_distance(km, lat):
+def angular_distance(km, lat, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
+
+    >>> '%.3f' % angular_distance(100, lat=40)
+    '1.174'
+    >>> '%.3f' % angular_distance(100, lat=80)
+    '5.179'
     """
+    if lat2 is not None:
+        # use the largest latitude to compute the angular distance
+        lat = max(abs(lat), abs(lat2))
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
@@ -342,8 +351,7 @@ class SourceFilter(object):
             else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and (
-            integration_distance and sitecol is not None and
-            sitecol.at_sea_level())
+            integration_distance and sitecol is not None)
         if self.use_rtree:
             self.index = rtree.index.Index()
             for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
@@ -403,15 +411,15 @@ class SourceFilter(object):
                     src.indices = get_indices(sites)
                 yield src, sites
             elif self.use_rtree:  # Rtree filtering
-                box = self.get_affected_box(src)
-                indices = numpy.array(sorted(self.index.intersection(box)))
-                if len(set(indices)) < len(indices):
-                    # MS: sanity check against rtree bugs
-                    raise ValueError('indices=%s' % indices)
-                elif len(indices):
-                    src.indices = indices
-                    yield src, sites.filtered(indices)
-            else:  # slow filtering for sitecol not at sea level
+                lon1, lat1, lon2, lat2 = self.get_affected_box(src)
+                set_ = set()
+                for l1, l2 in normalize_lons(lon1, lon2):
+                    box = (l1, lat1, l2, lat2)
+                    set_ |= set(self.index.intersection(box))
+                if set_:
+                    src.indices = numpy.array(sorted(set_))
+                    yield src, sites.filtered(src.indices)
+            else:  # slow filtering
                 _, maxmag = src.get_min_max_mag()
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, maxmag)

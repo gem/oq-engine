@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed another tricky bug with rtree filtering across the international
+    date line
   * Added a parameter `filter_sources_with_rtree`
   * Removed the prefiltering on the workers, resulting in a huge speedup
     for gridded ruptures at the cost of a larger data transfer

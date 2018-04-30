@@ -124,7 +124,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.vs30measured, [True, True])
         assert_eq(cll.z1pt0, [3.4, 3.4])
         assert_eq(cll.z2pt5, [5.6, 5.6])
-        assert_eq(cll.mesh.lons, [10, -1.2])
+        assert_eq(cll.mesh.lons, [10, -1.1999999999999886])
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, [30, -5.6])
         assert_eq(cll.backarc, [False, False])
@@ -225,6 +225,20 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # point (10, 20) is out, point (11, 12) is out, point (0, 2)
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
+
+
+class WithinBBoxTestCase(unittest.TestCase):
+    # to understand this test case it is ESSENTIAL to plot sites and
+    # bounding boxes; the code in plot_sites.py can get you started
+
+    @classmethod
+    def setUpClass(cls):
+        lons = numpy.array([-180, -178, 179, 180, 180], numpy.float32)
+        lats = numpy.array([-27, -28, -26, -30, -28], numpy.float32)
+        cls.sites = SiteCollection.from_points(lons, lats)
+
+    def test1(self):
+        assert_eq(self.sites.within_bbox((-182, -28, -178, -26)).sids, [0])
 
 
 class SiteCollectionIterTestCase(unittest.TestCase):
