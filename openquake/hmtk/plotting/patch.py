@@ -94,3 +94,15 @@ def PolygonPatch(polygon, **kwargs):
                     [coding(r) for r in t.interiors]) for t in polygon])
 
     return PathPatch(Path(vertices, codes),  **kwargs)
+
+
+def debug_plot(*polygons):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    for polygon in polygons:
+        pol = polygon._polygon2d
+        x1, y1, x2, y2 = pol.bounds
+        ax.set_xlim([x1, x2])
+        ax.set_ylim([y1, y2])
+        ax.add_patch(PolygonPatch(pol, alpha=0.2))
+    plt.show()
