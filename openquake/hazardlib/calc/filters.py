@@ -419,13 +419,8 @@ class SourceFilter(object):
                 if set_:
                     src.indices = numpy.array(sorted(set_))
                     yield src, sites.filtered(src.indices)
-            else:  # slow filtering
-                _, maxmag = src.get_min_max_mag()
-                maxdist = self.integration_distance(
-                    src.tectonic_region_type, maxmag)
-                with context(src):
-                    s_sites = src.filter_sites_by_distance_to_source(
-                        maxdist, sites)
+            else:  # numpy filtering
+                s_sites = sites.within_bbox(self.get_affected_box(src))
                 if s_sites is not None:
                     src.indices = get_indices(s_sites)
                     yield src, s_sites
