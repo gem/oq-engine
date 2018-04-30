@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2018-04-19T05:01:59
-engine_version 3.1.0-git9c5da5b   
+date           2018-04-30T11:21:29
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -42,11 +42,11 @@ structural_fragility `fragility_model_test03.xml <fragility_model_test03.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -65,21 +65,21 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-============== ===== ====== === === ========= ==========
-taxonomy       mean  stddev min max num_sites num_assets
-MUR/LWAL/HEX:1 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:2 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:3 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:4 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:5 1.000 NaN    1   1   1         1         
-*ALL*          5.000 NaN    5   5   1         5         
-============== ===== ====== === === ========= ==========
+============== ======= ====== === === ========= ==========
+taxonomy       mean    stddev min max num_sites num_assets
+MUR/LWAL/HEX:1 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:2 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:3 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:4 1.00000 NaN    1   1   1         1         
+MUR/LWAL/HEX:5 1.00000 NaN    1   1   1         1         
+*ALL*          5.00000 NaN    5   5   1         5         
+============== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading site collection 0.002    0.0       1     
-reading exposure        0.002    0.0       1     
+reading exposure        0.00150  0.0       1     
+reading site collection 0.00139  0.0       1     
 ======================= ======== ========= ======
