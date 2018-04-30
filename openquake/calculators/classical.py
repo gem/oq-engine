@@ -176,7 +176,7 @@ class PSHACalculator(base.HazardCalculator):
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
             with self.monitor('prefiltering'):
-                if self.prefilter:
+                if oq.prefilter_sources != 'no' and self.prefilter:
                     logging.info('Prefiltering sources')
                     csm = self.csm.filter(src_filter)
                 else:
