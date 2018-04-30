@@ -329,9 +329,9 @@ class SourceFilter(object):
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
     number of sites within the integration distance. Notice that SourceFilter
-    instances can be pickled, but when unpickled `prefilter` is set to
-    'no' and the index is lost: the reason is that libspatialindex indices
-    cannot be properly pickled (https://github.com/Toblerity/rtree/issues/65).
+    instances can be pickled, but when unpickled the index is lost: the reason
+    is that libspatialindex indices cannot be properly pickled
+    (https://github.com/Toblerity/rtree/issues/65).
 
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
@@ -340,7 +340,7 @@ class SourceFilter(object):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     :param prefilter:
-        by default True, i.e. use the rtree module
+        by default "rtree", i.e. use the rtree module
     """
     def __init__(self, sitecol, integration_distance, prefilter='rtree'):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
@@ -427,7 +427,7 @@ class SourceFilter(object):
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, prefilter='no')
+                    sitecol=self.sitecol, prefilter=self.prefilter)
 
 
 source_site_noop_filter = SourceFilter(None, {})
