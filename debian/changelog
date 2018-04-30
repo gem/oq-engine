@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed Decimal numbers from the PMF distribution in hazardlib
   * Fixed another tricky bug with rtree filtering across the international
     date line
   * Added a parameter `filter_sources_with_rtree`
