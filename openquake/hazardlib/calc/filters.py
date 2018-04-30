@@ -65,6 +65,7 @@ import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.geo.utils import normalize_lons
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -312,48 +313,6 @@ def get_indices(sites):
             if sites.indices is None else sites.indices)
 
 
-def fix_lon(lon):
-    """
-    :returns: a valid longitude in the range -180 <= lon <= 180
-    """
-    if lon < -180:
-        return lon + 360
-    elif lon > 180:
-        return lon - 360
-    return lon
-
-
-def normalize_lons(lon1, lon2):
-    """
-    An international date line safe way of returning a range of longitudes.
-
-    >>> normalize_lons(20, 30)  # no IDL within the range
-    [(20, 30)]
-    >>> normalize_lons(-17, +17)  # no IDL within the range
-    [(-17, 17)]
-    >>> normalize_lons(-178, +179)
-    [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, +181)
-    [(-180, -179), (178, 180)]
-    >>> normalize_lons(-181, -179)
-    [(-180, -179), (179, 180)]
-    >>> normalize_lons(-183, -176)
-    [(-180, -176), (177, 180)]
-    """
-    l1, l2 = fix_lon(lon1), fix_lon(lon2)
-    if l1 > l2:  # exchange lons
-        l1, l2 = l2, l1
-    delta = l2 - l1
-    assert delta >= 0, (lon1, lon2)
-    if l1 < 0 and l2 > 0 and delta > 180:
-        return [(-180, l1), (l2, 180)]
-    elif l1 > 0 and l2 > 180 and delta < 180:
-        return [(l1, 180), (-180, l2 - 360)]
-    elif l1 < -180 and l2 < 0 and delta < 180:
-        return [(l1 + 360, 180), (l2, -180)]
-    return [(l1, l2)]
-
-
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -449,16 +408,10 @@ class SourceFilter(object):
                     box = (l1, lat1, l2, lat2)
                     set_ |= set(self.index.intersection(box))
                 if set_:
-                    indices = numpy.array(sorted(set_))
-                    if len(set(indices)) < len(indices):
-                        # MS: sanity check against rtree bugs
-                        raise ValueError('indices=%s' % indices)
-                    src.indices = indices
-                    yield src, sites.filtered(indices)
-            else:  # do not filter
-                if sites is not None:
-                    src.indices = get_indices(sites)
-                yield src, sites
+                    src.indices = numpy.array(sorted(set_))
+                    yield src, sites.filtered(src.indices)
+            else:  # numpy filtering
+                s_sites = sites.within_bbox(self.get_affected_box(src))
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
