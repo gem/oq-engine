@@ -172,8 +172,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         probability ``0.8`` to not occurr, ``0.15`` to occur once, and
         ``0.05`` to occur twice, the ``pmf`` can be defined as ::
 
-          pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1),
-                      Decimal('0.05', 2)])
+          pmf = PMF([(0.8, 0), (0.15, 1), 0.05, 2)])
 
     :raises ValueError:
         If number of ruptures in ``pmf`` do not start from 0, are not defined

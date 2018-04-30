@@ -20,7 +20,6 @@ Norman Abrahamson, see
 http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`.
 """
 import unittest
-from decimal import Decimal
 
 import numpy
 
@@ -85,13 +84,10 @@ class Set1TestCase(unittest.TestCase):
                                atol=1e-4, rtol=1e-1)
 
     def test_case_11(self):
-        hypocenter_probability = (
-            Decimal(1) / len(test_data.SET1_CASE11_HYPOCENTERS)
-        )
+        hypocenter_probability = 1 / len(test_data.SET1_CASE11_HYPOCENTERS)
         hypocenter_pmf = PMF([
             (hypocenter_probability, hypocenter)
-            for hypocenter in test_data.SET1_CASE11_HYPOCENTERS
-        ])
+            for hypocenter in test_data.SET1_CASE11_HYPOCENTERS])
         # apart from hypocenter pmf repeats case 10
         sources = [AreaSource(
             source_id='area', name='area',
