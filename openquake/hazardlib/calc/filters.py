@@ -399,7 +399,9 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if hasattr(src, 'indices'):  # already filtered
+            if not self.integration_distance:  # do not filter
+                yield src, sites
+            elif hasattr(src, 'indices'):  # already filtered
                 yield src, sites.filtered(src.indices)
             elif self.use_rtree:  # Rtree filtering
                 lon1, lat1, lon2, lat2 = self.get_affected_box(src)
@@ -412,6 +414,8 @@ class SourceFilter(object):
                     yield src, sites.filtered(src.indices)
             else:  # numpy filtering
                 s_sites = sites.within_bbox(self.get_affected_box(src))
+                src.indices = numpy.array(sorted(set_))
+                yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
