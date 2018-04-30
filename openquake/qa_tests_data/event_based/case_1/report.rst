@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     1,243,559,086      
-date           2018-04-19T05:04:16
-engine_version 3.1.0-git9c5da5b   
+date           2018-04-30T11:22:58
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -69,7 +69,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1.000        1           
+source_model.xml 0      Active Shallow Crust 1.00000      1           
 ================ ====== ==================== ============ ============
 
 Slowest sources
@@ -77,7 +77,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  1            0.019     6.914E-06  1         1         2,037 
+1         PointSource  1            0.01896   9.775E-06  1         1         2,037 
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.019     1     
+PointSource  0.01896   1     
 ============ ========= ======
 
 Duplicated sources
@@ -94,16 +94,16 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.023 NaN    0.023 0.023 1        
-================== ===== ====== ===== ===== =========
+================== ======= ====== ======= ======= =========
+operation-duration mean    stddev min     max     num_tasks
+compute_ruptures   0.02142 NaN    0.02142 0.02142 1        
+================== ======= ====== ======= ======= =========
 
 Informational data
 ------------------
 ================ ====================================================================== ========
 task             sent                                                                   received
-compute_ruptures sources=1.32 KB src_filter=722 B param=583 B monitor=330 B gsims=120 B 53.97 KB
+compute_ruptures sources=1.38 KB src_filter=716 B param=577 B monitor=330 B gsims=120 B 53.97 KB
 ================ ====================================================================== ========
 
 Slowest operations
@@ -111,14 +111,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.053     0.0       1     
-total compute_ruptures         0.023     3.199     1     
-saving ruptures                0.016     0.0       1     
-setting event years            0.006     0.0       1     
-store source_info              0.005     0.0       1     
-reading composite source model 0.004     0.0       1     
-making contexts                0.001     0.0       1     
-splitting sources              4.520E-04 0.0       1     
-unpickling compute_ruptures    3.653E-04 0.0       1     
-reading site collection        2.971E-04 0.0       1     
+managing sources               0.04629   0.0       1     
+total compute_ruptures         0.02142   2.98047   1     
+saving ruptures                0.01266   0.0       1     
+setting event years            0.00487   0.0       1     
+store source_info              0.00393   0.0       1     
+reading composite source model 0.00310   0.0       1     
+making contexts                0.00136   0.0       1     
+splitting sources              4.642E-04 0.0       1     
+reading site collection        3.221E-04 0.0       1     
+unpickling compute_ruptures    2.751E-04 0.0       1     
 ============================== ========= ========= ======
