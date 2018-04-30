@@ -414,7 +414,7 @@ class SourceFilter(object):
                     yield src, sites.filtered(src.indices)
             else:  # numpy filtering
                 s_sites = sites.within_bbox(self.get_affected_box(src))
-                src.indices = numpy.array(sorted(set_))
+                src.indices = get_indices(s_sites)
                 yield src, s_sites
 
     def __getstate__(self):
