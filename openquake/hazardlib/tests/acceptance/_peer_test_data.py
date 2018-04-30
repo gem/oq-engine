@@ -12,7 +12,6 @@ from openquake.hazardlib.source import SimpleFaultSource
 from openquake.hazardlib.pmf import PMF
 
 import numpy
-from decimal import Decimal
 
 
 IMT = PGA()
@@ -348,7 +347,7 @@ SET1_CASE2_SOURCE_DATA = {
     'rake': 0.,
     'tectonic_region_type': 'Active Shallow Crust',
     'source_typology': SimpleFaultSource,
-    'pmf': PMF([(Decimal('0.9997772'), 0), (Decimal('0.0002228'), 1)]),
+    'pmf': PMF([(0.9997772, 0), (0.0002228, 1)]),
     'lons': numpy.zeros((8, 15)) - 122.,
     'lats': [
         numpy.tile(numpy.linspace(38.0, 38.126, 15), (8, 1)),
