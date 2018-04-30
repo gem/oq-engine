@@ -2,7 +2,7 @@
   * Removed Decimal numbers from the PMF distribution in hazardlib
   * Fixed another tricky bug with rtree filtering across the international
     date line
-  * Added a parameter `filter_sources_with_rtree`
+  * Added a parameter `prefilter_sources`
   * Removed the prefiltering on the workers, resulting in a huge speedup
     for gridded ruptures at the cost of a larger data transfer
   * Changed the `losses_by_event` output to export a single .csv file with
