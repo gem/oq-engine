@@ -66,7 +66,7 @@ import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.geo.utils import normalize_lons
+from openquake.hazardlib.geo.utils import within
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -411,13 +411,9 @@ class SourceFilter(object):
             elif self.prefilter == 'no':  # do not filter
                 yield src, sites
             elif self.prefilter == 'rtree':
-                lon1, lat1, lon2, lat2 = self.get_affected_box(src)
-                set_ = set()
-                for l1, l2 in normalize_lons(lon1, lon2):
-                    box = (l1, lat1, l2, lat2)
-                    set_ |= set(self.index.intersection(box))
-                if set_:
-                    src.indices = numpy.array(sorted(set_))
+                indices = within(self.get_affected_box(src), self.index)
+                if len(indices):
+                    src.indices = indices
                     yield src, sites.filtered(src.indices)
             elif self.prefilter == 'numpy':
                 s_sites = sites.within_bbox(self.get_affected_box(src))
