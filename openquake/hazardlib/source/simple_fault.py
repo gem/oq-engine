@@ -26,7 +26,6 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 
@@ -99,17 +98,15 @@ class SimpleFaultSource(ParametricSeismicSource):
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  fault_trace, dip, rake, hypo_list=(), slip_list=()):
-        super(SimpleFaultSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
-            temporal_occurrence_model
-        )
-
+            temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         SimpleFaultSurface.check_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip, rupture_mesh_spacing
-        )
+            dip, rupture_mesh_spacing)
+
         self.fault_trace = fault_trace
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
@@ -340,15 +337,6 @@ class SimpleFaultSource(ParametricSeismicSource):
             src.num_ruptures = self._nr[i]
             yield src
 
-    def get_bounding_box(self, maxdist):
-        """
-        Bounding box containing all surfaces, enlarged by the maximum distance
-        """
-        bbox = self.polygon.get_bbox()
-        a1 = maxdist * KM_TO_DEGREES
-        a2 = angular_distance(maxdist, bbox[1], bbox[3])
-        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
-
     @property
     def polygon(self):
         """
@@ -356,4 +344,4 @@ class SimpleFaultSource(ParametricSeismicSource):
         `"""
         return SimpleFaultSurface.surface_projection_from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip).get_bbox()
+            self.lower_seismogenic_depth, self.dip)

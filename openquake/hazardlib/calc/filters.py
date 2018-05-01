@@ -59,33 +59,16 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
-import math
 import collections
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.geo.utils import within, fix_lon
+from openquake.hazardlib.geo.utils import (
+    KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
 
-KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
-DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-
-
-def angular_distance(km, lat, lat2=None):
-    """
-    Return the angular distance of two points at the given latitude.
-
-    >>> '%.3f' % angular_distance(100, lat=40)
-    '1.174'
-    >>> '%.3f' % angular_distance(100, lat=80)
-    '5.179'
-    """
-    if lat2 is not None:
-        # use the largest latitude to compute the angular distance
-        lat = max(abs(lat), abs(lat2))
-    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 @contextmanager
@@ -370,7 +353,7 @@ class SourceFilter(object):
         """
         mag = src.get_min_max_mag()[1]
         maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        bbox = src.get_bounding_box(maxdist)
+        bbox = get_bounding_box(src, maxdist)
         return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
     def get_rectangle(self, src):

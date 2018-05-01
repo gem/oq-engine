@@ -24,7 +24,7 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
-from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
 @with_slots
