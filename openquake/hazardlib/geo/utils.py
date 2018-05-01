@@ -573,7 +573,7 @@ def cross_idl(lon1, lon2):
     return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
 
 
-def normalize_lons(lon1, lon2):
+def normalize_lons(l1, l2):
     """
     An international date line safe way of returning a range of longitudes.
 
@@ -583,14 +583,13 @@ def normalize_lons(lon1, lon2):
     [(-17, 17)]
     >>> normalize_lons(-178, +179)
     [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, +181)
+    >>> normalize_lons(178, -179)
     [(-180, -179), (178, 180)]
-    >>> normalize_lons(-181, -179)
+    >>> normalize_lons(179, -179)
     [(-180, -179), (179, 180)]
-    >>> normalize_lons(-183, -176)
+    >>> normalize_lons(177, -176)
     [(-180, -176), (177, 180)]
     """
-    l1, l2 = fix_lon(lon1), fix_lon(lon2)
     if l1 > l2:  # exchange lons
         l1, l2 = l2, l1
     delta = l2 - l1
