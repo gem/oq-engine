@@ -9,6 +9,7 @@
                     <uncertaintyModel>
 				ssm/shallow/gridded_seismicity_source_4.xml
 				ssm/shallow/shallow_faults.xml
+                                ssm/shallow/int_kt.xml
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
