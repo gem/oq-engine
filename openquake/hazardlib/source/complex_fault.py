@@ -293,8 +293,15 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         Bounding box containing all surfaces, enlarged by the maximum distance
         """
-        bbox = ComplexFaultSurface.surface_projection_from_fault_data(
-            self.edges).get_bbox()
+        bbox = self.polygon.get_bbox()
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+
+    @property
+    def polygon(self):
+        """
+        The underlying polygon
+        `"""
+        return ComplexFaultSurface.surface_projection_from_fault_data(
+            self.edges)
