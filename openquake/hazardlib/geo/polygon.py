@@ -144,8 +144,11 @@ class Polygon(object):
         """
         Returns a simple 2D bounding box from the extrema of lons and lats
         """
-        return (self.lons.min(), self.lats.min(),
-                self.lons.max(), self.lats.max())
+        min_lon, max_lon = self.lons.min(), self.lons.max()
+        if utils.cross_idl(min_lon, max_lon):
+            lons = self.lons % 360
+            min_lon, max_lon = lons.min(), lons.max()
+        return (min_lon, self.lats.min(), max_lon, self.lats.max())
 
     def _init_polygon2d(self):
         """
