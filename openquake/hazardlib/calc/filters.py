@@ -66,7 +66,7 @@ import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.geo.utils import within
+from openquake.hazardlib.geo.utils import within, fix_lon
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
@@ -370,7 +370,8 @@ class SourceFilter(object):
         """
         mag = src.get_min_max_mag()[1]
         maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        return src.get_bounding_box(maxdist)
+        bbox = src.get_bounding_box(maxdist)
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
     def get_rectangle(self, src):
         """
@@ -378,7 +379,7 @@ class SourceFilter(object):
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
         min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
-        return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
+        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
         """

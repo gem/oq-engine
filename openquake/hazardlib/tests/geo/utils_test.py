@@ -17,6 +17,7 @@ import unittest
 import collections
 
 import numpy
+import rtree
 import shapely.geometry
 
 from openquake.hazardlib import geo
@@ -374,6 +375,35 @@ class ConvexToPointDistanceTestCase(unittest.TestCase):
             pyy = numpy.array([1.5, 2.0, 2.0])
             dist = utils.point_to_polygon_distance(polygon, pxx, pyy)
             numpy.testing.assert_almost_equal(dist, [0.5, 1, 2])
+
+
+class WithinTestCase(unittest.TestCase):
+    """
+    Test geo.utils.within(bbox, lonlat_index)
+    """
+    def setUp(self):
+        self.lons = [
+            -179.75, -179.5, -179.25, -179.0, -178.75, -178.5, -178.25, -178.0,
+            -177.75, -177.5, -177.25, -177.0, -176.75, -176.5, -176.25, -176.0,
+            -175.75, -175.5, -175.25, 178.25, 178.5, 178.75, 179.0, 179.25,
+            179.5, 179.75, -180.0]
+        self.lats = [-30.5] * 27
+        self.index = rtree.index.Index()
+        for i, (x, y) in enumerate(zip(self.lons, self.lats)):
+            self.index.insert(i, (x, y, x, y))
+        self.all = numpy.arange(27, dtype=numpy.uint32)
+
+    def test(self):
+        b1 = [176.73699, -39.13234, -176.9016, -12.26262]
+        b2 = [174.12916, -39.26710, -169.9217, -12.41082]
+
+        indices = utils.within(b1, self.index)
+        numpy.testing.assert_equal(
+            indices, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23,
+                      24, 25, 26])
+
+        indices = utils.within(b2, self.index)
+        numpy.testing.assert_equal(indices, self.all)
 
 
 class PlaneFit(unittest.TestCase):
