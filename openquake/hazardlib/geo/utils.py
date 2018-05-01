@@ -603,6 +603,20 @@ def normalize_lons(lon1, lon2):
     return [(l1, l2)]
 
 
+def within(bbox, lonlat_index):
+    """
+    :param bbox: a bounding box in lon, lat
+    :param lonlat_index: an rtree index in lon, lat
+    :returns: array of indices within the bounding box
+    """
+    lon1, lat1, lon2, lat2 = bbox
+    set_ = set()
+    for l1, l2 in normalize_lons(lon1, lon2):
+        box = (l1, lat1, l2, lat2)
+        set_ |= set(lonlat_index.intersection(box))
+    return numpy.array(sorted(set_), numpy.uint32)
+
+
 def plane_fit(points):
     """
     This fits an n-dimensional plane to a set of points. See
