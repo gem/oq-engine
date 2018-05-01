@@ -45,16 +45,25 @@ def plot_sites(calc_id=-1):
     srcfilter = SourceFilter(sitecol, oq.maximum_distance,
                              oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
+    sources = csm.get_sources()
     fig, ax = p.subplots()
     ax.grid(True)
-    idl = cross_idl(lons.min(), lons.max())
-    rects = [srcfilter.get_rectangle(src) for src in csm.get_sources()]
-    any_idl = idl or any(cross(*rect) for rect in rects)
-    if any_idl:
+    rects = [srcfilter.get_rectangle(src) for src in sources]
+    lonset = set(lons)
+    for ((lon, lat), width, height) in rects:
+        lonset.add(lon)
+        lonset.add(lon + width)
+    idl = cross_idl(min(lonset), max(lonset))
+    if idl:
         lons = lons % 360
-    for (lon, lat), width, height in rects:
-        lonlat = (lon % 360 if any_idl else lon, lat)
+    for src, ((lon, lat), width, height) in zip(sources, rects):
+        lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
+        if hasattr(src, 'polygon'):
+            poly = src.polygon
+            p.scatter(poly.lons % 360 if idl else poly.lons, poly.lats,
+                      marker='.')
+
     p.scatter(lons, lats, marker='+')
     p.show()
 
