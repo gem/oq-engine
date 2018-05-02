@@ -31,7 +31,6 @@ class FakeSource(ParametricSeismicSource):
     MODIFICATIONS = set(())
     iter_ruptures = None
     count_ruptures = None
-    get_rupture_enclosing_polygon = None
 
 
 class _BaseSeismicSourceTestCase(unittest.TestCase):
@@ -81,56 +80,6 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def test_positive_filtering(self):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
-
-
-class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
-    def setUp(self):
-        super(SeismicSourceFilterSitesTestCase, self).setUp()
-
-        def get_rup_encl_poly(dilation=0):
-            if dilation:
-                return self.POLYGON.dilate(dilation)
-            else:
-                return self.POLYGON
-        self.source.get_rupture_enclosing_polygon = get_rup_encl_poly
-
-    def test_source_filter_zero_integration_distance(self):
-        filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=0, sites=self.sitecol)
-        self.assertEqual(len(filtered), 5)
-        numpy.testing.assert_array_equal(filtered.indices, [0, 5, 6, 7, 8])
-        numpy.testing.assert_array_equal(filtered.vs30, [0.1, 5, 6, 7, 8])
-        numpy.testing.assert_array_equal(filtered.mesh.depths,
-                                         [-0.5, 0, 0, 0, 0])
-
-    def test_source_filter_half_km_integration_distance(self):
-        filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=0.5, sites=self.sitecol)
-        numpy.testing.assert_array_equal(filtered.indices,
-                                         [0, 1, 2, 3, 4, 5, 6, 7, 8])
-
-    def test_source_filter_fifty_km_integration_distance(self):
-        filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=50, sites=self.sitecol
-        )
-        numpy.testing.assert_array_equal(filtered.indices,
-                                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-
-    def test_source_filter_thousand_km_integration_distance(self):
-        filtered = self.source.filter_sites_by_distance_to_source(
-            integration_distance=1000, sites=self.sitecol
-        )
-        self.assertIs(filtered, self.sitecol)  # nothing filtered
-
-    def test_source_filter_filter_all_out(self):
-        col = SiteCollection([Site(Point(10, 10), 1, True, 2, 3),
-                              Site(Point(11, 12), 2, True, 2, 3),
-                              Site(Point(13, 14), 1, True, 2, 3)])
-        for int_dist in (0, 1, 10, 100, 1000):
-            filtered = self.source.filter_sites_by_distance_to_source(
-                integration_distance=int_dist, sites=col
-            )
-            self.assertIs(filtered, None)  # all filtered
 
 
 class SeismicSourceFilterSitesByRuptureTestCase(

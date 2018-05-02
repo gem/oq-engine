@@ -3,8 +3,8 @@ Scenario Damage QA Test 4
 
 ============== ===================
 checksum32     1,284,787,561      
-date           2018-04-19T05:01:59
-engine_version 3.1.0-git9c5da5b   
+date           2018-04-30T11:21:29
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 3, num_levels = 60
@@ -42,11 +42,11 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -65,19 +65,19 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-RM       1.000 NaN    1   1   1         1         
-RC       1.000 NaN    1   1   1         1         
-W        1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   3         3         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+RM       1.00000 NaN    1   1   1         1         
+RC       1.00000 NaN    1   1   1         1         
+W        1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   3         3         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading exposure        0.003    0.0       1     
-reading site collection 0.001    0.0       1     
+reading exposure        0.00174  0.0       1     
+reading site collection 0.00103  0.0       1     
 ======================= ======== ========= ======

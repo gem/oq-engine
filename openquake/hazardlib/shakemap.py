@@ -105,10 +105,12 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sitecol_within = sitecol.within_bbox(bbox)
-    logging.info('Associating %d GMVs to %d sites',
-                 len(array), len(sitecol_within))
-    return geo.utils.assoc(array, sitecol_within, assoc_dist, 'warn')
+    sites = sitecol.within_bbox(bbox)
+    if sites is None:
+        raise RuntimeError('There are no sites within the boundind box %s'
+                           % str(bbox))
+    logging.info('Associating %d GMVs to %d sites', len(array), len(sites))
+    return geo.utils.assoc(array, sites, assoc_dist, 'warn')
 
 
 # Here is the explanation of USGS for the units they are using:

@@ -83,6 +83,7 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
+    prefilter = True
 
     def agg_dicts(self, acc, pmap_by_grp):
         """
@@ -163,24 +164,23 @@ class PSHACalculator(base.HazardCalculator):
         if num_tiles > 1:
             tiles = self.sitecol.split_in_tiles(num_tiles)
         else:
-            tiles = [self.sitecol]
+            tiles = [self.sitecol.complete]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         totweight = 0
         for tile_i, tile in enumerate(tiles, 1):
             num_tasks = 0
             num_sources = 0
-            src_filter = SourceFilter(tile, oq.maximum_distance)
+            src_filter = SourceFilter(tile, oq.maximum_distance,
+                                      oq.prefilter_sources)
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            prefilter = (num_tiles == 1 if isinstance(self, PreCalculator)
-                         else True)
-            if prefilter:
-                with self.monitor('prefiltering'):
+            with self.monitor('prefiltering'):
+                if oq.prefilter_sources != 'no' and self.prefilter:
                     logging.info('Prefiltering sources')
                     csm = self.csm.filter(src_filter)
-            else:
-                csm = self.csm
+                else:
+                    csm = self.csm
 
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(
@@ -196,7 +196,7 @@ class PSHACalculator(base.HazardCalculator):
                 logging.warn('Found %d duplicated sources',
                              csm.has_dupl_sources)
             for sg in csm.src_groups:
-                if sg.src_interdep == 'mutex':
+                if sg.src_interdep == 'mutex' and len(sg) > 0:
                     gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -209,6 +209,10 @@ class PSHACalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(block)
             logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+            # cleanup filtering information for the next tile
+            for src in csm.get_sources():
+                if hasattr(src, 'indices'):
+                    del src.indices
         self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
@@ -276,6 +280,7 @@ class PreCalculator(PSHACalculator):
     ruptures
     """
     core_task = count_ruptures
+    prefilter = False
 
 
 def fix_ones(pmap):
