@@ -401,8 +401,10 @@ class SourceFilter(object):
                     yield src, s_sites
 
     def __getstate__(self):
+        # 'rtree' cannot be used on the workers, so we use 'numpy' instead
+        pref = 'numpy' if self.prefilter == 'rtree' else self.prefilter
         return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, prefilter=self.prefilter)
+                    sitecol=self.sitecol, prefilter=pref)
 
 
 source_site_noop_filter = SourceFilter(None, {})
