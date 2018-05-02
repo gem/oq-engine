@@ -21,7 +21,7 @@ import logging
 import numpy
 
 from openquake.risklib import scientific, riskmodels
-from openquake.calculators import base, event_based
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U64 = numpy.uint64
@@ -120,7 +120,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        base.set_gmfs(self)  # set number_of_ground_motion_fields, R
         E = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(
@@ -175,4 +174,4 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.gmdata = result['gmdata']
         for arr in self.gmdata.values():
             arr[-2] = self.oqparam.number_of_ground_motion_fields  # events
-        event_based.save_gmdata(self, R)
+        base.save_gmdata(self, R)
