@@ -385,7 +385,9 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if self.prefilter == 'no':  # do not filter
+            if hasattr(src, 'indices'):  # already filtered
+                yield src, sites.filtered(src.indices)
+            elif self.prefilter == 'no':  # do not filter
                 yield src, sites
             elif self.prefilter == 'rtree':
                 indices = within(self.get_affected_box(src), self.index)
