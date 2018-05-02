@@ -333,9 +333,10 @@ class SourceFilter(object):
         else:
             self.prefilter = 'no'
         if self.prefilter == 'rtree':
-            self.index = rtree.index.Index()
-            for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
-                self.index.insert(i, (lon, lat, lon, lat))
+            lonlats = zip(sitecol.lons, sitecol.lats)
+            self.index = rtree.index.Index(
+                (i, (lon, lat, lon, lat), None)
+                for i, (lon, lat) in enumerate(lonlats))
             # http://toblerity.org/rtree/performance.html#use-stream-loading
             # causes undefined behavior, with wrong associations being made
 
