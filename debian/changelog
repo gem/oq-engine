@@ -1,4 +1,16 @@
   [Michele Simionato]
+  * Replaced the old prefiltering mechanism with the new one
+
+  [Daniele Viganò]
+  * Managed the case of a dead controlling terminal (SIGHUP)
+
+  [Michele Simionato]
+  * Removed Decimal numbers from the PMF distribution in hazardlib
+  * Fixed another tricky bug with rtree filtering across the international
+    date line
+  * Added a parameter `prefilter_sources` with values `rtree|numpy|no`
+  * Removed the prefiltering on the workers, resulting in a huge speedup
+    for gridded ruptures at the cost of a larger data transfer
   * Changed the `losses_by_event` output to export a single .csv file with
     all realizations
   * Added a `cross_correlation` parameter used when working with shakemaps

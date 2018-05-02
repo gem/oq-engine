@@ -87,7 +87,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # seismic source; in this case, we expect an error to be raised which
         # signals the id of the source in question
         fail_source = self.FailSource(2, [self.r2_1])
-        fake_sites = [1, 2, 3]
+        fake_sites = SiteCollection.from_points([0], [0])
         with self.assertRaises(ValueError) as ae:
             list(stochastic_event_set([self.source1, fail_source],
                                       sites=fake_sites))

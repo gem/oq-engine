@@ -23,6 +23,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 
@@ -47,7 +48,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
-    RUPTURE_WEIGHT = 20  # really heavy
 
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
@@ -96,17 +96,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
         max_mag = max(rup.mag for rup, pmf in self.data)
         return min_mag, max_mag
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
+    def get_bounding_box(self, maxdist):
         """
-        Create instance of
-        :class:`openquake.hazardlib.geo.surface.multi.MultiSurface` from all
-        ruptures' surfaces and compute its bounding box. Calculate convex hull
-        of bounding box, and return it dilated by ``dilation``.
-
-        :param dilation:
-            A buffer distance in km to extend the polygon borders to.
-        :returns:
-            Instance of :class:`openquake.hazardlib.geo.polygon.Polygon`.
+        Bounding box containing all surfaces, enlarged by the maximum distance
         """
         surfaces = []
         for rup, _ in self.data:
@@ -116,11 +108,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             else:
                 surfaces.append(rup.surface)
         multi_surf = MultiSurface(surfaces)
-
         west, east, north, south = multi_surf.get_bounding_box()
-        mesh = RectangularMesh(numpy.array([[west, east], [west, east]]),
-                               numpy.array([[north, north], [south, south]]),
-                               None)
-        poly = mesh.get_convex_hull()
-
-        return poly if dilation == 0 else poly.dilate(dilation)
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1
