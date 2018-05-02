@@ -57,26 +57,6 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         return source
 
 
-class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
-        _BaseFaultSourceTestCase):
-
-    def test(self):
-        # relies on mesh.get_convex_hull() and polygon.dilate
-        source = self._make_source()
-        poly = source.get_rupture_enclosing_polygon(dilation=5.0)
-
-        mesh = Mesh(numpy.array([[-1., 1.], [-1., 1.]]),
-                    numpy.array([[0., 0.], [0., 0.]]),
-                    numpy.array([[0., 0.], [10., 10.]]))
-
-        numpy.testing.assert_equal(
-            poly.lons, mesh.get_convex_hull().dilate(5.0).lons
-        )
-        numpy.testing.assert_equal(
-            poly.lats, mesh.get_convex_hull().dilate(5.0).lats
-        )
-
-
 class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
 
     def test(self):

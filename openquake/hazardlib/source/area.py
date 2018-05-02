@@ -70,17 +70,6 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Extends the area source polygon by ``dilation`` plus
-        :meth:`~openquake.hazardlib.source.point.PointSource._get_max_rupture_projection_radius`.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
-        """
-        max_rup_radius = self._get_max_rupture_projection_radius()
-        return self.polygon.dilate(max_rup_radius + dilation)
 
     def iter_ruptures(self):
         """

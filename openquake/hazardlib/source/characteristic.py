@@ -71,34 +71,6 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         self.surface = surface
         self.rake = rake
 
-    # NB: this looks completely wrong??
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Uses :meth:
-        `openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
-        and from bounding box coordinates create
-        :class:`openquake.hazardlib.geo.mesh.RectangularMesh` and then calls
-        :meth:`openquake.hazardlib.geo.mesh.Mesh.get_convex_hull()` to get a
-        polygon representation of the bounding box. Note that this is needed
-        to cope with the situation of a vertical rupture for which the bounding
-        box collapses to a line. In this case the method ``get_convex_hull()``
-        returns a valid polygon obtained by expanding the line by a small
-        distance. Finally, a polygon is returned by calling
-        :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate` passing in the
-        ``dilation`` parameter.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
-        """
-        west, east, north, south = self.surface.get_bounding_box()
-        mesh = RectangularMesh(numpy.array([[west, east], [west, east]]),
-                               numpy.array([[north, north], [south, south]]),
-                               None)
-        poly = mesh.get_convex_hull()
-        dpoly = poly.dilate(dilation)
-        return dpoly
-
     def get_bounding_box(self, maxdist):
         """
         Bounding box containing all points, enlarged by the maximum distance
