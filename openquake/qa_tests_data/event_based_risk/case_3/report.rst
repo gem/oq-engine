@@ -2,9 +2,9 @@ Event Based Risk Lisbon
 =======================
 
 ============== ===================
-checksum32     2,846,619,488      
-date           2018-04-19T05:02:12
-engine_version 3.1.0-git9c5da5b   
+checksum32     2,968,384,188      
+date           2018-04-30T11:21:35
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -46,12 +46,12 @@ structural_vulnerability `vulnerability_model2013.xml <vulnerability_model2013.x
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        0.600  complex(2,2)    4/4             
-b2        0.400  complex(2,2)    4/4             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        0.60000 complex(2,2)    4/4             
+b2        0.40000 complex(2,2)    4/4             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -84,15 +84,15 @@ Number of ruptures per tectonic region type
 =================== ====== ==================== ============ ============
 source_model        grp_id trt                  eff_ruptures tot_ruptures
 =================== ====== ==================== ============ ============
-SA_RA_CATAL1_00.xml 0      Active Shallow Crust 8,920        11,965      
-SA_RA_CATAL1_00.xml 1      Stable Shallow Crust 5,004        5,226       
-SA_RA_CATAL2_00.xml 2      Active Shallow Crust 8,920        11,965      
-SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 5,004        5,226       
+SA_RA_CATAL1_00.xml 0      Active Shallow Crust 10,370       11,965      
+SA_RA_CATAL1_00.xml 1      Stable Shallow Crust 5,202        5,226       
+SA_RA_CATAL2_00.xml 2      Active Shallow Crust 10,370       11,965      
+SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 5,202        5,226       
 =================== ====== ==================== ============ ============
 
 ============= ======
 #TRT models   4     
-#eff_ruptures 27,848
+#eff_ruptures 31,144
 #tot_ruptures 34,382
 #tot_weight   0     
 ============= ======
@@ -110,27 +110,27 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-M1_2_PC  1.000 NaN    1   1   1         1         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+M1_2_PC  1.00000 NaN    1   1   1         1         
+======== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-0         AreaSource   6,075        11        0.062      270       270       77    
-2         AreaSource   4,901        3.710     0.058      128       128       136   
-6         AreaSource   1,054        1.873     0.017      68        68        102   
-1         AreaSource   989          1.670     0.015      86        86        59    
-10        AreaSource   1,116        1.621     0.029      106       106       0     
-3         AreaSource   812          1.389     0.010      56        56        0     
-5         AreaSource   551          1.187     0.014      38        38        50    
-9         AreaSource   612          1.067     0.020      92        92        46    
-7         AreaSource   429          0.835     0.011      66        66        20    
-4         AreaSource   310          0.789     0.021      62        62        27    
-8         AreaSource   342          0.626     0.009      38        38        19    
+0         AreaSource   6,075        8.33714   0.04261    270       270       77    
+2         AreaSource   4,901        4.72237   0.04016    228       228       170   
+10        AreaSource   1,116        1.82385   0.02117    124       124       0     
+6         AreaSource   1,054        1.38653   0.01199    68        68        102   
+1         AreaSource   989          1.16245   0.01040    86        86        59    
+3         AreaSource   812          1.07606   0.00730    56        56        0     
+5         AreaSource   551          0.87138   0.01020    38        38        50    
+9         AreaSource   612          0.86002   0.01512    98        98        49    
+7         AreaSource   429          0.60738   0.00787    66        66        20    
+4         AreaSource   310          0.57401   0.01583    62        62        27    
+8         AreaSource   342          0.44143   0.00649    38        38        19    
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -138,7 +138,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   26        11    
+AreaSource   21        11    
 ============ ========= ======
 
 Duplicated sources
@@ -147,16 +147,16 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.509 0.612  0.038 2.053 18       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+compute_ruptures   1.22219 0.28906 0.58107 1.49227 18       
+================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
 ================ ================================================================================= ========
 task             sent                                                                              received
-compute_ruptures sources=396.91 KB param=15.63 KB src_filter=12.69 KB monitor=5.8 KB gsims=3.87 KB 74.7 KB 
+compute_ruptures sources=437.82 KB param=15.52 KB src_filter=12.59 KB monitor=5.8 KB gsims=3.87 KB 80.45 KB
 ================ ================================================================================= ========
 
 Slowest operations
@@ -164,15 +164,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         27       3.387     18    
-managing sources               2.396    0.0       1     
-reading composite source model 0.547    0.0       1     
-splitting sources              0.533    0.0       1     
-making contexts                0.026    0.0       14    
-saving ruptures                0.023    0.0       18    
-store source_info              0.007    0.0       1     
-unpickling compute_ruptures    0.005    0.0       18    
-reading exposure               0.003    0.0       1     
-reading site collection        0.003    0.0       1     
-setting event years            0.002    0.0       1     
+total compute_ruptures         21       3.41797   18    
+managing sources               1.66685  0.0       1     
+reading composite source model 0.39116  0.0       1     
+splitting sources              0.38066  0.13672   1     
+saving ruptures                0.01789  0.0       18    
+making contexts                0.01579  0.0       15    
+store source_info              0.00417  0.0       1     
+unpickling compute_ruptures    0.00390  0.0       18    
+reading exposure               0.00302  0.0       1     
+reading site collection        0.00279  0.0       1     
+setting event years            0.00116  0.0       1     
 ============================== ======== ========= ======

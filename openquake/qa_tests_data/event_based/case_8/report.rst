@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     103,533,850        
-date           2018-04-19T05:04:06
-engine_version 3.1.0-git9c5da5b   
+date           2018-04-30T11:22:45
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -69,7 +69,7 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.070     0.0       1     
-splitting sources              3.664E-04 0.0       1     
-reading site collection        1.178E-04 0.0       1     
+reading composite source model 0.06920   0.0       1     
+splitting sources              3.204E-04 0.0       1     
+reading site collection        9.823E-05 0.0       1     
 ============================== ========= ========= ======

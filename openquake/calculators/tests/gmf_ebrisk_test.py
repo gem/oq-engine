@@ -44,14 +44,14 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
-        num_events = len(self.calc.datastore['agg_loss_table'])
+        num_events = len(self.calc.datastore['losses_by_event'])
         self.assertEqual(num_events, 10)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini')
-        alt = self.calc.datastore['agg_loss_table']
+        alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
@@ -61,7 +61,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
-        alt = self.calc.datastore['agg_loss_table']
+        alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
@@ -76,7 +76,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
-        alt = self.calc.datastore['agg_loss_table']
+        alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 20)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()

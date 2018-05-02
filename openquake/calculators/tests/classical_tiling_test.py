@@ -39,6 +39,7 @@ class ClassicalTilingTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
+        # this is case with two tiles of 7 sites each
         self.run_calc(case_2.__file__, 'job.ini', exports='csv,geojson')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
