@@ -213,7 +213,7 @@ producing too small PoEs.'''
         oq = self.oqparam
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
-                                  use_rtree=False)
+                                  prefilter='no')
         csm = self.csm.filter(src_filter)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')

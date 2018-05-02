@@ -18,6 +18,7 @@
 
 from __future__ import division
 import logging
+import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -26,6 +27,14 @@ from openquake.commonlib import readinput
 
 def cross(lonlat, width, height):
     return cross_idl(lonlat[0], lonlat[0] + width)
+
+
+def fix_polygon(poly, idl):
+    # manage the international date line and add the first point as last point
+    # to close the polygon
+    lons = poly.lons % 360 if idl else poly.lons
+    return (numpy.append(lons, lons[0]),
+            numpy.append(poly.lats, poly.lats[0]))
 
 
 @sap.Script
@@ -43,18 +52,26 @@ def plot_sites(calc_id=-1):
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     srcfilter = SourceFilter(sitecol, oq.maximum_distance,
-                             oq.filter_sources_with_rtree)
+                             oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
+    sources = csm.get_sources()
     fig, ax = p.subplots()
     ax.grid(True)
-    idl = cross_idl(lons.min(), lons.max())
-    rects = [srcfilter.get_rectangle(src) for src in csm.get_sources()]
-    any_idl = idl or any(cross(*rect) for rect in rects)
-    if any_idl:
+    rects = [srcfilter.get_rectangle(src) for src in sources]
+    lonset = set(lons)
+    for ((lon, lat), width, height) in rects:
+        lonset.add(lon)
+        lonset.add(lon + width)
+    idl = cross_idl(min(lonset), max(lonset))
+    if idl:
         lons = lons % 360
-    for (lon, lat), width, height in rects:
-        lonlat = (lon % 360 if any_idl else lon, lat)
+    for src, ((lon, lat), width, height) in zip(sources, rects):
+        lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
+        if hasattr(src, 'polygon'):
+            xs, ys = fix_polygon(src.polygon, idl)
+            p.plot(xs, ys, marker='.')
+
     p.scatter(lons, lats, marker='+')
     p.show()
 
