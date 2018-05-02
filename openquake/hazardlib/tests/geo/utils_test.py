@@ -388,9 +388,9 @@ class WithinTestCase(unittest.TestCase):
             -175.75, -175.5, -175.25, 178.25, 178.5, 178.75, 179.0, 179.25,
             179.5, 179.75, -180.0]
         self.lats = [-30.5] * 27
-        self.index = rtree.index.Index()
-        for i, (x, y) in enumerate(zip(self.lons, self.lats)):
-            self.index.insert(i, (x, y, x, y))
+        self.index = rtree.index.Index(
+            (i, (x, y, x, y), None)
+            for i, (x, y) in enumerate(zip(self.lons, self.lats)))
 
     def test(self):
         all_sites = numpy.arange(27, dtype=numpy.uint32)
