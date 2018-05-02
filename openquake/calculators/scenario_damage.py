@@ -23,6 +23,8 @@ import numpy
 from openquake.risklib import scientific, riskmodels
 from openquake.calculators import base, event_based
 
+U16 = numpy.uint16
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -118,7 +120,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        _, self.R = base.get_gmfs(self)  # set number_of_ground_motion_fields
+        base.set_gmfs(self)  # set number_of_ground_motion_fields, R
         E = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(
@@ -158,13 +160,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         if result['c_asset']:
+            dtlist = [('eid', U64), ('rlzi', U16), ('loss', (F32, L))]
             stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
             c_asset = numpy.zeros((N, R, L), stat_dt)
             for (l, r, a, stat) in result['c_asset']:
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
             self.datastore['losses_by_asset'] = c_asset
-            self.datastore['losses_by_event'] = F32(result['c_event'])
+            self.datastore['losses_by_event'] = numpy.fromiter(
+                ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
+                 for rlzi in range(R) for eid in range(E)), dtlist)
 
         # save gmdata
         self.gmdata = result['gmdata']

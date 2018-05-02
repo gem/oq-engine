@@ -26,6 +26,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 
@@ -144,8 +145,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         """
         polygon = SimpleFaultSurface.surface_projection_from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip
-        )
+            self.lower_seismogenic_depth, self.dip)
         if dilation:
             return polygon.dilate(dilation)
         else:
@@ -339,3 +339,14 @@ class SimpleFaultSource(ParametricSeismicSource):
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             yield src
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all surfaces, enlarged by the maximum distance
+        """
+        bbox = SimpleFaultSurface.surface_projection_from_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip).get_bbox()
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, bbox[1], bbox[3])
+        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1

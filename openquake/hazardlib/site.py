@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 from shapely import geometry
 from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import fix_lon, cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
 
@@ -142,6 +142,7 @@ class SiteCollection(object):
         ('z2pt5', numpy.float64),
         ('backarc', numpy.bool),
     ])
+    offset = 0  # different from 0 if there are tiles
 
     @classmethod
     def from_shakemap(cls, shakemap_array):
@@ -187,7 +188,7 @@ class SiteCollection(object):
         self.indices = None
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
-        arr['lons'] = numpy.array(lons)
+        arr['lons'] = fix_lon(numpy.array(lons))
         arr['lats'] = numpy.array(lats)
         arr['depths'] = numpy.array(depths)
         if sitemodel is None:
@@ -216,6 +217,7 @@ class SiteCollection(object):
         new = object.__new__(self.__class__)
         new.indices = numpy.uint32(sorted(indices))
         new.array = self.array
+        new.offset = self.offset
         return new
 
     def __init__(self, sites):
@@ -287,11 +289,14 @@ class SiteCollection(object):
         :param hint: hint for how many tiles to generate
         """
         tiles = []
+        offset = 0
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.indices = None
             sc.array = self.array[numpy.array(seq, int)]
+            sc.offset = offset
             tiles.append(sc)
+            offset += len(seq)
         return tiles
 
     def __iter__(self):
@@ -345,19 +350,19 @@ class SiteCollection(object):
 
     def within_bbox(self, bbox):
         """
-        :param bbox: a quartet (min_lon, min_lat, max_lon, max_lat)
-        :returns: a filtered SiteCollection within the bounding box
+        :param bbox:
+            a quartet (min_lon, min_lat, max_lon, max_lat)
+        :returns:
+            a filtered SiteCollection within the bounding box or None
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        if cross_idl(min_lon, max_lon):
-            raise ValueError('Crossing the International Date Line is '
-                             'not supported yet')
-        recs = self.array if self.indices is None else self.array[self.indices]
-        mask = numpy.array([min_lon < rec['lons'] < max_lon and
-                            min_lat < rec['lats'] < max_lat for rec in recs])
-        if not mask.any():
-            raise Exception('There are no sites within the boundind box %s'
-                            % str(bbox))
+        arr = self.array if self.indices is None else self.array[self.indices]
+        lons, lats = arr['lons'], arr['lats']
+        if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
+            lons = lons % 360
+            min_lon, max_lon = min_lon % 360, max_lon % 360
+        mask = (min_lon < lons) * (lons < max_lon) * \
+               (min_lat < lats) * (lats < max_lat)
         return self.filter(mask)
 
     def __getstate__(self):
@@ -388,4 +393,6 @@ class SiteCollection(object):
 
     def __repr__(self):
         total_sites = len(self.array)
-        return '<SiteCollection with %d/%d sites>' % (len(self), total_sites)
+        offset = ', offset=%d' % self.offset if self.offset else ''
+        return '<SiteCollection with %d/%d sites%s>' % (
+            len(self), total_sites, offset)
