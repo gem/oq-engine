@@ -50,9 +50,8 @@ should also perform reasonably fast (filtering stage that takes longer than
 the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
-filter function (see :func:`filter_sites_by_distance_to_rupture`) as well as
-a "no operation" filter (`source_site_noop_filter`). There is
-a class `SourceFilter` to determine the sites
+filter function as well as a "no operation" filter (`source_site_noop_filter`).
+There is a class `SourceFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed. Finally, there is a function
@@ -109,9 +108,7 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     :returns:
         Filtered :class:`~openquake.hazardlib.site.SiteCollection`.
 
-    This function is similar to :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`.
-    The same notes about filtering criteria apply. Site
-    should not be filtered out if it is not further than the integration
+    Sites should not be filtered out if it is not further than the integration
     distance from the rupture's surface projection along the great
     circle arc (this is known as Joyner-Boore distance, :meth:`
     openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`).
@@ -319,11 +316,9 @@ class SourceFilter(object):
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
     :param integration_distance:
-        Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
-        which is what is actually used for filtering.
+        Integration distance dictionary (TRT -> distance in km)
     :param prefilter:
-        by default "rtree", i.e. use the rtree module
+        by default "rtree", accepts also "numpy" and "no"
     """
     def __init__(self, sitecol, integration_distance, prefilter='rtree'):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
@@ -406,8 +401,10 @@ class SourceFilter(object):
                     yield src, s_sites
 
     def __getstate__(self):
+        # 'rtree' cannot be used on the workers, so we use 'numpy' instead
+        pref = 'numpy' if self.prefilter == 'rtree' else self.prefilter
         return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, prefilter=self.prefilter)
+                    sitecol=self.sitecol, prefilter=pref)
 
 
 source_site_noop_filter = SourceFilter(None, {})

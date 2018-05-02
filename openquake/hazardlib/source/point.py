@@ -123,30 +123,6 @@ class PointSource(ParametricSeismicSource):
                 self.max_radius = radius
         return self.max_radius
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Returns a circle-shaped polygon with radius equal to ``dilation`` plus
-        :meth:`_get_max_rupture_projection_radius`.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
-        """
-        max_rup_radius = self._get_max_rupture_projection_radius()
-        return self.location.to_polygon(max_rup_radius + dilation)
-
-    def filter_sites_by_distance_to_source(self, integration_distance, sites):
-        """
-        Filter sites that are closer than maximum rupture projection radius
-        plus integration distance along the great circle arc from source's
-        epicenter location. Overrides :meth:`base class' method
-        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`
-        in order to avoid using polygon.
-        """
-        radius = self._get_max_rupture_projection_radius()
-        radius += integration_distance
-        return sites.filter(self.location.closer_than(sites.mesh, radius))
-
     def iter_ruptures(self):
         """
         See :meth:
