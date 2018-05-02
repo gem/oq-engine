@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
+import math
 import logging
 import operator
 import collections
@@ -32,7 +33,24 @@ from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, geodetic_distance
 from openquake.baselib.slots import with_slots
 
 U32 = numpy.uint32
+KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
+DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
+
+
+def angular_distance(km, lat, lat2=None):
+    """
+    Return the angular distance of two points at the given latitude.
+
+    >>> '%.3f' % angular_distance(100, lat=40)
+    '1.174'
+    >>> '%.3f' % angular_distance(100, lat=80)
+    '5.179'
+    """
+    if lat2 is not None:
+        # use the largest latitude to compute the angular distance
+        lat = max(abs(lat), abs(lat2))
+    return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
 class SiteAssociationError(Exception):
@@ -242,6 +260,18 @@ def get_longitudinal_extent(lon1, lon2):
         valid parameters values.
     """
     return (lon2 - lon1 + 180) % 360 - 180
+
+
+def get_bounding_box(obj, maxdist):
+    """
+    Return the dilated bounding box of a geometric object
+    """
+    if hasattr(obj, 'get_bounding_box'):
+        return obj.get_bounding_box(maxdist)
+    bbox = obj.polygon.get_bbox()
+    a1 = maxdist * KM_TO_DEGREES
+    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
 def get_spherical_bounding_box(lons, lats):
@@ -573,7 +603,7 @@ def cross_idl(lon1, lon2):
     return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
 
 
-def normalize_lons(lon1, lon2):
+def normalize_lons(l1, l2):
     """
     An international date line safe way of returning a range of longitudes.
 
@@ -583,14 +613,13 @@ def normalize_lons(lon1, lon2):
     [(-17, 17)]
     >>> normalize_lons(-178, +179)
     [(-180, -178), (179, 180)]
-    >>> normalize_lons(178, +181)
+    >>> normalize_lons(178, -179)
     [(-180, -179), (178, 180)]
-    >>> normalize_lons(-181, -179)
+    >>> normalize_lons(179, -179)
     [(-180, -179), (179, 180)]
-    >>> normalize_lons(-183, -176)
+    >>> normalize_lons(177, -176)
     [(-180, -176), (177, 180)]
     """
-    l1, l2 = fix_lon(lon1), fix_lon(lon2)
     if l1 > l2:  # exchange lons
         l1, l2 = l2, l1
     delta = l2 - l1
@@ -601,6 +630,20 @@ def normalize_lons(lon1, lon2):
     elif l1 < -180 and l2 < 0 and delta < 180:
         return [(l1 + 360, 180), (l2, -180)]
     return [(l1, l2)]
+
+
+def within(bbox, lonlat_index):
+    """
+    :param bbox: a bounding box in lon, lat
+    :param lonlat_index: an rtree index in lon, lat
+    :returns: array of indices within the bounding box
+    """
+    lon1, lat1, lon2, lat2 = bbox
+    set_ = set()
+    for l1, l2 in normalize_lons(lon1, lon2):
+        box = (l1, lat1, l2, lat2)
+        set_ |= set(lonlat_index.intersection(box))
+    return numpy.array(sorted(set_), numpy.uint32)
 
 
 def plane_fit(points):

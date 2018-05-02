@@ -25,7 +25,6 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 MINWEIGHT = 100
@@ -289,12 +288,10 @@ class ComplexFaultSource(ParametricSeismicSource):
             for s in split(src):
                 yield s
 
-    def get_bounding_box(self, maxdist):
+    @property
+    def polygon(self):
         """
-        Bounding box containing all surfaces, enlarged by the maximum distance
-        """
-        bbox = ComplexFaultSurface.surface_projection_from_fault_data(
-            self.edges).get_bbox()
-        a1 = maxdist * KM_TO_DEGREES
-        a2 = angular_distance(maxdist, bbox[1], bbox[3])
-        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        The underlying polygon
+        `"""
+        return ComplexFaultSurface.surface_projection_from_fault_data(
+            self.edges)
