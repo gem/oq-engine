@@ -75,6 +75,7 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
+    serial = 0  # set to a value > 0 by the engine
 
     @classmethod
     def init(cls):
@@ -171,8 +172,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         probability ``0.8`` to not occurr, ``0.15`` to occur once, and
         ``0.05`` to occur twice, the ``pmf`` can be defined as ::
 
-          pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1),
-                      Decimal('0.05', 2)])
+          pmf = PMF([(0.8, 0), (0.15, 1), 0.05, 2)])
 
     :raises ValueError:
         If number of ruptures in ``pmf`` do not start from 0, are not defined
@@ -571,13 +571,19 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events, serial=0):
+    def __init__(self, rupture, sids, events):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.serial = serial
         self.eidx1 = 0
         self.eidx2 = len(events)
+
+    @property
+    def serial(self):
+        """
+        Serial number of the rupture
+        """
+        return self.rupture.serial
 
     @property
     def grp_id(self):

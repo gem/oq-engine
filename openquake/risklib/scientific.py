@@ -1390,9 +1390,9 @@ class LossesByPeriodBuilder(object):
                     self.num_events[rlzi], self.eff_time)
         return array
 
-    def build(self, agg_loss_table_array, stats=()):
+    def build(self, losses_by_event, stats=()):
         """
-        :param agg_loss_table_array:
+        :param losses_by_event:
             the aggregate loss table as an array
         :param stats:
             list of pairs [(statname, statfunc), ...]
@@ -1401,12 +1401,13 @@ class LossesByPeriodBuilder(object):
         """
         P, R = len(self.return_periods), len(self.weights)
         array = numpy.zeros((P, R), self.loss_dt)
-        dic = group_array(agg_loss_table_array, 'rlzi')
+        dic = group_array(losses_by_event, 'rlzi')
         for r in dic:
             num_events = self.num_events[r]
             losses = dic[r]['loss']
             for lti, lt in enumerate(self.loss_dt.names):
                 ls = losses[:, lti].flatten()  # flatten only in ucerf
+                # NB: do not use squeeze or the gmf_ebrisk tests will break
                 lbp = losses_by_period(
                     ls, self.return_periods, num_events, self.eff_time)
                 array[:, r][lt] = lbp
