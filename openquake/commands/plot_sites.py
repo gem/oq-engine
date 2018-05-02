@@ -18,6 +18,7 @@
 
 from __future__ import division
 import logging
+import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -26,6 +27,14 @@ from openquake.commonlib import readinput
 
 def cross(lonlat, width, height):
     return cross_idl(lonlat[0], lonlat[0] + width)
+
+
+def fix_polygon(poly, idl):
+    # manage the international date line and add the first point as last point
+    # to close the polygon
+    lons = poly.lons % 360 if idl else poly.lons
+    return (numpy.append(lons, lons[0]),
+            numpy.append(poly.lats, poly.lats[0]))
 
 
 @sap.Script
@@ -60,9 +69,8 @@ def plot_sites(calc_id=-1):
         lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
         if hasattr(src, 'polygon'):
-            poly = src.polygon
-            p.scatter(poly.lons % 360 if idl else poly.lons, poly.lats,
-                      marker='.')
+            xs, ys = fix_polygon(src.polygon, idl)
+            p.plot(xs, ys, marker='.')
 
     p.scatter(lons, lats, marker='+')
     p.show()
