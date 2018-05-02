@@ -15,7 +15,6 @@ from __future__ import division
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-from decimal import Decimal
 
 import numpy
 
@@ -103,8 +102,7 @@ class PointSourceCreationTestCase(unittest.TestCase):
             'depths of all hypocenters must be in between '
             'lower and upper seismogenic depths',
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
-            hypocenter_distribution=PMF([(Decimal('0.3'), 4),
-                                         (Decimal('0.7'), 8.001)])
+            hypocenter_distribution=PMF([(0.3, 4), (0.7, 8.001)])
         )
 
     def test_negative_aspect_ratio(self):
@@ -297,12 +295,12 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         mag2_rate = 9e-4
         hypocenter1 = 9.0
         hypocenter2 = 10.0
-        hypocenter1_weight = Decimal('0.8')
-        hypocenter2_weight = Decimal('0.2')
+        hypocenter1_weight = 0.8
+        hypocenter2_weight = 0.2
         nodalplane1 = NodalPlane(strike=45, dip=90, rake=0)
         nodalplane2 = NodalPlane(strike=0, dip=45, rake=10)
-        nodalplane1_weight = Decimal('0.3')
-        nodalplane2_weight = Decimal('0.7')
+        nodalplane1_weight = 0.3
+        nodalplane2_weight = 0.7
         upper_seismogenic_depth = 2
         lower_seismogenic_depth = 16
         rupture_aspect_ratio = 2

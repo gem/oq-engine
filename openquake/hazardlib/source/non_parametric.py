@@ -23,7 +23,7 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
-from openquake.hazardlib.calc.filters import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.baselib.slots import with_slots
 
 

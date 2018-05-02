@@ -254,7 +254,7 @@ def view_ruptures_per_trt(token, dstore):
                 num_trts += 1
                 eff_ruptures += er
                 tbl.append(
-                    (sm.names, src_group.id, trt, er, src_group.tot_ruptures))
+                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
             tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
             ('#eff_ruptures', eff_ruptures),
