@@ -45,6 +45,8 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PPID = os.getppid()  # the controlling terminal PID
+
 if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default():
@@ -157,9 +159,17 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
+    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
+    # terminal died; in the workers, do nothing
+    # NB: there is no SIGHUP on Windows
+    if signum == signal.SIGHUP and os.getppid() == _PPID:
+        return
+
     parallel.Starmap.shutdown()
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
+    elif signum == signal.SIGHUP:
+        msg = 'The openquake master lost its controlling terminal'
     else:
         msg = 'Received a signal %d' % signum
     raise MasterKilled(msg)
@@ -172,6 +182,7 @@ def raiseMasterKilled(signum, _stack):
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
+    signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 
