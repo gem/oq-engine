@@ -24,6 +24,7 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
 @with_slots
@@ -70,32 +71,14 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         self.surface = surface
         self.rake = rake
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
+    def get_bounding_box(self, maxdist):
         """
-        Uses :meth:
-        `openquake.hazardlib.geo.surface.base.BaseSurface.get_bounding_box()`
-        and from bounding box coordinates create
-        :class:`openquake.hazardlib.geo.mesh.RectangularMesh` and then calls
-        :meth:`openquake.hazardlib.geo.mesh.Mesh.get_convex_hull()` to get a
-        polygon representation of the bounding box. Note that this is needed
-        to cope with the situation of a vertical rupture for which the bounding
-        box collapses to a line. In this case the method ``get_convex_hull()``
-        returns a valid polygon obtained by expanding the line by a small
-        distance. Finally, a polygon is returned by calling
-        :meth:`~openquake.hazardlib.geo.polygon.Polygon.dilate` passing in the
-        ``dilation`` parameter.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
+        Bounding box containing all points, enlarged by the maximum distance
         """
         west, east, north, south = self.surface.get_bounding_box()
-        mesh = RectangularMesh(numpy.array([[west, east], [west, east]]),
-                               numpy.array([[north, north], [south, south]]),
-                               None)
-        poly = mesh.get_convex_hull()
-        dpoly = poly.dilate(dilation)
-        return dpoly
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, north, south)
+        return west - a2, south - a1, east + a2, north + a1
 
     def iter_ruptures(self):
         """
@@ -110,8 +93,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self), occurrence_rate,
-                self.temporal_occurrence_model
-            )
+                self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """

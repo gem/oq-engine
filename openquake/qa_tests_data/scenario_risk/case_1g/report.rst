@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,419,232,840      
-date           2018-04-19T05:04:19
-engine_version 3.1.0-git9c5da5b   
+date           2018-04-30T11:23:02
+engine_version 3.1.0-gitb0812f0   
 ============== ===================
 
 num_sites = 7, num_levels = 3
@@ -41,11 +41,11 @@ sites         `sites.csv <sites.csv>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,5 +60,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 3.703E-04 0.0       1     
+reading site collection 3.359E-04 0.0       1     
 ======================= ========= ========= ======

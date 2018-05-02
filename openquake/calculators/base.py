@@ -411,6 +411,8 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_inputs()
         self.param = {}  # used in the risk calculators
+        if 'gmfs' in self.oqparam.inputs:
+            save_gmfs(self)
 
     def init(self):
         """
@@ -495,7 +497,6 @@ class HazardCalculator(BaseCalculator):
                      if self.datastore.parent else None)
         if oq.shakemap_id or 'shakemap' in oq.inputs:
             self.read_shakemap()
-            self.R = 1
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
@@ -608,6 +609,17 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+    @property
+    def R(self):
+        """
+        :returns: the number of realizations as read from `csm_info`
+        """
+        try:
+            return self._R
+        except AttributeError:
+            self._R = self.datastore['csm_info'].get_num_rlzs()
+            return self._R
+
     def read_shakemap(self):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.
@@ -750,56 +762,66 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def set_gmfs(calculator):
+def save_gmdata(calc, n_rlzs):
+    """
+    Save a composite array `gmdata` in the datastore.
+
+    :param calc: a calculator with a dictionary .gmdata {rlz: data}
+    :param n_rlzs: the total number of realizations
+    """
+    n_sites = len(calc.sitecol)
+    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
+              [('events', U32), ('nbytes', U32)])
+    array = numpy.zeros(n_rlzs, dtlist)
+    for rlzi in sorted(calc.gmdata):
+        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
+        events = data[-2]
+        nbytes = data[-1]
+        gmv = data[:-2] / events / n_sites
+        array[rlzi] = tuple(gmv) + (events, nbytes)
+    calc.datastore['gmdata'] = array
+    logging.info('Generated %s of GMFs',
+                 general.humansize(array['nbytes'].sum()))
+
+
+def save_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
     :returns: a pair (eids, R) where R is the number of realizations
     """
     dstore = calculator.datastore
     oq = calculator.oqparam
-    sitecol = calculator.sitecol
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # S sites
-    else:
-        haz_sitecol = sitecol  # N sites
-    N = len(haz_sitecol.complete)
-    I = len(oq.imtls)
-    if 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
+    logging.info('Reading gmfs from file')
+    if oq.inputs['gmfs'].endswith('.csv'):
+        eids, num_rlzs, calculator.gmdata = import_gmfs(
+            dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
+        save_gmdata(calculator, calculator.R)
+    else:  # XML
         eids, gmfs = readinput.get_gmfs(oq)
-        E = len(eids)
-        if hasattr(oq, 'number_of_ground_motion_fields'):
-            if oq.number_of_ground_motion_fields != E:
-                raise RuntimeError(
-                    'Expected %d ground motion fields, found %d' %
-                    (oq.number_of_ground_motion_fields, E))
-        else:  # set the number of GMFs from the file
-            oq.number_of_ground_motion_fields = E
-        # NB: get_gmfs redefine oq.sites in case of GMFs from XML or CSV
-        haz_sitecol = readinput.get_site_collection(oq) or haz_sitecol
+    E = len(eids)
+    calculator.eids = eids
+    if hasattr(oq, 'number_of_ground_motion_fields'):
+        if oq.number_of_ground_motion_fields != E:
+            raise RuntimeError(
+                'Expected %d ground motion fields, found %d' %
+                (oq.number_of_ground_motion_fields, E))
+    else:  # set the number of GMFs from the file
+        oq.number_of_ground_motion_fields = E
+    # NB: save_gmfs redefine oq.sites in case of GMFs from XML or CSV
+    if oq.inputs['gmfs'].endswith('.xml'):
+        haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
         idx = (slice(None) if haz_sitecol.indices is None
                else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx])
-
-        # store the events, useful when read the GMFs from a file
-        events = numpy.zeros(E, readinput.stored_event_dt)
-        events['eid'] = eids
-        dstore['events'] = events
-        calculator.R = len(gmfs)
-
-    elif calculator.precalc:  # from previous step
-        calculator.R = dstore['csm_info'].get_num_rlzs()
-
-    else:  # with --hc option
-        calculator.R = calculator.datastore['csm_info'].get_num_rlzs()
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs):
+def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param gmfs: an array of shape (R, N, E, M)
+    :param eids: E event IDs or the empty tuple
     """
     offset = 0
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
@@ -812,6 +834,10 @@ def save_gmf_data(dstore, sitecol, gmfs):
         offset += n
     dstore.save_vlen('gmf_data/indices', lst)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+    if len(eids):  # store the events
+        events = numpy.zeros(len(eids), readinput.stored_event_dt)
+        events['eid'] = eids
+        dstore['events'] = events
 
 
 def import_gmfs(dstore, fname, sids):
