@@ -337,8 +337,6 @@ class SourceFilter(object):
             self.index = rtree.index.Index(
                 (i, (lon, lat, lon, lat), None)
                 for i, (lon, lat) in enumerate(lonlats))
-            # http://toblerity.org/rtree/performance.html#use-stream-loading
-            # causes undefined behavior, with wrong associations being made
 
     def get_affected_box(self, src):
         """
