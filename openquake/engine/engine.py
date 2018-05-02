@@ -161,6 +161,7 @@ def raiseMasterKilled(signum, _stack):
     """
     # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
     # terminal died; in the workers, do nothing
+    # NB: there is no SIGHUP on Windows
     if signum == signal.SIGHUP and os.getppid() == _PPID:
         return
 
