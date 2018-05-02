@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Managed the case of a dead controlling terminal (SIGHUP)
+
   [Michele Simionato]
   * Removed Decimal numbers from the PMF distribution in hazardlib
   * Fixed another tricky bug with rtree filtering across the international
