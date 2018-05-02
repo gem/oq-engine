@@ -31,7 +31,6 @@ class FakeSource(ParametricSeismicSource):
     MODIFICATIONS = set(())
     iter_ruptures = None
     count_ruptures = None
-    get_bounding_box = None
 
 
 class _BaseSeismicSourceTestCase(unittest.TestCase):
