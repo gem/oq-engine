@@ -45,7 +45,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
-_PPID = os.getppid()
+_PPID = os.getppid()  # the controlling terminal PID
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -159,8 +159,8 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Check if SIGHUP is raised by died parent. If not do not
-    # kill everything and keep computation running instead
+    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
+    # terminal died; in the workers, do nothing
     if signum == signal.SIGHUP and os.getppid() == _PPID:
         return
 
