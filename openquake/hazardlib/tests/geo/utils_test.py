@@ -391,19 +391,36 @@ class WithinTestCase(unittest.TestCase):
         self.index = rtree.index.Index()
         for i, (x, y) in enumerate(zip(self.lons, self.lats)):
             self.index.insert(i, (x, y, x, y))
-        self.all = numpy.arange(27, dtype=numpy.uint32)
 
     def test(self):
-        b1 = [176.73699, -39.13234, -176.9016, -12.26262]
-        b2 = [174.12916, -39.26710, -169.9217, -12.41082]
+        all_sites = numpy.arange(27, dtype=numpy.uint32)
+        expected = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23,
+                    24, 25, 26]
 
-        indices = utils.within(b1, self.index)
-        numpy.testing.assert_equal(
-            indices, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23,
-                      24, 25, 26])
+        # bounding box taking 20 of the 27 sites
+        indices = utils.within(
+            [176.73699, -39, -176.9016, -12], self.index)
+        numpy.testing.assert_equal(indices, expected)
 
-        indices = utils.within(b2, self.index)
-        numpy.testing.assert_equal(indices, self.all)
+        # one can invert lon1, lon2
+        indices = utils.within(
+            [-176.9016, -39, 176.73699, -12], self.index)
+        numpy.testing.assert_equal(indices, expected)
+
+        # bounding box large enough to contain all sites
+        indices = utils.within(
+            [174.12916, -39, -169.9217, -12], self.index)
+        numpy.testing.assert_equal(indices, all_sites)
+
+        # lat on the edge from below is (strangely) taken
+        indices = utils.within(
+            [174.12916, -39, -169.9217, -30], self.index)
+        numpy.testing.assert_equal(indices, all_sites)
+
+        # lat on the edge from up is discarded
+        indices = utils.within(
+            [174.12916, -30, -169.9217, -12], self.index)
+        numpy.testing.assert_equal(indices, [])
 
 
 class PlaneFit(unittest.TestCase):
