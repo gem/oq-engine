@@ -38,7 +38,8 @@ def zip(job_ini, archive_zip):
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
     logging.basicConfig(level=logging.INFO)
-    oq = readinput.get_oqparam(job_ini)
+    # do not validate to avoid permissions error on the export_dir
+    oq = readinput.get_oqparam(job_ini, validate=False)
     files = set()
 
     # collect .hdf5 tables for the GSIMs, if any

@@ -140,6 +140,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(PSHACalculator, 'core_task', count_ruptures):
+        calc.prefilter = False
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'

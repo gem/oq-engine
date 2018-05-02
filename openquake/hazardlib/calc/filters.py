@@ -60,23 +60,31 @@ the index can be compensed. Finally, there is a function
 """
 import sys
 import math
-import logging
 import collections
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.geo.utils import normalize_lons
 
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 
 
-def angular_distance(km, lat):
+def angular_distance(km, lat, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
+
+    >>> '%.3f' % angular_distance(100, lat=40)
+    '1.174'
+    >>> '%.3f' % angular_distance(100, lat=80)
+    '5.179'
     """
+    if lat2 is not None:
+        # use the largest latitude to compute the angular distance
+        lat = max(abs(lat), abs(lat2))
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
@@ -300,6 +308,14 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
+def get_indices(sites):
+    """
+    :returns the indices from a SiteCollection
+    """
+    return (numpy.arange(len(sites), dtype=numpy.float32)
+            if sites.indices is None else sites.indices)
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -313,9 +329,9 @@ class SourceFilter(object):
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
     number of sites within the integration distance. Notice that SourceFilter
-    instances can be pickled, but when unpickled the `use_rtree` flag is set to
-    false and the index is lost: the reason is that libspatialindex indices
-    cannot be properly pickled (https://github.com/Toblerity/rtree/issues/65).
+    instances can be pickled, but when unpickled the index is lost: the reason
+    is that libspatialindex indices cannot be properly pickled
+    (https://github.com/Toblerity/rtree/issues/65).
 
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
@@ -323,22 +339,25 @@ class SourceFilter(object):
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
-    :param use_rtree:
-        by default True, i.e. use the rtree module
+    :param prefilter:
+        by default "rtree", i.e. use the rtree module
     """
-    def __init__(self, sitecol, integration_distance, use_rtree=True):
+    def __init__(self, sitecol, integration_distance, prefilter='rtree'):
+        if sitecol is not None and len(sitecol) < len(sitecol.complete):
+            raise ValueError('%s is not complete!' % sitecol)
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
         self.sitecol = sitecol
-        self.use_rtree = use_rtree and (
-            integration_distance and sitecol is not None and
-            sitecol.at_sea_level())
-        if self.use_rtree:
+        if integration_distance and sitecol is not None:
+            self.prefilter = prefilter
+        else:
+            self.prefilter = 'no'
+        if self.prefilter == 'rtree':
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-                self.index.insert(sid, (lon, lat, lon, lat))
+            for i, (lon, lat) in enumerate(zip(sitecol.lons, sitecol.lats)):
+                self.index.insert(i, (lon, lat, lon, lat))
             # http://toblerity.org/rtree/performance.html#use-stream-loading
             # causes undefined behavior, with wrong associations being made
 
@@ -387,35 +406,28 @@ class SourceFilter(object):
         if sites is None:
             sites = self.sitecol
         for src in sources:
-            if hasattr(src, 'sites'):  # already filtered
-                yield src, src.sites
-            elif not self.integration_distance:  # do not filter
-                if sites is not None:
-                    src.nsites = len(sites)
+            if hasattr(src, 'indices'):  # already filtered
+                yield src, sites.filtered(src.indices)
+            elif self.prefilter == 'no':  # do not filter
                 yield src, sites
-            elif self.use_rtree:  # Rtree filtering, used in the controller
-                box = self.get_affected_box(src)
-                sids = numpy.array(sorted(self.index.intersection(box)))
-                if len(set(sids)) < len(sids):
-                    # MS: sanity check against rtree bugs
-                    raise ValueError('sids=%s' % sids)
-                elif len(sids):
-                    src.nsites = len(sids)
-                    yield src, sites.filtered(sids)
-            else:  # normal filtering, used in the workers
-                _, maxmag = src.get_min_max_mag()
-                maxdist = self.integration_distance(
-                    src.tectonic_region_type, maxmag)
-                with context(src):
-                    s_sites = src.filter_sites_by_distance_to_source(
-                        maxdist, sites)
+            elif self.prefilter == 'rtree':
+                lon1, lat1, lon2, lat2 = self.get_affected_box(src)
+                set_ = set()
+                for l1, l2 in normalize_lons(lon1, lon2):
+                    box = (l1, lat1, l2, lat2)
+                    set_ |= set(self.index.intersection(box))
+                if set_:
+                    src.indices = numpy.array(sorted(set_))
+                    yield src, sites.filtered(src.indices)
+            elif self.prefilter == 'numpy':
+                s_sites = sites.within_bbox(self.get_affected_box(src))
                 if s_sites is not None:
-                    src.nsites = len(s_sites)
+                    src.indices = get_indices(s_sites)
                     yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, use_rtree=False)
+                    sitecol=self.sitecol, prefilter=self.prefilter)
 
 
 source_site_noop_filter = SourceFilter(None, {})
