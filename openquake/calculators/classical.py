@@ -172,11 +172,11 @@ class PSHACalculator(base.HazardCalculator):
             num_tasks = 0
             num_sources = 0
             src_filter = SourceFilter(tile, oq.maximum_distance,
-                                      oq.filter_sources_with_rtree)
+                                      oq.prefilter_sources)
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
             with self.monitor('prefiltering'):
-                if self.prefilter:
+                if oq.prefilter_sources != 'no' and self.prefilter:
                     logging.info('Prefiltering sources')
                     csm = self.csm.filter(src_filter)
                 else:

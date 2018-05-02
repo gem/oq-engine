@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import numpy
-from decimal import Decimal
 
 from openquake.hazardlib.source.non_parametric import \
     NonParametricSeismicSource
@@ -47,8 +46,8 @@ def make_non_parametric_source():
         mag=6, rake=0, tectonic_region_type='ASC',
         hypocenter=Point(0., 0., 5.), surface=surf2, source_typology=None
     )
-    pmf1 = PMF([(Decimal('0.7'), 0), (Decimal('0.3'), 1)])
-    pmf2 = PMF([(Decimal('0.7'), 0), (Decimal('0.2'), 1), (Decimal('0.1'), 2)])
+    pmf1 = PMF([(0.7, 0), (0.3, 1)])
+    pmf2 = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
     kwargs = {
         'source_id': 'source_id', 'name': 'source name',
         'tectonic_region_type': 'tectonic region',
