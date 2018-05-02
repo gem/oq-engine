@@ -316,9 +316,9 @@ class SourceFilter(object):
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
     :param integration_distance:
-        Threshold distance in km
+        Integration distance dictionary (TRT -> distance in km)
     :param prefilter:
-        by default "rtree", i.e. use the rtree module
+        by default "rtree", accepts also "numpy" and "no"
     """
     def __init__(self, sitecol, integration_distance, prefilter='rtree'):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
