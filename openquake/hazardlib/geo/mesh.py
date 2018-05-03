@@ -321,7 +321,7 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        proj = geo_utils.get_orthographic_projection(
+        proj = geo_utils.OrthographicProjection(
             *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
 
         # project all the points and create a shapely multipoint object.
@@ -424,7 +424,7 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        proj = geo_utils.get_orthographic_projection(
+        proj = geo_utils.OrthographicProjection(
             *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
