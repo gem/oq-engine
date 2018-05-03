@@ -262,19 +262,13 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):
-        lons = numpy.array([10.0, 20.0, 30.0])
-        lats = numpy.array([-10.0, 0.0, 10.0])
-        depths = numpy.array([1.0, 10.0, 100.0])
+        lons = numpy.array([10.0, 20.0])
+        lats = numpy.array([-10.0, 0.0])
+        depths = numpy.array([1.0, 10.0])
         vectors = numpy.array([
             (6177.9209972, 1089.33415649, -1106.13889174),
-            (5977.38476082, 2175.59013169, 0.),
-            (5348.33856387, 3087.86470957, 1088.94772215)
-        ])
+            (5977.38476082, 2175.59013169, 0.)])
         self._test((lons, lats, depths), vectors)
-        self._test(([lons, lons], [lats, lats], [depths, depths]),
-                   [vectors, vectors])
-        self._test(([[lons, lons]], [[lats, lats]], [[depths, depths]]),
-                   ([[vectors, vectors]]))
 
 
 class TriangleAreaTestCase(unittest.TestCase):

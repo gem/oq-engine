@@ -437,10 +437,10 @@ def spherical_to_cartesian(lons, lats, depths):
 
     :returns:
         ``numpy.array`` of 3d vectors representing points' coordinates in
-        Cartesian space. The array has the same shape as parameter arrays.
-        In particular it means that if ``lons`` and ``lats`` are scalars,
-        the result is a single 3d vector. Vector of length ``1`` represents
-        distance of 1 km.
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
 
     See also :func:`cartesian_to_spherical`.
     """
@@ -451,12 +451,18 @@ def spherical_to_cartesian(lons, lats, depths):
     else:
         rr = EARTH_RADIUS - numpy.array(depths)
     cos_theta_r = rr * numpy.cos(theta)
-    xx = cos_theta_r * numpy.cos(phi)
-    yy = cos_theta_r * numpy.sin(phi)
-    zz = rr * numpy.sin(theta)
-    vectors = numpy.array([xx.transpose(), yy.transpose(), zz.transpose()]) \
-                   .transpose()
-    return vectors
+    try:
+        shape = lons.shape
+    except AttributeError:  # a list/tuple was passed
+        try:
+            shape = (len(lons),)
+        except TypeError:  # a scalar was passed
+            shape = ()
+    arr = numpy.zeros(shape + (3,))
+    arr[..., 0] = cos_theta_r * numpy.cos(phi)
+    arr[..., 1] = cos_theta_r * numpy.sin(phi)
+    arr[..., 2] = rr * numpy.sin(theta)
+    return arr
 
 
 def cartesian_to_spherical(vectors):
