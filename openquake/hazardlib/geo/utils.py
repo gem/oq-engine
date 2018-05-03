@@ -87,6 +87,7 @@ class _GeographicObjects(object):
         :param lon: longitude in degrees
         :param lat: latitude in degrees
         :param depth: depth in km (default 0)
+        :returns: (object, distance)
         """
         xyz = spherical_to_cartesian(lon, lat, depth)
         min_dist, idx = self.kdtree.query(xyz)
