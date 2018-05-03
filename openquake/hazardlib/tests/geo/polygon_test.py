@@ -311,7 +311,7 @@ class PolygonFrom2dTestCase(unittest.TestCase):
         polygon2d = shapely.geometry.Polygon([
             (-12, 0), (0, 14.5), (17.1, 3), (18, 0), (16.5, -3), (0, -10)
         ])
-        proj = geo_utils.get_orthographic_projection(0, 0, 0, 0)
+        proj = geo_utils.OrthographicProjection(0, 0, 0, 0)
         poly = polygon.Polygon._from_2d(polygon2d, proj)
         elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825, 0.]
         elats = [0., 0.13040175, 0.02697965, 0., -0.02697965, -0.0899322]
