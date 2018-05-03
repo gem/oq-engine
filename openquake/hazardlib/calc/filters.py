@@ -132,11 +132,12 @@ def getdefault(dic_with_default, key):
 def get_distances(rupture, mesh, param):
     """
     :param rupture: a rupture
-    :param mesh: a mesh of points
+    :param mesh: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given mesh
     """
     if param == 'rrup':
+        # TODO: to be replaced with get_min_distance(mesh, rupture.mesh)
         dist = rupture.surface.get_min_distance(mesh)
     elif param == 'rx':
         dist = rupture.surface.get_rx_distance(mesh)

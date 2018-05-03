@@ -69,21 +69,26 @@ class _GeographicObjects(object):
         if hasattr(objects, 'lons'):
             lons = objects.lons
             lats = objects.lats
+            depths = objects.depths
         elif isinstance(objects, numpy.ndarray):
             lons = objects['lon']
             lats = objects['lat']
-        self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, 0))
+            try:
+                depths = objects['depth']
+            except ValueError:  # no field of name depth
+                depths = numpy.zeros_like(lons)
+        self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
 
-    def get_closest(self, lon, lat):
+    def get_closest(self, lon, lat, depth=0):
         """
         Get the closest object to the given longitude and latitude
         and its distance.
 
         :param lon: longitude in degrees
         :param lat: latitude in degrees
-        :param max_distance: distance in km (or None)
+        :param depth: depth in km (default 0)
         """
-        xyz = spherical_to_cartesian(lon, lat, 0)
+        xyz = spherical_to_cartesian(lon, lat, depth)
         min_dist, idx = self.kdtree.query(xyz)
         return self.objects[idx], min_dist
 
@@ -104,8 +109,8 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to %s km from site (%s %s)',
-                             distance, lon, lat)
+                logging.warn('Association to %d km from site (%s %s)',
+                             int(distance), lon, lat)
             elif mode == 'filter':
                 pass  # do not associate
             elif mode == 'strict':
@@ -157,12 +162,19 @@ class _GeographicObjects(object):
 
 def get_min_distance(mesh1, mesh2):
     """
-    Get the minimum distance between 2D meshes by using rtree
+    :param mesh1: a object with .lons, .lats, .depths
+    :param mesh2: another object with .lons, .lats, .depths
+
+    Get the minimum distance between 3D meshes by using cKDTree.
+    Works by adding a .kdtree cached attribute to mesh1.
     """
-    go = _GeographicObjects(mesh1)
-    min_dist = min(go.get_closest(lon, lat)[1]
-                   for lon, lat in zip(mesh2.lons, mesh2.lats))
-    return min_dist
+    try:
+        kdtree = mesh1.kdtree
+    except AttributeError:
+        mesh1.kdtree = kdtree = _GeographicObjects(mesh1)
+    dists = [kdtree.get_closest(lon, lat, dep)[1]
+             for lon, lat, dep in zip(mesh2.lons, mesh2.lats, mesh2.depths)]
+    return min(dists)
 
 
 def assoc(objects, sitecol, assoc_dist, mode):
