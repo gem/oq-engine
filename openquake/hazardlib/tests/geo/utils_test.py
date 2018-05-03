@@ -24,6 +24,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
 Point = collections.namedtuple("Point",  'lon lat')
+aac = numpy.testing.assert_allclose
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -139,8 +140,8 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         xx, yy = proj(lons, lats)
         exx = [-309.89151465, 800.52541443, 1885.04014687, 2909.78079661]
         eyy = [-1650.93260348, -1747.79256663, -1797.62444771, -1802.28117183]
-        self.assertTrue(numpy.allclose(xx, exx, atol=0.01, rtol=0.005))
-        self.assertTrue(numpy.allclose(yy, eyy, atol=0.01, rtol=0.005))
+        aac(xx, exx, atol=0.01, rtol=0.005)
+        aac(yy, eyy, atol=0.01, rtol=0.005)
 
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
@@ -151,8 +152,8 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         self.assertEqual(xx.shape, (20, 10))
         self.assertEqual(yy.shape, (20, 10))
         blons, blats = proj(xx, yy, reverse=True)
-        self.assertTrue(numpy.allclose(blons, lons))
-        self.assertTrue(numpy.allclose(blats, lats))
+        aac(blons, lons)
+        aac(blats, lats)
 
     def test_points_too_far(self):
         proj = utils.OrthographicProjection(180, 180, 45, 45)
@@ -228,10 +229,9 @@ class GetMiddlePointTestCase(unittest.TestCase):
 
 class SphericalToCartesianAndBackTestCase(unittest.TestCase):
     def _test(self, lons_lats_depths, vectors):
-        (lons, lats, depths) = lons_lats_depths
+        lons, lats, depths = lons_lats_depths
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
-        self.assertIsInstance(res_cart, numpy.ndarray)
-        self.assertTrue(numpy.allclose(vectors, res_cart), str(res_cart))
+        aac(vectors, res_cart, atol=1E-7)
         res_sphe = utils.cartesian_to_spherical(res_cart)
         self.assertIsInstance(res_sphe, tuple)
         self.assertEqual(len(res_sphe), 3)
@@ -239,8 +239,7 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
             depths = numpy.zeros_like(lons)
         self.assertEqual(numpy.array(res_sphe).shape,
                          numpy.array([lons, lats, depths]).shape)
-        self.assertTrue(numpy.allclose([lons, lats, depths], res_sphe),
-                        str(res_sphe))
+        aac([lons, lats, depths], res_sphe)
 
     def test_zero_zero_zero(self):
         self._test((0, 0, 0), (6371, 0, 0))
@@ -294,7 +293,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         bb = numpy.array([(0.5, 4., 3.), (0, 2, -2.)])
         cc = numpy.array([(-1.5, 0., 3.), (1, 2, -2)])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, [4.0, 0.5]))
+        aac(areas, [4.0, 0.5])
 
         # 2d array
         aa = numpy.array([aa, aa * 2])
@@ -302,7 +301,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc, cc * 2])
         expected_area = [[4.0, 0.5], [16.0, 2.0]]
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
         # 3d array
         aa = numpy.array([aa])
@@ -310,32 +309,32 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc])
         expected_area = numpy.array([expected_area])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
 
 class NormalizedTestCase(unittest.TestCase):
     def test_one_vector(self):
         v = numpy.array([0., 0., 2.])
-        self.assertTrue(numpy.allclose(utils.normalized(v), [0, 0, 1]))
+        aac(utils.normalized(v), [0, 0, 1])
         v = numpy.array([0., -1., -1.])
         n = utils.normalized(v)
-        self.assertTrue(numpy.allclose(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.]))
+        aac(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.])
 
     def test_arrays(self):
         # 1d array of vectors
         vv = numpy.array([(0., 0., -0.1), (10., 0., 0.)])
         nn = numpy.array([(0., 0., -1.), (1., 0., 0.)])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 2d array
         vv = numpy.array([vv, vv * 2, vv * (-3)])
         nn = numpy.array([nn, nn, -nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 3d array
         vv = numpy.array([vv])
         nn = numpy.array([nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
 
 class ConvexToPointDistanceTestCase(unittest.TestCase):
