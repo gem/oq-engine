@@ -253,8 +253,7 @@ class Point(object):
         lons, lats, depths = geodetic.intervals_between(
             self.longitude, self.latitude, self.depth,
             point.longitude, point.latitude, point.depth,
-            distance
-        )
+            distance)
         return [Point(lons[i], lats[i], depths[i]) for i in range(len(lons))]
 
     def to_polygon(self, radius):
