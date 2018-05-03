@@ -368,7 +368,7 @@ class MultiSurface(BaseSurface):
         west, east, north, south = utils.get_spherical_bounding_box(
             edge_sets[:, 0],
             edge_sets[:, 1])
-        self.proj = utils.get_orthographic_projection(west, east, north, south)
+        self.proj = utils.OrthographicProjection(west, east, north, south)
 
         for edges in self.edge_set:
             # Project edges into cartesian space

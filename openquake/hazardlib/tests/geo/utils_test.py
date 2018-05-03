@@ -133,7 +133,7 @@ class GetSphericalBoundingBox(unittest.TestCase):
 class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projection(self):
         # values verified against pyproj's implementation
-        proj = utils.get_orthographic_projection(10, 16, -2, 30)
+        proj = utils.OrthographicProjection(10, 16, -2, 30)
         lons = numpy.array([10., 20., 30., 40.])
         lats = numpy.array([-1., -2., -3., -4.])
         xx, yy = proj(lons, lats)
@@ -144,7 +144,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
 
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
-        proj = utils.get_orthographic_projection(lon0, lat0, lon0, lat0)
+        proj = utils.OrthographicProjection(lon0, lat0, lon0, lat0)
         lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
         lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
         xx, yy = proj(lons, lats, reverse=False)
@@ -155,7 +155,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(blats, lats))
 
     def test_points_too_far(self):
-        proj = utils.get_orthographic_projection(180, 180, 45, 45)
+        proj = utils.OrthographicProjection(180, 180, 45, 45)
         with self.assertRaises(ValueError) as ar:
             proj(90, -45)
         self.assertEqual(str(ar.exception),
@@ -170,7 +170,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.8650
         north = 51.4320
         south = 50.8410
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
 
         lons = numpy.array([179.8960, 179.9500, -179.9930, -179.9120,
                             -179.8650, -179.9380, 179.9130, 179.7800])
@@ -185,7 +185,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.
         north = 1
         south = -1
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
         lats = numpy.array([-1, 1])
         xx, yy = proj(lons, lats)
