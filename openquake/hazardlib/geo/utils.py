@@ -24,17 +24,18 @@ import math
 import logging
 import operator
 import collections
-import rtree
+
 import numpy
+from scipy.spatial import cKDTree
 import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, geodetic_distance
 from openquake.baselib.slots import with_slots
 
 U32 = numpy.uint32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
+EARTH_RADIUS = geodetic.EARTH_RADIUS
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
@@ -66,19 +67,12 @@ class _GeographicObjects(object):
     def __init__(self, objects):
         self.objects = objects
         if hasattr(objects, 'lons'):
-            self.lons = objects.lons
-            self.lats = objects.lats
+            lons = objects.lons
+            lats = objects.lats
         elif isinstance(objects, numpy.ndarray):
-            self.lons = objects['lon']
-            self.lats = objects['lat']
-        self.min_lon, self.max_lon = self.lons.min(), self.lons.max()
-        if cross_idl(self.min_lon, self.max_lon):
-            self.lons = self.lons % 360
-
-        self.index = rtree.index.Index()
-        # no http://toblerity.org/rtree/performance.html#use-stream-loading!
-        for i, (x, y) in enumerate(zip(self.lons, self.lats)):
-            self.index.insert(i, (x, y, x, y))
+            lons = objects['lon']
+            lats = objects['lat']
+        self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, 0))
 
     def get_closest(self, lon, lat):
         """
@@ -89,11 +83,8 @@ class _GeographicObjects(object):
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
-        # forbid risky crossing of the International Date Line
-        assert cross_idl(self.min_lon, self.max_lon, lon) == cross_idl(
-            self.min_lon, self.max_lon)
-        idx = list(self.index.nearest((lon, lat, lon, lat), 1))[0]
-        min_dist = geodetic_distance(lon, lat, self.lons[idx], self.lats[idx])
+        xyz = spherical_to_cartesian(lon, lat, 0)
+        min_dist, idx = self.kdtree.query(xyz)
         return self.objects[idx], min_dist
 
     def assoc(self, sitecol, assoc_dist, mode):
