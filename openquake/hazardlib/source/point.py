@@ -329,6 +329,15 @@ class PointSource(ParametricSeismicSource):
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
 
+    @property
+    def polygon(self):
+        """
+        Polygon corresponding to the max_rupture_projection_radius
+        """		
+        radius = self._get_max_rupture_projection_radius()
+        poly = self.location.to_polygon(radius)
+        return poly
+
     def get_bounding_box(self, maxdist):
         """
         Bounding box containing all points, enlarged by the maximum distance

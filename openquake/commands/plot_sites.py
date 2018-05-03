@@ -20,7 +20,7 @@ from __future__ import division
 import logging
 import numpy
 from openquake.baselib import sap, datastore
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import cross_idl, fix_lon
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import readinput
 
@@ -61,7 +61,7 @@ def plot_sites(calc_id=-1):
     lonset = set(lons)
     for ((lon, lat), width, height) in rects:
         lonset.add(lon)
-        lonset.add(lon + width)
+        lonset.add(fix_lon(lon + width))
     idl = cross_idl(min(lonset), max(lonset))
     if idl:
         lons = lons % 360
