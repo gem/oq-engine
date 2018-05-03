@@ -71,13 +71,13 @@ class _GeographicObjects(object):
         elif isinstance(objects, numpy.ndarray):
             self.lons = objects['lon']
             self.lats = objects['lat']
+        self.min_lon, self.max_lon = self.lons.min(), self.lons.max()
+        if cross_idl(self.min_lon, self.max_lon):
+            self.lons = self.lons % 360
 
-        self.proj = OrthographicProjection.from_lons_lats(
-            self.lons, self.lats)
-        xs, ys = self.proj(self.lons, self.lats)
         self.index = rtree.index.Index()
         # no http://toblerity.org/rtree/performance.html#use-stream-loading!
-        for i, (x, y) in enumerate(zip(xs, ys)):
+        for i, (x, y) in enumerate(zip(self.lons, self.lats)):
             self.index.insert(i, (x, y, x, y))
 
     def get_closest(self, lon, lat):
@@ -89,10 +89,11 @@ class _GeographicObjects(object):
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
-        x, y = self.proj(lon, lat)
-        idx = list(self.index.nearest((x, y, x, y), 1))[0]
-        min_dist = geodetic_distance(
-            lon, lat, self.lons[idx], self.lats[idx])
+        # forbid risky crossing of the International Date Line
+        assert cross_idl(self.min_lon, self.max_lon, lon) == cross_idl(
+            self.min_lon, self.max_lon)
+        idx = list(self.index.nearest((lon, lat, lon, lat), 1))[0]
+        min_dist = geodetic_distance(lon, lat, self.lons[idx], self.lats[idx])
         return self.objects[idx], min_dist
 
     def assoc(self, sitecol, assoc_dist, mode):
@@ -571,7 +572,7 @@ def fix_lon(lon):
     return (lon + 180) % 360 - 180
 
 
-def cross_idl(lon1, lon2):
+def cross_idl(lon1, lon2, *lons):
     """
     Return True if two longitude values define line crossing international date
     line.
@@ -593,9 +594,11 @@ def cross_idl(lon1, lon2):
     >>> cross_idl(-180, 180)
     True
     """
+    lons = (lon1, lon2) + lons
+    l1, l2 = min(lons), max(lons)
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
-    return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
+    return l1 * l2 < 0 and abs(l1 - l2) > 180
 
 
 def normalize_lons(l1, l2):
