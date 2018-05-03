@@ -52,16 +52,14 @@ class Polygon(object):
 
     def __init__(self, points):
         points = utils.clean_points(points)
-
-        if not len(points) >= 3:
+        if len(points) < 3:
             raise ValueError('polygon must have at least 3 unique vertices')
 
         self.lons = numpy.array([float(point.longitude) for point in points])
         self.lats = numpy.array([float(point.latitude) for point in points])
-
-        if utils.line_intersects_itself(self.lons, self.lats,
-                                        closed_shape=True):
+        if utils.line_intersects_itself(self.lons, self.lats, closed_shape=1):
             raise ValueError('polygon perimeter intersects itself')
+
         self._projection = None
         self._polygon2d = None
 
@@ -70,15 +68,10 @@ class Polygon(object):
         """
         Generate WKT (Well-Known Text) to represent this polygon.
         """
-        pairs = []
-        for i, lon in enumerate(self.lons):
-            lat = self.lats[i]
-            pairs.append('%s %s' % (lon, lat))
-
-        # The polygon must form a closed loop; first and last coord pairs are
-        # the same.
+        pairs = ['%s %s' % (lon, lat) for lon, lat in zip(self.lons, self.lats)]
+        # the polygon must form a closed loop; first and last coord pairs
+        # are the same
         pairs.append(pairs[0])
-
         return 'POLYGON((%s))' % ', '.join(pairs)
 
     @classmethod
@@ -134,8 +127,8 @@ class Polygon(object):
         # need to cut off the last point -- it repeats the first one
         polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
         # initialize the instance (as constructor would do)
-        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
-                                                         polygon.lats)
+        polygon._bbox = utils.get_spherical_bounding_box(
+            polygon.lons, polygon.lats)
         polygon._polygon2d = polygon2d
         polygon._projection = proj
         return polygon
@@ -166,8 +159,7 @@ class Polygon(object):
             self._bbox = utils.get_spherical_bounding_box(lons, lats)
 
             # create a projection that is centered in a polygon center:
-            self._projection = \
-                utils.get_orthographic_projection(*self._bbox)
+            self._projection = utils.get_orthographic_projection(*self._bbox)
 
             # project polygon vertices to the Cartesian space and create
             # a shapely polygon object:
@@ -226,12 +218,8 @@ class Polygon(object):
             (all the points are on the Earth surface).
         """
         self._init_polygon2d()
-
         west, east, north, south = self._bbox
-
-        lons = []
-        lats = []
-
+        lons, lats = [], []
         # we cover the bounding box (in spherical coordinates) from highest
         # to lowest latitude and from left to right by longitude. we step
         # by mesh spacing distance (linear measure). we check each point
@@ -255,10 +243,7 @@ class Polygon(object):
             # ... and by the same distance along meridian in outer one
             _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
 
-        lons = numpy.array(lons)
-        lats = numpy.array(lats)
-
-        return Mesh(lons, lats, depths=None)
+        return Mesh(numpy.array(lons), numpy.array(lats), depths=None)
 
 
 def get_resampled_coordinates(lons, lats):
@@ -279,8 +264,8 @@ def get_resampled_coordinates(lons, lats):
 
     lons1 = numpy.array(lons)
     lats1 = numpy.array(lats)
-    lons2 = numpy.concatenate((lons1[1:], lons1[0:1]))
-    lats2 = numpy.concatenate((lats1[1:], lats1[0:1]))
+    lons2 = numpy.concatenate((lons1[1:], lons1[:1]))
+    lats2 = numpy.concatenate((lats1[1:], lats1[:1]))
     distances = geodetic.geodetic_distance(lons1, lats1, lons2, lats2)
 
     resampled_lons = [lons[0]]
@@ -289,19 +274,18 @@ def get_resampled_coordinates(lons, lats):
         next_point = (i + 1) % num_coords
         lon1, lat1 = lons[i], lats[i]
         lon2, lat2 = lons[next_point], lats[next_point]
-
         distance = distances[i]
         num_points = int(distance / UPSAMPLING_STEP_KM) + 1
         if num_points >= 2:
             # We need to increase the resolution of this arc by adding new
             # points.
             new_lons, new_lats, _ = geodetic.npoints_between(
-                lon1, lat1, 0, lon2, lat2, 0, num_points
-            )
+                lon1, lat1, 0, lon2, lat2, 0, num_points)
             resampled_lons.extend(new_lons[1:])
             resampled_lats.extend(new_lats[1:])
         else:
             resampled_lons.append(lon2)
             resampled_lats.append(lat2)
-    # we cut off the last point because it repeats the first one.
+
+    # NB: we cut off the last point because it repeats the first one
     return numpy.array(resampled_lons[:-1]), numpy.array(resampled_lats[:-1])
