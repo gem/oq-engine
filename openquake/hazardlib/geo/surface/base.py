@@ -59,7 +59,7 @@ def _find_turning_points(mesh, tol=1.0):
             idx.append(i)
             azim = azimuths[i]
     # Add on last point - if not already in the set
-    if not idx[-1] == (mesh.lons.shape[1] - 1):
+    if idx[-1] != mesh.lons.shape[1] - 1:
         idx.append(mesh.lons.shape[1] - 1)
     return numpy.array(idx)
 
