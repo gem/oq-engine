@@ -95,12 +95,6 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
                              "Check the geometry definition of the "
                              "fault source")
 
-    def _create_mesh(self):
-        """
-        Return a mesh provided to object's constructor.
-        """
-        return self.mesh
-
     def get_dip(self):
         """
         Return the fault dip as the average dip over the mesh.

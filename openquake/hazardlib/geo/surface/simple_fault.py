@@ -70,12 +70,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
 
-    def _create_mesh(self):
-        """
-        Return a mesh provided to object's constructor.
-        """
-        return self.mesh
-
     def get_dip(self):
         """
         Return the fault dip as the average dip over the fault surface mesh.
