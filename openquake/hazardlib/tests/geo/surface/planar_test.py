@@ -21,16 +21,13 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
-
 from openquake.hazardlib.tests.geo.surface import _planar_test_data as tdata
-from openquake.hazardlib.tests.geo.surface import _utils as utils
 
 assert_aeq = numpy.testing.assert_almost_equal
 
 
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
-    def assert_failed_creation(self, mesh_spacing, strike, dip, corners,
-                               exc, msg):
+    def assert_failed_creation(self, strike, dip, corners, exc, msg):
         with self.assertRaises(exc) as ae:
             PlanarSurface(strike, dip, *corners)
         self.assertEqual(str(ae.exception), msg)
@@ -39,51 +36,48 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.30001),
                    Point(0, 1, 0.5), Point(0, -1, 0.5)]
         msg = 'top and bottom edges must be parallel to the earth surface'
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
+        self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_bottom_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.3),
                    Point(0, 1, 0.5), Point(0, -1, 0.499999)]
         msg = 'top and bottom edges must be parallel to the earth surface'
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
+        self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_twisted_surface(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
         msg = 'corners are in the wrong order'
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
+        self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_corners_not_on_the_same_plane(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
         msg = 'corner points do not lie on the same plane'
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
+        self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
         msg = 'top and bottom edges have different lengths'
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
+        self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_strike_out_of_range(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1, 2), Point(0, -1, 2)]
         for strike in [-1, 360]:
             msg = 'strike %g is out of range [0, 360)' % strike
-            self.assert_failed_creation(10, strike, 90,
-                                        corners, ValueError, msg)
+            self.assert_failed_creation(strike, 90, corners, ValueError, msg)
 
     def test_dip_out_of_range(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1, 2), Point(0, -1, 2)]
         for dip in [0, 91, -1]:
             msg = 'dip %g is out of range (0, 90]' % dip
-            self.assert_failed_creation(10, 0, dip, corners, ValueError, msg)
+            self.assert_failed_creation(0, dip, corners, ValueError, msg)
 
-    def assert_successfull_creation(self, mesh_spacing, strike, dip,
-                                    tl, tr, br, bl):
+    def assert_successfull_creation(self, strike, dip, tl, tr, br, bl):
         surface1 = PlanarSurface(strike, dip, tl, tr, br, bl)
-        surface1.mesh_spacing = mesh_spacing
         translated = surface1.translate(tl, tr).translate(tr, tl)
         for surface in [surface1, translated]:
             self.assertIsInstance(surface, PlanarSurface)
@@ -91,7 +85,6 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             self.assertEqual(surface.top_right, tr)
             self.assertEqual(surface.bottom_left, bl)
             self.assertEqual(surface.bottom_right, br)
-            self.assertEqual(surface.mesh_spacing, mesh_spacing)
             self.assertEqual(surface.strike, strike)
             self.assertEqual(surface.get_strike(), strike)
             self.assertEqual(surface.dip, dip)
@@ -102,26 +95,25 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
-            10, 20, 30,
+            20, 30,
             Point(0, -1, 1), Point(0, 1, 1),
-            Point(-0.0003, 1, 2), Point(0.0003, -1, 2)
-        )
+            Point(-0.0003, 1, 2), Point(0.0003, -1, 2))
 
     def test_edges_azimuths_cross_north_direction(self):
         self.assert_successfull_creation(
-            10, 150, 45,
+            150, 45,
             Point(-0.0001, 0, 1), Point(0.0001, -1, 1),
             Point(-0.0001, -1, 2), Point(0.0001, 0, 2)
         )
         self.assert_successfull_creation(
-            1, 2, 3,
+            2, 3,
             Point(0.0001, 0, 1), Point(-0.0001, -1, 1),
             Point(0.0001, -1, 2), Point(-0.0001, 0, 2)
         )
 
     def test_edges_differ_in_length_within_tolerance(self):
         self.assert_successfull_creation(
-            1, 2, 3,
+            2, 3,
             Point(0, -1, 1), Point(0, 1, 1),
             Point(0, 1.000001, 2), Point(0, -1, 2)
         )
@@ -129,9 +121,7 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_vertical_surf_from_corner_points(self):
         # vertical surface pointing North
         surf = PlanarSurface.from_corner_points(
-            2., Point(0, 0, 0), Point(0, 1, 0), Point(0, 1, 5), Point(0, 0, 5)
-        )
-        self.assertEqual(surf.mesh_spacing, 2.)
+            Point(0, 0, 0), Point(0, 1, 0), Point(0, 1, 5), Point(0, 0, 5))
         self.assertAlmostEqual(surf.strike, 0.)
         self.assertAlmostEqual(surf.dip, 90.)
         self.assertEqual(surf.top_left, Point(0, 0, 0))
@@ -142,10 +132,8 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_vertical_surf_from_corner_points_topo(self):
         # vertical surface pointing North
         surf = PlanarSurface.from_corner_points(
-            2., Point(0, 0, -1), Point(0, 1, -1), Point(0, 1, 4),
-            Point(0, 0, 4)
-        )
-        self.assertEqual(surf.mesh_spacing, 2.)
+            Point(0, 0, -1), Point(0, 1, -1), Point(0, 1, 4),
+            Point(0, 0, 4))
         self.assertAlmostEqual(surf.strike, 0.)
         self.assertAlmostEqual(surf.dip, 90.)
         self.assertEqual(surf.top_left, Point(0, 0, -1))
@@ -156,10 +144,8 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_inclined_surf_from_corner_points(self):
         # inclined surface (dip = 45) with 45 degrees strike
         surf = PlanarSurface.from_corner_points(
-            2., Point(0, 0, 0), Point(0.5, 0.5, 0),
-            Point(0.563593, 0.436408, 10.), Point(0.063592, -0.063592, 10)
-        )
-        self.assertEqual(surf.mesh_spacing, 2.)
+            Point(0, 0, 0), Point(0.5, 0.5, 0),
+            Point(0.563593, 0.436408, 10.), Point(0.063592, -0.063592, 10))
         self.assertAlmostEqual(surf.strike, 45., delta=0.1)
         self.assertAlmostEqual(surf.dip, 45., delta=0.1)
         self.assertEqual(surf.top_left, Point(0, 0, 0))
@@ -170,10 +156,8 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_inclined_surf_from_corner_points_topo(self):
         # inclined surface (dip = 45) with 45 degrees strike
         surf = PlanarSurface.from_corner_points(
-            2., Point(0, 0, -1), Point(0.5, 0.5, -1),
-            Point(0.563593, 0.436408, 9.), Point(0.063592, -0.063592, 9)
-        )
-        self.assertEqual(surf.mesh_spacing, 2.)
+            Point(0, 0, -1), Point(0.5, 0.5, -1),
+            Point(0.563593, 0.436408, 9.), Point(0.063592, -0.063592, 9))
         self.assertAlmostEqual(surf.strike, 45., delta=0.1)
         self.assertAlmostEqual(surf.dip, 45., delta=0.1)
         self.assertEqual(surf.top_left, Point(0, 0, -1))
@@ -219,69 +203,6 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         aaae(lons, plons)
         aaae(lats, plats)
         aaae(depths, pdepths)
-
-
-class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
-
-    def _surface(self, corners):
-        surface = PlanarSurface(0.0, 90.0, *corners)
-        surface.mesh_spacing = 1.
-        return surface
-
-    def test_2(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_2_CORNERS),
-                            expected_mesh=tdata.TEST_2_MESH)
-
-    def test_3(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_3_CORNERS),
-                            expected_mesh=tdata.TEST_3_MESH)
-
-    def test_4(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_4_CORNERS),
-                            expected_mesh=tdata.TEST_4_MESH)
-
-    def test_5(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_5_CORNERS),
-                            expected_mesh=tdata.TEST_5_MESH)
-
-    def test_6(self):
-        corners = [Point(0, 0, 9), Point(0, 1e-9, 9),
-                   Point(0, 1e-9, 9.0 + 1e-9), Point(0, 0, 9.0 + 1e-9)]
-        mesh = [[(0, 0, 9)]]
-        self.assert_mesh_is(self._surface(corners),
-                            expected_mesh=mesh)
-
-    def test_7_rupture_1(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_1_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_1_MESH)
-
-    def test_7_rupture_2(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_2_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_2_MESH)
-
-    def test_7_rupture_3(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_3_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_3_MESH)
-
-    def test_7_rupture_4(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_4_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_4_MESH)
-
-    def test_7_rupture_5(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_5_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_5_MESH)
-
-    def test_7_rupture_6(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_6_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_6_MESH)
-
-    def test_7_rupture_7(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_7_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_7_MESH)
-
-    def test_7_rupture_8(self):
-        self.assert_mesh_is(self._surface(tdata.TEST_7_RUPTURE_8_CORNERS),
-                            expected_mesh=tdata.TEST_7_RUPTURE_8_MESH)
 
 
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
@@ -445,28 +366,6 @@ class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
         aae(res.lats, [-0.08, 0.07], decimal=3)
         aae(res.depths, [0.20679306, 1.69185737])
 
-    def test_against_mesh_to_mesh(self):
-        corners = [Point(2.6, 3.7, 20), Point(2.90102155, 3.99961567, 20),
-                   Point(3.2, 3.7, 75), Point(2.89905849, 3.40038407, 75)]
-        surface = PlanarSurface(45, 70, *corners)
-        surface.mesh_spacing = 1.0
-        lons, lats = numpy.meshgrid(numpy.linspace(2.2, 3.6, 7),
-                                    numpy.linspace(3.4, 4.2, 7))
-        sites = Mesh(lons, lats, depths=None)
-
-        res1 = surface.get_closest_points(sites)
-        res2 = super(PlanarSurface, surface).get_closest_points(sites)
-
-        aae = numpy.testing.assert_almost_equal
-        # precision up to ~1 km
-        aae(res1.lons, res2.lons, decimal=2)
-        aae(res1.lats, res2.lats, decimal=2)
-        aae(res1.depths, res2.depths, decimal=0)
-
-    corners_topo = [Point(-0.1, -0.1, -2), Point(0.1, -0.1, -2),
-                    Point(0.1, 0.1, 0), Point(-0.1, 0.1, 0)]
-    surface_topo = PlanarSurface(90, 45, *corners_topo)
-
     def test_point_above_surface_topo(self):
         sites = Mesh.from_points_list([Point(0, 0, -2),
                                        Point(-0.03, 0.05, -1.5)])
@@ -476,6 +375,10 @@ class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
         aae(res.lons, [0, -0.03], decimal=5)
         aae(res.lats, [-0.00081824,  0.04919223], decimal=5)
         aae(res.depths, [1.0113781-2., 1.50822185-2.], decimal=5)
+
+    corners_topo = [Point(-0.1, -0.1, -2), Point(0.1, -0.1, -2),
+                    Point(0.1, 0.1, 0), Point(-0.1, 0.1, 0)]
+    surface_topo = PlanarSurface(90, 45, *corners_topo)
 
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
