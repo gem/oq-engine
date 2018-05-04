@@ -73,6 +73,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         (sid, rlzi, poe, imt, iml, trti).
     """
     result = {'trti': trti, 'num_ruptures': 0}
+    # all the time is spent in collect_bin_data
     bin_data = disagg.collect_bin_data(
         sources, src_filter.sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
