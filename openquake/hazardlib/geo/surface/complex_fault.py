@@ -216,7 +216,6 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         ul = edges[0].points[0]
         strike = ul.azimuth(edges[0].points[-1])
         dist = 10.
-        mesh_spacing = 2.
 
         ur = ul.point_at(dist, 0, strike)
         bl = Point(ul.longitude, ul.latitude, ul.depth + dist)
@@ -224,9 +223,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
 
         # project surface boundary to reference plane and check for
         # validity.
-        ref_plane = PlanarSurface.from_corner_points(
-            mesh_spacing, ul, ur, br, bl
-        )
+        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl)
         _, xx, yy = ref_plane._project(lons, lats, depths)
         coords = [(x, y) for x, y in zip(xx, yy)]
         p = shapely.geometry.Polygon(coords)

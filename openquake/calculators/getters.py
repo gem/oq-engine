@@ -527,8 +527,7 @@ class RuptureGetter(object):
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
             if surface_cls is geo.PlanarSurface:
-                rupture.surface = geo.PlanarSurface.from_array(
-                    mesh_spacing, rec['points'])
+                rupture.surface = geo.PlanarSurface.from_array(rec['points'])
             elif surface_cls.__name__.endswith('MultiSurface'):
                 rupture.surface.__init__([
                     geo.PlanarSurface.from_array(
