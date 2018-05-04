@@ -389,6 +389,8 @@ class DataStore(collections.MutableMapping):
             return default
 
     def __getitem__(self, key):
+        if self.hdf5 == ():  # the datastore is closed
+            raise ValueError('Cannot find %s in %s' % (key, self))
         try:
             val = self.hdf5[key]
         except KeyError:
