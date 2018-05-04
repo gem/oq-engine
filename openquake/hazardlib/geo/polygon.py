@@ -109,7 +109,7 @@ class Polygon(object):
         :param proj:
             Projection object created
             by
-            :func:`~openquake.hazardlib.geo.utils.get_orthographic_projection`
+            :class:`~openquake.hazardlib.geo.utils.OrthographicProjection`
             that was used to project ``polygon2d``. That projection
             will be used for projecting it back to get spherical
             coordinates from Cartesian ones.
@@ -151,7 +151,7 @@ class Polygon(object):
         If any of them are `None`, recalculate all of them.
         """
         if (self._polygon2d is None or self._projection is None
-            or self._bbox is None):
+                or self._bbox is None):
             # resample polygon line segments:
             lons, lats = get_resampled_coordinates(self.lons, self.lats)
 
@@ -159,7 +159,7 @@ class Polygon(object):
             self._bbox = utils.get_spherical_bounding_box(lons, lats)
 
             # create a projection that is centered in a polygon center:
-            self._projection = utils.get_orthographic_projection(*self._bbox)
+            self._projection = utils.OrthographicProjection(*self._bbox)
 
             # project polygon vertices to the Cartesian space and create
             # a shapely polygon object:
@@ -185,9 +185,8 @@ class Polygon(object):
         """
         assert dilation > 0, dilation
         self._init_polygon2d()
-        # use shapely buffer() method
-        new_2d_polygon = self._polygon2d.buffer(dilation)
-        return type(self)._from_2d(new_2d_polygon, self._projection)
+        newpoly2d = self._polygon2d.buffer(dilation)
+        return self.__class__._from_2d(newpoly2d, self._projection)
 
     def intersects(self, mesh):
         """

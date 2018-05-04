@@ -96,7 +96,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
-        super(PlanarSurface, self).__init__()
+        super().__init__()
         if not (top_left.depth == top_right.depth and
                 bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "

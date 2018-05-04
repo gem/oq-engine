@@ -271,7 +271,7 @@ class Point(object):
         from openquake.hazardlib.geo.polygon import Polygon
 
         # get a projection that is centered in the point
-        proj = geo_utils.get_orthographic_projection(
+        proj = geo_utils.OrthographicProjection(
             self.longitude, self.longitude, self.latitude, self.latitude)
         
         # create a shapely object from a projected point coordinates,

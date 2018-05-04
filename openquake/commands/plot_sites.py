@@ -68,7 +68,7 @@ def plot_sites(calc_id=-1):
     for src, ((lon, lat), width, height) in zip(sources, rects):
         lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
-        if hasattr(src, 'polygon'):
+        if hasattr(src.__class__, 'polygon'):
             xs, ys = fix_polygon(src.polygon, idl)
             p.plot(xs, ys, marker='.')
 
