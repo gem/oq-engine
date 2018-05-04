@@ -321,7 +321,7 @@ class Mesh(object):
             on number of points in the mesh and their arrangement.
         """
         # create a projection centered in the center of points collection
-        proj = geo_utils.get_orthographic_projection(
+        proj = geo_utils.OrthographicProjection(
             *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
 
         # project all the points and create a shapely multipoint object.
@@ -424,7 +424,7 @@ class Mesh(object):
             # the mesh doesn't contain even a single cell
             return self._get_proj_convex_hull()
 
-        proj = geo_utils.get_orthographic_projection(
+        proj = geo_utils.OrthographicProjection(
             *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
         if len(self.lons.shape) == 1:  # 1D mesh
             lons = self.lons.reshape(len(self.lons), 1)
@@ -506,7 +506,7 @@ class RectangularMesh(Mesh):
     in a mesh is related to it's position with respect to neighbouring points.
     """
     def __init__(self, lons, lats, depths=None):
-        super(RectangularMesh, self).__init__(lons, lats, depths)
+        super().__init__(lons, lats, depths)
         assert lons.ndim == 2
 
     @classmethod
@@ -529,9 +529,9 @@ class RectangularMesh(Mesh):
             assert len(row) == num_cols, \
                    'lists of points are not of uniform length'
             for j, point in enumerate(row):
-                lons[i][j] = point.longitude
-                lats[i][j] = point.latitude
-                depths[i][j] = point.depth
+                lons[i, j] = point.longitude
+                lats[i, j] = point.latitude
+                depths[i, j] = point.depth
         if not depths.any():
             depths = None
         return cls(lons, lats, depths)
@@ -599,14 +599,12 @@ class RectangularMesh(Mesh):
         """
         assert 1 not in self.lons.shape, (
             "inclination and azimuth are only defined for mesh of more than "
-            "one row and more than one column of points"
-        )
+            "one row and more than one column of points")
 
         if self.depths is not None:
             assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), (
                 "get_mean_inclination_and_azimuth() requires next mesh row "
-                "to be not shallower than the previous one"
-            )
+                "to be not shallower than the previous one")
 
         points, along_azimuth, updip, diag = self.triangulate()
 
@@ -691,8 +689,8 @@ class RectangularMesh(Mesh):
             # be only either -1 or 1 with zero values (when edge is pointing
             # strictly north or south) expressed as 1 (which means "don't
             # change the sign")
-            + 0.1
-        )
+            + 0.1)
+
         # the length of projection of azimuthal edge on norms_north is cosine
         # of edge's azimuth
         az_cos = numpy.sum(along_azimuth[:-1] * norms_north[:-1, :-1], axis=-1)
@@ -706,8 +704,7 @@ class RectangularMesh(Mesh):
         # bottom-right triangles
         sign = numpy.sign(numpy.sign(
             numpy.sum(along_azimuth[1:] * norms_west[1:, 1:], axis=-1))
-            + 0.1
-        )
+            + 0.1)
         az_cos = numpy.sum(along_azimuth[1:] * norms_north[1:, 1:], axis=-1)
         xx += numpy.sum(br_area * az_cos)
         yy += numpy.sum(br_area * sqrt(1 - az_cos * az_cos) * sign)
