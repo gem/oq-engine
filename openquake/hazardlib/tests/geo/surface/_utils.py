@@ -21,8 +21,8 @@ from openquake.hazardlib.geo.mesh import Mesh
 
 
 def assert_mesh_is(testcase, surface, expected_mesh):
-    mesh = surface.get_mesh()
-    testcase.assertIs(mesh, surface.get_mesh())
+    mesh = surface.mesh
+    testcase.assertIs(mesh, surface.mesh)
 
     expected_mesh = list(itertools.chain(*expected_mesh))
     testcase.assertEqual(len(mesh), len(expected_mesh))
