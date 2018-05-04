@@ -449,19 +449,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         top_edge = self.mesh[0:1]
         return top_edge.get_middle_point()
 
-    def get_mesh(self):
-        """
-        Return surface's mesh.
-
-        Uses :meth:`_create_mesh` for creating the mesh for the first time.
-        All subsequent calls to :meth:`get_mesh` return the same mesh object.
-
-        .. warning::
-            It is required that the mesh is constructed "top-to-bottom".
-            That is, the first row of points should be the shallowest.
-        """
-        return self.mesh
-
     def get_area(self):
         """
         Compute area as the sum of the mesh cells area values.
