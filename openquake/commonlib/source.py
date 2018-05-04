@@ -459,20 +459,22 @@ class CompositionInfo(object):
         return {trt: i for i, trt in enumerate(trts)}
 
     def __toh5__(self):
-        data = []
+        # save csm_info/sg_data, csm_info/sm_data in the datastore
         trti = self.trt2i()
+        sg_data = []
+        sm_data = []
         for sm in self.source_models:
+            trts = set(sg.trt for sg in sm.src_groups)
+            num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
+            sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
+                            num_gsim_paths, sm.samples))
             for src_group in sm.src_groups:
-                # the number of effective realizations is set by get_rlzs_assoc
-                data.append((src_group.id, trti[src_group.trt],
-                             src_group.eff_ruptures, src_group.tot_ruptures,
-                             sm.ordinal))
-        lst = [(sm.names, sm.weight, '_'.join(sm.path),
-                sm.num_gsim_paths, sm.samples)
-               for i, sm in enumerate(self.source_models)]
+                sg_data.append((src_group.id, trti[src_group.trt],
+                                src_group.eff_ruptures, src_group.tot_ruptures,
+                                sm.ordinal))
         return (dict(
-            sg_data=numpy.array(data, src_group_dt),
-            sm_data=numpy.array(lst, source_model_dt)),
+            sg_data=numpy.array(sg_data, src_group_dt),
+            sm_data=numpy.array(sm_data, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(sorted(trti)),
                      gsim_lt_xml=str(self.gsim_lt),
@@ -503,10 +505,9 @@ class CompositionInfo(object):
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
-            num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = logictree.SourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
-                num_gsim_paths, sm_id, rec['samples'])
+                rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
         self.init()
         try:
