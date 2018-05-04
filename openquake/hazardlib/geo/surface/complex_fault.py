@@ -87,19 +87,13 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         # restrict every complex source to have a projected enclosing
         # polygon that is not a multipolygon.
         if isinstance(
-                self.get_mesh()._get_proj_enclosing_polygon()[1],
+                self.mesh._get_proj_enclosing_polygon()[1],
                 shapely.geometry.multipolygon.MultiPolygon):
             raise ValueError("Invalid surface. "
                              "The projected enclosing polygon "
                              "must be a simple polygon. "
                              "Check the geometry definition of the "
                              "fault source")
-
-    def _create_mesh(self):
-        """
-        Return a mesh provided to object's constructor.
-        """
-        return self.mesh
 
     def get_dip(self):
         """
@@ -114,7 +108,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         """
         # uses the same approach as in simple fault surface
         if self.dip is None:
-            mesh = self.get_mesh()
+            mesh = self.mesh
             self.dip, self.strike = mesh.get_mean_inclination_and_azimuth()
         return self.dip
 
@@ -222,7 +216,6 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         ul = edges[0].points[0]
         strike = ul.azimuth(edges[0].points[-1])
         dist = 10.
-        mesh_spacing = 2.
 
         ur = ul.point_at(dist, 0, strike)
         bl = Point(ul.longitude, ul.latitude, ul.depth + dist)
@@ -230,9 +223,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
 
         # project surface boundary to reference plane and check for
         # validity.
-        ref_plane = PlanarSurface.from_corner_points(
-            mesh_spacing, ul, ur, br, bl
-        )
+        ref_plane = PlanarSurface.from_corner_points(ul, ur, br, bl)
         _, xx, yy = ref_plane._project(lons, lats, depths)
         coords = [(x, y) for x, y in zip(xx, yy)]
         p = shapely.geometry.Polygon(coords)

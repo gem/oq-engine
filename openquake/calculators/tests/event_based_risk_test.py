@@ -231,15 +231,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
-        if REFERENCE_OS:
-            for fname in fnames:
-                self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                      fname, delta=1E-5)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
         # extract curves by tag
         tags = 'taxonomy=tax1&state=01&cresta=0.11'
         a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
-        self.assertEqual(a.array.shape, (4, 2))  # 4 stats, 2 return periods
+        self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)

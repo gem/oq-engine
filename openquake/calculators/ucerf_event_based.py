@@ -237,7 +237,7 @@ def get_rupture_surface(mag, nodal_plane, hypocenter, msr,
         vertical_increment=rup_proj_height / 2,
         azimuth=(nodal_plane.strike + theta) % 360
     )
-    return PlanarSurface(mesh_spacing, nodal_plane.strike, nodal_plane.dip,
+    return PlanarSurface(nodal_plane.strike, nodal_plane.dip,
                          left_top, right_top, right_bottom, left_bottom)
 
 
@@ -557,8 +557,7 @@ class UCERFSource(object):
                 try:
                     surface_set.append(
                         ImperfectPlanarSurface.from_corner_points(
-                            mesh_spacing, top_left, top_right,
-                            bottom_right, bottom_left))
+                            top_left, top_right, bottom_right, bottom_left))
                 except ValueError as err:
                     raise ValueError(err, trace, top_left, top_right,
                                      bottom_right, bottom_left)

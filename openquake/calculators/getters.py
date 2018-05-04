@@ -24,7 +24,7 @@ from openquake.baselib.general import (
     AccumDict, groupby, group_array, get_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import calc, geo, probability_map, stats
-from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 
 U16 = numpy.uint16
@@ -370,6 +370,7 @@ class LossRatiosGetter(object):
     """
     def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
+        dstore.open()
         dset = self.dstore['all_loss_ratios/indices']
         self.aids = list(aids or range(len(dset)))
         self.indices = [dset[aid] for aid in self.aids]
@@ -420,12 +421,8 @@ def get_ruptures_by_grp(dstore, slice_=slice(None)):
     if slice_.stop is None:
         n = len(dstore['ruptures']) - (slice_.start or 0)
         logging.info('Reading %d ruptures from the datastore', n)
-    # disable check on PlaceSurface to support UCERF ruptures
-    with mock.patch(
-            'openquake.hazardlib.geo.surface.PlanarSurface.'
-            'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        rgetter = RuptureGetter(dstore, slice_)
-        return groupby(rgetter, operator.attrgetter('grp_id'))
+    rgetter = RuptureGetter(dstore, slice_)
+    return groupby(rgetter, operator.attrgetter('grp_id'))
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -527,25 +524,23 @@ class RuptureGetter(object):
             rupture.occurrence_rate = rec['occurrence_rate']
             rupture.tectonic_region_type = grp_trt[rec['grp_id']]
             pmfx = rec['pmfx']
-            # disable check on PlanarSurface to support UCERF ruptures
-            with mock.patch(
-                    'openquake.hazardlib.geo.surface.PlanarSurface.'
-                    'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-                if pmfx != -1:
-                    rupture.pmf = self.dstore['pmfs'][pmfx]
-                if surface_cls is geo.PlanarSurface:
-                    rupture.surface = geo.PlanarSurface.from_array(
-                        mesh_spacing, rec['points'])
-                elif surface_cls.__name__.endswith('MultiSurface'):
-                    rupture.surface.__init__([
-                        geo.PlanarSurface.from_array(
-                            mesh_spacing, m1.flatten())
-                        for m1 in mesh])
-                else:  # fault surface, strike and dip will be computed
-                    rupture.surface.strike = rupture.surface.dip = None
-                    m = mesh[0]
-                    rupture.surface.mesh = RectangularMesh(
-                        m['lon'], m['lat'], m['depth'])
+            if pmfx != -1:
+                rupture.pmf = self.dstore['pmfs'][pmfx]
+            if surface_cls is geo.PlanarSurface:
+                rupture.surface = geo.PlanarSurface.from_array(rec['points'])
+            elif surface_cls.__name__.endswith('MultiSurface'):
+                rupture.surface.__init__([
+                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
+            elif surface_cls.__name__.endswith('GriddedSurface'):
+                # fault surface, strike and dip will be computed
+                rupture.surface.strike = rupture.surface.dip = None
+                m = mesh[0]
+                rupture.surface.mesh = Mesh(m['lon'], m['lat'], m['depth'])
+            else:  # fault surface, strike and dip will be computed
+                rupture.surface.strike = rupture.surface.dip = None
+                m = mesh[0]
+                rupture.surface.mesh = RectangularMesh(
+                    m['lon'], m['lat'], m['depth'])
             ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
