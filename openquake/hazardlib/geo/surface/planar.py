@@ -269,6 +269,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
         return Point(self.corner_lons[3], self.corner_lats[3],
                      self.corner_depths[3])
 
+    # NB: this is NEVER called by engine!
     def get_mesh(self):
         """
         :returns: a cached RectangularMesh
