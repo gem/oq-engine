@@ -21,17 +21,13 @@ from openquake.hazardlib.geo.mesh import Mesh
 
 
 def assert_mesh_is(testcase, surface, expected_mesh):
-    mesh = surface.mesh
-    testcase.assertIs(mesh, surface.mesh)
-
     expected_mesh = list(itertools.chain(*expected_mesh))
-    testcase.assertEqual(len(mesh), len(expected_mesh))
-    testcase.assertIsInstance(mesh, Mesh)
+    testcase.assertEqual(len(surface.mesh), len(expected_mesh))
+    testcase.assertIsInstance(surface.mesh, Mesh)
 
-    for i, point in enumerate(mesh):
+    for i, point in enumerate(surface.mesh):
         expected_point = Point(*expected_mesh[i])
         distance = expected_point.distance(point) * 1e3
-
         testcase.assertAlmostEqual(
             0, distance, delta=2,  # allow discrepancy of 2 meters
             msg="point %d is off: %s != %s (distance is %.3fm)"
