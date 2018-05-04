@@ -504,7 +504,7 @@ def get_geom(surface, is_from_fault_source, is_multi_surface,
     if is_from_fault_source:
         # for simple and complex fault sources,
         # rupture surface geometry is represented by a mesh
-        surf_mesh = surface.get_mesh()
+        surf_mesh = surface.mesh
         lons = surf_mesh.lons
         lats = surf_mesh.lats
         depths = surf_mesh.depths
