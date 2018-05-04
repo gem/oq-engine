@@ -54,11 +54,9 @@ def _create_rupture(distance, magnitude,
     rake = 0.0
     tectonic_region_type = tectonic_region_type
     hypocenter = Point(lonp, latp, 2.5)
-    surface = PlanarSurface.from_corner_points(0.01,
-                                               Point(lonp, -1, 0.),
-                                               Point(lonp, +1, 0.),
-                                               Point(lonp, +1, 5.),
-                                               Point(lonp, -1, 5.))
+    surface = PlanarSurface.from_corner_points(
+        Point(lonp, -1, 0.), Point(lonp, +1, 0.),
+        Point(lonp, +1, 5.), Point(lonp, -1, 5.))
     surface = SimpleFaultSurface.from_fault_data(
         fault_trace=Line([Point(lonp, -1), Point(lonp, 1)]),
         upper_seismogenic_depth=0.0,
