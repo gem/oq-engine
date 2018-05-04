@@ -316,7 +316,6 @@ class RuptureConverter(object):
             br = surface.bottomRight
             bottom_right = geo.Point(br['lon'], br['lat'], br['depth'])
         return geo.PlanarSurface.from_corner_points(
-            self.rupture_mesh_spacing,
             top_left, top_right, bottom_right, bottom_left)
 
     def convert_surfaces(self, surface_nodes):

@@ -325,15 +325,16 @@ class PointSource(ParametricSeismicSource):
             azimuth=(nodal_plane.strike + theta) % 360
         )
 
-        return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
-                             nodal_plane.dip, left_top, right_top,
-                             right_bottom, left_bottom)
+        surface = PlanarSurface(
+            nodal_plane.strike, nodal_plane.dip, left_top, right_top,
+            right_bottom, left_bottom)
+        return surface
 
     @property
     def polygon(self):
         """
         Polygon corresponding to the max_rupture_projection_radius
-        """		
+        """
         radius = self._get_max_rupture_projection_radius()
         poly = self.location.to_polygon(radius)
         return poly
