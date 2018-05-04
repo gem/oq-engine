@@ -530,9 +530,7 @@ class RuptureGetter(object):
                 rupture.surface = geo.PlanarSurface.from_array(rec['points'])
             elif surface_cls.__name__.endswith('MultiSurface'):
                 rupture.surface.__init__([
-                    geo.PlanarSurface.from_array(
-                        mesh_spacing, m1.flatten())
-                    for m1 in mesh])
+                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
             elif surface_cls.__name__.endswith('GriddedSurface'):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
