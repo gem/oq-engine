@@ -76,7 +76,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
     :meth:`from_fault_data`.
     """
     def __init__(self, mesh):
-        super(ComplexFaultSurface, self).__init__()
+        super().__init__()
         self.mesh = mesh
         assert 1 not in self.mesh.shape
         self.strike = self.dip = None

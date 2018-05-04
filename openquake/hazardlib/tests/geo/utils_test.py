@@ -24,6 +24,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
 Point = collections.namedtuple("Point",  'lon lat')
+aac = numpy.testing.assert_allclose
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -133,29 +134,29 @@ class GetSphericalBoundingBox(unittest.TestCase):
 class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projection(self):
         # values verified against pyproj's implementation
-        proj = utils.get_orthographic_projection(10, 16, -2, 30)
+        proj = utils.OrthographicProjection(10, 16, -2, 30)
         lons = numpy.array([10., 20., 30., 40.])
         lats = numpy.array([-1., -2., -3., -4.])
         xx, yy = proj(lons, lats)
         exx = [-309.89151465, 800.52541443, 1885.04014687, 2909.78079661]
         eyy = [-1650.93260348, -1747.79256663, -1797.62444771, -1802.28117183]
-        self.assertTrue(numpy.allclose(xx, exx, atol=0.01, rtol=0.005))
-        self.assertTrue(numpy.allclose(yy, eyy, atol=0.01, rtol=0.005))
+        aac(xx, exx, atol=0.01, rtol=0.005)
+        aac(yy, eyy, atol=0.01, rtol=0.005)
 
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
-        proj = utils.get_orthographic_projection(lon0, lat0, lon0, lat0)
+        proj = utils.OrthographicProjection(lon0, lat0, lon0, lat0)
         lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
         lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
         xx, yy = proj(lons, lats, reverse=False)
         self.assertEqual(xx.shape, (20, 10))
         self.assertEqual(yy.shape, (20, 10))
         blons, blats = proj(xx, yy, reverse=True)
-        self.assertTrue(numpy.allclose(blons, lons))
-        self.assertTrue(numpy.allclose(blats, lats))
+        aac(blons, lons)
+        aac(blats, lats)
 
     def test_points_too_far(self):
-        proj = utils.get_orthographic_projection(180, 180, 45, 45)
+        proj = utils.OrthographicProjection(180, 180, 45, 45)
         with self.assertRaises(ValueError) as ar:
             proj(90, -45)
         self.assertEqual(str(ar.exception),
@@ -170,7 +171,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.8650
         north = 51.4320
         south = 50.8410
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
 
         lons = numpy.array([179.8960, 179.9500, -179.9930, -179.9120,
                             -179.8650, -179.9380, 179.9130, 179.7800])
@@ -185,7 +186,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         east = -179.
         north = 1
         south = -1
-        proj = utils.get_orthographic_projection(west, east, north, south)
+        proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
         lats = numpy.array([-1, 1])
         xx, yy = proj(lons, lats)
@@ -228,10 +229,9 @@ class GetMiddlePointTestCase(unittest.TestCase):
 
 class SphericalToCartesianAndBackTestCase(unittest.TestCase):
     def _test(self, lons_lats_depths, vectors):
-        (lons, lats, depths) = lons_lats_depths
+        lons, lats, depths = lons_lats_depths
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
-        self.assertIsInstance(res_cart, numpy.ndarray)
-        self.assertTrue(numpy.allclose(vectors, res_cart), str(res_cart))
+        aac(vectors, res_cart, atol=1E-7)
         res_sphe = utils.cartesian_to_spherical(res_cart)
         self.assertIsInstance(res_sphe, tuple)
         self.assertEqual(len(res_sphe), 3)
@@ -239,8 +239,7 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
             depths = numpy.zeros_like(lons)
         self.assertEqual(numpy.array(res_sphe).shape,
                          numpy.array([lons, lats, depths]).shape)
-        self.assertTrue(numpy.allclose([lons, lats, depths], res_sphe),
-                        str(res_sphe))
+        aac([lons, lats, depths], res_sphe)
 
     def test_zero_zero_zero(self):
         self._test((0, 0, 0), (6371, 0, 0))
@@ -263,19 +262,13 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):
-        lons = numpy.array([10.0, 20.0, 30.0])
-        lats = numpy.array([-10.0, 0.0, 10.0])
-        depths = numpy.array([1.0, 10.0, 100.0])
+        lons = numpy.array([10.0, 20.0])
+        lats = numpy.array([-10.0, 0.0])
+        depths = numpy.array([1.0, 10.0])
         vectors = numpy.array([
             (6177.9209972, 1089.33415649, -1106.13889174),
-            (5977.38476082, 2175.59013169, 0.),
-            (5348.33856387, 3087.86470957, 1088.94772215)
-        ])
+            (5977.38476082, 2175.59013169, 0.)])
         self._test((lons, lats, depths), vectors)
-        self._test(([lons, lons], [lats, lats], [depths, depths]),
-                   [vectors, vectors])
-        self._test(([[lons, lons]], [[lats, lats]], [[depths, depths]]),
-                   ([[vectors, vectors]]))
 
 
 class TriangleAreaTestCase(unittest.TestCase):
@@ -294,7 +287,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         bb = numpy.array([(0.5, 4., 3.), (0, 2, -2.)])
         cc = numpy.array([(-1.5, 0., 3.), (1, 2, -2)])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, [4.0, 0.5]))
+        aac(areas, [4.0, 0.5])
 
         # 2d array
         aa = numpy.array([aa, aa * 2])
@@ -302,7 +295,7 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc, cc * 2])
         expected_area = [[4.0, 0.5], [16.0, 2.0]]
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
         # 3d array
         aa = numpy.array([aa])
@@ -310,32 +303,32 @@ class TriangleAreaTestCase(unittest.TestCase):
         cc = numpy.array([cc])
         expected_area = numpy.array([expected_area])
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
-        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+        aac(areas, expected_area)
 
 
 class NormalizedTestCase(unittest.TestCase):
     def test_one_vector(self):
         v = numpy.array([0., 0., 2.])
-        self.assertTrue(numpy.allclose(utils.normalized(v), [0, 0, 1]))
+        aac(utils.normalized(v), [0, 0, 1])
         v = numpy.array([0., -1., -1.])
         n = utils.normalized(v)
-        self.assertTrue(numpy.allclose(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.]))
+        aac(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.])
 
     def test_arrays(self):
         # 1d array of vectors
         vv = numpy.array([(0., 0., -0.1), (10., 0., 0.)])
         nn = numpy.array([(0., 0., -1.), (1., 0., 0.)])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 2d array
         vv = numpy.array([vv, vv * 2, vv * (-3)])
         nn = numpy.array([nn, nn, -nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
         # 3d array
         vv = numpy.array([vv])
         nn = numpy.array([nn])
-        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+        aac(utils.normalized(vv), nn)
 
 
 class ConvexToPointDistanceTestCase(unittest.TestCase):
@@ -388,9 +381,9 @@ class WithinTestCase(unittest.TestCase):
             -175.75, -175.5, -175.25, 178.25, 178.5, 178.75, 179.0, 179.25,
             179.5, 179.75, -180.0]
         self.lats = [-30.5] * 27
-        self.index = rtree.index.Index()
-        for i, (x, y) in enumerate(zip(self.lons, self.lats)):
-            self.index.insert(i, (x, y, x, y))
+        self.index = rtree.index.Index(
+            (i, (x, y, x, y), None)
+            for i, (x, y) in enumerate(zip(self.lons, self.lats)))
 
     def test(self):
         all_sites = numpy.arange(27, dtype=numpy.uint32)
