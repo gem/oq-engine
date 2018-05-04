@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the instantiation of the rtree index
   * Replaced the old prefiltering mechanism with the new one
 
   [Daniele Viganò]
