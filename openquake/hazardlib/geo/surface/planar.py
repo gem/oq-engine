@@ -94,17 +94,13 @@ class PlanarSurface(BaseQuadrilateralSurface):
             node.append(Node(name, dict(lon=lon, lat=lat, depth=depth)))
         return [node]
 
-    def __init__(self, mesh_spacing, strike, dip,
+    def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
-        super(PlanarSurface, self).__init__()
+        super().__init__()
         if not (top_left.depth == top_right.depth and
                 bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
                              "to the earth surface")
-
-        if not mesh_spacing > 0:
-            raise ValueError("mesh spacing must be positive")
-        self.mesh_spacing = mesh_spacing
 
         NodalPlane.check_dip(dip)
         NodalPlane.check_strike(strike)
@@ -174,8 +170,10 @@ class PlanarSurface(BaseQuadrilateralSurface):
         dist = top_left.distance(bottom_left)
         vert_dist = bottom_left.depth - top_left.depth
         dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
-        return cls(mesh_spacing, strike, dip, top_left, top_right,
+        self = cls(strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
+        self.mesh_spacing = mesh_spacing
+        return self
 
     @classmethod
     def from_array(cls, mesh_spacing, array):
@@ -188,7 +186,9 @@ class PlanarSurface(BaseQuadrilateralSurface):
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-        return cls(mesh_spacing, strike, dip, tl, tr, br, bl)
+        self = cls(strike, dip, tl, tr, br, bl)
+        self.mesh_spacing = mesh_spacing
+        return self
 
     def _init_plane(self):
         """
