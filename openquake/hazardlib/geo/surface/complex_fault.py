@@ -87,7 +87,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         # restrict every complex source to have a projected enclosing
         # polygon that is not a multipolygon.
         if isinstance(
-                self.get_mesh()._get_proj_enclosing_polygon()[1],
+                self.mesh._get_proj_enclosing_polygon()[1],
                 shapely.geometry.multipolygon.MultiPolygon):
             raise ValueError("Invalid surface. "
                              "The projected enclosing polygon "
@@ -108,7 +108,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         """
         # uses the same approach as in simple fault surface
         if self.dip is None:
-            mesh = self.get_mesh()
+            mesh = self.mesh
             self.dip, self.strike = mesh.get_mean_inclination_and_azimuth()
         return self.dip
 

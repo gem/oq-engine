@@ -145,7 +145,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
         )
-        whole_fault_mesh = whole_fault_surface.get_mesh()
+        whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
@@ -200,7 +200,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing)
-        whole_fault_mesh = whole_fault_surface.get_mesh()
+        whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)

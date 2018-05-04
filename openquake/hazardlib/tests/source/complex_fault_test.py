@@ -43,7 +43,7 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
             source.lower_seismogenic_depth, source.dip,
             source.rupture_mesh_spacing
         )
-        mesh = surface.get_mesh()
+        mesh = surface.mesh
         top_edge = Line(list(mesh[0:1]))
         bottom_edge = Line(list(mesh[-1:]))
 

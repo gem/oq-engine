@@ -288,7 +288,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         of knowledge of a specific surface shape and thus perform
         better.
         """
-        return self.get_mesh().get_min_distance(mesh)
+        return self.mesh.get_min_distance(mesh)
 
     def get_closest_points(self, mesh):
         """
@@ -300,7 +300,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         <openquake.hazardlib.geo.mesh.Mesh.get_closest_points>` method of the
         surface's :meth:`mesh <get_mesh>`.
         """
-        return self.get_mesh().get_closest_points(mesh)
+        return self.mesh.get_closest_points(mesh)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -311,7 +311,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         Base class calls surface mesh's method
         :meth:`~openquake.hazardlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
         """
-        return self.get_mesh().get_joyner_boore_distance(mesh)
+        return self.mesh.get_joyner_boore_distance(mesh)
 
     def get_ry0_distance(self, mesh):
         """
@@ -327,7 +327,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         This method uses an average strike direction to compute ry0.
         """
         # This computes ry0 by using an average strike direction
-        top_edge = self.get_mesh()[0:1]
+        top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
@@ -361,7 +361,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         distance matrix is then constructed by taking, for each point in mesh,
         the minimum Rx distance value computed.
         """
-        top_edge = self.get_mesh()[0:1]
+        top_edge = self.mesh[0:1]
 
         dists = []
         if top_edge.lons.shape[1] < 3:
@@ -435,7 +435,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        top_edge = self.get_mesh()[0:1]
+        top_edge = self.mesh[0:1]
         if top_edge.depths is None:
             return 0
         else:
@@ -446,7 +446,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         Return :class:`~openquake.hazardlib.geo.point.Point` representing the
         surface's top edge centroid.
         """
-        top_edge = self.get_mesh()[0:1]
+        top_edge = self.mesh[0:1]
         return top_edge.get_middle_point()
 
     def get_mesh(self):
@@ -466,7 +466,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         """
         Compute area as the sum of the mesh cells area values.
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         _, _, _, area = mesh.get_cell_dimensions()
 
         return numpy.sum(area)
@@ -482,7 +482,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):
@@ -490,7 +490,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         Compute middle point from surface mesh representation. Calls
         :meth:`openquake.hazardlib.geo.mesh.RectangularMesh.get_middle_point`
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         return mesh.get_middle_point()
 
     def get_surface_boundaries(self):
@@ -498,7 +498,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         Returns the boundaries in the same format as a multiplanar
         surface, with two one-element lists of lons and lats
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         lons = numpy.concatenate((mesh.lons[0, :],
                                   mesh.lons[1:, -1],
                                   mesh.lons[-1, :-1][::-1],
@@ -522,7 +522,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             A :class:`~openquake.hazardlib.geo.line.Line` representing the
             rupture surface's top edge.
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         top_edge = [Point(mesh.lons[0][0], mesh.lats[0][0], mesh.depths[0][0])]
 
         for i in range(len(mesh.triangulate()[1][0]) - 1):
@@ -567,7 +567,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             Hypocentre location as instance of
             :class:`~openquake.hazardlib.geo.point.Point`
         """
-        mesh = self.get_mesh()
+        mesh = self.mesh
         centroid = mesh.get_middle_point()
         if hypo_loc is None:
             return centroid
