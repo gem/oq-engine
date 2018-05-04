@@ -370,6 +370,7 @@ class LossRatiosGetter(object):
     """
     def __init__(self, dstore, aids=None, lazy=True):
         self.dstore = dstore
+        dstore.open()
         dset = self.dstore['all_loss_ratios/indices']
         self.aids = list(aids or range(len(dset)))
         self.indices = [dset[aid] for aid in self.aids]
@@ -420,12 +421,8 @@ def get_ruptures_by_grp(dstore, slice_=slice(None)):
     if slice_.stop is None:
         n = len(dstore['ruptures']) - (slice_.start or 0)
         logging.info('Reading %d ruptures from the datastore', n)
-    # disable check on PlaceSurface to support UCERF ruptures
-    with mock.patch(
-            'openquake.hazardlib.geo.surface.PlanarSurface.'
-            'IMPERFECT_RECTANGLE_TOLERANCE', numpy.inf):
-        rgetter = RuptureGetter(dstore, slice_)
-        return groupby(rgetter, operator.attrgetter('grp_id'))
+    rgetter = RuptureGetter(dstore, slice_)
+    return groupby(rgetter, operator.attrgetter('grp_id'))
 
 
 def get_maxloss_rupture(dstore, loss_type):
