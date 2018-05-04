@@ -316,6 +316,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))
 
+
 _tmp_paths = []
 
 
@@ -374,7 +375,7 @@ def git_suffix(fname):
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
             return gh
-        except:
+        except Exception:
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
             pass
