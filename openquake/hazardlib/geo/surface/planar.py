@@ -46,9 +46,6 @@ class PlanarSurface(BaseQuadrilateralSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
 
-    :param mesh_spacing:
-        The desired distance between two adjacent points in the surface mesh
-        in both horizontal and vertical directions, in km.
     :param strike:
         Strike of the surface is the azimuth from ``top_left`` to ``top_right``
         points.
@@ -78,7 +75,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.002
 
-    _slots_ = ('mesh_spacing strike dip width length '
+    _slots_ = ('strike dip width length '
                'corner_lons corner_lats corner_depths '
                'normal d uv1 uv2 zero_zero').split()
 
@@ -94,17 +91,13 @@ class PlanarSurface(BaseQuadrilateralSurface):
             node.append(Node(name, dict(lon=lon, lat=lat, depth=depth)))
         return [node]
 
-    def __init__(self, mesh_spacing, strike, dip,
+    def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
         super().__init__()
         if not (top_left.depth == top_right.depth and
                 bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
                              "to the earth surface")
-
-        if not mesh_spacing > 0:
-            raise ValueError("mesh spacing must be positive")
-        self.mesh_spacing = mesh_spacing
 
         NodalPlane.check_dip(dip)
         NodalPlane.check_strike(strike)
@@ -146,7 +139,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
             raise ValueError("top and bottom edges have different lengths")
 
     @classmethod
-    def from_corner_points(cls, mesh_spacing, top_left, top_right,
+    def from_corner_points(cls, top_left, top_right,
                            bottom_right, bottom_left):
         """
         Create and return a planar surface from four corner points.
@@ -156,9 +149,6 @@ class PlanarSurface(BaseQuadrilateralSurface):
         connecting the top left and bottom left corners and a line parallel
         to the earth surface defines the surface dip.
 
-        :param mesh_spacing:
-            Distance between two subsequent points in the mesh representing
-            the planar surface, in km.
         :param openquake.hazardlib.geo.point.Point top_left:
             Upper left corner
         :param openquake.hazardlib.geo.point.Point top_right:
@@ -174,13 +164,13 @@ class PlanarSurface(BaseQuadrilateralSurface):
         dist = top_left.distance(bottom_left)
         vert_dist = bottom_left.depth - top_left.depth
         dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
-        return cls(mesh_spacing, strike, dip, top_left, top_right,
+        self = cls(strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
+        return self
 
     @classmethod
-    def from_array(cls, mesh_spacing, array):
+    def from_array(cls, array):
         """
-        :param mesh_spacing: mesh spacing parameter
         :param array: a composite array with fields (lon, lat, depth)
         :returns: a :class:`PlanarSurface` instance
         """
@@ -188,7 +178,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-        return cls(mesh_spacing, strike, dip, tl, tr, br, bl)
+        self = cls(strike, dip, tl, tr, br, bl)
+        return self
 
     def _init_plane(self):
         """
@@ -237,7 +228,6 @@ class PlanarSurface(BaseQuadrilateralSurface):
         nsurf = object.__new__(PlanarSurface)
         # but do call BaseQuadrilateralSurface's one
         BaseQuadrilateralSurface.__init__(nsurf)
-        nsurf.mesh_spacing = self.mesh_spacing
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
@@ -268,37 +258,6 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def bottom_right(self):
         return Point(self.corner_lons[3], self.corner_lats[3],
                      self.corner_depths[3])
-
-    def _create_mesh(self):
-        """
-        See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface._create_mesh`.
-        """
-        llons, llats, ldepths = geodetic.intervals_between(
-            self.top_left.longitude, self.top_left.latitude,
-            self.top_left.depth,
-            self.bottom_left.longitude, self.bottom_left.latitude,
-            self.bottom_left.depth,
-            self.mesh_spacing
-        )
-        rlons, rlats, rdepths = geodetic.intervals_between(
-            self.top_right.longitude, self.top_right.latitude,
-            self.top_right.depth,
-            self.bottom_right.longitude, self.bottom_right.latitude,
-            self.bottom_right.depth,
-            self.mesh_spacing
-        )
-        mlons, mlats, mdepths = [], [], []
-        for i in range(len(llons)):
-            lons, lats, depths = geodetic.intervals_between(
-                llons[i], llats[i], ldepths[i], rlons[i], rlats[i], rdepths[i],
-                self.mesh_spacing
-            )
-            mlons.append(lons)
-            mlats.append(lats)
-            mdepths.append(depths)
-        return RectangularMesh(numpy.array(mlons), numpy.array(mlats),
-                               numpy.array(mdepths))
 
     def get_strike(self):
         """

@@ -33,10 +33,10 @@ def assert_mesh_is(testcase, surface, expected_mesh):
         distance = expected_point.distance(point) * 1e3
 
         testcase.assertAlmostEqual(
-            0, distance, delta=2, # allow discrepancy of 2 meters
+            0, distance, delta=2,  # allow discrepancy of 2 meters
             msg="point %d is off: %s != %s (distance is %.3fm)"
-                % (i, point, expected_point, distance)
-        )
+                % (i, point, expected_point, distance))
+
 
 class SurfaceTestCase(unittest.TestCase):
     def assert_mesh_is(self, surface, expected_mesh):
