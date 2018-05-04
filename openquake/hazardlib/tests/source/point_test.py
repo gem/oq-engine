@@ -24,11 +24,9 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
+from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
@@ -155,7 +153,6 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertIs(rupture.tectonic_region_type, trt)
         self.assertEqual(rupture.rake, nodal_plane.rake)
         self.assertIsInstance(rupture.surface, PlanarSurface)
-        self.assertEqual(rupture.surface.mesh_spacing, rupture_mesh_spacing)
         return rupture
 
     def _check_dimensions(self, surface, length, width, delta=1e-3):
