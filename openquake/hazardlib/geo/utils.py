@@ -234,7 +234,7 @@ def line_intersects_itself(lons, lats, closed_shape=False):
         return False
 
     west, east, north, south = get_spherical_bounding_box(lons, lats)
-    proj = get_orthographic_projection(west, east, north, south)
+    proj = OrthographicProjection(west, east, north, south)
 
     xx, yy = proj(lons, lats)
     if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
@@ -314,8 +314,40 @@ def get_spherical_bounding_box(lons, lats):
 @with_slots
 class OrthographicProjection(object):
     """
-    Callable object to compute orthographic projections. See the docstring
-    of get_orthographic_projection.
+    Callable OrthographicProjection object that can perform both forward
+    and reverse projection (converting from longitudes and latitudes to x
+    and y values on 2d-space and vice versa). The call takes three
+    arguments: first two are numpy arrays of longitudes and latitudes *or*
+    abscissae and ordinates of points to project and the third one
+    is a boolean that allows to choose what operation is requested --
+    is it forward or reverse one. ``True`` value given to third
+    positional argument (or keyword argument "reverse") indicates
+    that the projection of points in 2d space back to earth surface
+    is needed. The default value for "reverse" argument is ``False``,
+    which means forward projection (degrees to kilometers).
+
+    Raises ``ValueError`` in forward projection
+    mode if any of the target points is further than 90 degree
+    (along the great circle arc) from the projection center.
+
+    Parameters are given as floats, representing decimal degrees (first two
+    are longitudes and last two are latitudes). They define a bounding box
+    in a spherical coordinates of the collection of points that is about
+    to be projected. The center point of the projection (coordinates (0, 0)
+    in Cartesian space) is set to the middle point of that bounding box.
+    The resulting projection is defined for spherical coordinates that are
+    not further from the bounding box center than 90 degree on the great
+    circle arc.
+
+    The result projection is of type `Orthographic
+    <http://mathworld.wolfram.com/OrthographicProjection.html>`_.
+    This projection is prone to distance, area and angle distortions
+    everywhere outside of the center point, but still can be used for
+    checking shapes: verifying if line intersects itself (like in
+    :func:`line_intersects_itself`) or if point is inside of a polygon
+    (like in :meth:`openquake.hazardlib.geo.polygon.Polygon.discretize`). It
+    can be also used for measuring distance to an extent of around 700
+    kilometers (error doesn't exceed 1 km up until then).
     """
     _slots_ = ('west east north south lambda0 phi0 '
                'cos_phi0 sin_phi0 sin_pi_over_4').split()
@@ -375,49 +407,6 @@ class OrthographicProjection(object):
             return xx, yy
 
 
-def get_orthographic_projection(west, east, north, south):
-    """
-    Create and return a projection object for a given bounding box.
-
-    :returns:
-        callable OrthographicProjection object that can perform both forward
-        and reverse projection (converting from longitudes and latitudes to x
-        and y values on 2d-space and vice versa). The call takes three
-        arguments: first two are numpy arrays of longitudes and latitudes *or*
-        abscissae and ordinates of points to project and the third one
-        is a boolean that allows to choose what operation is requested --
-        is it forward or reverse one. ``True`` value given to third
-        positional argument (or keyword argument "reverse") indicates
-        that the projection of points in 2d space back to earth surface
-        is needed. The default value for "reverse" argument is ``False``,
-        which means forward projection (degrees to kilometers).
-
-        Raises ``ValueError`` in forward projection
-        mode if any of the target points is further than 90 degree
-        (along the great circle arc) from the projection center.
-
-    Parameters are given as floats, representing decimal degrees (first two
-    are longitudes and last two are latitudes). They define a bounding box
-    in a spherical coordinates of the collection of points that is about
-    to be projected. The center point of the projection (coordinates (0, 0)
-    in Cartesian space) is set to the middle point of that bounding box.
-    The resulting projection is defined for spherical coordinates that are
-    not further from the bounding box center than 90 degree on the great
-    circle arc.
-
-    The result projection is of type `Orthographic
-    <http://mathworld.wolfram.com/OrthographicProjection.html>`_.
-    This projection is prone to distance, area and angle distortions
-    everywhere outside of the center point, but still can be used for
-    checking shapes: verifying if line intersects itself (like in
-    :func:`line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`openquake.hazardlib.geo.polygon.Polygon.discretize`). It
-    can be also used for measuring distance to an extent of around 700
-    kilometers (error doesn't exceed 1 km up until then).
-    """
-    return OrthographicProjection(west, east, north, south)
-
-
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same
@@ -448,10 +437,10 @@ def spherical_to_cartesian(lons, lats, depths):
 
     :returns:
         ``numpy.array`` of 3d vectors representing points' coordinates in
-        Cartesian space. The array has the same shape as parameter arrays.
-        In particular it means that if ``lons`` and ``lats`` are scalars,
-        the result is a single 3d vector. Vector of length ``1`` represents
-        distance of 1 km.
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
 
     See also :func:`cartesian_to_spherical`.
     """
@@ -462,12 +451,18 @@ def spherical_to_cartesian(lons, lats, depths):
     else:
         rr = EARTH_RADIUS - numpy.array(depths)
     cos_theta_r = rr * numpy.cos(theta)
-    xx = cos_theta_r * numpy.cos(phi)
-    yy = cos_theta_r * numpy.sin(phi)
-    zz = rr * numpy.sin(theta)
-    vectors = numpy.array([xx.transpose(), yy.transpose(), zz.transpose()]) \
-                   .transpose()
-    return vectors
+    try:
+        shape = lons.shape
+    except AttributeError:  # a list/tuple was passed
+        try:
+            shape = (len(lons),)
+        except TypeError:  # a scalar was passed
+            shape = ()
+    arr = numpy.zeros(shape + (3,))
+    arr[..., 0] = cos_theta_r * numpy.cos(phi)
+    arr[..., 1] = cos_theta_r * numpy.sin(phi)
+    arr[..., 2] = rr * numpy.sin(theta)
+    return arr
 
 
 def cartesian_to_spherical(vectors):
