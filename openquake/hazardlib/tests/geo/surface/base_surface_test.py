@@ -37,7 +37,7 @@ class DummySurface(BaseQuadrilateralSurface):
         return RectangularMesh.from_points_list(points)
 
     def get_strike(self):
-        top_row = self.get_mesh()[0:2]
+        top_row = self.mesh[0:2]
         self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
         return self.strike
 
