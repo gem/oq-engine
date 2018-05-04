@@ -295,7 +295,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0)
         surfaces = [
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=9.696547068,
                 top_left=geo.Point(-1, 1, 21),
@@ -304,7 +303,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 bottom_right=geo.Point(1, -1, 59)
             ),
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=15.0987061388,
                 top_left=geo.Point(1, 1, 20),
