@@ -369,7 +369,7 @@ class ContextMaker(object):
         """
         sitemesh = sitecol.mesh
         acc = AccumDict(accum=[])
-        ctx_mon = monitor('make_contexts', measuremem=False)
+        ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
