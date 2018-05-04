@@ -269,36 +269,37 @@ class PlanarSurface(BaseQuadrilateralSurface):
         return Point(self.corner_lons[3], self.corner_lats[3],
                      self.corner_depths[3])
 
-    def _create_mesh(self):
+    def get_mesh(self):
         """
-        See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface._create_mesh`.
+        :returns: a cached RectangularMesh
         """
-        llons, llats, ldepths = geodetic.intervals_between(
-            self.top_left.longitude, self.top_left.latitude,
-            self.top_left.depth,
-            self.bottom_left.longitude, self.bottom_left.latitude,
-            self.bottom_left.depth,
-            self.mesh_spacing
-        )
-        rlons, rlats, rdepths = geodetic.intervals_between(
-            self.top_right.longitude, self.top_right.latitude,
-            self.top_right.depth,
-            self.bottom_right.longitude, self.bottom_right.latitude,
-            self.bottom_right.depth,
-            self.mesh_spacing
-        )
-        mlons, mlats, mdepths = [], [], []
-        for i in range(len(llons)):
-            lons, lats, depths = geodetic.intervals_between(
-                llons[i], llats[i], ldepths[i], rlons[i], rlats[i], rdepths[i],
+        if self.mesh is None:
+            llons, llats, ldepths = geodetic.intervals_between(
+                self.top_left.longitude, self.top_left.latitude,
+                self.top_left.depth,
+                self.bottom_left.longitude, self.bottom_left.latitude,
+                self.bottom_left.depth,
                 self.mesh_spacing
             )
-            mlons.append(lons)
-            mlats.append(lats)
-            mdepths.append(depths)
-        return RectangularMesh(numpy.array(mlons), numpy.array(mlats),
-                               numpy.array(mdepths))
+            rlons, rlats, rdepths = geodetic.intervals_between(
+                self.top_right.longitude, self.top_right.latitude,
+                self.top_right.depth,
+                self.bottom_right.longitude, self.bottom_right.latitude,
+                self.bottom_right.depth,
+                self.mesh_spacing
+            )
+            mlons, mlats, mdepths = [], [], []
+            for i in range(len(llons)):
+                lons, lats, depths = geodetic.intervals_between(
+                    llons[i], llats[i], ldepths[i], rlons[i], rlats[i],
+                    rdepths[i], self.mesh_spacing
+                )
+                mlons.append(lons)
+                mlats.append(lats)
+                mdepths.append(depths)
+            self.mesh = RectangularMesh(numpy.array(mlons), numpy.array(mlats),
+                                        numpy.array(mdepths))
+        return self.mesh
 
     def get_strike(self):
         """
