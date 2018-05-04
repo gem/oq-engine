@@ -78,7 +78,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.002
 
-    _slots_ = ('mesh_spacing strike dip width length '
+    _slots_ = ('strike dip width length '
                'corner_lons corner_lats corner_depths '
                'normal d uv1 uv2 zero_zero').split()
 
