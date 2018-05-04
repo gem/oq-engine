@@ -237,7 +237,7 @@ def get_rupture_surface(mag, nodal_plane, hypocenter, msr,
         vertical_increment=rup_proj_height / 2,
         azimuth=(nodal_plane.strike + theta) % 360
     )
-    return PlanarSurface(mesh_spacing, nodal_plane.strike, nodal_plane.dip,
+    return PlanarSurface(nodal_plane.strike, nodal_plane.dip,
                          left_top, right_top, right_bottom, left_bottom)
 
 

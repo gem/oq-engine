@@ -20,7 +20,7 @@ from openquake.hazardlib.source.non_parametric import \
     NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import BaseRupture, \
     NonParametricProbabilisticRupture
-from openquake.hazardlib.geo import Point, Polygon
+from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.pmf import PMF
 
@@ -29,12 +29,12 @@ from openquake.hazardlib.tests import assert_pickleable
 
 def make_non_parametric_source():
     surf1 = PlanarSurface(
-        mesh_spacing=2., strike=0, dip=90,
+        strike=0, dip=90,
         top_left=Point(0., -1., 0.), top_right=Point(0., 1., 0.),
         bottom_right=Point(0., 1., 10.), bottom_left=Point(0., -1., 10.)
     )
     surf2 = PlanarSurface(
-        mesh_spacing=2., strike=90., dip=90.,
+        strike=90., dip=90.,
         top_left=Point(-1., 0., 0.), top_right=Point(1., 0., 0.),
         bottom_right=Point(1., 0., 10.), bottom_left=Point(-1., 0., 10.)
     )
