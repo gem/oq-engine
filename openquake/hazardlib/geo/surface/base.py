@@ -460,12 +460,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             It is required that the mesh is constructed "top-to-bottom".
             That is, the first row of points should be the shallowest.
         """
-        if self.mesh is None:
-            self.mesh = self._create_mesh()
-            assert (
-                self.mesh.depths is None or len(self.mesh.depths) == 1
-                or self.mesh.depths[0][0] < self.mesh.depths[-1][0]
-            ), "the first row of points in the mesh must be the shallowest"
         return self.mesh
 
     def get_area(self):
@@ -549,16 +543,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         line_top_edge = Line(top_edge)
 
         return line_top_edge
-
-    @abc.abstractmethod
-    def _create_mesh(self):
-        """
-        Create and return the mesh of points covering the surface.
-
-        :returns:
-            An instance of
-            :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
-        """
 
     def get_hypo_location(self, mesh_spacing, hypo_loc=None):
         """
