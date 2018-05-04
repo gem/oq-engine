@@ -557,8 +557,7 @@ class UCERFSource(object):
                 try:
                     surface_set.append(
                         ImperfectPlanarSurface.from_corner_points(
-                            mesh_spacing, top_left, top_right,
-                            bottom_right, bottom_left))
+                            top_left, top_right, bottom_right, bottom_left))
                 except ValueError as err:
                     raise ValueError(err, trace, top_left, top_right,
                                      bottom_right, bottom_left)
