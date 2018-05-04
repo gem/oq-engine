@@ -767,18 +767,14 @@ class SourceModelLogicTree(object):
         """
         Parses a planar geometry surface
         """
-        spacing = node["spacing"]
         nodes = []
         for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
             nodes.append(geo.Point(getattr(node, key)["lon"],
                                    getattr(node, key)["lat"],
                                    getattr(node, key)["depth"]))
         top_left, top_right, bottom_right, bottom_left = tuple(nodes)
-        return geo.PlanarSurface.from_corner_points(spacing,
-                                                    top_left,
-                                                    top_right,
-                                                    bottom_right,
-                                                    bottom_left)
+        return geo.PlanarSurface.from_corner_points(
+            top_left, top_right, bottom_right, bottom_left)
 
     def validate_uncertainty_value(self, node, branchset):
         """
