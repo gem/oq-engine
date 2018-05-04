@@ -85,7 +85,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             # calculate weighted average dip and strike of only the top row
             # of cells since those values are uniform along dip for simple
             # faults
-            top_row = self.get_mesh()[0:2]
+            top_row = self.mesh[0:2]
             self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
         return self.dip
 
@@ -367,5 +367,5 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         # calculate width only along the first mesh column, because
         # width is uniform for simple faults
-        left_column = self.get_mesh()[:, 0:2]
+        left_column = self.mesh[:, 0:2]
         return left_column.get_mean_width()
