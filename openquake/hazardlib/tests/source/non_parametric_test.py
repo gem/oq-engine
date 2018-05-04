@@ -81,9 +81,6 @@ class NonParametricSourceTestCase(unittest.TestCase):
             )
             self.assertEqual(rup.hypocenter, exp_rup.hypocenter)
             self.assertIsInstance(rup.surface, PlanarSurface)
-            self.assertEqual(
-                rup.surface.mesh_spacing, exp_rup.surface.mesh_spacing
-            )
             self.assertEqual(rup.surface.strike, exp_rup.surface.strike)
             self.assertEqual(rup.surface.dip, exp_rup.surface.dip)
             self.assertEqual(rup.surface.top_left, exp_rup.surface.top_left)
