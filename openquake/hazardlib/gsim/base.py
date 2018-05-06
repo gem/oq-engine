@@ -462,7 +462,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     for more detailed description of dip and rake.
     #: ``ztor``
     #:     Depth of rupture's top edge in km. See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_top_edge_depth`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: These parameters are available from the :class:`RuptureContext` object
     #: attributes with same names.
@@ -473,17 +473,17 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:
     #: ``rrup``
     #:     Closest distance to rupture surface.  See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance`.
     #: ``rjb``
     #:     Distance to rupture's surface projection. See
-    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`.
+    #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`.
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
-    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_rx_distance`.
+    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_rx_distance`.
     #: ``ry0``
     #:     Horizontal distance off the end of the rupture measured parallel to
     #      strike. See:
-    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_ry0_distance`.
+    #:     See :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_ry0_distance`.
     #: ``rcdpp``
     #:     Direct point parameter for directivity effect centered on the site- and earthquake-specific
     #      average DPP used. See:
