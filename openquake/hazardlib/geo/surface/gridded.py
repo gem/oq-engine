@@ -42,9 +42,6 @@ class GriddedSurface(BaseSurface):
         An unstructured mesh of points ideally representing a rupture surface.
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
-    def __init__(self, mesh):
-        self.mesh = mesh  # a 1D mesh
-
     @property
     def surface_nodes(self):
         """

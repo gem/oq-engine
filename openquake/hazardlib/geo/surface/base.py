@@ -111,8 +111,8 @@ class BaseSurface:
     and can override any others just for the sake of performance
     """
 
-    def __init__(self):
-        self.mesh = None
+    def __init__(self, mesh=None):
+        self.mesh = mesh
 
     def get_min_distance(self, mesh):
         """
