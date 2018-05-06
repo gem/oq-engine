@@ -832,7 +832,7 @@ devtest_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        commit="$(git log --pretty='format:%h' -1)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -854,6 +854,7 @@ devtest_run () {
             fi
         else
             ( echo "${var_pfx}_COMMIT=$commit"
+              echo "${var_pfx}_PKG=$dep_pkg"
               echo "${var_pfx}_REPO=$repo"
               echo "${var_pfx}_BRANCH=$branch_cur"
               echo "${var_pfx}_TYPE=$dep_type" ) >> _jenkins_deps_info
@@ -939,7 +940,7 @@ builddoc_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        commit="$(git log --pretty='format:%h' -1)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -961,6 +962,7 @@ builddoc_run () {
             fi
         else
             ( echo "${var_pfx}_COMMIT=$commit"
+              echo "${var_pfx}_PKG=$dep_pkg"
               echo "${var_pfx}_REPO=$repo"
               echo "${var_pfx}_BRANCH=$branch_cur" ) >> _jenkins_deps_info
         fi
@@ -1090,8 +1092,8 @@ EOF
                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
                     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
-                PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
-                grep '_COMMIT' _jenkins_deps_info \
+                PKG_COMMIT="$(git log --pretty='format:%h' -1)"
+                egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
             fi
