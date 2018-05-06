@@ -330,7 +330,7 @@ class BaseSurface:
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        return mesh.get_middle_point()
+        return self.mesh.get_middle_point()
 
     def get_surface_boundaries(self):
         """
