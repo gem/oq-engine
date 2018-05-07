@@ -18,7 +18,6 @@
 
 import os
 import copy
-import time
 import math
 import os.path
 import logging
@@ -49,7 +48,8 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.calc.filters import SourceFilter, FarAwayRupture
+from openquake.hazardlib.calc.filters import (
+    get_distances, SourceFilter, FarAwayRupture)
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -707,7 +707,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        r_sites, rrup = idist.get_sites_distances(sitecol, rup)
+                        distances = get_distances(rup, sitecol, 'rrup')
+                        r_sites = sitecol.filter(
+                            distances <= idist(
+                                rup.tectonic_region_type, rup.mag))
                     except FarAwayRupture:
                         continue
                     indices = (numpy.arange(len(r_sites)) if r_sites.indices

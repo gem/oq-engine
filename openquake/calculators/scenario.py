@@ -55,9 +55,9 @@ class ScenarioCalculator(base.HazardCalculator):
         rupser.close()
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
+        cmaker = ContextMaker(self.gsims, oq.maximum_distance)
         self.computer = GmfComputer(
-            ebr, self.sitecol, oq.imtls, ContextMaker(self.gsims),
-            trunc_level, correl_model)
+            ebr, self.sitecol, oq.imtls, cmaker, trunc_level, correl_model)
 
     def init(self):
         pass
