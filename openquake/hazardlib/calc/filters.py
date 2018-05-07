@@ -235,24 +235,6 @@ class IntegrationDistance(collections.Mapping):
             md = self.piecewise[trt] = Piecewise(mags, dists)
         return md(mag)
 
-    def get_sites_distances(self, sites, rupture, distance_type='rrup',
-                            filter=True):
-        """
-        :param sites: a (Filtered)SiteCollection
-        :param rupture: a rupture
-        :param distance_type: default 'rrup'
-        :returns: (close sites, close distances)
-        :raises: a FarAwayRupture exception if the rupture is far away
-        """
-        distances = get_distances(rupture, sites.mesh, distance_type)
-        if not filter or not self.dic:  # for sites already filtered
-            return sites, distances
-        mask = distances <= self(rupture.tectonic_region_type, rupture.mag)
-        if mask.any():
-            return sites.filter(mask), distances[mask]
-        else:
-            raise FarAwayRupture
-
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
         Build a bounding box around the given lon, lat by computing the

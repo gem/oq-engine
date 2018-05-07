@@ -135,40 +135,6 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
 
-    def make_distances_context(self, mesh, rupture, dist_dict=()):
-        """
-        Create distances context object for given site collection and rupture.
-
-        :param mesh:
-            mesh of points coming from a filtered site collection
-
-        :param rupture:
-            Instance of
-            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
-            subclass of
-            :class:
-            `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
-
-        :param dist_dict:
-             A dictionary of already computed distances, keyed by distance name
-
-        :returns:
-            Source to site distances as instance of :class:
-            `DistancesContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required distance parameters is unknown.
-        """
-        dctx = DistancesContext()
-        for param in self.REQUIRES_DISTANCES | set(['rjb']):
-            if param in dist_dict:  # already computed distances
-                distances = dist_dict[param]
-            else:
-                distances = get_distances(rupture, mesh, param)
-            setattr(dctx, param, distances)
-        return dctx
-
     def make_sites_context(self, site_collection):
         """
         Create context objects for given site collection
@@ -239,12 +205,12 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, site_collection, rupture, filter=True):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
 
-        :param site_collection:
+        :param sites:
             Instance of :class:`openquake.hazardlib.site.SiteCollection`.
 
         :param rupture:
@@ -265,10 +231,26 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        sites, distances = self.maximum_distance.get_sites_distances(
-            site_collection, rupture, 'rjb', filter)
-        dctx = self.make_distances_context(
-            sites.mesh, rupture, {'rjb': distances})
+        if not self.maximum_distance:  # do not filter
+            mesh = sites.mesh
+            dctx = DistancesContext(
+                (param, get_distances(rupture, mesh, param))
+                for param in self.REQUIRES_DISTANCES)
+            sctx = self.make_sites_context(sites)
+            return sctx, rctx, dctx
+
+        # otherwise filter with the rjb distance
+        dctx = DistancesContext()
+        rjb = get_distances(rupture, sites.mesh, 'rjb')
+        md = self.maximum_distance(rupture.tectonic_region_type, rupture.mag)
+        mask = rjb <= md
+        if mask.any():
+            sites, dctx.rjb = sites.filter(mask), rjb[mask]
+        else:
+            raise FarAwayRupture
+        mesh = sites.mesh
+        for param in self.REQUIRES_DISTANCES - set(['rjb']):
+            setattr(dctx, param, get_distances(rupture, mesh, param))
         sctx = self.make_sites_context(sites)
         return sctx, rctx, dctx
 
@@ -916,6 +898,10 @@ class DistancesContext(BaseContext):
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
+
+    def __init__(self, name_dist_pairs=()):
+        for name, dist in name_dist_pairs:
+            setattr(self, name, dist)
 
     def roundup(self, minimum_distance):
         """
