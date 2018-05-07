@@ -472,21 +472,18 @@ def cartesian_to_spherical(vectors):
     This function does an opposite to :func:`spherical_to_cartesian`.
 
     :param vectors:
-        Array of 3d vectors in Cartesian space.
+        Array of 3d vectors in Cartesian space of shape (..., 3)
     :returns:
         Tuple of three arrays of the same shape as ``vectors`` representing
         longitude (decimal degrees), latitude (decimal degrees) and depth (km)
         in specified order.
     """
     rr = numpy.sqrt(numpy.sum(vectors * vectors, axis=-1))
-    xx, yy, zz = vectors.transpose()
-    xx = xx.transpose()
-    yy = yy.transpose()
-    zz = zz.transpose()
+    xx, yy, zz = vectors.T
     lats = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
     lons = numpy.degrees(numpy.arctan2(yy, xx))
     depths = EARTH_RADIUS - rr
-    return lons, lats, depths
+    return lons.T, lats.T, depths
 
 
 def triangle_area(e1, e2, e3):
