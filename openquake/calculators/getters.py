@@ -526,11 +526,8 @@ class RuptureGetter(object):
             if surf_cls is geo.PlanarSurface:
                 rupture.surface = geo.PlanarSurface.from_array(rec['points'])
             elif surf_cls is geo.MultiSurface:
-                try:
-                    rupture.surface.__init__([
-                        geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
-                except:
-                    import pdb; pdb.set_trace()
+                rupture.surface.__init__([
+                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
             elif surf_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
