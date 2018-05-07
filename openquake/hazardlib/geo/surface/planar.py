@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -42,7 +42,7 @@ def _corners(array):
 
 
 @with_slots
-class PlanarSurface(BaseQuadrilateralSurface):
+class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
 
@@ -226,8 +226,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        # but do call BaseQuadrilateralSurface's one
-        BaseQuadrilateralSurface.__init__(nsurf)
+        # but do call BaseSurface's one
+        BaseSurface.__init__(nsurf)
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
@@ -316,7 +316,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`.
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -401,7 +401,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def get_closest_points(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_closest_points>`.
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_closest_points>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -416,7 +416,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def _get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface._get_top_edge_centroid>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
@@ -428,7 +428,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def get_top_edge_depth(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_top_edge_depth>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth>`
         in order to avoid creating a mesh.
         """
         return self.corner_depths[0]
@@ -436,7 +436,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def get_joyner_boore_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance>`.
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -534,7 +534,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     def get_rx_distance(self, mesh):
         """
         See :meth:`superclass method
-        <.base.BaseQuadrilateralSurface.get_rx_distance>`
+        <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
 
         This is an optimized version specific to planar surface that doesn't
