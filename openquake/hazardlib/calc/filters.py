@@ -237,7 +237,7 @@ class IntegrationDistance(collections.Mapping):
 
     def get_closest(self, sites, rupture, distance_type='rrup', filter=True):
         """
-        :param sites: a (Filtered)SiteColletion
+        :param sites: a (Filtered)SiteCollection
         :param rupture: a rupture
         :param distance_type: default 'rrup'
         :returns: (close sites, close distances)
