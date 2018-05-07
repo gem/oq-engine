@@ -23,8 +23,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 import numpy
 from copy import deepcopy
 from scipy.spatial.distance import pdist, squareform
-from openquake.hazardlib.geo.surface.base import (BaseSurface,
-                                                  downsample_trace)
+from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.surface import (
@@ -228,9 +227,7 @@ class MultiSurface(BaseSurface):
         # for each point in mesh compute the Joyner-Boore distance to all the
         # surfaces and return the shortest one.
         dists = [
-            surf.get_joyner_boore_distance(mesh) for surf in self.surfaces
-        ]
-
+            surf.get_joyner_boore_distance(mesh) for surf in self.surfaces]
         return numpy.min(dists, axis=0)
 
     def get_top_edge_depth(self):
@@ -240,9 +237,7 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         depths = numpy.array(
-            [surf.get_top_edge_depth() for surf in self.surfaces]
-        )
-
+            [surf.get_top_edge_depth() for surf in self.surfaces])
         return numpy.sum(areas * depths) / numpy.sum(areas)
 
     def get_strike(self):
@@ -309,7 +304,6 @@ class MultiSurface(BaseSurface):
             west, east, north, south = surf.get_bounding_box()
             lons.extend([west, east])
             lats.extend([north, south])
-
         return utils.get_spherical_bounding_box(lons, lats)
 
     def get_middle_point(self):
@@ -339,10 +333,8 @@ class MultiSurface(BaseSurface):
             dists.append(
                 surf.get_min_distance(Mesh(numpy.array([longitude]),
                                            numpy.array([latitude]),
-                                           None))
-            )
+                                           None)))
         dists = numpy.array(dists).flatten()
-
         idx = dists == numpy.min(dists)
         return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
@@ -387,8 +379,7 @@ class MultiSurface(BaseSurface):
             # Store the two end-points of the trace
             self.cartesian_endpoints.append(
                 numpy.array([[px[0], py[0], edges[0, 2]],
-                             [px[-1], py[-1], edges[-1, 2]]])
-                )
+                             [px[-1], py[-1], edges[-1, 2]]]))
             self.cartesian_edges.append(numpy.column_stack([px, py,
                                                             edges[:, 2]]))
             # Get surface length vector for the trace - easier in cartesian
@@ -396,8 +387,8 @@ class MultiSurface(BaseSurface):
                                  (py[:-1] - py[1:]) ** 2.)
             self.length_set.append(lengths)
             # Get cumulative surface length vector
-            self.cum_length_set.append(numpy.hstack([0.,
-                                                     numpy.cumsum(lengths)]))
+            self.cum_length_set.append(
+                numpy.hstack([0., numpy.cumsum(lengths)]))
         return edge_sets
 
     def _setup_gc2_framework(self):
