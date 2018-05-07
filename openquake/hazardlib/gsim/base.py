@@ -265,7 +265,7 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        sites, distances = self.maximum_distance.get_closest(
+        sites, distances = self.maximum_distance.get_sites_distances(
             site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(
