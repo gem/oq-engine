@@ -205,7 +205,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, sites, rupture, filter=True):
+    def make_contexts(self, sites, rupture, filter_sites=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -217,6 +217,11 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
             :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+        :param filter_sites:
+            If True, possibly reduces the site collection before building
+            the :class:`SitesContext`, depending on the value of the
+            integration distance for the current rupture.
 
         :returns:
             Tuple of three items: sites context, rupture context and
@@ -242,7 +247,7 @@ class ContextMaker(object):
         # otherwise compute the rjb distance and normally filter with it
         dctx = DistancesContext()
         dctx.rjb = get_distances(rupture, sites.mesh, 'rjb')
-        if filter:
+        if filter_sites:
             maxdist = self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             mask = dctx.rjb <= maxdist
@@ -360,7 +365,7 @@ class ContextMaker(object):
             with ctx_mon:
                 # do not filter to avoid changing the number of sites
                 sctx, rctx, orig_dctx = self.make_contexts(
-                    sitecol, rupture, filter=False)
+                    sitecol, rupture, filter_sites=False)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
