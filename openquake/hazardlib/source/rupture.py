@@ -77,6 +77,8 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
     serial = 0  # set to a value > 0 by the engine
+    _code = {}
+    types = {}
 
     @classmethod
     def init(cls):
@@ -90,18 +92,16 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
         source_classes = list(get_subclasses(BaseSeismicSource))
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
-        for cls in source_classes + rupture_classes + surface_classes:
-            classes[cls.__name__] = cls
-        code, types, n = {}, {}, 0
+        for cl in source_classes + rupture_classes + surface_classes:
+            classes[cl.__name__] = cl
+        n = 0
         for src, rup, sur in itertools.product(
                 source_classes, rupture_classes, surface_classes):
-            code[rup, sur, src] = n
-            types[n] = rup, sur, src
+            cls._code[rup, sur, src] = n
+            cls.types[n] = rup, sur, src
             n += 1
         if n >= 256:
             raise ValueError('Too many rupture codes: %d' % n)
-        cls._code = code
-        cls.types = types
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, source_typology, rupture_slip_direction=None):
@@ -192,7 +192,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         if not numpy.all(numpy.diff(occ) == 1):
             raise ValueError(
                 'numbers of ruptures must be defined with unit step')
-        super(NonParametricProbabilisticRupture, self).__init__(
+        super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
             source_typology, rupture_slip_direction)
         # an array of probabilities with sum 1
@@ -269,10 +269,9 @@ class ParametricProbabilisticRupture(BaseRupture):
                  rupture_slip_direction=None):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
-        super(ParametricProbabilisticRupture, self).__init__(
+        super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology, rupture_slip_direction
-        )
+            source_typology, rupture_slip_direction)
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
 

@@ -73,6 +73,7 @@ def convert_to_array(pmap, nsites, imtls):
                 idx += 1
     return curves
 
+
 # ######################### hazard maps ################################### #
 
 # cutoff value for the poe
