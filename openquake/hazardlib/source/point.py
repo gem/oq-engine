@@ -25,6 +25,47 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
+def _get_rupture_dimensions(src, mag, nodal_plane):
+    """
+    Calculate and return the rupture length and width
+    for given magnitude ``mag`` and nodal plane.
+
+    :param src:
+        a PointSource, AreaSource or MultiPointSource
+    :param mag:
+        a magnitude
+    :param nodal_plane:
+        Instance of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`.
+    :returns:
+        Tuple of two items: rupture length in width in km.
+
+    The rupture area is calculated using method
+    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
+    of source's
+    magnitude-scaling relationship. In any case the returned
+    dimensions multiplication is equal to that value. Than
+    the area is decomposed to length and width with respect
+    to source's rupture aspect ratio.
+
+    If calculated rupture width being inclined by nodal plane's
+    dip angle would not fit in between upper and lower seismogenic
+    depth, the rupture width is shrunken to a maximum possible
+    and rupture length is extended to preserve the same area.
+    """
+    area = src.magnitude_scaling_relationship.get_median_area(
+        mag, nodal_plane.rake)
+    rup_length = math.sqrt(area * src.rupture_aspect_ratio)
+    rup_width = area / rup_length
+    seismogenic_layer_width = (src.lower_seismogenic_depth
+                               - src.upper_seismogenic_depth)
+    max_width = (seismogenic_layer_width
+                 / math.sin(math.radians(nodal_plane.dip)))
+    if rup_width > max_width:
+        rup_width = max_width
+        rup_length = area / rup_width
+    return rup_length, rup_width
+
+
 @with_slots
 class PointSource(ParametricSeismicSource):
     """
@@ -114,7 +155,7 @@ class PointSource(ParametricSeismicSource):
         max_mag, _rate = self.get_annual_occurrence_rates()[-1]
         for (np_prob, np) in self.nodal_plane_distribution.data:
             # compute rupture dimensions
-            rup_length, rup_width = self._get_rupture_dimensions(max_mag, np)
+            rup_length, rup_width = _get_rupture_dimensions(self, max_mag, np)
             # compute rupture width surface projection
             rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
@@ -131,8 +172,8 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(self.temporal_occurrence_model,
-                                               self.location)
+        return self._iter_ruptures_at_location(
+            self.temporal_occurrence_model, self.location)
 
     def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
                                    rate_scaling_factor=1):
@@ -157,22 +198,20 @@ class PointSource(ParametricSeismicSource):
             to number of locations. Point sources use no scaling
             (``rate_scaling_factor = 1``).
         """
-        assert 0 < rate_scaling_factor
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            for (np_prob, np) in self.nodal_plane_distribution.data:
-                for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
+        assert 0 < rate_scaling_factor, rate_scaling_factor
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            for np_prob, np in self.nodal_plane_distribution.data:
+                for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hypocenter = Point(latitude=location.latitude,
                                        longitude=location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (
-                        mag_occ_rate * float(np_prob) * float(hc_prob))
-                    occurrence_rate *= rate_scaling_factor
+                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
+                                       * rate_scaling_factor)
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
-                        surface, type(self),
-                        occurrence_rate, self.temporal_occurrence_model
-                    )
+                        surface, occurrence_rate,
+                        self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
@@ -182,44 +221,6 @@ class PointSource(ParametricSeismicSource):
         return (len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
-
-    def _get_rupture_dimensions(self, mag, nodal_plane):
-        """
-        Calculate and return the rupture length and width
-        for given magnitude ``mag`` and nodal plane.
-
-        :param nodal_plane:
-            Instance of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`.
-        :returns:
-            Tuple of two items: rupture length in width in km.
-
-        The rupture area is calculated using method
-        :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
-        of source's
-        magnitude-scaling relationship. In any case the returned
-        dimensions multiplication is equal to that value. Than
-        the area is decomposed to length and width with respect
-        to source's rupture aspect ratio.
-
-        If calculated rupture width being inclined by nodal plane's
-        dip angle would not fit in between upper and lower seismogenic
-        depth, the rupture width is shrunken to a maximum possible
-        and rupture length is extended to preserve the same area.
-        """
-        area = self.magnitude_scaling_relationship.get_median_area(
-            mag, nodal_plane.rake
-        )
-        rup_length = math.sqrt(area * self.rupture_aspect_ratio)
-        rup_width = area / rup_length
-
-        seismogenic_layer_width = (self.lower_seismogenic_depth
-                                   - self.upper_seismogenic_depth)
-        max_width = (seismogenic_layer_width
-                     / math.sin(math.radians(nodal_plane.dip)))
-        if rup_width > max_width:
-            rup_width = max_width
-            rup_length = area / rup_width
-        return rup_length, rup_width
 
     def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
         """
@@ -248,7 +249,7 @@ class PointSource(ParametricSeismicSource):
         azimuth_left = (azimuth_down + 90) % 360
         azimuth_up = (azimuth_left + 90) % 360
 
-        rup_length, rup_width = self._get_rupture_dimensions(mag, nodal_plane)
+        rup_length, rup_width = _get_rupture_dimensions(self, mag, nodal_plane)
         # calculate the height of the rupture being projected
         # on the vertical plane:
         rup_proj_height = rup_width * math.sin(rdip)
@@ -285,8 +286,7 @@ class PointSource(ParametricSeismicSource):
             hshift = abs(vshift / math.tan(rdip))
             rupture_center = rupture_center.point_at(
                 horizontal_distance=hshift, vertical_increment=vshift,
-                azimuth=(azimuth_up if vshift < 0 else azimuth_down)
-            )
+                azimuth=(azimuth_up if vshift < 0 else azimuth_down))
 
         # from the rupture center we can now compute the coordinates of the
         # four coorners by moving along the diagonals of the plane. This seems
@@ -298,32 +298,26 @@ class PointSource(ParametricSeismicSource):
         # top and bottom edges. Theta is zero for vertical ruptures (because
         # rup_proj_width is zero)
         theta = math.degrees(
-            math.atan((rup_proj_width / 2.) / (rup_length / 2.))
-        )
+            math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
         hor_dist = math.sqrt(
-            (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2
-        )
+            (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2)
 
         left_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 + theta) % 360
-        )
+            azimuth=(nodal_plane.strike + 180 + theta) % 360)
         right_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike - theta) % 360
-        )
+            azimuth=(nodal_plane.strike - theta) % 360)
         left_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 - theta) % 360
-        )
+            azimuth=(nodal_plane.strike + 180 - theta) % 360)
         right_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + theta) % 360
-        )
+            azimuth=(nodal_plane.strike + theta) % 360)
 
         surface = PlanarSurface(
             nodal_plane.strike, nodal_plane.dip, left_top, right_top,
@@ -336,16 +330,15 @@ class PointSource(ParametricSeismicSource):
         Polygon corresponding to the max_rupture_projection_radius
         """
         radius = self._get_max_rupture_projection_radius()
-        poly = self.location.to_polygon(radius)
-        return poly
+        return self.location.to_polygon(radius)
 
     def get_bounding_box(self, maxdist):
         """
         Bounding box containing all points, enlarged by the maximum distance
         and the maximum rupture projection radius (upper limit).
         """
-        lon = self.location.x
-        lat = self.location.y
+        lon = self.location.longitude
+        lat = self.location.latitude
         maxradius = self._get_max_rupture_projection_radius()
         a1 = (maxdist + maxradius) * KM_TO_DEGREES
         a2 = angular_distance(maxdist + maxradius, lat)

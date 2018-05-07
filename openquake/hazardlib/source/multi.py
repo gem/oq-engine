@@ -17,9 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.point import (
-    PointSource, angular_distance, KM_TO_DEGREES)
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.source.point import PointSource
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -92,12 +90,8 @@ class MultiPointSource(ParametricSeismicSource):
     @property
     def polygon(self):
         """
-        The polygon containing all points expanded by the max rupture projection radius
+        The polygon containing all points expanded by the
+        max rupture projection radius
         """
-        maxradius = self._get_max_rupture_projection_radius()
-        poly = self.mesh.get_convex_hull().dilate(maxradius)
-        return poly
-
-    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
-    _get_max_rupture_projection_radius = PointSource.__dict__[
-        '_get_max_rupture_projection_radius']
+        maxradius = PointSource._get_max_rupture_projection_radius(self)
+        return self.mesh.get_convex_hull().dilate(maxradius)

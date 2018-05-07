@@ -28,13 +28,9 @@ from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
 class DummySurface(BaseSurface):
     def __init__(self, coordinates_list):
-        self.coordinates_list = coordinates_list
-        super(DummySurface, self).__init__()
-
-    def _create_mesh(self):
         points = [[Point(*coordinates) for coordinates in row]
-                  for row in self.coordinates_list]
-        return RectangularMesh.from_points_list(points)
+                  for row in coordinates_list]
+        self.mesh = RectangularMesh.from_points_list(points)
 
     def get_strike(self):
         top_row = self.mesh[0:2]

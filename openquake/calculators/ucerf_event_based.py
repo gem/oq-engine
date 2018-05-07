@@ -46,7 +46,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, EBRupture)
-from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import (
@@ -289,7 +288,7 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
                                depths[i][0])
         ruptures.append(ParametricProbabilisticRupture(
             mag, nodal_planes[i][1].rake, trt, hypocentre, surface,
-            PointSource, rupture_probability, tom))
+            rupture_probability, tom))
     return ruptures
 
 
@@ -536,7 +535,6 @@ class UCERFSource(object):
         :param src_filter:
             Sites for consideration and maximum distance
         """
-        mesh_spacing = self.mesh_spacing
         trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
         mag = self.mags[iloc]
@@ -566,8 +564,7 @@ class UCERFSource(object):
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[iloc], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), CharacteristicFaultSource,
-            self.rate[iloc], self.tom)
+            MultiSurface(surface_set), self.rate[iloc], self.tom)
 
         return rupture
 

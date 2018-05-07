@@ -18,14 +18,13 @@
 import collections
 import operator
 import logging
-import mock
 import numpy
 from openquake.baselib.general import (
     AccumDict, groupby, group_array, get_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
+from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -493,7 +492,11 @@ class RuptureGetter(object):
 
     def __iter__(self):
         self.dstore.open()  # if needed
-        oq = self.dstore['oqparam']
+        attrs = self.dstore.get_attrs('ruptures')
+        code2cls = {}  # code -> rupture_cls, surface_cls
+        for key, val in attrs.items():
+            if key.startswith('code_'):
+                code2cls[int(key[5:])] = [classes[v] for v in val.split()]
         grp_trt = self.dstore['csm_info'].grp_by("trt")
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
@@ -506,17 +509,10 @@ class RuptureGetter(object):
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-            rupture_cls, surface_cls, source_cls = BaseRupture.types[
-                rec['code']]
+            rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
             rupture.surface = object.__new__(surface_cls)
-            # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
-            if 'Complex' in surface_cls.__name__:
-                mesh_spacing = oq.complex_fault_mesh_spacing
-            else:
-                mesh_spacing = oq.rupture_mesh_spacing
-            rupture.source_typology = source_cls
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
             rupture.seed = rec['seed']
@@ -528,10 +524,10 @@ class RuptureGetter(object):
                 rupture.pmf = self.dstore['pmfs'][pmfx]
             if surface_cls is geo.PlanarSurface:
                 rupture.surface = geo.PlanarSurface.from_array(rec['points'])
-            elif surface_cls.__name__.endswith('MultiSurface'):
+            elif surface_cls is geo.MultiSurface:
                 rupture.surface.__init__([
                     geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
-            elif surface_cls.__name__.endswith('GriddedSurface'):
+            elif surface_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 m = mesh[0]
@@ -539,8 +535,8 @@ class RuptureGetter(object):
             else:  # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 m = mesh[0]
-                rupture.surface.mesh = RectangularMesh(
-                    m['lon'], m['lat'], m['depth'])
+                rupture.surface.__init__(
+                    RectangularMesh(m['lon'], m['lat'], m['depth']))
             ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
