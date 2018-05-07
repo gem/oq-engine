@@ -42,6 +42,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import min_idx_dst, min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, EBRupture)
@@ -695,7 +696,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    idist = src_filter.integration_distance
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
@@ -707,14 +708,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        distances = get_distances(rup, sitecol, 'rrup')
-                        r_sites = sitecol.filter(
-                            distances <= idist(
-                                rup.tectonic_region_type, rup.mag))
+                        rup.ctx = cmaker.make_contexts(sitecol, rup)
+                        indices = rup.ctx[0].sids
                     except FarAwayRupture:
                         continue
-                    indices = (numpy.arange(len(r_sites)) if r_sites.indices
-                               is None else r_sites.indices)
                     events = []
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))
