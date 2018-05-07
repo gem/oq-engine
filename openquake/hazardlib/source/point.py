@@ -131,8 +131,8 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(self.temporal_occurrence_model,
-                                               self.location)
+        return self._iter_ruptures_at_location(
+            self.temporal_occurrence_model, self.location)
 
     def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
                                    rate_scaling_factor=1):
@@ -157,22 +157,20 @@ class PointSource(ParametricSeismicSource):
             to number of locations. Point sources use no scaling
             (``rate_scaling_factor = 1``).
         """
-        assert 0 < rate_scaling_factor
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            for (np_prob, np) in self.nodal_plane_distribution.data:
-                for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
+        assert 0 < rate_scaling_factor, rate_scaling_factor
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            for np_prob, np in self.nodal_plane_distribution.data:
+                for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hypocenter = Point(latitude=location.latitude,
                                        longitude=location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (
-                        mag_occ_rate * float(np_prob) * float(hc_prob))
-                    occurrence_rate *= rate_scaling_factor
+                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
+                                       * rate_scaling_factor)
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
-                        occurrence_rate, self.temporal_occurrence_model
-                    )
+                        occurrence_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
@@ -207,11 +205,9 @@ class PointSource(ParametricSeismicSource):
         and rupture length is extended to preserve the same area.
         """
         area = self.magnitude_scaling_relationship.get_median_area(
-            mag, nodal_plane.rake
-        )
+            mag, nodal_plane.rake)
         rup_length = math.sqrt(area * self.rupture_aspect_ratio)
         rup_width = area / rup_length
-
         seismogenic_layer_width = (self.lower_seismogenic_depth
                                    - self.upper_seismogenic_depth)
         max_width = (seismogenic_layer_width
@@ -285,8 +281,7 @@ class PointSource(ParametricSeismicSource):
             hshift = abs(vshift / math.tan(rdip))
             rupture_center = rupture_center.point_at(
                 horizontal_distance=hshift, vertical_increment=vshift,
-                azimuth=(azimuth_up if vshift < 0 else azimuth_down)
-            )
+                azimuth=(azimuth_up if vshift < 0 else azimuth_down))
 
         # from the rupture center we can now compute the coordinates of the
         # four coorners by moving along the diagonals of the plane. This seems
@@ -298,32 +293,26 @@ class PointSource(ParametricSeismicSource):
         # top and bottom edges. Theta is zero for vertical ruptures (because
         # rup_proj_width is zero)
         theta = math.degrees(
-            math.atan((rup_proj_width / 2.) / (rup_length / 2.))
-        )
+            math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
         hor_dist = math.sqrt(
-            (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2
-        )
+            (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2)
 
         left_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 + theta) % 360
-        )
+            azimuth=(nodal_plane.strike + 180 + theta) % 360)
         right_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=-rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike - theta) % 360
-        )
+            azimuth=(nodal_plane.strike - theta) % 360)
         left_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + 180 - theta) % 360
-        )
+            azimuth=(nodal_plane.strike + 180 - theta) % 360)
         right_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
             vertical_increment=rup_proj_height / 2.,
-            azimuth=(nodal_plane.strike + theta) % 360
-        )
+            azimuth=(nodal_plane.strike + theta) % 360)
 
         surface = PlanarSurface(
             nodal_plane.strike, nodal_plane.dip, left_top, right_top,
@@ -336,16 +325,15 @@ class PointSource(ParametricSeismicSource):
         Polygon corresponding to the max_rupture_projection_radius
         """
         radius = self._get_max_rupture_projection_radius()
-        poly = self.location.to_polygon(radius)
-        return poly
+        return self.location.to_polygon(radius)
 
     def get_bounding_box(self, maxdist):
         """
         Bounding box containing all points, enlarged by the maximum distance
         and the maximum rupture projection radius (upper limit).
         """
-        lon = self.location.x
-        lat = self.location.y
+        lon = self.location.longitude
+        lat = self.location.latitude
         maxradius = self._get_max_rupture_projection_radius()
         a1 = (maxdist + maxradius) * KM_TO_DEGREES
         a2 = angular_distance(maxdist + maxradius, lat)
