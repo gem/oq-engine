@@ -88,7 +88,7 @@ def _get_min_distance_to_sub_trench(lons, lats):
     depth.
     The 10 km depth value is arbitrary given that distance calculation depend
     only on top edge depth. The method calls then
-    :meth:`openquake.hazardlib.geo.base.BaseQuadrilateralSurface.get_rx_distance`
+    :meth:`openquake.hazardlib.geo.base.BaseSurface.get_rx_distance`
     and return its absolute value.
     """
     trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)

@@ -28,7 +28,7 @@ from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
@@ -63,7 +63,7 @@ def complex_fault_node(edges):
     return node
 
 
-class ComplexFaultSurface(BaseQuadrilateralSurface):
+class ComplexFaultSurface(BaseSurface):
     """
     Represent a complex fault surface as 3D mesh of points (not necessarily
     uniformly spaced across the surface area).
