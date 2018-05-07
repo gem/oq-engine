@@ -194,14 +194,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         on the whole fault surface.
         """
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing
-        )
+            self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
         cell_center, cell_length, cell_width, cell_area = (
-            whole_fault_mesh.get_cell_dimensions()
-        )
+            whole_fault_mesh.get_cell_dimensions())
 
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake)
             rupture_length = numpy.sqrt(
@@ -214,7 +212,6 @@ class ComplexFaultSource(ParametricSeismicSource):
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
                 hypocenter = mesh.get_middle_point()
-
                 try:
                     surface = ComplexFaultSurface(mesh)
                 except ValueError as e:
@@ -222,8 +219,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                         self.source_id, str(e)))
                 yield ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self),
-                    occurrence_rate, self.temporal_occurrence_model)
+                    surface, occurrence_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
