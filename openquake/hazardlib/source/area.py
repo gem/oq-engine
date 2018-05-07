@@ -126,8 +126,7 @@ class AreaSource(ParametricSeismicSource):
                 hypocenter.depth = hc_depth
                 rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self), occ_rate,
-                    self.temporal_occurrence_model)
+                    surface, occ_rate, self.temporal_occurrence_model)
                 yield rupture
 
     def count_ruptures(self):

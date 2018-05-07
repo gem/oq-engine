@@ -509,11 +509,10 @@ class RuptureGetter(object):
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-            rup_cls, surf_cls, src_cls = code2cls[rec['code']]
+            rup_cls, surf_cls = code2cls[rec['code']]
             rupture = object.__new__(rup_cls)
             rupture.serial = serial
             rupture.surface = object.__new__(surf_cls)
-            rupture.source_typology = src_cls
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
             rupture.seed = rec['seed']

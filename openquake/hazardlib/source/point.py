@@ -210,8 +210,8 @@ class PointSource(ParametricSeismicSource):
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
-                        surface, type(self),
-                        occurrence_rate, self.temporal_occurrence_model)
+                        surface, occurrence_rate,
+                        self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
