@@ -21,12 +21,12 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
 
-class DummySurface(BaseQuadrilateralSurface):
+class DummySurface(BaseSurface):
     def __init__(self, coordinates_list):
         self.coordinates_list = coordinates_list
         super(DummySurface, self).__init__()
