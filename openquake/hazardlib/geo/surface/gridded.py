@@ -42,9 +42,6 @@ class GriddedSurface(BaseSurface):
         An unstructured mesh of points ideally representing a rupture surface.
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
-    def __init__(self, mesh):
-        self.mesh = mesh  # a 1D mesh
-
     @property
     def surface_nodes(self):
         """
@@ -88,46 +85,6 @@ class GriddedSurface(BaseSurface):
         """
         min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
         return [[min_lon, max_lon]], [[min_lat, max_lat]]
-
-    def get_min_distance(self, mesh):
-        """
-        Compute and return the minimum distance from the surface to each point
-        of ``mesh``. This distance is sometimes called ``Rrup``.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
-            minimum distance to.
-        :returns:
-            A numpy array of distances in km.
-        """
-        return self.mesh.get_min_distance(mesh)
-
-    def get_closest_points(self, mesh):
-        """
-        For each point from ``mesh`` find a closest point belonging to surface.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to find
-            closest points to.
-        :returns:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
-            ``mesh`` with closest surface's points on respective indices.
-        """
-        return self.mesh.get_closest_points(mesh)
-
-    def get_joyner_boore_distance(self, mesh):
-        """
-        Compute and return Joyner-Boore (also known as ``Rjb``) distance
-        to each point of ``mesh``.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
-            Joyner-Boore distance to.
-        :returns:
-            Numpy array of closest distances between the projections of surface
-            and each point of the ``mesh`` to the earth surface.
-        """
-        return self.mesh.get_joyner_boore_distance(mesh)
 
     def get_rx_distance(self, mesh):
         """
