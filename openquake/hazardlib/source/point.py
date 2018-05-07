@@ -155,7 +155,7 @@ class PointSource(ParametricSeismicSource):
         max_mag, _rate = self.get_annual_occurrence_rates()[-1]
         for (np_prob, np) in self.nodal_plane_distribution.data:
             # compute rupture dimensions
-            rup_length, rup_width = self._get_rupture_dimensions(max_mag, np)
+            rup_length, rup_width = _get_rupture_dimensions(self, max_mag, np)
             # compute rupture width surface projection
             rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
