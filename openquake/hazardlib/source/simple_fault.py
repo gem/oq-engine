@@ -172,8 +172,7 @@ class SimpleFaultSource(ParametricSeismicSource):
 
                         yield ParametricProbabilisticRupture(
                             mag, self.rake, self.tectonic_region_type,
-                            hypocenter, surface, type(self),
-                            occurrence_rate_hypo,
+                            hypocenter, surface, occurrence_rate_hypo,
                             self.temporal_occurrence_model)
                     else:
                         for hypo in self.hypo_list:
