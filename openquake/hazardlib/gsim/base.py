@@ -205,7 +205,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, filter=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -239,15 +239,17 @@ class ContextMaker(object):
             sctx = self.make_sites_context(sites)
             return sctx, rctx, dctx
 
-        # otherwise filter with the rjb distance
+        # otherwise compute the rjb distance and normally filter with it
         dctx = DistancesContext()
-        rjb = get_distances(rupture, sites.mesh, 'rjb')
-        md = self.maximum_distance(rupture.tectonic_region_type, rupture.mag)
-        mask = rjb <= md
-        if mask.any():
-            sites, dctx.rjb = sites.filter(mask), rjb[mask]
-        else:
-            raise FarAwayRupture
+        dctx.rjb = get_distances(rupture, sites.mesh, 'rjb')
+        if filter:
+            maxdist = self.maximum_distance(
+                rupture.tectonic_region_type, rupture.mag)
+            mask = dctx.rjb <= maxdist
+            if mask.any():
+                sites, dctx.rjb = sites.filter(mask), dctx.rjb[mask]
+            else:
+                raise FarAwayRupture
         mesh = sites.mesh
         for param in self.REQUIRES_DISTANCES - set(['rjb']):
             setattr(dctx, param, get_distances(rupture, mesh, param))
@@ -356,12 +358,9 @@ class ContextMaker(object):
         pne_mon = monitor('disaggregate_pne', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
+                # do not filter to avoid changing the number of sites
                 sctx, rctx, orig_dctx = self.make_contexts(
                     sitecol, rupture, filter=False)
-                if (self.maximum_distance and
-                    orig_dctx.rjb.min() > self.maximum_distance(
-                        rupture.tectonic_region_type, rupture.mag)):
-                    continue  # rupture away from all sites
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
