@@ -286,9 +286,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.rupture = BaseRupture(
             mag=123.45, rake=123.56,
             tectonic_region_type=const.TRT.VOLCANIC,
-            hypocenter=self.rupture_hypocenter, surface=FakeSurface(),
-            source_typology=object()
-        )
+            hypocenter=self.rupture_hypocenter, surface=FakeSurface())
         self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
         self.fake_surface = FakeSurface
 
