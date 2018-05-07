@@ -25,6 +25,47 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
+def _get_rupture_dimensions(src, mag, nodal_plane):
+    """
+    Calculate and return the rupture length and width
+    for given magnitude ``mag`` and nodal plane.
+
+    :param src:
+        a PointSource, AreaSource or MultiPointSource
+    :param mag:
+        a magnitude
+    :param nodal_plane:
+        Instance of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`.
+    :returns:
+        Tuple of two items: rupture length in width in km.
+
+    The rupture area is calculated using method
+    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
+    of source's
+    magnitude-scaling relationship. In any case the returned
+    dimensions multiplication is equal to that value. Than
+    the area is decomposed to length and width with respect
+    to source's rupture aspect ratio.
+
+    If calculated rupture width being inclined by nodal plane's
+    dip angle would not fit in between upper and lower seismogenic
+    depth, the rupture width is shrunken to a maximum possible
+    and rupture length is extended to preserve the same area.
+    """
+    area = src.magnitude_scaling_relationship.get_median_area(
+        mag, nodal_plane.rake)
+    rup_length = math.sqrt(area * src.rupture_aspect_ratio)
+    rup_width = area / rup_length
+    seismogenic_layer_width = (src.lower_seismogenic_depth
+                               - src.upper_seismogenic_depth)
+    max_width = (seismogenic_layer_width
+                 / math.sin(math.radians(nodal_plane.dip)))
+    if rup_width > max_width:
+        rup_width = max_width
+        rup_length = area / rup_width
+    return rup_length, rup_width
+
+
 @with_slots
 class PointSource(ParametricSeismicSource):
     """
@@ -181,42 +222,6 @@ class PointSource(ParametricSeismicSource):
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
-    def _get_rupture_dimensions(self, mag, nodal_plane):
-        """
-        Calculate and return the rupture length and width
-        for given magnitude ``mag`` and nodal plane.
-
-        :param nodal_plane:
-            Instance of :class:`openquake.hazardlib.geo.nodalplane.NodalPlane`.
-        :returns:
-            Tuple of two items: rupture length in width in km.
-
-        The rupture area is calculated using method
-        :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
-        of source's
-        magnitude-scaling relationship. In any case the returned
-        dimensions multiplication is equal to that value. Than
-        the area is decomposed to length and width with respect
-        to source's rupture aspect ratio.
-
-        If calculated rupture width being inclined by nodal plane's
-        dip angle would not fit in between upper and lower seismogenic
-        depth, the rupture width is shrunken to a maximum possible
-        and rupture length is extended to preserve the same area.
-        """
-        area = self.magnitude_scaling_relationship.get_median_area(
-            mag, nodal_plane.rake)
-        rup_length = math.sqrt(area * self.rupture_aspect_ratio)
-        rup_width = area / rup_length
-        seismogenic_layer_width = (self.lower_seismogenic_depth
-                                   - self.upper_seismogenic_depth)
-        max_width = (seismogenic_layer_width
-                     / math.sin(math.radians(nodal_plane.dip)))
-        if rup_width > max_width:
-            rup_width = max_width
-            rup_length = area / rup_width
-        return rup_length, rup_width
-
     def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
         """
         Create and return rupture surface object with given properties.
@@ -244,7 +249,7 @@ class PointSource(ParametricSeismicSource):
         azimuth_left = (azimuth_down + 90) % 360
         azimuth_up = (azimuth_left + 90) % 360
 
-        rup_length, rup_width = self._get_rupture_dimensions(mag, nodal_plane)
+        rup_length, rup_width = _get_rupture_dimensions(self, mag, nodal_plane)
         # calculate the height of the rupture being projected
         # on the vertical plane:
         rup_proj_height = rup_width * math.sin(rdip)
