@@ -20,13 +20,10 @@
 Module :mod:`openquake.hazardlib.geo.surface.base` implements
 :class:`BaseSurface` and :class:`BaseSurface`.
 """
-import abc
-
 import numpy
 import math
 from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
     RectangularMesh
-from openquake.baselib.python3compat import with_metaclass
 
 
 def _find_turning_points(mesh, tol=1.0):
@@ -102,13 +99,7 @@ def downsample_trace(mesh, tol=1.0):
 
 class BaseSurface:
     """
-    Base class for a quadrilateral surface in 3D-space.
-
-    Subclasses must implement :meth:`_create_mesh`, and superclass methods
-    :meth:`get_strike() <.base.BaseSurface.get_strike>`,
-    :meth:`get_dip() <.base.BaseSurface.get_dip>` and
-    :meth:`get_width() <.base.BaseSurface.get_width>`,
-    and can override any others just for the sake of performance
+    Base class for a surface in 3D-space.
     """
 
     def __init__(self, mesh=None):
