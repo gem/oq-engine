@@ -74,9 +74,6 @@ class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
             self.assertTrue(ruptures[i].hypocenter == Point(0., 0., 5.))
             self.assertTrue(ruptures[i].surface.strike == self.STRIKE)
             self.assertTrue(ruptures[i].surface.dip == self.DIP)
-            self.assertTrue(
-                ruptures[i].source_typology == CharacteristicFaultSource
-            )
             numpy.testing.assert_equal(ruptures[i].surface.corner_lons,
                                        self.CORNER_LONS)
             numpy.testing.assert_equal(ruptures[i].surface.corner_lats,
