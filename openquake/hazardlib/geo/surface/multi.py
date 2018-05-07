@@ -95,6 +95,17 @@ class MultiSurface(BaseSurface):
         """
         return [surf.surface_nodes[0] for surf in self.surfaces]
 
+    @property
+    def mesh(self):
+        """
+        :returns: mesh corresponding to the whole multi surface
+        """
+        meshes = [surface.mesh for surface in self.surfaces]
+        lons = numpy.concatenate([m.lons for m in meshes])
+        lats = numpy.concatenate([m.lats for m in meshes])
+        depths = numpy.concatenate([m.depths for m in meshes])
+        return Mesh(lons, lats, depths)
+
     def __init__(self, surfaces, tol=0.1):
         """
         Instantiate object with list of surfaces
