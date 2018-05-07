@@ -511,11 +511,6 @@ class RuptureGetter(object):
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
             rupture.surface = object.__new__(surface_cls)
-            # MISSING: case complex_fault_mesh_spacing != rupture_mesh_spacing
-            if 'Complex' in surface_cls.__name__:
-                mesh_spacing = oq.complex_fault_mesh_spacing
-            else:
-                mesh_spacing = oq.rupture_mesh_spacing
             rupture.source_typology = source_cls
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
