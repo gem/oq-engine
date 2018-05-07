@@ -39,6 +39,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
+classes = {}  # initialized in .init()
 
 
 @with_slots
@@ -86,9 +87,11 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
         source_class). This is useful when serializing the rupture to and
         from HDF5.
         """
-        source_classes = get_subclasses(BaseSeismicSource)
+        source_classes = list(get_subclasses(BaseSeismicSource))
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
-        surface_classes = get_subclasses(BaseSurface)
+        surface_classes = list(get_subclasses(BaseSurface))
+        for cls in source_classes + rupture_classes + surface_classes:
+            classes[cls.__name__] = cls
         code, types, n = {}, {}, 0
         for src, rup, sur in itertools.product(
                 source_classes, rupture_classes, surface_classes):
