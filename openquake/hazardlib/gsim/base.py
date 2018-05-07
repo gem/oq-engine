@@ -135,12 +135,12 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
 
-    def make_distances_context(self, site_collection, rupture, dist_dict=()):
+    def make_distances_context(self, mesh, rupture, dist_dict=()):
         """
         Create distances context object for given site collection and rupture.
 
-        :param site_collection:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
+        :param mesh:
+            mesh of points coming from a filtered site collection
 
         :param rupture:
             Instance of
@@ -165,7 +165,7 @@ class ContextMaker(object):
             if param in dist_dict:  # already computed distances
                 distances = dist_dict[param]
             else:
-                distances = get_distances(rupture, site_collection.mesh, param)
+                distances = get_distances(rupture, mesh, param)
             setattr(dctx, param, distances)
         return dctx
 
@@ -268,7 +268,8 @@ class ContextMaker(object):
         sites, distances = self.maximum_distance.get_closest(
             site_collection, rupture, 'rjb', filter)
         sctx = self.make_sites_context(sites)
-        dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
+        dctx = self.make_distances_context(
+            sites.mesh, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
     def filter_ruptures(self, src, sites):
