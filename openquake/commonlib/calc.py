@@ -438,6 +438,10 @@ class RuptureSerializer(object):
         self.datastore.flush()
 
     def close(self):
+        """
+        Save information about the rupture codes as attributes of the
+        'ruptures' dataset.
+        """
         codes = numpy.unique(self.datastore['ruptures']['code'])
         attr = {'code_%d' % code: ' '.join(
             cls.__name__ for cls in BaseRupture.types[code])
