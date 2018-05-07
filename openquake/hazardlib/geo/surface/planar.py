@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
