@@ -232,13 +232,10 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
-        # but do call BaseSurface's one
-        BaseSurface.__init__(nsurf)
         nsurf.dip = self.dip
         nsurf.strike = self.strike
         nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
-            self.corner_lons, self.corner_lats, azimuth, distance
-        )
+            self.corner_lons, self.corner_lats, azimuth, distance)
         nsurf.corner_depths = self.corner_depths.copy()
         nsurf._init_plane()
         nsurf.width = self.width
