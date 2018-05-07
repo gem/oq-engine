@@ -236,18 +236,10 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        if not self.maximum_distance:  # do not filter
-            mesh = sites.mesh
-            dctx = DistancesContext(
-                (param, get_distances(rupture, mesh, param))
-                for param in self.REQUIRES_DISTANCES)
-            sctx = self.make_sites_context(sites)
-            return sctx, rctx, dctx
-
-        # otherwise compute the rjb distance and normally filter with it
+        # compute the rjb distance and normally filter with it
         dctx = DistancesContext()
         dctx.rjb = get_distances(rupture, sites.mesh, 'rjb')
-        if filter_sites:
+        if self.maximum_distance and filter_sites:
             maxdist = self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             mask = dctx.rjb <= maxdist
