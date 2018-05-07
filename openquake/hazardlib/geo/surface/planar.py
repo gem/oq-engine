@@ -91,9 +91,15 @@ class PlanarSurface(BaseSurface):
             node.append(Node(name, dict(lon=lon, lat=lat, depth=depth)))
         return [node]
 
+    @property
+    def mesh(self):
+        """
+        :returns: a mesh with the 4 corner points tl, tr, bl, br
+        """
+        return Mesh(self.corner_lons, self.corner_lats, self.corner_depths)
+
     def __init__(self, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
-        super().__init__()
         if not (top_left.depth == top_right.depth and
                 bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
