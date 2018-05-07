@@ -18,10 +18,8 @@ Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
 import numpy
-
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.geo.mesh import RectangularMesh
-from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.geo import mesh, NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
@@ -63,10 +61,9 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,
                  surface_node=None):
-        super(CharacteristicFaultSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd, None, None, None,
-            temporal_occurrence_model
-        )
+            temporal_occurrence_model)
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake
@@ -89,11 +86,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         rupture with a surface always equal to the given surface.
         """
         hypocenter = self.surface.get_middle_point()
-        for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
+        for mag, occurrence_rate in self.get_annual_occurrence_rates():
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
-                self.surface, type(self), occurrence_rate,
-                self.temporal_occurrence_model)
+                self.surface, occurrence_rate, self.temporal_occurrence_model)
 
     def count_ruptures(self):
         """
@@ -114,3 +110,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         """
         self.surface = surface
         self.surface_node = surface_node
+
+    @property
+    def polygon(self):
+        """
+        The underlying polygon, as a convex hull
+        """
+        return self.surface.mesh.get_convex_hull()

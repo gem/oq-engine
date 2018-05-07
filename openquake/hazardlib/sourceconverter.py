@@ -366,8 +366,7 @@ class RuptureConverter(object):
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_complexFaultRupture(self, node):
@@ -382,8 +381,7 @@ class RuptureConverter(object):
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_singlePlaneRupture(self, node):
@@ -399,8 +397,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_multiPlanesRupture(self, node):
@@ -416,8 +413,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_griddedRupture(self, node):
@@ -433,8 +429,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_ruptureCollection(self, node):

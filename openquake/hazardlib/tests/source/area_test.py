@@ -83,7 +83,6 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                            lat, delta=1e-3)
                     self.assertAlmostEqual(rupture.hypocenter.depth,
                                            depths[iloc], delta=1e-3)
-                    self.assertIs(rupture.source_typology, AreaSource)
                 self.assertEqual(r1.mag, 5.5)
                 self.assertEqual(r2.mag, 5.5)
                 self.assertEqual(r3.mag, 6.5)
