@@ -23,6 +23,7 @@ import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -437,4 +438,8 @@ class RuptureSerializer(object):
         self.datastore.flush()
 
     def close(self):
-        pass
+        codes = numpy.unique(self.datastore['ruptures']['code'])
+        attr = {'code_%d' % code: ' '.join(
+            cls.__name__ for cls in BaseRupture.types[code])
+                for code in codes}
+        self.datastore.set_attrs('ruptures', **attr)
