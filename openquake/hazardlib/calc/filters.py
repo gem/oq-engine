@@ -235,7 +235,8 @@ class IntegrationDistance(collections.Mapping):
             md = self.piecewise[trt] = Piecewise(mags, dists)
         return md(mag)
 
-    def get_closest(self, sites, rupture, distance_type='rrup', filter=True):
+    def get_sites_distances(self, sites, rupture, distance_type='rrup',
+                            filter=True):
         """
         :param sites: a (Filtered)SiteCollection
         :param rupture: a rupture
