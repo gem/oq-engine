@@ -707,7 +707,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        r_sites, rrup = idist.get_closest(sitecol, rup)
+                        r_sites, rrup = idist.get_sites_distances(sitecol, rup)
                     except FarAwayRupture:
                         continue
                     indices = (numpy.arange(len(r_sites)) if r_sites.indices
