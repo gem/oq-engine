@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the source typology from the ruptures and reduced the rupture
+    hierarchy
   * Removed the mesh spacing from PlanarSurfaces
   * Optimized the instantiation of the rtree index
   * Replaced the old prefiltering mechanism with the new one
