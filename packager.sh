@@ -623,9 +623,7 @@ celery_wait $GEM_MAXLOOP
 
         ssh "$lxc_ip" "oq engine --make-html-report today
         oq engine --show-log -1
-        oq engine --delete-calculation 1 --yes
-        oq engine --dc 1 --yes
-        oq purge -1; oq reset --yes"
+        oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
         # WebUI command check
