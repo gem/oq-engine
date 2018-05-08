@@ -80,25 +80,3 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def test_positive_filtering(self):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
-
-
-class SeismicSourceFilterSitesByRuptureTestCase(
-        _BaseSeismicSourceTestCase):
-    def test(self):
-        surface_mesh = RectangularMesh(self.POLYGON.lons.reshape((2, 2)),
-                                       self.POLYGON.lats.reshape((2, 2)),
-                                       depths=None)
-
-        class rupture(object):
-            class surface(object):
-                @classmethod
-                def get_joyner_boore_distance(cls, mesh):
-                    return surface_mesh.get_joyner_boore_distance(mesh)
-
-        filtered = filters.filter_sites_by_distance_to_rupture(
-            rupture=rupture, integration_distance=1.01, sites=self.sitecol
-        )
-        numpy.testing.assert_array_equal(filtered.indices,
-                                         [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        numpy.testing.assert_array_equal(filtered.mesh.depths,
-                                         [-0.5, 0, 0, 0, 0, 0, 0, 0, 0])
