@@ -19,7 +19,7 @@ import numpy
 from openquake.hazardlib import nrml, geo
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.stochastic import (
-    stochastic_event_sets, sample_ruptures)
+    stochastic_event_set, sample_ruptures)
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 
@@ -61,5 +61,5 @@ class StochasticEventSetTestCase(unittest.TestCase):
         ebr.export(mesh)
 
         # test no filtering
-        ruptures = stochastic_event_sets(group, s_filter)
-        self.assertEqual(len(ruptures), 2)
+        ruptures = list(stochastic_event_set(group))
+        self.assertEqual(len(ruptures), 19)
