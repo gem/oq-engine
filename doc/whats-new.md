@@ -116,7 +116,7 @@ plotting libraries and added the ability to customize the figure size.
 
 The source writer in hazardlib now checks that the sum of the
 probabilities of occurrence is 1, when saving nonparametric sources.
-This avoids errors were building time-dependent models.
+This avoids errors when building time-dependent models.
 
 Risk
 -----
