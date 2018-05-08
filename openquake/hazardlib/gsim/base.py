@@ -867,10 +867,6 @@ class DistancesContext(BaseContext):
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
 
-    def __init__(self, name_dist_pairs=()):
-        for name, dist in name_dist_pairs:
-            setattr(self, name, dist)
-
     def roundup(self, minimum_distance):
         """
         If the minimum_distance is nonzero, returns a copy of the
