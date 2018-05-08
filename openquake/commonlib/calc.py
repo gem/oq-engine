@@ -23,6 +23,7 @@ import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -71,6 +72,7 @@ def convert_to_array(pmap, nsites, imtls):
                 curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
                 idx += 1
     return curves
+
 
 # ######################### hazard maps ################################### #
 
@@ -437,4 +439,14 @@ class RuptureSerializer(object):
         self.datastore.flush()
 
     def close(self):
-        pass
+        """
+        Save information about the rupture codes as attributes of the
+        'ruptures' dataset.
+        """
+        if 'ruptures' not in self.datastore:  # for UCERF
+            return
+        codes = numpy.unique(self.datastore['ruptures']['code'])
+        attr = {'code_%d' % code: ' '.join(
+            cls.__name__ for cls in BaseRupture.types[code])
+                for code in codes}
+        self.datastore.set_attrs('ruptures', **attr)
