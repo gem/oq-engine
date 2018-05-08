@@ -493,7 +493,7 @@ class RuptureGetter(object):
     def __iter__(self):
         self.dstore.open()  # if needed
         attrs = self.dstore.get_attrs('ruptures')
-        code2cls = {}  # code -> rup_cls, surf_cls, src_cls
+        code2cls = {}  # code -> rupture_cls, surface_cls
         for key, val in attrs.items():
             if key.startswith('code_'):
                 code2cls[int(key[5:])] = [classes[v] for v in val.split()]
@@ -509,11 +509,10 @@ class RuptureGetter(object):
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-            rup_cls, surf_cls, src_cls = code2cls[rec['code']]
-            rupture = object.__new__(rup_cls)
+            rupture_cls, surface_cls = code2cls[rec['code']]
+            rupture = object.__new__(rupture_cls)
             rupture.serial = serial
-            rupture.surface = object.__new__(surf_cls)
-            rupture.source_typology = src_cls
+            rupture.surface = object.__new__(surface_cls)
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
             rupture.seed = rec['seed']
@@ -523,12 +522,12 @@ class RuptureGetter(object):
             pmfx = rec['pmfx']
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
-            if surf_cls is geo.PlanarSurface:
+            if surface_cls is geo.PlanarSurface:
                 rupture.surface = geo.PlanarSurface.from_array(rec['points'])
-            elif surf_cls is geo.MultiSurface:
+            elif surface_cls is geo.MultiSurface:
                 rupture.surface.__init__([
                     geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
-            elif surf_cls is geo.GriddedSurface:
+            elif surface_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 m = mesh[0]
