@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Undeprecated `hazardlib.calc.stochastic.stochastic_event_set` and
+    made its signature right
   * Removed the source typology from the ruptures and reduced the rupture
     hierarchy
   * Removed the mesh spacing from PlanarSurfaces
