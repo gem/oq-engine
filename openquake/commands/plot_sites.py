@@ -52,7 +52,7 @@ def plot_sites(calc_id=-1):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    srcfilter = SourceFilter(sitecol, oq.maximum_distance,
+    srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance,
                              oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
     sources = csm.get_sources()
