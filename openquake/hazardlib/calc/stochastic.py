@@ -25,9 +25,8 @@ import time
 import operator
 import collections
 import numpy
-from openquake.baselib.general import AccumDict, deprecated
+from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -42,63 +41,33 @@ event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
                         ('sample', U32)])
 
 
-@deprecated('Use sample_ruptures instead')
-def stochastic_event_set(
-        sources,
-        sites=None,
-        source_site_filter=filters.source_site_noop_filter):
+def stochastic_event_sets(sources, ss_filter, seed=42,
+                          ses_per_logic_tree_path=1):
     """
-    Generates a 'Stochastic Event Set' (that is a collection of earthquake
-    ruptures) representing a possible *realization* of the seismicity as
+    Generates 'Stochastic Event Sets' (that is a collection of earthquake
+    ruptures) representing possible realizations of the seismicity as
     described by a source model.
 
     The calculator loops over sources. For each source, it loops over ruptures.
     For each rupture, the number of occurrence is randomly sampled by
-    calling
-    :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
-
-    .. note::
-        This calculator is using random numbers. In order to reproduce the
-        same results numpy random numbers generator needs to be seeded, see
-        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+    calling :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param sites:
-        A list of sites to consider (or None)
-    :param source_site_filter:
-        The source filter to use (only meaningful is sites is not None)
-    :param source_site_filter:
-        The rupture filter to use (only meaningful is sites is not None)
+    :param ss_filter:
+        A source sites filter or a site collection
+    :param seed:
+        The seed to use in the random number generator
+    :param ses_per_logic_tree_path:
+        The number of stochastic event sets to generate (default 1)
     :returns:
-        Generator of :class:`~openquake.hazardlib.source.rupture.Rupture`
-        objects that are contained in an event set. Some ruptures can be
-        missing from it, others can appear one or more times in a row.
+        A list of EBRuptures
     """
-    if sites is None:  # no filtering
-        for source in sources:
-            try:
-                for rupture in source.iter_ruptures():
-                    for i in range(rupture.sample_number_of_occurrences()):
-                        yield rupture
-            except Exception as err:
-                etype, err, tb = sys.exc_info()
-                msg = 'An error occurred with source id=%s. Error: %s'
-                msg %= (source.source_id, str(err))
-                raise_(etype, msg, tb)
-        return
-    # else apply filtering
-    for source, s_sites in source_site_filter(sources, sites):
-        try:
-            for rupture in source.iter_ruptures():
-                for i in range(rupture.sample_number_of_occurrences()):
-                    yield rupture
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, str(err))
-            raise_(etype, msg, tb)
+    if not hasattr(ss_filter, 'sitecol'):  # assume a sitecol was passed
+        ss_filter = filters.SourceFilter(ss_filter, {})
+    param = dict(seed=seed, ses_per_logic_tree_path=ses_per_logic_tree_path)
+    return sample_ruptures(sources, ss_filter, [], param)['eb_ruptures']
 
 
 # ######################## rupture calculator ############################ #
@@ -129,9 +98,10 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
     :param src_filter:
         a source site filter
     :param gsims:
-        a list of GSIMs for the current tectonic region model
+        a list of GSIMs for the current tectonic region model (possibly empty)
     :param param:
-        a dictionary of additional parameters
+        a dictionary of additional parameters, including seed and
+        ses_per_logic_tree_path
     :param monitor:
         monitor instance
     :returns:
