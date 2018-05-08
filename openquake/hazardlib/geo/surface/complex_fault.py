@@ -76,9 +76,8 @@ class ComplexFaultSurface(BaseSurface):
     :meth:`from_fault_data`.
     """
     def __init__(self, mesh):
-        super().__init__()
         self.mesh = mesh
-        assert 1 not in self.mesh.shape
+        assert 1 not in self.mesh.shape, self.mesh.shape
         self.strike = self.dip = None
 
         # A common user error is to create a ComplexFaultSourceSurface

@@ -92,8 +92,9 @@ def export_ruptures_csv(ekey, dstore):
     rows = []
     ruptures_by_grp = get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):
+        rups = ruptures_by_grp.get(grp_id, [])
         rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
-        for r in rup_data.to_array(ruptures_by_grp.get(grp_id, [])):
+        for r in rup_data.to_array(rups):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
