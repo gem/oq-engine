@@ -18,6 +18,7 @@
 
 from __future__ import division
 import logging
+import random
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.geo.utils import cross_idl, fix_lon
@@ -55,6 +56,9 @@ def plot_sites(calc_id=-1):
                              oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
     sources = csm.get_sources()
+    if len(sources) > 100:
+        logging.info('Sampling 100 sources of %d', len(sources))
+        sources = random.Random(42).sample(sources, 100)
     fig, ax = p.subplots()
     ax.grid(True)
     rects = [srcfilter.get_rectangle(src) for src in sources]
