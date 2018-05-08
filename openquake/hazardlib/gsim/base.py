@@ -177,7 +177,33 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def make_contexts(self, sites, rupture, filter_sites=True):
+    def filter(self, sites, rupture, filter_distance='rjb'):
+        """
+        Filter the site collection with respect to the rupture.
+
+        :param sites:
+            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
+        :param rupture:
+            Instance of
+            :class:`openquake.hazardlib.source.rupture.BaseRupture`
+        :returns:
+            (filtered sites, distance context)
+        """
+        # compute the rjb distance and normally filter with it
+        dctx = DistancesContext()
+        setattr(dctx, filter_distance,
+                get_distances(rupture, sites.mesh, filter_distance))
+        if self.maximum_distance:
+            maxdist = self.maximum_distance(
+                rupture.tectonic_region_type, rupture.mag)
+            mask = dctx.rjb <= maxdist
+            if mask.any():
+                sites, dctx.rjb = sites.filter(mask), dctx.rjb[mask]
+            else:
+                raise FarAwayRupture
+        return sites, dctx
+
+    def make_contexts(self, sites, rupture, filter_distance='rjb'):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -187,10 +213,9 @@ class ContextMaker(object):
 
         :param rupture:
             Instance of
-            :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
-            :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+            :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param filter_sites:
+        :param filter_distance:
             If True, possibly reduces the site collection before building
             the :class:`SitesContext`, depending on the value of the
             integration distance for the current rupture.
@@ -208,19 +233,13 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        # compute the rjb distance and normally filter with it
-        dctx = DistancesContext()
-        dctx.rjb = get_distances(rupture, sites.mesh, 'rjb')
-        if self.maximum_distance and filter_sites:
-            maxdist = self.maximum_distance(
-                rupture.tectonic_region_type, rupture.mag)
-            mask = dctx.rjb <= maxdist
-            if mask.any():
-                sites, dctx.rjb = sites.filter(mask), dctx.rjb[mask]
-            else:
-                raise FarAwayRupture
+        if self.maximum_distance and filter_distance:
+            sites, dctx = self.filter(sites, rupture)
+        else:
+            dctx = DistancesContext()
         mesh = sites.mesh
-        for param in self.REQUIRES_DISTANCES - set(['rjb']):
+        fdist_set = set([filter_distance]) if filter_distance else set()
+        for param in self.REQUIRES_DISTANCES - fdist_set:
             setattr(dctx, param, get_distances(rupture, mesh, param))
         sctx = self.make_sites_context(sites)
         return sctx, rctx, dctx
