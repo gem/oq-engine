@@ -18,7 +18,6 @@
 
 import os
 import copy
-import time
 import math
 import os.path
 import logging
@@ -43,12 +42,14 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import min_idx_dst, min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, EBRupture)
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.calc.filters import SourceFilter, FarAwayRupture
+from openquake.hazardlib.calc.filters import (
+    get_distances, SourceFilter, FarAwayRupture)
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -692,7 +693,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    idist = src_filter.integration_distance
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
@@ -704,11 +705,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        r_sites, rrup = idist.get_closest(sitecol, rup)
+                        rup.ctx = cmaker.make_contexts(sitecol, rup)
+                        indices = rup.ctx[0].sids
                     except FarAwayRupture:
                         continue
-                    indices = (numpy.arange(len(r_sites)) if r_sites.indices
-                               is None else r_sites.indices)
                     events = []
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))
