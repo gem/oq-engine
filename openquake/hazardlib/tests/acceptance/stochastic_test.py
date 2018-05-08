@@ -23,7 +23,7 @@ from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo import Point, NodalPlane
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.stochastic import stochastic_event_sets
+from openquake.hazardlib.calc.stochastic import stochastic_event_set
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
@@ -57,7 +57,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             polygon=Point(0., 0.).to_polygon(100.),
             area_discretization=9.0,
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(self.time_span))
+            temporal_occurrence_model=PoissonTOM(self.time_span)
+        )
 
         # area source of circular shape with radius of 100 km
         # centered at 1., 1.
@@ -75,7 +76,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             polygon=Point(5., 5.).to_polygon(100.),
             area_discretization=9.0,
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(self.time_span))
+            temporal_occurrence_model=PoissonTOM(self.time_span)
+        )
 
         # non-parametric source
         self.np_src, _ = make_non_parametric_source()
@@ -87,6 +89,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         mags = []
         for r in ses:
             mags.append(r.mag)
+
         rates, _ = numpy.histogram(mags, bins=bins)
         rates = rates / time_span
 
@@ -119,18 +122,24 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # excluded. the MFD from the SES will be therefore approximately equal
         # to the one of area1 only.
         numpy.random.seed(123)
-        site = Site(location=Point(0., 0.), vs30=760, vs30measured=True,
-                    z1pt0=40., z2pt5=2.)
-        sites = SiteCollection([site])
-        ses = stochastic_event_sets(
+        sites = SiteCollection([
+            Site(
+                location=Point(0., 0.), vs30=760, vs30measured=True,
+                z1pt0=40., z2pt5=2.
+            )
+        ])
+        ses = stochastic_event_set(
             [self.area1, self.area2],
-            filters.SourceFilter(sites, {'default': 100.}))
+            sites=sites,
+            source_site_filter=filters.SourceFilter(sites, {'default': 100.})
+        )
 
         rates = self._extract_rates(ses, time_span=self.time_span,
                                     bins=numpy.arange(5., 6.6, 0.1))
 
         expect_rates = numpy.array(
-            [r for m, r in self.mfd.get_annual_occurrence_rates()])
+            [r for m, r in self.mfd.get_annual_occurrence_rates()]
+        )
 
         numpy.testing.assert_allclose(rates, expect_rates, rtol=0, atol=1e-4)
 
@@ -146,7 +155,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # compared with the expected value
         numpy.random.seed(123)
         num_sess = 10000
-        sess = [stochastic_event_sets([self.np_src]) for i in range(num_sess)]
+        sess = [stochastic_event_set([self.np_src]) for i in range(num_sess)]
 
         # loop over ses. For each ses count number of rupture
         # occurrences (for each magnitude)
@@ -164,8 +173,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # count how many SESs have 0,1 or 2 occurrences, and then normalize
         # by the total number of SESs generated. This gives the probability
         # of having 0, 1 or 2 occurrences
-        n_occs1 = numpy.fromiter(n_rups1.values())
-        n_occs2 = numpy.fromiter(n_rups2.values())
+        n_occs1 = numpy.array(list(n_rups1.values()))
+        n_occs2 = numpy.array(list(n_rups2.values()))
 
         p_occs1_0 = float(len(n_occs1[n_occs1 == 0])) / num_sess
         p_occs1_1 = float(len(n_occs1[n_occs1 == 1])) / num_sess
