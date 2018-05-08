@@ -63,7 +63,6 @@ from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 
@@ -88,39 +87,38 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for src in group:
         grp_ids.update(src.src_group_ids)
     maxdist = src_filter.integration_distance
-    with GroundShakingIntensityModel.forbid_instantiation():
-        imtls = param['imtls']
-        trunclevel = param.get('truncation_level')
-        cmaker = ContextMaker(gsims, maxdist)
-        ctx_mon = monitor('make_contexts', measuremem=False)
-        poe_mon = monitor('get_poes', measuremem=False)
-        pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
-                          for grp_id in grp_ids})
-        # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
-        pmap.calc_times = AccumDict(accum=numpy.zeros(4))
-        pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-        for src, s_sites in src_filter(group):  # filter now
-            t0 = time.time()
-            indep = group.rup_interdep == 'indep' if mutex_weight else True
-            poemap = cmaker.poe_map(
-                src, s_sites, imtls, trunclevel, ctx_mon, poe_mon, indep)
-            if mutex_weight:  # mutex sources
-                weight = mutex_weight[src.source_id]
-                for sid in poemap:
-                    pcurve = pmap[group.id].setdefault(sid, 0)
-                    pcurve += poemap[sid] * weight
-            elif poemap:
-                for grp_id in src.src_group_ids:
-                    pmap[grp_id] |= poemap
-            src_id = src.source_id.split(':', 1)[0]
-            pmap.calc_times[src_id] += numpy.array(
-                [src.weight, len(s_sites), time.time() - t0, 1])
-            # storing the number of contributing ruptures too
-            pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
-                                  for grp_id in src.src_group_ids}
-        if mutex_weight and group.grp_probability is not None:
-            pmap[group.id] *= group.grp_probability
-        return pmap
+    imtls = param['imtls']
+    trunclevel = param.get('truncation_level')
+    cmaker = ContextMaker(gsims, maxdist)
+    ctx_mon = monitor('make_contexts', measuremem=False)
+    poe_mon = monitor('get_poes', measuremem=False)
+    pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
+                      for grp_id in grp_ids})
+    # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
+    pmap.calc_times = AccumDict(accum=numpy.zeros(4))
+    pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
+    for src, s_sites in src_filter(group):  # filter now
+        t0 = time.time()
+        indep = group.rup_interdep == 'indep' if mutex_weight else True
+        poemap = cmaker.poe_map(
+            src, s_sites, imtls, trunclevel, ctx_mon, poe_mon, indep)
+        if mutex_weight:  # mutex sources
+            weight = mutex_weight[src.source_id]
+            for sid in poemap:
+                pcurve = pmap[group.id].setdefault(sid, 0)
+                pcurve += poemap[sid] * weight
+        elif poemap:
+            for grp_id in src.src_group_ids:
+                pmap[grp_id] |= poemap
+        src_id = src.source_id.split(':', 1)[0]
+        pmap.calc_times[src_id] += numpy.array(
+            [src.weight, len(s_sites), time.time() - t0, 1])
+        # storing the number of contributing ruptures too
+        pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
+                              for grp_id in src.src_group_ids}
+    if mutex_weight and group.grp_probability is not None:
+        pmap[group.id] *= group.grp_probability
+    return pmap
 
 
 def calc_hazard_curves(

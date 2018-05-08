@@ -21,7 +21,6 @@ Package :mod:`openquake.hazardlib.calc` contains hazard calculator modules
 and utilities for them, such as :mod:`~openquake.hazardlib.calc.filters`.
 """
 from openquake.hazardlib.calc.gmf import ground_motion_fields
-from openquake.hazardlib.calc.stochastic import stochastic_event_set
 # from disagg we want to import main calc function
 # as well as all the pmf extractors
 from openquake.hazardlib.calc.disagg import *
