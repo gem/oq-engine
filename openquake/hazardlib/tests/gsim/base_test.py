@@ -473,15 +473,6 @@ class GsimInstantiationTestCase(unittest.TestCase):
             warning_msg, 'MyGMPE is not independently verified - '
             'the user is liable for their application')
 
-    def test_non_instantiable(self):
-        # check that a NonInstantiableError is raised when a non-instantiable
-        # GSIM is instantiated
-        class MyGMPE(TGMPE):
-            pass
-        with self.assertRaises(NonInstantiableError):
-            with TGMPE.forbid_instantiation():
-                MyGMPE()
-
 
 class GsimOrderingTestCase(unittest.TestCase):
     def test_ordering_and_equality(self):
