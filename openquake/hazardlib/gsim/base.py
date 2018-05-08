@@ -28,7 +28,6 @@ import sys
 import math
 import warnings
 import functools
-import contextlib
 from scipy.special import ndtr
 import numpy
 
@@ -63,9 +62,8 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass controlling the instantiation mechanism.  A subclass with
-    instantiable=False will raise a NonInstantiableError when directly
-    instantiated. A GroundShakingIntensityModel subclass with an
+    Metaclass controlling the instantiation mechanism.
+    A GroundShakingIntensityModel subclass with an
     attribute deprecated=True will print a deprecation warning when
     instantiated. A subclass with an attribute non_verified=True will
     print a UserWarning.
