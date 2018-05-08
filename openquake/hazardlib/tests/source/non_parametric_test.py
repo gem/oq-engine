@@ -40,12 +40,10 @@ def make_non_parametric_source():
     )
     rup1 = BaseRupture(
         mag=5., rake=90., tectonic_region_type='ASC',
-        hypocenter=Point(0., 0., 5.), surface=surf1, source_typology=None
-    )
+        hypocenter=Point(0., 0., 5.), surface=surf1)
     rup2 = BaseRupture(
         mag=6, rake=0, tectonic_region_type='ASC',
-        hypocenter=Point(0., 0., 5.), surface=surf2, source_typology=None
-    )
+        hypocenter=Point(0., 0., 5.), surface=surf2)
     pmf1 = PMF([(0.7, 0), (0.3, 1)])
     pmf2 = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
     kwargs = {
@@ -86,9 +84,7 @@ class NonParametricSourceTestCase(unittest.TestCase):
             self.assertEqual(rup.surface.top_left, exp_rup.surface.top_left)
             self.assertEqual(rup.surface.top_right, exp_rup.surface.top_right)
             self.assertEqual(
-                rup.surface.bottom_right, exp_rup.surface.bottom_right
-            )
-            self.assertEqual(rup.source_typology, exp_rup.source_typology)
+                rup.surface.bottom_right, exp_rup.surface.bottom_right)
             numpy.testing.assert_allclose(
                 rup.pmf, [prob for prob, occ in exp_pmf.data])
 

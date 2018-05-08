@@ -139,7 +139,6 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             'surface': SimpleFaultSurface.from_fault_data(
                 fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
                 dip=dip, mesh_spacing=mesh_spacing),
-            'source_typology': object(),
             'rupture_slip_direction': 0.,
             'occurrence_rate': 0.01,
             'temporal_occurrence_model': PoissonTOM(50)
