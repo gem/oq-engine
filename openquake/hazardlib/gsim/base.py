@@ -250,7 +250,8 @@ class ContextMaker(object):
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param epsilons: the epsilon bins
         :param monitor: a Monitor instance
-        :returns: an AccumDict
+        :returns:
+            an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
         """
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
