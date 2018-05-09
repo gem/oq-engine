@@ -331,7 +331,7 @@ class ZipTestCase(unittest.TestCase):
         shutil.rmtree(dtemp)
 
 
-class SourceModelShapefileConverterTestCase(unittest.TestCase):
+class LtSourceModelShapefileConverterTestCase(unittest.TestCase):
     """
     Simple conversion test for the Source Model to shapefile converter
     - more tests will follow

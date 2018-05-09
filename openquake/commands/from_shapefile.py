@@ -32,7 +32,7 @@ def from_shapefile(output, input_shp_files, validate):
         source_model.sources.extend(input_parser.read(f, validate).sources)
     if not output:
         output = os.path.splitext(input_shp_files[0])[0]
-    shapefileparser.SourceModelParser().write(output + '.xml', source_model)
+    shapefileparser.LtSourceModelParser().write(output + '.xml', source_model)
 
 
 from_shapefile.opt('output', 'output path (no extension)')

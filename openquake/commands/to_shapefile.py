@@ -33,7 +33,7 @@ def to_shapefile(output, input_nrml_file, validate):
 
     NB: nonparametric sources are not supported.
     """
-    input_parser = shapefileparser.SourceModelParser()
+    input_parser = shapefileparser.LtSourceModelParser()
     source_model = input_parser.read(input_nrml_file, validate)
     if not output:
         output = os.path.splitext(input_nrml_file)[0]
