@@ -119,7 +119,7 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rupture, sites.mesh, filter_distance)
+        distances = get_distances(rupture, sites, filter_distance)
         if self.maximum_distance and filter_sites:
             mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
@@ -158,10 +158,9 @@ class ContextMaker(object):
         """
         sites, dctx = self.filter(
             sites, rupture, filter_distance, filter_sites)
-        mesh = sites.mesh
         fdist_set = set([filter_distance]) if filter_distance else set()
         for param in self.REQUIRES_DISTANCES - fdist_set:
-            setattr(dctx, param, get_distances(rupture, mesh, param))
+            setattr(dctx, param, get_distances(rupture, sites, param))
         return sites, dctx
 
     def filter_ruptures(self, src, sites):
@@ -260,15 +259,15 @@ class ContextMaker(object):
         :param monitor: a Monitor instance
         :returns: an AccumDict
         """
-        sitemesh = sitecol.mesh
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
+        distance_type = 'rjb'
         for rupture in ruptures:
             with ctx_mon:
-                # do not filter to avoid changing the number of sites
+                # build the distance but do not filter the sites
                 sctx, orig_dctx = self.make_contexts(
-                    sitecol, rupture, filter_sites=False)
+                    sitecol, rupture, distance_type, filter_sites=False)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
@@ -284,9 +283,9 @@ class ContextMaker(object):
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
-            closest_points = rupture.surface.get_closest_points(sitemesh)
+            closest_points = rupture.surface.get_closest_points(sitecol)
             acc['mags'].append(rupture.mag)
-            acc['dists'].append(dctx.rjb)
+            acc['dists'].append(getattr(dctx, distance_type))
             acc['lons'].append(closest_points.lons)
             acc['lats'].append(closest_points.lats)
         return acc
