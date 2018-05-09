@@ -134,49 +134,6 @@ class ContextMaker(object):
             setattr(sctx, param, value)
         return sctx
 
-    def make_rupture_context(self, rupture):
-        """
-        Create context object for given rupture.
-
-        :param rupture:
-            Instance of
-            :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
-            :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-
-        :returns:
-            Rupture parameters as instance of :class:
-            `RuptureContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required rupture parameters is unknown.
-        """
-        rctx = RuptureContext()
-        for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if param == 'mag':
-                value = rupture.mag
-            elif param == 'strike':
-                value = rupture.surface.get_strike()
-            elif param == 'dip':
-                value = rupture.surface.get_dip()
-            elif param == 'rake':
-                value = rupture.rake
-            elif param == 'ztor':
-                value = rupture.surface.get_top_edge_depth()
-            elif param == 'hypo_lon':
-                value = rupture.hypocenter.longitude
-            elif param == 'hypo_lat':
-                value = rupture.hypocenter.latitude
-            elif param == 'hypo_depth':
-                value = rupture.hypocenter.depth
-            elif param == 'width':
-                value = rupture.surface.get_width()
-            else:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(rctx, param, value)
-        return rctx
-
     def filter(self, sites, rupture, filter_distance, filter_sites=True):
         """
         Filter the site collection with respect to the rupture.
@@ -231,7 +188,6 @@ class ContextMaker(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        rctx = self.make_rupture_context(rupture)
         sites, dctx = self.filter(
             sites, rupture, filter_distance, filter_sites)
         sctx = self.make_sites_context(sites)
@@ -239,7 +195,7 @@ class ContextMaker(object):
         fdist_set = set([filter_distance]) if filter_distance else set()
         for param in self.REQUIRES_DISTANCES - fdist_set:
             setattr(dctx, param, get_distances(rupture, mesh, param))
-        return sctx, rctx, dctx
+        return sctx, rupture, dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -902,6 +858,7 @@ class DistancesContext(BaseContext):
         return ctx
 
 
+# mock of a rupture used in the tests only
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
@@ -916,8 +873,7 @@ class RuptureContext(BaseContext):
     """
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc'
-    )
+        'hypo_depth', 'width', 'hypo_loc')
 
 
 class CoeffsTable(object):
