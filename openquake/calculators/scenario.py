@@ -53,12 +53,11 @@ class ScenarioCalculator(base.HazardCalculator):
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
         cmaker = ContextMaker(self.gsims, oq.maximum_distance)
-        sctx, rctx, dctx = cmaker.make_contexts(self.sitecol, rup)
-        self.sitecol = self.sitecol.filtered(sctx.sids)
+        self.sitecol, dctx = cmaker.make_contexts(self.sitecol, rup)
         n = oq.number_of_ground_motion_fields
         events = numpy.zeros(n, readinput.stored_event_dt)
         events['eid'] = numpy.arange(n)
-        ebr = EBRupture(rup, sctx.sids, events)
+        ebr = EBRupture(rup, self.sitecol.sids, events)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
