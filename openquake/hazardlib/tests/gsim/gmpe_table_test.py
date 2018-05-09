@@ -28,7 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, AmplificationTable, hdf_arrays_to_dict)
 from openquake.hazardlib.gsim.base import (
-    RuptureContext, SitesContext, DistancesContext)
+    FakeRupture, FakeSitecol, DistancesContext)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
@@ -163,7 +163,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         Test the retrieval of the mean amplification tables for a given
         magnitude and IMT
         """
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         # PGA
         expected_table = np.ones([10, 2])
@@ -191,7 +191,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         Test the retrieval of the standard deviation modification tables
         for a given magnitude and IMT
         """
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         # PGA
         expected_table = np.ones([10, 2])
@@ -211,7 +211,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Tests the amplification tables
         """
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         dctx = DistancesContext()
         # Takes distances at the values found in the table (not checking
@@ -219,7 +219,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         dctx.rjb = np.copy(self.amp_table.distances[:, 0, 0])
         # Test Vs30 is 700.0 m/s midpoint between the 400 m/s and 1000 m/s
         # specified in the table
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         sctx.vs30 = 700.0 * np.ones_like(dctx.rjb)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.ones_like(dctx.rjb)
@@ -297,7 +297,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         """
         Tests the amplification tables
         """
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.rake = 45.0
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -306,7 +306,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         dctx.rjb = np.copy(self.amp_table.distances[:, 0, 0])
         # Test Vs30 is 700.0 m/s midpoint between the 400 m/s and 1000 m/s
         # specified in the table
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.ones_like(dctx.rjb)
         # Check PGA and PGV
@@ -496,12 +496,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         dctx = DistancesContext()
         # Test values at the given distances and those outside range
         dctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         sctx.vs30 = 1000. * np.ones(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
@@ -533,12 +533,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         dctx = DistancesContext()
         # Test values at the given distances and those outside range
         dctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         sctx.vs30 = 100. * np.ones(5)
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20., 20., 10., 5., 1.0E-19])
@@ -562,12 +562,12 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         type
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         dctx = DistancesContext()
         # Test values at the given distances and those outside range
         dctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         sctx.vs30 = 1000. * np.ones(5)
         stddevs = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT]
         with self.assertRaises(ValueError) as ve:
@@ -635,13 +635,13 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         rctx.rake = 90.0
         dctx = DistancesContext()
         # Test values at the given distances and those outside range
         dctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([20.0, 20.0, 10.0, 5.0, 1.0E-19])
         # PGA
@@ -698,12 +698,12 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         Tests mean and standard deviations without amplification
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 6.0
         dctx = DistancesContext()
         # Test values at the given distances and those outside range
         dctx.rjb = np.array([0.5, 1.0, 10.0, 100.0, 500.0])
-        sctx = SitesContext()
+        sctx = FakeSitecol()
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.array([2.0, 2.0, 1.0, 0.5, 1.0E-20])
         # PGA

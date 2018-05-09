@@ -26,7 +26,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.gsim.base import (
-    SitesContext, RuptureContext, DistancesContext
+    FakeSitecol, FakeRupture, DistancesContext
 )
 
 import numpy
@@ -57,8 +57,8 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         )
 
     def test_mag_dist_outside_range(self):
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
 
         # rupture with Mw = 3 (Mblg=2.9434938048208452) at rhypo = 1 must give
@@ -96,8 +96,8 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
 
     def test_dist_not_in_increasing_order(self):
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
 
         rctx.mag = 5.
