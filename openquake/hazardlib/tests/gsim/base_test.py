@@ -27,7 +27,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
     GMPE, IPE, CoeffsTable, FakeSitecol, FakeRupture, DistancesContext,
     NotVerifiedWarning, DeprecationWarning)
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.site import Site, SiteCollection
@@ -239,35 +238,31 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                 self.call_counts['get_dip'] += 1
                 return 45.4545
 
-            def get_min_distance(fake_surface, mesh):
-                self.assertIsInstance(mesh, Mesh)
-                [point1, point2] = mesh
-                self.assertEqual(point1, self.site1_location)
-                self.assertEqual(point2, self.site2_location)
+            def get_min_distance(fake_surface, sitecol):
+                [point1, point2] = sitecol
+                self.assertEqual(point1.location, self.site1_location)
+                self.assertEqual(point2.location, self.site2_location)
                 fake_surface.call_counts['get_min_distance'] += 1
                 return min_distance
 
-            def get_rx_distance(fake_surface, mesh):
-                self.assertIsInstance(mesh, Mesh)
-                [point1, point2] = mesh
-                self.assertEqual(point1, self.site1_location)
-                self.assertEqual(point2, self.site2_location)
+            def get_rx_distance(fake_surface, sitecol):
+                [point1, point2] = sitecol
+                self.assertEqual(point1.location, self.site1_location)
+                self.assertEqual(point2.location, self.site2_location)
                 fake_surface.call_counts['get_rx_distance'] += 1
                 return rx_distance
 
-            def get_ry0_distance(fake_surface, mesh):
-                self.assertIsInstance(mesh, Mesh)
-                [point1, point2] = mesh
-                self.assertEqual(point1, self.site1_location)
-                self.assertEqual(point2, self.site2_location)
+            def get_ry0_distance(fake_surface, sitecol):
+                [point1, point2] = sitecol
+                self.assertEqual(point1.location, self.site1_location)
+                self.assertEqual(point2.location, self.site2_location)
                 fake_surface.call_counts['get_ry0_distance'] += 1
                 return ry0_distance
 
-            def get_joyner_boore_distance(fake_surface, mesh):
-                self.assertIsInstance(mesh, Mesh)
-                [point1, point2] = mesh
-                self.assertEqual(point1, self.site1_location)
-                self.assertEqual(point2, self.site2_location)
+            def get_joyner_boore_distance(fake_surface, sitecol):
+                [point1, point2] = sitecol
+                self.assertEqual(point1.location, self.site1_location)
+                self.assertEqual(point2.location, self.site2_location)
                 fake_surface.call_counts['get_joyner_boore_distance'] += 1
                 return jb_distance
 
