@@ -388,12 +388,14 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         Method must be implemented by subclasses.
 
         :param sites:
-            Instance of :class:`FakeSitecol` with parameters of sites
+            Instance of :class:`openquake.hazardlib.site.SiteCollection`
+            with parameters of sites
             collection assigned to respective values as numpy arrays.
             Only those attributes that are listed in class'
             :attr:`REQUIRES_SITES_PARAMETERS` set are available.
         :param rup:
-            Instance of :class:`FakeRupture` with parameters of a rupture
+            Instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
+            with parameters of a rupture
             assigned to respective values. Only those attributes that are
             listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
             available.
