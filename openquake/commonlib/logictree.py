@@ -54,7 +54,7 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
-class SourceModel(object):
+class LtSourceModel(object):
     """
     A container of SourceGroup instances with some additional attributes
     describing the source model in the logic tree.
@@ -462,11 +462,11 @@ class FakeSmlt(object):
 
     def gen_source_models(self, gsim_lt):
         """
-        Yield the underlying SourceModel, multiple times if there is sampling
+        Yield the underlying LtSourceModel, multiple times if there is sampling
         """
         num_gsim_paths = 1 if self.num_samples else gsim_lt.get_num_paths()
         for i, rlz in enumerate(self):
-            yield SourceModel(
+            yield LtSourceModel(
                 rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
 
     def make_apply_uncertainties(self, branch_ids):
@@ -643,7 +643,7 @@ class SourceModelLogicTree(object):
 
     def gen_source_models(self, gsim_lt):
         """
-        Yield empty SourceModel instances (one per effective realization)
+        Yield empty LtSourceModel instances (one per effective realization)
         """
         samples_by_lt_path = self.samples_by_lt_path()
         for i, rlz in enumerate(get_effective_rlzs(self)):
@@ -651,7 +651,7 @@ class SourceModelLogicTree(object):
             num_samples = samples_by_lt_path[smpath]
             num_gsim_paths = (num_samples if self.num_samples
                               else gsim_lt.get_num_paths())
-            yield SourceModel(
+            yield LtSourceModel(
                 rlz.value, rlz.weight / num_samples, smpath, [],
                 num_gsim_paths, i, num_samples)
 
