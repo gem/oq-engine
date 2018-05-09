@@ -433,7 +433,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
