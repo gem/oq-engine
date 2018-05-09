@@ -32,7 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+from openquake.hazardlib.gsim.base import (FakeSitecol, FakeRupture,
                                            DistancesContext)
 from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
                                      RSD595, RSD2080)
@@ -198,7 +198,7 @@ def _parse_csv(datafile, debug):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+    sattrs = [slot for slot in FakeSitecol._slots_ if hasattr(sctx, slot)]
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
@@ -208,7 +208,7 @@ def _parse_csv(datafile, debug):
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
                 and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
-                        for slot in RuptureContext._slots_):
+                        for slot in FakeRupture._slots_):
             for slot in sattrs:
                 setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
                                                   getattr(sctx2, slot))))
@@ -238,12 +238,12 @@ def _parse_csv_line(headers, values):
         A tuple of the following values (in specified order):
 
         sctx
-            An instance of :class:`openquake.hazardlib.gsim.base.SitesContext`
+            An instance of :class:`openquake.hazardlib.gsim.base.FakeSitecol`
             with attributes populated by the information from in row in a form
             of single-element numpy arrays.
         rctx
             An instance of
-            :class:`openquake.hazardlib.gsim.base.RuptureContext`.
+            :class:`openquake.hazardlib.gsim.base.FakeRupture`.
         dctx
             An instance of
             :class:`openquake.hazardlib.gsim.base.DistancesContext`.
@@ -259,8 +259,8 @@ def _parse_csv_line(headers, values):
             A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
             is taken from column ``result_type``.
     """
-    rctx = RuptureContext()
-    sctx = SitesContext()
+    rctx = FakeRupture()
+    sctx = FakeSitecol()
     dctx = DistancesContext()
     expected_results = {}
     stddev_types = result_type = damping = None

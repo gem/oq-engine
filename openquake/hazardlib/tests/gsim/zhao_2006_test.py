@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SSlabNSHMP2014,
                                                 ZhaoEtAl2006SInterCascadia,
                                                 ZhaoEtAl2006SSlabCascadia)
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+from openquake.hazardlib.gsim.base import (FakeSitecol, FakeRupture,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
@@ -118,8 +118,8 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
         # the slab correction term has a singularity). In this case the
         # method should return values equal to the ones obtained by
         # replacing 0 values with 0.1
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
         setattr(sctx, 'vs30', numpy.array([800.0, 800.0]))
         setattr(rctx, 'mag', 5.0)

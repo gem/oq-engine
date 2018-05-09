@@ -19,7 +19,7 @@
 from openquake.hazardlib.gsim.cauzzi_faccioli_2008 import CauzziFaccioli2008
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+from openquake.hazardlib.gsim.base import (FakeSitecol, FakeRupture,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
@@ -44,8 +44,8 @@ class CauzziFaccioli2008TestCase(BaseGSIMTestCase):
         # (for rhypo=0 the distance term has a singularity). In this case the
         # method should return values equal to the ones obtained by clipping
         # distances at 15 km.
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
         setattr(sctx, 'vs30', numpy.array([800.0, 800.0, 800.0]))
         setattr(rctx, 'mag', 5.0)

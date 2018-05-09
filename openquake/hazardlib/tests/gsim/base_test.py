@@ -25,7 +25,7 @@ from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, CoeffsTable, SitesContext, RuptureContext, DistancesContext,
+    GMPE, IPE, CoeffsTable, FakeSitecol, FakeRupture, DistancesContext,
     NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
@@ -65,8 +65,8 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
     def _get_poes(self, **kwargs):
         default_kwargs = dict(
-            sctx=SitesContext(),
-            rctx=RuptureContext(),
+            sctx=FakeSitecol(),
+            rctx=FakeRupture(),
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
             imls=[1.0, 2.0, 3.0],
@@ -360,13 +360,13 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
 class ContextTestCase(unittest.TestCase):
     def test_equality(self):
-        sctx1 = SitesContext()
+        sctx1 = FakeSitecol()
         sctx1.vs30 = numpy.array([500., 600., 700.])
         sctx1.vs30measured = True
         sctx1.z1pt0 = numpy.array([40., 50., 60.])
         sctx1.z2pt5 = numpy.array([1, 2, 3])
 
-        sctx2 = SitesContext()
+        sctx2 = FakeSitecol()
         sctx2.vs30 = numpy.array([500., 600., 700.])
         sctx2.vs30measured = True
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
@@ -374,7 +374,7 @@ class ContextTestCase(unittest.TestCase):
 
         self.assertTrue(sctx1 == sctx2)
 
-        sctx2 = SitesContext()
+        sctx2 = FakeSitecol()
         sctx2.vs30 = numpy.array([500., 600.])
         sctx2.vs30measured = True
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
@@ -382,7 +382,7 @@ class ContextTestCase(unittest.TestCase):
 
         self.assertTrue(sctx1 != sctx2)
 
-        sctx2 = SitesContext()
+        sctx2 = FakeSitecol()
         sctx2.vs30 = numpy.array([500., 600., 700.])
         sctx2.vs30measured = False
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
@@ -390,14 +390,14 @@ class ContextTestCase(unittest.TestCase):
 
         self.assertTrue(sctx1 != sctx2)
 
-        sctx2 = SitesContext()
+        sctx2 = FakeSitecol()
         sctx2.vs30 = numpy.array([500., 600., 700.])
         sctx2.vs30measured = True
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
 
         self.assertTrue(sctx1 != sctx2)
 
-        rctx = RuptureContext()
+        rctx = FakeRupture()
         rctx.mag = 5.
         self.assertTrue(sctx1 != rctx)
 
