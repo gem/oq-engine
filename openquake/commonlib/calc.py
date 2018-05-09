@@ -332,8 +332,7 @@ class RuptureData(object):
         data = []
         for ebr in ebruptures:
             rup = ebr.rupture
-            rc = self.cmaker.make_rupture_context(rup)
-            ruptparams = tuple(getattr(rc, param) for param in self.params)
+            ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
             bounds = ','.join('((%s))' % ','.join(

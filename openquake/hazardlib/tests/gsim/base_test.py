@@ -34,6 +34,8 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 
+aac = numpy.testing.assert_allclose
+
 
 class _FakeGSIMTestCase(unittest.TestCase):
     DEFAULT_IMT = PGA
@@ -68,8 +70,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
             imls=[1.0, 2.0, 3.0],
-            truncation_level=1.0
-        )
+            truncation_level=1.0)
         default_kwargs.update(kwargs)
         kwargs = default_kwargs
         return self.gsim.get_poes(**kwargs)
@@ -83,8 +84,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
 class GetPoEsTestCase(_FakeGSIMTestCase):
     def test_no_truncation(self):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
+            const.StdDev.TOTAL)
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             self.assertEqual(imt, self.DEFAULT_IMT())
@@ -117,15 +117,13 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertEqual(list(poes), expected_poes)
 
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
+            const.StdDev.TOTAL)
         [poes] = self._get_poes(imt=imt, imls=imls, truncation_level=0)
         self.assertEqual(list(poes), expected_poes)
 
     def test_truncated(self):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
+            const.StdDev.TOTAL)
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
@@ -143,8 +141,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
 
     def test_several_contexts(self):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
-            const.StdDev.TOTAL
-        )
+            const.StdDev.TOTAL)
         mean_stddev = numpy.array([[3, 4], [5, 6]])
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
@@ -209,7 +206,7 @@ class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
 
 class MakeContextsTestCase(_FakeGSIMTestCase):
     def setUp(self):
-        super(MakeContextsTestCase, self).setUp()
+        super().setUp()
         self.site1_location = Point(1, 2)
         self.site2_location = Point(-2, -3)
         self.site1 = Site(vs30=456, vs30measured=False,
@@ -294,20 +291,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         return ContextMaker([self.gsim_class]).make_contexts(
             site_collection, rupture)
 
-    def test_unknown_site_param_error(self):
-        self.gsim_class.REQUIRES_SITES_PARAMETERS.add('unknown!')
-        err = "ContextMaker requires unknown site parameter 'unknown!'"
-        sites = SiteCollection([self.site1, self.site2])
-        self._assert_value_error(self.make_contexts, err,
-                                 site_collection=sites, rupture=self.rupture)
-
-    def test_unknown_rupture_param_error(self):
-        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
-        err = "ContextMaker requires unknown rupture parameter 'stuff'"
-        sites = SiteCollection([self.site1])
-        self._assert_value_error(self.make_contexts, err,
-                                 site_collection=sites, rupture=self.rupture)
-
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES.add('jump height')
         err = "Unknown distance measure 'jump height'"
@@ -317,20 +300,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set(
-            'rjb rx rrup repi rhypo ry0 azimuth'.split()
-        )
+            'rjb rx rrup repi rhypo ry0 azimuth'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
-            split()
-        )
+            split())
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
-            'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
-        )
+            'vs30 vs30measured z1pt0 z2pt5 lons lats'.split())
         sites = SiteCollection([self.site1, self.site2])
         sctx, rctx, dctx = self.make_contexts(sites, self.rupture)
-        self.assertIsInstance(sctx, SitesContext)
-        self.assertIsInstance(rctx, RuptureContext)
-        self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.strike, 60.123)
@@ -340,21 +317,19 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.hypo_lat, 3)
         self.assertEqual(rctx.hypo_depth, 40)
         self.assertEqual(rctx.width, 15)
-        self.assertTrue((sctx.vs30 == [456, 1456]).all())
-        self.assertTrue((sctx.vs30measured == [False, True]).all())
-        self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
-        self.assertTrue((sctx.z2pt5 == [15.1, 115.1]).all())
-        self.assertTrue((sctx.lons == [1, -2]).all())
-        self.assertTrue((sctx.lats == [2, -3]).all())
-        self.assertTrue((dctx.rjb == [6, 7]).all())
-        self.assertTrue((dctx.rx == [4, 5]).all())
-        self.assertTrue((dctx.ry0 == [8, 9]).all())
-        self.assertTrue((dctx.rrup == [10, 11]).all())
-        self.assertTrue((dctx.azimuth == [12, 34]).all())
-        numpy.testing.assert_almost_equal(dctx.rhypo,
-                                          [162.18749272, 802.72247682])
-        numpy.testing.assert_almost_equal(dctx.repi,
-                                          [157.17755181, 801.72524895])
+        aac(sctx.vs30, [456, 1456])
+        aac(sctx.vs30measured, [False, True])
+        aac(sctx.z1pt0, [12.1, 112.1])
+        aac(sctx.z2pt5, [15.1, 115.1])
+        aac(sctx.lons, [1, -2])
+        aac(sctx.lats, [2, -3])
+        aac(dctx.rjb, [6, 7])
+        aac(dctx.rx, [4, 5])
+        aac(dctx.ry0, [8, 9])
+        aac(dctx.rrup, [10, 11])
+        aac(dctx.azimuth, [12, 34])
+        aac(dctx.rhypo, [162.18749272, 802.72247682])
+        aac(dctx.repi, [157.17755181, 801.72524895])
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
@@ -372,21 +347,11 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         sctx, rctx, dctx = self.make_contexts(sites, self.rupture)
         self.assertEqual(
             (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
-            (123.45, 123.56, 60.123, 2)
-        )
-        self.assertTrue((sctx.vs30 == (456, 1456)).all())
-        self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
-        self.assertTrue((sctx.lons == [1, -2]).all())
-        self.assertTrue((dctx.rx == (4, 5)).all())
-        self.assertFalse(hasattr(rctx, 'dip'))
-        self.assertFalse(hasattr(rctx, 'hypo_lat'))
-        self.assertFalse(hasattr(rctx, 'hypo_depth'))
-        self.assertFalse(hasattr(sctx, 'vs30measured'))
-        self.assertFalse(hasattr(sctx, 'z2pt0'))
-        self.assertFalse(hasattr(dctx, 'rrup'))
-        self.assertFalse(hasattr(dctx, 'azimuth'))
-        self.assertFalse(hasattr(dctx, 'ztor'))
-        self.assertFalse(hasattr(dctx, 'width'))
+            (123.45, 123.56, 60.123, 2))
+        aac(sctx.vs30, (456, 1456))
+        aac(sctx.z1pt0, (12.1, 112.1))
+        aac(sctx.lons, [1, -2])
+        aac(dctx.rx, (4, 5))
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1,
