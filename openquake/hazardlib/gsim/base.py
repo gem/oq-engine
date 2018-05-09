@@ -28,7 +28,6 @@ import sys
 import math
 import warnings
 import functools
-import contextlib
 from scipy.special import ndtr
 import numpy
 
@@ -40,12 +39,6 @@ from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.calc.filters import (
     IntegrationDistance, get_distances, FarAwayRupture)
 from openquake.hazardlib.probability_map import ProbabilityMap
-
-
-class NonInstantiableError(Exception):
-    """
-    Raised when a non instantiable GSIM is called
-    """
 
 
 class NotVerifiedWarning(UserWarning):
@@ -69,21 +62,16 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass controlling the instantiation mechanism.  A subclass with
-    instantiable=False will raise a NonInstantiableError when directly
-    instantiated. A GroundShakingIntensityModel subclass with an
+    Metaclass controlling the instantiation mechanism.
+    A GroundShakingIntensityModel subclass with an
     attribute deprecated=True will print a deprecation warning when
     instantiated. A subclass with an attribute non_verified=True will
     print a UserWarning.
     """
-    instantiable = True
     deprecated = False
     non_verified = False
 
     def __call__(cls, **kwargs):
-        if not cls.instantiable:
-            raise NonInstantiableError(
-                '%s cannot be directly instantiated in this context' % cls)
         if cls.deprecated:
             msg = '%s is deprecated - use %s instead' % (
                 cls.__name__, cls.__base__.__name__)
@@ -92,24 +80,9 @@ class MetaGSIM(abc.ABCMeta):
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
-        self = super(MetaGSIM, cls).__call__(**kwargs)
+        self = super().__call__(**kwargs)
         self.kwargs = kwargs
         return self
-
-    # NB: the idea is to use this context manager inside the oqtask
-    # decorator in the engine, so that GSIM classes cannot be directly
-    # instantiated in the workers; however, they can still be
-    # instantiated indirectly via __new__, so that unpickling works
-    @contextlib.contextmanager
-    def forbid_instantiation(cls):
-        """
-        Make the class and all its subclassed not directly instantiable
-        """
-        cls.instantiable = False
-        try:
-            yield
-        finally:
-            cls.instantiable = True
 
 
 class ContextMaker(object):
@@ -119,7 +92,6 @@ class ContextMaker(object):
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
     def __init__(self, gsims, maximum_distance=IntegrationDistance(None)):
-        assert gsims
         self.gsims = gsims
         self.maximum_distance = maximum_distance
         for req in self.REQUIRES:
