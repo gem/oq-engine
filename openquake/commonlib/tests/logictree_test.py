@@ -164,7 +164,7 @@ def _whatever_sourcemodel_lt(sourcemodel_filename):
     """ % sourcemodel_filename)
 
 
-class LtSourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
+class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
     def _assert_logic_tree_error(self, filename, files, basepath,
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
@@ -1124,7 +1124,7 @@ class LtSourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     "wrong exception message: %s" % exc.message)
 
 
-class LtSourceModelLogicTreeTestCase(unittest.TestCase):
+class SourceModelLogicTreeTestCase(unittest.TestCase):
     def assert_branch_equal(self, branch, branch_id, weight_str, value,
                             child_branchset_args=None):
         self.assertEqual(type(branch), logictree.Branch)
