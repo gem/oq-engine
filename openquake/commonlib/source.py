@@ -652,7 +652,7 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.hazardlib.sourceconverter.LtSourceModel`
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
