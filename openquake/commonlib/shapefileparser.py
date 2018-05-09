@@ -799,7 +799,7 @@ def build_complex_fault_source_from_shp(shape, record):
     return Node("complexFaultSource", attribs, nodes=nodes)
 
 
-class LtSourceModel(object):
+class SourceModel(object):
     """
     A collection of sources
     """
@@ -893,7 +893,7 @@ class LtSourceModel(object):
             yield source
 
 
-class LtSourceModelParser(object):
+class SourceModelParser(object):
     """
     Base class executes simple export to NRML
     """
@@ -928,7 +928,7 @@ class LtSourceModelParser(object):
                     print("Validating Source %s" % src_node.attrib["id"])
                     converter.convert_node(src_node)
                 sources.append(src_node)
-        return LtSourceModel(sources)
+        return SourceModel(sources)
 
     def write(self, destination, source_model, name=None):
         """
@@ -952,7 +952,7 @@ class LtSourceModelParser(object):
             nrml.write([output_source_model], f, "%s")
 
 
-class ShapefileParser(LtSourceModelParser):
+class ShapefileParser(SourceModelParser):
     def filter_params(self, src_mod):
         """
         Remove params uneeded by source_model
@@ -1023,7 +1023,7 @@ class ShapefileParser(LtSourceModelParser):
                 converter.convert_node(src)
             if src:
                 sources.append(src)
-        return LtSourceModel(sources)
+        return SourceModel(sources)
 
     def write(self, destination, source_model, name=None):
         """
