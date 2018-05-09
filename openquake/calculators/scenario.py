@@ -53,7 +53,7 @@ class ScenarioCalculator(base.HazardCalculator):
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
         cmaker = ContextMaker(self.gsims, oq.maximum_distance)
-        self.sitecol, dctx = cmaker.make_contexts(self.sitecol, rup)
+        self.sitecol, dctx = cmaker.filter(self.sitecol, rup)
         n = oq.number_of_ground_motion_fields
         events = numpy.zeros(n, readinput.stored_event_dt)
         events['eid'] = numpy.arange(n)
