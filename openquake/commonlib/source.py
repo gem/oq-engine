@@ -368,7 +368,7 @@ class CompositionInfo(object):
     a composite source model.
 
     :param source_model_lt: a SourceModelLogicTree object
-    :param source_models: a list of SourceModel instances
+    :param source_models: a list of LtSourceModel instances
     """
     @classmethod
     def fake(cls, gsimlt=None):
@@ -379,7 +379,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
-        fakeSM = logictree.SourceModel(
+        fakeSM = logictree.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -505,7 +505,7 @@ class CompositionInfo(object):
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
-            sm = logictree.SourceModel(
+            sm = logictree.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
@@ -517,7 +517,7 @@ class CompositionInfo(object):
 
     def get_num_rlzs(self, source_model=None):
         """
-        :param source_model: a SourceModel instance (or None)
+        :param source_model: a LtSourceModel instance (or None)
         :returns: the number of realizations per source model (or all)
         """
         if source_model is None:
@@ -652,7 +652,7 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
+        a list of :class:`openquake.hazardlib.sourceconverter.LtSourceModel`
         tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
@@ -753,7 +753,7 @@ class CompositeSourceModel(collections.Sequence):
                 for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
                 src_groups.append(sg)
-            newsm = logictree.SourceModel(
+            newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
