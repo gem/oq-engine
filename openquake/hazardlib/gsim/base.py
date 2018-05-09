@@ -761,10 +761,8 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
                 self_other = [
                     numpy.all(
                         getattr(self, s, None) == getattr(other, s, None))
-                    for s in self._slots_
-                ]
+                    for s in self._slots_]
                 return numpy.all(self_other)
-
         return False
 
 
@@ -785,10 +783,10 @@ class SitesContext(BaseContext):
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
                'lons', 'lats', 'sids')
 
-    def __init__(self, obj=None):
-        if obj is not None:
+    def __init__(self, sitecol=None):
+        if sitecol is not None:
             for name in self._slots_:
-                setattr(self, name, getattr(obj, name))
+                setattr(self, name, getattr(sitecol, name))
 
 
 class DistancesContext(BaseContext):
