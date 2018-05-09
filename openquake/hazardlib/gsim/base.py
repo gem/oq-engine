@@ -328,7 +328,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
     #: Those attributes are then available in the
-    #: :class:`FakeSitecol` object with the same names.
+    #: :class:`SitesContext` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -346,7 +346,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     Depth of rupture's top edge in km. See
     #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
-    #: These parameters are available from the :class:`FakeRupture` object
+    #: These parameters are available from the :class:`RuptureContext` object
     #: attributes with same names.
     REQUIRES_RUPTURE_PARAMETERS = abc.abstractproperty()
 
@@ -441,10 +441,10 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         for one or more pairs "site -- rupture".
 
         :param sctx:
-            An instance of :class:`FakeSitecol` with sites information
+            An instance of :class:`SitesContext` with sites information
             to calculate PoEs on.
         :param rctx:
-            An instance of :class:`FakeRupture` with a single rupture
+            An instance of :class:`RuptureContext` with a single rupture
             information.
         :param dctx:
             An instance of :class:`DistancesContext` with information about
@@ -768,8 +768,8 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
         return False
 
 
-# mock of a site collection used in the tests only
-class FakeSitecol(BaseContext):
+# mock of a site collection used in the tests and in the SMTK
+class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
 
@@ -824,8 +824,8 @@ class DistancesContext(BaseContext):
         return ctx
 
 
-# mock of a rupture used in the tests only
-class FakeRupture(BaseContext):
+# mock of a rupture used in the tests and in the SMTK
+class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
