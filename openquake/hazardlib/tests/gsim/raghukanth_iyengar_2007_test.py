@@ -69,8 +69,8 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
         Warning should be thrown for any vs30 below limit for NEHRP class D.
         """
 
-        rctx = gsim.base.FakeRupture()
-        sctx = gsim.base.FakeSitecol()
+        rctx = gsim.base.RuptureContext()
+        sctx = gsim.base.SitesContext()
         dctx = gsim.base.DistancesContext()
 
         # set reasonable default values
