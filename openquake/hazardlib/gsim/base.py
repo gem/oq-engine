@@ -154,7 +154,8 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             setattr(dctx, param, get_distances(rupture, sites, param))
-        return sites, dctx
+        # NB: returning a SitesContext makes .get_poes faster
+        return SitesContext(sites), dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -759,8 +760,7 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
             if self._slots_ == other._slots_:
                 self_other = [
                     numpy.all(
-                        getattr(self, s, None) == getattr(other, s, None)
-                    )
+                        getattr(self, s, None) == getattr(other, s, None))
                     for s in self._slots_
                 ]
                 return numpy.all(self_other)
@@ -783,7 +783,12 @@ class SitesContext(BaseContext):
     """
     # _slots_ is used in hazardlib check_gsim, but not in the engine
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats')
+               'lons', 'lats', 'sids')
+
+    def __init__(self, obj=None):
+        if obj is not None:
+            for name in self._slots_:
+                setattr(self, name, getattr(obj, name))
 
 
 class DistancesContext(BaseContext):
@@ -995,7 +1000,7 @@ class CoeffsTable(object):
             imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
             try:
                 sa_period = float(imt_name)
-            except:
+            except Exception:
                 if not hasattr(imt_module, imt_name):
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = getattr(imt_module, imt_name)()
