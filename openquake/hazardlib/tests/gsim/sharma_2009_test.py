@@ -76,8 +76,8 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
         Warning should be thrown for normal faulting
         """
 
-        rctx = gsim.base.RuptureContext()
-        sctx = gsim.base.SitesContext()
+        rctx = gsim.base.FakeRupture()
+        sctx = gsim.base.FakeSitecol()
         dctx = gsim.base.DistancesContext()
 
         # set reasonable default values

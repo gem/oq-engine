@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006Mwbar200NSHMP2008,
     AtkinsonBoore2006Modified2011
 )
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+from openquake.hazardlib.gsim.base import (FakeSitecol, FakeRupture,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
@@ -55,8 +55,8 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         # the equations have a singularity). In this case the
         # method should return values equal to the ones obtained by
         # replacing 0 values with 1
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
         setattr(sctx, 'vs30', numpy.array([500.0, 2500.0]))
         setattr(rctx, 'mag', 5.0)

@@ -146,16 +146,11 @@ class ContextMaker(object):
 
         :param filter_distance:
             If True, possibly reduces the site collection before building
-            the :class:`SitesContext`, depending on the value of the
+            the :class:`FakeSitecol`, depending on the value of the
             integration distance for the current rupture.
 
         :returns:
-            Tuple of three items: sites context, rupture context and
-            distances context, that is, instances of
-            :class:`SitesContext`, :class:`RuptureContext` and
-            :class:`DistancesContext` in a specified order. Only those
-            values that are required by GSIM are filled in in
-            contexts.
+            Tuple of two items: sites and distances context.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
@@ -167,7 +162,7 @@ class ContextMaker(object):
         fdist_set = set([filter_distance]) if filter_distance else set()
         for param in self.REQUIRES_DISTANCES - fdist_set:
             setattr(dctx, param, get_distances(rupture, mesh, param))
-        return sites, rupture, dctx
+        return sites, dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -180,7 +175,7 @@ class ContextMaker(object):
         for rup in src.iter_ruptures():
             rup.weight = weight
             try:
-                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
+                rup.sctx, rup.dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             ruptures.append(rup)
@@ -245,7 +240,7 @@ class ContextMaker(object):
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
                 poes = gsim.get_poes(
-                    rupture.sctx, rupture.rctx, dctx,
+                    rupture.sctx, rupture, dctx,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
@@ -272,7 +267,7 @@ class ContextMaker(object):
         for rupture in ruptures:
             with ctx_mon:
                 # do not filter to avoid changing the number of sites
-                sctx, rctx, orig_dctx = self.make_contexts(
+                sctx, orig_dctx = self.make_contexts(
                     sitecol, rupture, filter_sites=False)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
@@ -285,7 +280,7 @@ class ContextMaker(object):
                         except KeyError:
                             with pne_mon:
                                 pne = gsim.disaggregate_pne(
-                                    rupture, sctx, rctx, dctx, imt, iml,
+                                    rupture, sctx, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
@@ -341,7 +336,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
     #: Those attributes are then available in the
-    #: :class:`SitesContext` object with the same names.
+    #: :class:`FakeSitecol` object with the same names.
     REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -359,7 +354,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     #:     Depth of rupture's top edge in km. See
     #:     :meth:`~openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
-    #: These parameters are available from the :class:`RuptureContext` object
+    #: These parameters are available from the :class:`FakeRupture` object
     #: attributes with same names.
     REQUIRES_RUPTURE_PARAMETERS = abc.abstractproperty()
 
@@ -401,12 +396,12 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         Method must be implemented by subclasses.
 
         :param sites:
-            Instance of :class:`SitesContext` with parameters of sites
+            Instance of :class:`FakeSitecol` with parameters of sites
             collection assigned to respective values as numpy arrays.
             Only those attributes that are listed in class'
             :attr:`REQUIRES_SITES_PARAMETERS` set are available.
         :param rup:
-            Instance of :class:`RuptureContext` with parameters of a rupture
+            Instance of :class:`FakeRupture` with parameters of a rupture
             assigned to respective values. Only those attributes that are
             listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
             available.
@@ -452,10 +447,10 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         for one or more pairs "site -- rupture".
 
         :param sctx:
-            An instance of :class:`SitesContext` with sites information
+            An instance of :class:`FakeSitecol` with sites information
             to calculate PoEs on.
         :param rctx:
-            An instance of :class:`RuptureContext` with a single rupture
+            An instance of :class:`FakeRupture` with a single rupture
             information.
         :param dctx:
             An instance of :class:`DistancesContext` with information about
@@ -526,7 +521,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml,
+    def disaggregate_pne(self, rupture, sctx, dctx, imt, iml,
                          truncnorm, epsilons):
         """
         Disaggregate (separate) PoE of ``iml`` in different contributions
@@ -541,7 +536,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             probabilities with shape (n_sites, n_epsilons)
         """
         # compute mean and standard deviations
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+        mean, [stddev] = self.get_mean_and_stddevs(sctx, rupture, dctx, imt,
                                                    [const.StdDev.TOTAL])
 
         # compute iml value with respect to standard (mean=0, std=1)
@@ -780,7 +775,7 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
 
 
 # mock of a site collection used in the tests only
-class SitesContext(BaseContext):
+class FakeSitecol(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
 
@@ -832,7 +827,7 @@ class DistancesContext(BaseContext):
 
 
 # mock of a rupture used in the tests only
-class RuptureContext(BaseContext):
+class FakeRupture(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
