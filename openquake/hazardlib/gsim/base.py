@@ -177,7 +177,7 @@ class ContextMaker(object):
             setattr(rctx, param, value)
         return rctx
 
-    def filter(self, sites, rupture, filter_distance='rjb'):
+    def filter(self, sites, rupture, filter_distance, filter_sites=True):
         """
         Filter the site collection with respect to the rupture.
 
@@ -189,21 +189,20 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        # compute the rjb distance and normally filter with it
-        dctx = DistancesContext()
-        setattr(dctx, filter_distance,
-                get_distances(rupture, sites.mesh, filter_distance))
-        if self.maximum_distance:
-            maxdist = self.maximum_distance(
+        distances = get_distances(rupture, sites.mesh, filter_distance)
+        if self.maximum_distance and filter_sites:
+            mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
-            mask = dctx.rjb <= maxdist
             if mask.any():
-                sites, dctx.rjb = sites.filter(mask), dctx.rjb[mask]
+                sites, distances = sites.filter(mask), distances[mask]
             else:
                 raise FarAwayRupture
+        dctx = DistancesContext()
+        setattr(dctx, filter_distance, distances)
         return sites, dctx
 
-    def make_contexts(self, sites, rupture, filter_distance='rjb'):
+    def make_contexts(self, sites, rupture, filter_distance='rjb',
+                      filter_sites=True):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -233,15 +232,13 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        if self.maximum_distance and filter_distance:
-            sites, dctx = self.filter(sites, rupture)
-        else:
-            dctx = DistancesContext()
+        sites, dctx = self.filter(
+            sites, rupture, filter_distance, filter_sites)
+        sctx = self.make_sites_context(sites)
         mesh = sites.mesh
         fdist_set = set([filter_distance]) if filter_distance else set()
         for param in self.REQUIRES_DISTANCES - fdist_set:
             setattr(dctx, param, get_distances(rupture, mesh, param))
-        sctx = self.make_sites_context(sites)
         return sctx, rctx, dctx
 
     def filter_ruptures(self, src, sites):
