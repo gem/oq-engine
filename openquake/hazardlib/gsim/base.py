@@ -107,33 +107,6 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
 
-    def make_sites_context(self, site_collection):
-        """
-        Create context objects for given site collection
-
-        :param site_collection:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-
-        :returns:
-            Site parameters as instance of :class:
-            `SitesContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required site parameters is unknown.
-
-        """
-        sctx = SitesContext()
-        sctx.sids = site_collection.sids
-        for param in self.REQUIRES_SITES_PARAMETERS:
-            try:
-                value = getattr(site_collection, param)
-            except AttributeError:
-                raise ValueError('%s requires unknown site parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(sctx, param, value)
-        return sctx
-
     def filter(self, sites, rupture, filter_distance, filter_sites=True):
         """
         Filter the site collection with respect to the rupture.
@@ -190,12 +163,11 @@ class ContextMaker(object):
         """
         sites, dctx = self.filter(
             sites, rupture, filter_distance, filter_sites)
-        sctx = self.make_sites_context(sites)
         mesh = sites.mesh
         fdist_set = set([filter_distance]) if filter_distance else set()
         for param in self.REQUIRES_DISTANCES - fdist_set:
             setattr(dctx, param, get_distances(rupture, mesh, param))
-        return sctx, rupture, dctx
+        return sites, rupture, dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -807,6 +779,7 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
         return False
 
 
+# mock of a site collection used in the tests only
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
