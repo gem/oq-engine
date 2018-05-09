@@ -20,7 +20,7 @@ from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (
-    SitesContext, RuptureContext, DistancesContext
+    FakeSitecol, FakeRupture, DistancesContext
 )
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
@@ -52,8 +52,8 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
     def test_mag_greater_8pt5(self):
         gmpe = SadighEtAl1997()
 
-        sctx = SitesContext()
-        rctx = RuptureContext()
+        sctx = FakeSitecol()
+        rctx = FakeRupture()
         dctx = DistancesContext()
 
         rctx.rake =  0.0
