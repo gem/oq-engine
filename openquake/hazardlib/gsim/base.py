@@ -91,14 +91,17 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=IntegrationDistance(None)):
+    def __init__(self, gsims, maximum_distance=IntegrationDistance(None),
+                 filter_distance='rjb'):
         self.gsims = gsims
         self.maximum_distance = maximum_distance
+        self.filter_distance = filter_distance
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        self.REQUIRES_DISTANCES.add(self.filter_distance)
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
             # same TRT, given a realization there is a single gsim
@@ -107,7 +110,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
 
-    def filter(self, sites, rupture, filter_distance, filter_sites=True):
+    def filter(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture.
 
@@ -119,20 +122,17 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rupture, sites, filter_distance)
-        if self.maximum_distance and filter_sites:
+        distances = get_distances(rupture, sites, self.filter_distance)
+        if self.maximum_distance:
             mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             if mask.any():
                 sites, distances = sites.filter(mask), distances[mask]
             else:
                 raise FarAwayRupture
-        dctx = DistancesContext()
-        setattr(dctx, filter_distance, distances)
-        return sites, dctx
+        return sites, DistancesContext([(self.filter_distance, distances)])
 
-    def make_contexts(self, sites, rupture, filter_distance='rjb',
-                      filter_sites=True):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -144,11 +144,6 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param filter_distance:
-            If True, possibly reduces the site collection before building
-            the :class:`FakeSitecol`, depending on the value of the
-            integration distance for the current rupture.
-
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -156,10 +151,8 @@ class ContextMaker(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        sites, dctx = self.filter(
-            sites, rupture, filter_distance, filter_sites)
-        fdist_set = set([filter_distance]) if filter_distance else set()
-        for param in self.REQUIRES_DISTANCES - fdist_set:
+        sites, dctx = self.filter(sites, rupture)
+        for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             setattr(dctx, param, get_distances(rupture, sites, param))
         return sites, dctx
 
@@ -262,12 +255,11 @@ class ContextMaker(object):
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
-        distance_type = 'rjb'
         for rupture in ruptures:
             with ctx_mon:
-                # build the distance but do not filter the sites
-                sctx, orig_dctx = self.make_contexts(
-                    sitecol, rupture, distance_type, filter_sites=False)
+                orig_dctx = DistancesContext(
+                    (param, get_distances(rupture, sitecol, param))
+                    for param in self.REQUIRES_DISTANCES)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
@@ -279,13 +271,13 @@ class ContextMaker(object):
                         except KeyError:
                             with pne_mon:
                                 pne = gsim.disaggregate_pne(
-                                    rupture, sctx, dctx, imt, iml,
+                                    rupture, sitecol, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
             closest_points = rupture.surface.get_closest_points(sitecol)
             acc['mags'].append(rupture.mag)
-            acc['dists'].append(getattr(dctx, distance_type))
+            acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
             acc['lats'].append(closest_points.lats)
         return acc
@@ -805,6 +797,10 @@ class DistancesContext(BaseContext):
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
+
+    def __init__(self, param_dist_pairs=()):
+        for param, dist in param_dist_pairs:
+            setattr(self, param, dist)
 
     def roundup(self, minimum_distance):
         """
