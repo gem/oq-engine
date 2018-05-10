@@ -48,16 +48,17 @@ F64 = numpy.float64
 
 def cached_property(method):
     """
+    :param method: a method without arguments except self
     :returns: a cached property
     """
-    _name = '_' + method.__name__
+    name = method.__name__
 
     def newmethod(self):
         try:
-            val = getattr(self, _name)
-        except AttributeError:
+            val = self.__dict__[name]
+        except KeyError:
             val = method(self)
-            setattr(self, _name, val)
+            self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
     return property(newmethod)
