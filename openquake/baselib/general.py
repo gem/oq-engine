@@ -54,7 +54,6 @@ def cached_property(method):
     name = method.__name__
 
     def newmethod(self):
-        print('called************')
         try:
             val = self.__dict__[name]
         except KeyError:
