@@ -121,6 +121,7 @@ producing too small PoEs.'''
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+            self.sitecol = cl.sitecol
 
     def execute(self):
         """Performs the disaggregation"""
