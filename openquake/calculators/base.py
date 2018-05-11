@@ -408,7 +408,8 @@ class HazardCalculator(BaseCalculator):
             self.init()
         else:  # we are in a basic calculator
             self.read_inputs()
-        self.datastore['sitecol'] = self.sitecol
+        if hasattr(self, 'sitecol'):
+            self.datastore['sitecol'] = self.sitecol
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
