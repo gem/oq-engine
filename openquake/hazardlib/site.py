@@ -379,10 +379,9 @@ class SiteCollection(object):
                         'depths sids'):
             raise AttributeError(name)
         if self.indices is None:
-            idx = slice(None)
+            return self.array[name]
         else:
-            idx = self.indices
-        return self.array[idx][name]
+            return self.array[self.indices][name]
 
     def __len__(self):
         """
