@@ -190,8 +190,8 @@ def _build_eb_ruptures(
         rup.serial = rup.seed - random_seed + 1
         with rup_mon:
             try:
-                rup.ctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.ctx[0].sids
+                rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
+                indices = rup.sctx.sids
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory
