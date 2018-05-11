@@ -280,6 +280,7 @@ class SiteCollection(object):
         """True if all depths are zero"""
         return (self.depths == 0).all()
 
+    # used in the engine when computing the hazard statistics
     def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles (SiteCollection instances).
@@ -387,5 +388,5 @@ class SiteCollection(object):
 
     def __repr__(self):
         total_sites = len(self.array)
-        return '<SiteCollection with %d/%d sites%s>' % (
+        return '<SiteCollection with %d/%d sites>' % (
             len(self), total_sites)
