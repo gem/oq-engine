@@ -91,14 +91,17 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=IntegrationDistance(None)):
+    def __init__(self, gsims, maximum_distance=IntegrationDistance(None),
+                 filter_distance='rjb'):
         self.gsims = gsims
         self.maximum_distance = maximum_distance
+        self.filter_distance = filter_distance
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        self.REQUIRES_DISTANCES.add(self.filter_distance)
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
             # same TRT, given a realization there is a single gsim
@@ -107,77 +110,7 @@ class ContextMaker(object):
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
 
-    def make_sites_context(self, site_collection):
-        """
-        Create context objects for given site collection
-
-        :param site_collection:
-            Instance of :class:`openquake.hazardlib.site.SiteCollection`.
-
-        :returns:
-            Site parameters as instance of :class:
-            `SitesContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required site parameters is unknown.
-
-        """
-        sctx = SitesContext()
-        sctx.sids = site_collection.sids
-        for param in self.REQUIRES_SITES_PARAMETERS:
-            try:
-                value = getattr(site_collection, param)
-            except AttributeError:
-                raise ValueError('%s requires unknown site parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(sctx, param, value)
-        return sctx
-
-    def make_rupture_context(self, rupture):
-        """
-        Create context object for given rupture.
-
-        :param rupture:
-            Instance of
-            :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
-            :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-
-        :returns:
-            Rupture parameters as instance of :class:
-            `RuptureContext()`. Only those  values that are required by GSIM
-            are filled in this context.
-
-        :raises ValueError:
-            If any of declared required rupture parameters is unknown.
-        """
-        rctx = RuptureContext()
-        for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if param == 'mag':
-                value = rupture.mag
-            elif param == 'strike':
-                value = rupture.surface.get_strike()
-            elif param == 'dip':
-                value = rupture.surface.get_dip()
-            elif param == 'rake':
-                value = rupture.rake
-            elif param == 'ztor':
-                value = rupture.surface.get_top_edge_depth()
-            elif param == 'hypo_lon':
-                value = rupture.hypocenter.longitude
-            elif param == 'hypo_lat':
-                value = rupture.hypocenter.latitude
-            elif param == 'hypo_depth':
-                value = rupture.hypocenter.depth
-            elif param == 'width':
-                value = rupture.surface.get_width()
-            else:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (type(self).__name__, param))
-            setattr(rctx, param, value)
-        return rctx
-
-    def filter(self, sites, rupture, filter_distance, filter_sites=True):
+    def filter(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture.
 
@@ -189,20 +122,17 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rupture, sites.mesh, filter_distance)
-        if self.maximum_distance and filter_sites:
+        distances = get_distances(rupture, sites, self.filter_distance)
+        if self.maximum_distance:
             mask = distances <= self.maximum_distance(
                 rupture.tectonic_region_type, rupture.mag)
             if mask.any():
                 sites, distances = sites.filter(mask), distances[mask]
             else:
                 raise FarAwayRupture
-        dctx = DistancesContext()
-        setattr(dctx, filter_distance, distances)
-        return sites, dctx
+        return sites, DistancesContext([(self.filter_distance, distances)])
 
-    def make_contexts(self, sites, rupture, filter_distance='rjb',
-                      filter_sites=True):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -214,32 +144,18 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
-        :param filter_distance:
-            If True, possibly reduces the site collection before building
-            the :class:`SitesContext`, depending on the value of the
-            integration distance for the current rupture.
-
         :returns:
-            Tuple of three items: sites context, rupture context and
-            distances context, that is, instances of
-            :class:`SitesContext`, :class:`RuptureContext` and
-            :class:`DistancesContext` in a specified order. Only those
-            values that are required by GSIM are filled in in
-            contexts.
+            Tuple of two items: sites and distances context.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        rctx = self.make_rupture_context(rupture)
-        sites, dctx = self.filter(
-            sites, rupture, filter_distance, filter_sites)
-        sctx = self.make_sites_context(sites)
-        mesh = sites.mesh
-        fdist_set = set([filter_distance]) if filter_distance else set()
-        for param in self.REQUIRES_DISTANCES - fdist_set:
-            setattr(dctx, param, get_distances(rupture, mesh, param))
-        return sctx, rctx, dctx
+        sites, dctx = self.filter(sites, rupture)
+        for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
+            setattr(dctx, param, get_distances(rupture, sites, param))
+        # NB: returning a SitesContext makes .get_poes faster
+        return SitesContext(sites), dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -252,7 +168,7 @@ class ContextMaker(object):
         for rup in src.iter_ruptures():
             rup.weight = weight
             try:
-                rup.sctx, rup.rctx, rup.dctx = self.make_contexts(sites, rup)
+                rup.sctx, rup.dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             ruptures.append(rup)
@@ -317,7 +233,7 @@ class ContextMaker(object):
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
                 poes = gsim.get_poes(
-                    rupture.sctx, rupture.rctx, dctx,
+                    rupture.sctx, rupture, dctx,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
@@ -335,17 +251,17 @@ class ContextMaker(object):
         :param truncnorm: an instance of scipy.stats.truncnorm
         :param epsilons: the epsilon bins
         :param monitor: a Monitor instance
-        :returns: an AccumDict
+        :returns:
+            an AccumDict with keys (poe, imt, rlzi) and mags, dists, lons, lats
         """
-        sitemesh = sitecol.mesh
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
-                # do not filter to avoid changing the number of sites
-                sctx, rctx, orig_dctx = self.make_contexts(
-                    sitecol, rupture, filter_sites=False)
+                orig_dctx = DistancesContext(
+                    (param, get_distances(rupture, sitecol, param))
+                    for param in self.REQUIRES_DISTANCES)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
@@ -357,13 +273,13 @@ class ContextMaker(object):
                         except KeyError:
                             with pne_mon:
                                 pne = gsim.disaggregate_pne(
-                                    rupture, sctx, rctx, dctx, imt, iml,
+                                    rupture, sitecol, dctx, imt, iml,
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
-            closest_points = rupture.surface.get_closest_points(sitemesh)
+            closest_points = rupture.surface.get_closest_points(sitecol)
             acc['mags'].append(rupture.mag)
-            acc['dists'].append(dctx.rjb)
+            acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
             acc['lats'].append(closest_points.lats)
         return acc
@@ -473,12 +389,14 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         Method must be implemented by subclasses.
 
         :param sites:
-            Instance of :class:`SitesContext` with parameters of sites
+            Instance of :class:`openquake.hazardlib.site.SiteCollection`
+            with parameters of sites
             collection assigned to respective values as numpy arrays.
             Only those attributes that are listed in class'
             :attr:`REQUIRES_SITES_PARAMETERS` set are available.
         :param rup:
-            Instance of :class:`RuptureContext` with parameters of a rupture
+            Instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
+            with parameters of a rupture
             assigned to respective values. Only those attributes that are
             listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
             available.
@@ -598,7 +516,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             else:
                 return _truncnorm_sf(truncation_level, values)
 
-    def disaggregate_pne(self, rupture, sctx, rctx, dctx, imt, iml,
+    def disaggregate_pne(self, rupture, sctx, dctx, imt, iml,
                          truncnorm, epsilons):
         """
         Disaggregate (separate) PoE of ``iml`` in different contributions
@@ -613,7 +531,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
             probabilities with shape (n_sites, n_epsilons)
         """
         # compute mean and standard deviations
-        mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+        mean, [stddev] = self.get_mean_and_stddevs(sctx, rupture, dctx, imt,
                                                    [const.StdDev.TOTAL])
 
         # compute iml value with respect to standard (mean=0, std=1)
@@ -842,15 +760,13 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
             if self._slots_ == other._slots_:
                 self_other = [
                     numpy.all(
-                        getattr(self, s, None) == getattr(other, s, None)
-                    )
-                    for s in self._slots_
-                ]
+                        getattr(self, s, None) == getattr(other, s, None))
+                    for s in self._slots_]
                 return numpy.all(self_other)
-
         return False
 
 
+# mock of a site collection used in the tests and in the SMTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -865,7 +781,12 @@ class SitesContext(BaseContext):
     """
     # _slots_ is used in hazardlib check_gsim, but not in the engine
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats')
+               'lons', 'lats', 'sids')
+
+    def __init__(self, sitecol=None):
+        if sitecol is not None:
+            for name in self._slots_:
+                setattr(self, name, getattr(sitecol, name))
 
 
 class DistancesContext(BaseContext):
@@ -882,6 +803,10 @@ class DistancesContext(BaseContext):
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
                'azimuth', 'hanging_wall', 'rvolc')
+
+    def __init__(self, param_dist_pairs=()):
+        for param, dist in param_dist_pairs:
+            setattr(self, param, dist)
 
     def roundup(self, minimum_distance):
         """
@@ -902,6 +827,7 @@ class DistancesContext(BaseContext):
         return ctx
 
 
+# mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
@@ -916,8 +842,7 @@ class RuptureContext(BaseContext):
     """
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc'
-    )
+        'hypo_depth', 'width', 'hypo_loc')
 
 
 class CoeffsTable(object):
@@ -1073,7 +998,7 @@ class CoeffsTable(object):
             imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
             try:
                 sa_period = float(imt_name)
-            except:
+            except Exception:
                 if not hasattr(imt_module, imt_name):
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = getattr(imt_module, imt_name)()
