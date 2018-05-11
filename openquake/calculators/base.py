@@ -119,7 +119,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param calc_id: numeric calculation ID
     """
     from_engine = False  # set by engine.run_calc
-    sitecol = datastore.persistent_attribute('sitecol')
     performance = datastore.persistent_attribute('performance')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
@@ -192,7 +191,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self.post_execute(self.result)
             self.before_export()
             self.export(kw.get('exports', ''))
-        except:
+        except Exception:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
                 traceback.print_tb(tb)
@@ -404,12 +403,14 @@ class HazardCalculator(BaseCalculator):
             # there is a precalculator
             if precalc_id is None:
                 self.precalc = self.compute_previous()
+                self.sitecol = self.precalc.sitecol
             else:
                 self.read_previous(precalc_id)
                 self.read_risk_data()
             self.init()
         else:  # we are in a basic calculator
             self.read_inputs()
+            self.datastore['sitecol'] = self.sitecol
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
@@ -506,7 +507,8 @@ class HazardCalculator(BaseCalculator):
             if oq.region:
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
-            if general.not_equal(self.sitecol.sids, haz_sitecol.sids):
+            if hasattr(self, 'sitecol') and general.not_equal(
+                    self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol.sids)
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
