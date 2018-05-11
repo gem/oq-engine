@@ -779,12 +779,13 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    # _slots_ is used in hazardlib check_gsim, but not in the engine
+    # _slots_ is used in hazardlib check_gsim and in the SMTK
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats', 'sids')
+               'lons', 'lats')
 
     def __init__(self, sitecol=None):
         if sitecol is not None:
+            self.sids = sitecol.sids
             for name in self._slots_:
                 setattr(self, name, getattr(sitecol, name))
 
