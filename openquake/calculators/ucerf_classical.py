@@ -141,7 +141,8 @@ class UcerfPSHACalculator(PSHACalculator):
         parse the logic tree and source model input
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
-        self.sitecol = readinput.get_site_collection(self.oqparam)
+        sitecol = readinput.get_site_collection(self.oqparam)
+        self.datastore['sitecol'] = self.sitecol = sitecol
         self.csm = get_composite_source_model(self.oqparam)
         self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
                              for sm in self.csm.source_models
