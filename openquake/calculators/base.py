@@ -51,6 +51,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
+logversion = True
 
 
 class InvalidCalculationID(Exception):
@@ -58,8 +59,6 @@ class InvalidCalculationID(Exception):
     Raised when running a post-calculation on top of an incompatible
     pre-calculation
     """
-
-logversion = True
 
 
 PRECALC_MAP = dict(
@@ -409,7 +408,7 @@ class HazardCalculator(BaseCalculator):
             self.init()
         else:  # we are in a basic calculator
             self.read_inputs()
-            self.datastore['sitecol'] = self.sitecol
+        self.datastore['sitecol'] = self.sitecol
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
