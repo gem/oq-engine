@@ -26,7 +26,6 @@ import math
 import itertools
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
-from openquake.baselib.python3compat import with_metaclass
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
@@ -41,7 +40,7 @@ classes = {}  # initialized in .init()
 
 
 @with_slots
-class BaseRupture(with_metaclass(abc.ABCMeta)):
+class BaseRupture(metaclass=abc.ABCMeta):
     """
     Rupture object represents a single earthquake rupture.
 
@@ -111,6 +110,34 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     def code(self):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
+
+    @property
+    def hypo_lon(self):
+        return self.hypocenter.longitude
+
+    @property
+    def hypo_lat(self):
+        return self.hypocenter.latitude
+
+    @property
+    def hypo_depth(self):
+        return self.hypocenter.depth
+
+    @general.cached_property
+    def strike(self):
+        return self.surface.get_strike()
+
+    @general.cached_property
+    def dip(self):
+        return self.surface.get_dip()
+
+    @general.cached_property
+    def ztor(self):
+        return self.surface.get_top_edge_depth()
+
+    @general.cached_property
+    def width(self):
+        return self.surface.get_width()
 
     def get_probability_no_exceedance(self, poes):
         """

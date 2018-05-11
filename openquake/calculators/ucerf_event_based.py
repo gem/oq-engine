@@ -705,8 +705,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        rup.ctx = cmaker.make_contexts(sitecol, rup)
-                        indices = rup.ctx[0].sids
+                        rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
+                        indices = rup.sctx.sids
                     except FarAwayRupture:
                         continue
                     events = []
