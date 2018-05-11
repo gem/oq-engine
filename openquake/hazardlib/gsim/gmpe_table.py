@@ -73,10 +73,8 @@ class AmplificationTable(object):
     :attr distances:
         Distance values for the tables
     :attr parameter:
-        Parameter to which the amplification applies. Must be an element
-        inside the _slots_ defines in the :class:`openquake.hazardlib.
-        gsim.base.RuptureContext` or the :class:`openquake.hazardlib.gsim.base.
-        SitesContext`
+        Parameter to which the amplification applies. There is a check
+        on the parameter name.
     :attr values:
         Array of values to which each amplification table corresponds
     :attr element:
@@ -168,11 +166,9 @@ class AmplificationTable(object):
             Intensity measure type as an instance of the :class:
             `openquake.hazardlib.imt`
         :param sctx:
-            Site parameters as instance of the :class:
-            `openquake.hazardlib.gsim.base.SitesContext`
+            SiteCollection instance
         :param rctx:
-            Rupture parameters as instance of the :class:
-            `openquake.hazardlib.gsim.base.RuptureContext`
+            Rupture instance
         :param dists:
             Source to site distances (km)
         :param stddev_types:

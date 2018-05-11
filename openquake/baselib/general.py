@@ -46,6 +46,24 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def cached_property(method):
+    """
+    :param method: a method without arguments except self
+    :returns: a cached property
+    """
+    name = method.__name__
+
+    def newmethod(self):
+        try:
+            val = self.__dict__[name]
+        except KeyError:
+            val = method(self)
+            self.__dict__[name] = val
+        return val
+    newmethod.__name__ = method.__name__
+    return property(newmethod)
+
+
 class WeightedSequence(collections.MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight attribute.
@@ -937,6 +955,7 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
 
 port_candidates = list(range(1920, 2000))
 
