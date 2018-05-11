@@ -764,6 +764,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
+        self.datastore['sitecol'] = self.sitecol
         self.datastore['csm_info'] = self.csm_info = self.csm.info
         self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.infos = []
