@@ -149,7 +149,7 @@ class SiteCollection(object):
         Build a site collection from a shakemap array
         """
         self = object.__new__(cls)
-        self.indices = None
+        self.complete = self
         n = len(shakemap_array)
         self.array = arr = numpy.zeros(n, self.dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
@@ -184,7 +184,7 @@ class SiteCollection(object):
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
         self = object.__new__(cls)
-        self.indices = None
+        self.complete = self
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lons'] = fix_lon(numpy.array(lons))
@@ -203,29 +203,14 @@ class SiteCollection(object):
                 arr[name] = sitemodel[name]
         return self
 
-    def filtered(self, indices):
-        """
-        :param indices:
-           a subset of indices in the range [0 .. tot_sites - 1]
-        :returns:
-           a filtered SiteCollection instance if `indices` is a proper subset
-           of the available indices, otherwise returns the full SiteCollection
-        """
-        if len(indices) == len(self.complete):
-            return self.complete
-        new = object.__new__(self.__class__)
-        new.indices = numpy.uint32(sorted(indices))
-        new.array = self.array
-        return new
-
     def __init__(self, sites):
         """
         Build a complete SiteCollection from a list of Site objects
         """
-        self.indices = None
         if hasattr(sites, 'sids'):
             numpy.testing.assert_equal(sites.sids, numpy.arange(len(sites)))
         self.array = arr = numpy.zeros(len(sites), self.dtype)
+        self.complete = self
         for i in range(len(arr)):
             arr['sids'][i] = i
             arr['lons'][i] = sites[i].location.longitude
@@ -246,35 +231,22 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        if not_equal(self.indices, other.indices):
-            return False
         return (self.array == other.array).all()
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __toh5__(self):
-        return (self.array,
-                dict(indices=self.indices) if self.indices is not None else {})
+        return self.array, {}
 
     def __fromh5__(self, array, attrs):
-        self.indices = attrs.get('indices')
         self.array = array
+        self.complete = self
 
     @property
     def mesh(self):
         """Return a mesh with the given lons, lats, and depths"""
         return Mesh(self.lons, self.lats, self.depths)
-
-    @property
-    def complete(self):
-        """Return a complete SiteCollection object"""
-        if self.indices is None:
-            return self
-        new = object.__new__(self.__class__)
-        new.indices = None
-        new.array = self.array
-        return new
 
     def at_sea_level(self):
         """True if all depths are zero"""
@@ -290,7 +262,6 @@ class SiteCollection(object):
         tiles = []
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
-            sc.indices = None
             sc.array = self.array[numpy.array(seq, int)]
             tiles.append(sc)
         return tiles
@@ -303,6 +274,22 @@ class SiteCollection(object):
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
                        self.z1pt0[i], self.z2pt5[i], self.backarc[i])
+
+    def filtered(self, indices):
+        """
+        :param indices:
+           a subset of indices in the range [0 .. tot_sites - 1]
+        :returns:
+           a filtered SiteCollection instance if `indices` is a proper subset
+           of the available indices, otherwise returns the full SiteCollection
+        """
+        if len(indices) == len(self):
+            return self
+        new = object.__new__(self.__class__)
+        indices = numpy.uint32(sorted(indices))
+        new.array = self.array[indices]
+        new.complete = self.complete
+        return new
 
     def filter(self, mask):
         """
@@ -328,10 +315,7 @@ class SiteCollection(object):
             # no sites pass the filter, return None
             return None
         # extract indices of Trues from the mask
-        if self.indices is None:
-            indices, = mask.nonzero()
-        else:
-            indices = self.indices.take(mask.nonzero()[0])
+        indices, = mask.nonzero()
         return self.filtered(indices)
 
     def within(self, region):
@@ -342,7 +326,7 @@ class SiteCollection(object):
         mask = numpy.array([
             geometry.Point(rec['lons'], rec['lats']).within(region)
             for rec in self.array])
-        return self.complete.filter(mask)
+        return self.filter(mask)
 
     def within_bbox(self, bbox):
         """
@@ -352,8 +336,7 @@ class SiteCollection(object):
             a filtered SiteCollection within the bounding box or None
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        arr = self.array if self.indices is None else self.array[self.indices]
-        lons, lats = arr['lons'], arr['lats']
+        lons, lats = self.array['lons'], self.array['lats']
         if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
@@ -362,7 +345,7 @@ class SiteCollection(object):
         return self.filter(mask)
 
     def __getstate__(self):
-        return dict(array=self.array, indices=self.indices)
+        return dict(array=self.array, complete=self.complete)
 
     def __getitem__(self, sid):
         """
@@ -374,19 +357,15 @@ class SiteCollection(object):
         if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
                         'depths sids'):
             raise AttributeError(name)
-        if self.indices is None:
-            return self.array[name]
-        else:
-            return self.array[self.indices][name]
+        return self.array[name]
 
     def __len__(self):
         """
         Return the number of sites in the collection.
         """
-        return (len(self.indices) if self.indices is not None
-                else len(self.array))
+        return len(self.array)
 
     def __repr__(self):
-        total_sites = len(self.array)
+        total_sites = len(self.complete.array)
         return '<SiteCollection with %d/%d sites>' % (
             len(self), total_sites)

@@ -243,14 +243,6 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def get_indices(sites):
-    """
-    :returns the indices from a SiteCollection
-    """
-    return (numpy.arange(len(sites), dtype=numpy.float32)
-            if sites.indices is None else sites.indices)
-
-
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library. The index is generated at
@@ -351,7 +343,7 @@ class SourceFilter(object):
             elif self.prefilter == 'numpy':
                 s_sites = sites.within_bbox(self.get_affected_box(src))
                 if s_sites is not None:
-                    src.indices = get_indices(s_sites)
+                    src.indices = s_sites.sids
                     yield src, s_sites
 
     def __getstate__(self):
