@@ -857,9 +857,7 @@ class CompositeSourceModel(collections.Sequence):
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
-                if len(grp) > 1 and not isinstance(src.src_group_id, list):
-                    # src.src_group_id could be a list because grouped in a
-                    # previous step (this may happen in presence of tiles)
+                if len(grp) > 1:
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
         return dic
