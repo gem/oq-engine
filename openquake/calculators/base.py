@@ -51,6 +51,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
+logversion = True
 
 
 class InvalidCalculationID(Exception):
@@ -58,8 +59,6 @@ class InvalidCalculationID(Exception):
     Raised when running a post-calculation on top of an incompatible
     pre-calculation
     """
-
-logversion = True
 
 
 PRECALC_MAP = dict(
@@ -811,9 +810,7 @@ def save_gmfs(calculator):
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
-        idx = (slice(None) if haz_sitecol.indices is None
-               else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
 
 
 def save_gmf_data(dstore, sitecol, gmfs, eids=()):
