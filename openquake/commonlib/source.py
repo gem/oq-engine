@@ -819,24 +819,21 @@ class CompositeSourceModel(collections.Sequence):
             if sg.src_interdep == 'mutex':
                 yield sg
 
-    def get_sources(self, kind='all', maxweight=None):
+    def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
-        filtering and splitting them, depending on the passed parameters.
+        filtering and splitting them, depending on the passed parameter.
         """
-        if kind != 'all':
-            assert kind in ('light', 'heavy') and maxweight is not None, (
-                kind, maxweight)
+        assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
         for src_group in self.src_groups:
-            if src_group.src_interdep == 'indep':
-                for src in src_group:
-                    if kind == 'all':
-                        sources.append(src)
-                    elif kind == 'light' and src.weight <= maxweight:
-                        sources.append(src)
-                    elif kind == 'heavy' and src.weight > maxweight:
-                        sources.append(src)
+            for src in src_group:
+                if kind == 'all':
+                    sources.append(src)
+                elif kind == 'indep':
+                    sources.append(src)
+                elif kind == 'mutex':
+                    sources.append(src)
         return sources
 
     def get_sources_by_trt(self):
