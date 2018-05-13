@@ -271,6 +271,7 @@ class BaseFilter(object):
     def __init__(self, sitecol, integration_distance):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
+        self.sitecol = sitecol
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
@@ -304,9 +305,6 @@ class BaseFilter(object):
 
 
 class NumpyFilter(BaseFilter):
-    def __init__(self, sitecol, integration_distance, prefilter='rtree'):
-        super().__init__(sitecol, integration_distance)
-        self.sitecol = sitecol
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
@@ -374,7 +372,7 @@ class RtreeFilter(BaseFilter):
         by default "rtree", accepts also "numpy" and "no"
     """
     def __init__(self, sitecol, integration_distance):
-        super().__init__(sitecol, integration_distance)
+        self.integration_distance = integration_distance
         self.indexpath = writetmp('')
         lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
