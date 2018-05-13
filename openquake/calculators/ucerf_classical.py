@@ -25,7 +25,7 @@ from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import NumpyFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, util
@@ -157,7 +157,7 @@ class UcerfPSHACalculator(PSHACalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
-        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
+        self.src_filter = NumpyFilter(self.sitecol, oq.maximum_distance,
                                        prefilter='no')
         self.nsites = []
         acc = AccumDict({
