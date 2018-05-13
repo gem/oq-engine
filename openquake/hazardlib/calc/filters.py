@@ -358,7 +358,8 @@ class SourceFilter(object):
                 continue
             box = self.integration_distance.get_affected_box(src)
             if self.prefilter == 'rtree':
-                index = rtree.index.Index(self.indexpath)
+                if index is None:
+                    index = rtree.index.Index(self.indexpath)
                 indices = within(box, index)
             elif self.prefilter == 'numpy':
                 indices = self.sitecol.within_bbox(box)
