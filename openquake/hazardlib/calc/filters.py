@@ -383,7 +383,6 @@ class SourceFilter(object):
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor),
             distribute='processpool').reduce()
-        Starmap.shutdown()  # close the process pool and save memory
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
