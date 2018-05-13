@@ -178,7 +178,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                if sg.src_interdep == 'mutex':
+                if sg.src_interdep == 'mutex':  # do not split
                     sg.samples = sm.samples
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
