@@ -175,13 +175,13 @@ class PSHACalculator(base.HazardCalculator):
                                       oq.prefilter_sources)
             if num_tiles > 1:
                 logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            with self.monitor('prefiltering'):
-                if oq.prefilter_sources != 'no' and self.prefilter:
-                    logging.info(
-                        'Prefiltering sources with %s', oq.prefilter_sources)
-                    csm = self.csm.filter(src_filter)
-                else:
-                    csm = self.csm
+            monitor = self.monitor('prefiltering')
+            if oq.prefilter_sources != 'no' and self.prefilter:
+                logging.info(
+                    'Prefiltering sources with %s', oq.prefilter_sources)
+                csm = self.csm.filter(src_filter, monitor)
+            else:
+                csm = self.csm
 
             if tile_i == 1:  # set it only on the first tile
                 maxweight = csm.get_maxweight(
