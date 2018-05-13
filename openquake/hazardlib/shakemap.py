@@ -105,7 +105,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sites = sitecol.within_bbox(bbox)
+    sites = sitecol.filtered(sitecol.within_bbox(bbox))
     if sites is None:
         raise RuntimeError('There are no sites within the boundind box %s'
                            % str(bbox))
