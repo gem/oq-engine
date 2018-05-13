@@ -735,17 +735,16 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter):  # called once per tile
+    def filter(self, src_filter, monitor=performance.Monitor('prefilter')):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
-        :param weight: source weight function
+        :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(
-            self.get_sources(), performance.Monitor())
+        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []
