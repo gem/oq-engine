@@ -382,6 +382,9 @@ class SourceFilter(object):
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor),
             distribute='processpool').reduce()
+        # avoid task ordering issues
+        for sources in sources_by_grp.values():
+            sources.sort(key=operator.attrgetter('source_id'))
         return sources_by_grp
 
 
