@@ -173,7 +173,7 @@ class PSHACalculator(base.HazardCalculator):
             csm = self.csm.filter(src_filter, monitor)
         else:
             csm = self.csm
-
+        src_filter.prefilter = 'numpy'
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)

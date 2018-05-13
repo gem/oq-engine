@@ -310,6 +310,8 @@ class SourceFilter(object):
             for i, (lon, lat) in enumerate(lonlats):
                 index.insert(i, (lon, lat, lon, lat))
             index.close()
+        else:
+            self.sitecol = sitecol
 
     def get_rectangle(self, src):
         """
