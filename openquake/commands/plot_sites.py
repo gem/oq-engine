@@ -22,7 +22,7 @@ import random
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.geo.utils import cross_idl, fix_lon
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import NumpyFilter
 from openquake.commonlib import readinput
 
 
@@ -52,7 +52,7 @@ def plot_sites(calc_id=-1):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance,
+    srcfilter = NumpyFilter(sitecol.complete, oq.maximum_distance,
                              oq.prefilter_sources)
     csm = readinput.get_composite_source_model(oq).filter(srcfilter)
     sources = csm.get_sources()

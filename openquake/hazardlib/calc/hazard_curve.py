@@ -26,7 +26,7 @@ than 20 lines of code:
    import sys
    import logging
    from openquake.baselib import parallel
-   from openquake.hazardlib.calc.filters import SourceFilter
+   from openquake.hazardlib.calc.filters import NumpyFilter
    from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
    from openquake.commonlib import readinput
 
@@ -34,7 +34,7 @@ than 20 lines of code:
        logging.basicConfig(level=logging.INFO)
        oq = readinput.get_oqparam(job_ini)
        sitecol = readinput.get_site_collection(oq)
-       src_filter = SourceFilter(sitecol, oq.maximum_distance)
+       src_filter = NumpyFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq).filter(src_filter)
        rlzs_assoc = csm.info.get_rlzs_assoc()
        for i, sm in enumerate(csm.source_models):
@@ -63,7 +63,7 @@ from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import NumpyFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
@@ -169,7 +169,7 @@ def calc_hazard_curves(
         sitecol = ss_filter.sitecol
     else:  # backward compatibility, a site collection was passed
         sitecol = ss_filter
-        ss_filter = SourceFilter(sitecol, {})
+        ss_filter = NumpyFilter(sitecol, {})
 
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level)
