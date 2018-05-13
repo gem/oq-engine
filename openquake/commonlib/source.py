@@ -825,13 +825,8 @@ class CompositeSourceModel(collections.Sequence):
         assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
         for src_group in self.src_groups:
-            for src in src_group:
-                if kind == 'all':
-                    sources.append(src)
-                elif kind == 'indep':
-                    sources.append(src)
-                elif kind == 'mutex':
-                    sources.append(src)
+            if kind in ('all', src_group.src_interdep):
+                sources.extend(src_group)
         return sources
 
     def get_sources_by_trt(self):
