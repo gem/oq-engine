@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import NumpyFilter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.calculators import getters
 from openquake.calculators import base, classical
@@ -53,7 +53,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
     # of the algorithm used
     """
     :param src_filter:
-        a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
+        a :class:`openquake.hazardlib.calc.filter.NumpyFilter` instance
     :param sources:
         list of hazardlib source objects
     :param cmaker:
@@ -214,8 +214,7 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
-                                  prefilter='numpy')
+        src_filter = NumpyFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm.filter(src_filter)  # fine filtering
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')

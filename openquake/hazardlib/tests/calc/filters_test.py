@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, MAX_DISTANCE, SourceFilter, angular_distance)
+    IntegrationDistance, MAX_DISTANCE, NumpyFilter, angular_distance)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -50,7 +50,7 @@ class IntegrationDistanceTestCase(unittest.TestCase):
         aae(bb, [-2.7395804, 7.30204, 2.7395804, 12.69796])
 
 
-class SourceFilterTestCase(unittest.TestCase):
+class NumpyFilterTestCase(unittest.TestCase):
     def test_get_bounding_boxes(self):
         maxdist = IntegrationDistance({'default': [
             (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
@@ -61,7 +61,7 @@ class SourceFilterTestCase(unittest.TestCase):
             Site(location=Point(-1.2, -3.4, -5.6),
                  vs30=55.4, vs30measured=False,
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
-        srcfilter = SourceFilter(sitecol, maxdist)
+        srcfilter = NumpyFilter(sitecol, maxdist)
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
         aae(bb1, (9.0429636, 19.10068, 10.9570364, 20.89932))
@@ -77,7 +77,7 @@ class SourceFilterTestCase(unittest.TestCase):
             Site(location=Point(-179, 80),
                  vs30=55.4, vs30measured=False,
                  z1pt0=66.7, z2pt5=88.9, backarc=False)])
-        srcfilter = SourceFilter(sitecol, maxdist)
+        srcfilter = NumpyFilter(sitecol, maxdist)
         bb1, bb2 = srcfilter.get_bounding_boxes(mag=4.5)
         # bounding boxes in the form min_lon, min_lat, max_lon, max_lat
         aae(bb1, (173.8210225, 79.10068, 184.1789775, 80.89932))
@@ -92,7 +92,7 @@ class SourceFilterTestCase(unittest.TestCase):
         sitecol = SiteCollection([
             Site(location=Point(176.919, -39.489),
                  vs30=760, vs30measured=True, z1pt0=100, z2pt5=5)])
-        srcfilter = SourceFilter(sitecol, maxdist)
+        srcfilter = NumpyFilter(sitecol, maxdist)
         sites = srcfilter.get_close_sites(src)
         self.assertIsNotNone(sites)
 

@@ -740,7 +740,7 @@ class CompositeSourceModel(collections.Sequence):
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
-        :param src_filter: a SourceFilter instance
+        :param src_filter: a NumpyFilter instance
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
