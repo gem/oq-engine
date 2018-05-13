@@ -295,11 +295,12 @@ class BaseFilter(object):
             return source_sites[0][1]
 
     def __call__(self, sources):
-        for src in self.filter(sources):
-            if hasattr(src, 'indices'):
-                yield src, self.sitecol.filtered(src.indices)
-            else:
+        if not self.integration_distance:  # do not filter
+            for src in sources:
                 yield src, self.sitecol
+            return
+        for src in self.filter(sources):
+            yield src, self.sitecol.filtered(src.indices)
 
 
 class NumpyFilter(BaseFilter):
