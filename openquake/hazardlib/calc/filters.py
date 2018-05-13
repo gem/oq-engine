@@ -51,7 +51,7 @@ the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
 filter function as well as a "no operation" filter (`source_site_noop_filter`).
-There is a class `SourceFilter` to determine the sites
+There is a class `NumpyFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed.
@@ -267,51 +267,14 @@ def prefilter(srcs, srcfilter, monitor):
     return groupby(srcfilter.filter(srcs), src_group_id)
 
 
-class SourceFilter(object):
-    """
-    The SourceFilter uses the rtree library. The index is generated at
-    instantiation time and kept in memory. The filter should be
-    instantiated only once per calculation, after the site collection is
-    known. It should be used as follows::
-
-      ss_filter = SourceFilter(sitecol, integration_distance)
-      for src, sites in ss_filter(sources):
-         do_something(...)
-
-    As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that SourceFilter
-    instances can be pickled, but when unpickled the index is lost: the reason
-    is that libspatialindex indices cannot be properly pickled
-    (https://github.com/Toblerity/rtree/issues/65).
-
-    :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
-    :param integration_distance:
-        Integration distance dictionary (TRT -> distance in km)
-    :param prefilter:
-        by default "rtree", accepts also "numpy" and "no"
-    """
-    def __init__(self, sitecol, integration_distance, prefilter='rtree'):
+class BaseFilter(object):
+    def __init__(self, sitecol, integration_distance):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        self.sitecol = sitecol
-        if integration_distance and sitecol is not None:
-            self.prefilter = prefilter
-        else:
-            self.prefilter = 'no'
-        if self.prefilter == 'rtree':
-            self.indexpath = writetmp('')
-            lonlats = zip(sitecol.lons, sitecol.lats)
-            index = rtree.index.Index(self.indexpath)
-            for i, (lon, lat) in enumerate(lonlats):
-                index.insert(i, (lon, lat, lon, lat))
-            index.close()
-        else:
-            self.sitecol = sitecol
 
     def get_rectangle(self, src):
         """
@@ -331,6 +294,19 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
+    def __call__(self, sources):
+        for src in self.filter(sources):
+            if hasattr(src, 'indices'):
+                yield src, self.sitecol.filtered(src.indices)
+            else:
+                yield src, self.sitecol
+
+
+class NumpyFilter(BaseFilter):
+    def __init__(self, sitecol, integration_distance, prefilter='rtree'):
+        super().__init__(sitecol, integration_distance)
+        self.sitecol = sitecol
+
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
         """
@@ -345,44 +321,84 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def __call__(self, sources):
-        for src in self.filter(sources):
-            yield src, self.sitecol.filtered(src.indices)
-
     def filter(self, sources):
-        if self.prefilter == 'no':
-            yield from sources
-            return
-        index = None
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src
                 continue
             box = self.integration_distance.get_affected_box(src)
-            if self.prefilter == 'rtree':
-                if index is None:
-                    index = rtree.index.Index(self.indexpath)
-                indices = within(box, index)
-            elif self.prefilter == 'numpy':
-                indices = self.sitecol.within_bbox(box)
+            indices = self.sitecol.within_bbox(box)
             if len(indices):
                 src.indices = indices
                 yield src
-        if index:
-            index.close()
 
-    def pfilter(self, sources, monitor, distribute='processpool'):
+    def pfilter(self, sources, monitor):
         """
         Filter the sources in parallel.
 
         :param sources: a sequence of sources
         :param monitor: a Monitor instance
-        :param distribution: distribution mechanism (default 'processpool')
         :returns: a dictionary src_group_id -> sources
         """
-        if self.prefilter == 'rtree':
-            self = copy.copy(self)
-            del self.sitecol  # hack to avoid transferring the sitecol
+        sources_by_grp = Starmap.apply(
+            prefilter, (sources, self, monitor)).reduce()
+        # avoid task ordering issues
+        for sources in sources_by_grp.values():
+            sources.sort(key=operator.attrgetter('source_id'))
+        return sources_by_grp
+
+
+class RtreeFilter(BaseFilter):
+    """
+    The NumpyFilter uses the rtree library. The index is generated at
+    instantiation time and kept in memory. The filter should be
+    instantiated only once per calculation, after the site collection is
+    known. It should be used as follows::
+
+      ss_filter = NumpyFilter(sitecol, integration_distance)
+      for src, sites in ss_filter(sources):
+         do_something(...)
+
+    As a side effect, sets the `.nsites` attribute of the source, i.e. the
+    number of sites within the integration distance. Notice that NumpyFilter
+    instances can be pickled, but when unpickled the index is lost: the reason
+    is that libspatialindex indices cannot be properly pickled
+    (https://github.com/Toblerity/rtree/issues/65).
+
+    :param sitecol:
+        :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
+    :param integration_distance:
+        Integration distance dictionary (TRT -> distance in km)
+    :param prefilter:
+        by default "rtree", accepts also "numpy" and "no"
+    """
+    def __init__(self, sitecol, integration_distance):
+        super().__init__(sitecol, integration_distance)
+        self.indexpath = writetmp('')
+        lonlats = zip(sitecol.lons, sitecol.lats)
+        index = rtree.index.Index(self.indexpath)
+        for i, (lon, lat) in enumerate(lonlats):
+            index.insert(i, (lon, lat, lon, lat))
+        index.close()
+
+    def filter(self, sources):
+        index = rtree.index.Index(self.indexpath)
+        for src in sources:
+            box = self.integration_distance.get_affected_box(src)
+            indices = within(box, index)
+            if len(indices):
+                src.indices = indices
+                yield src
+        index.close()
+
+    def pfilter(self, sources, monitor):
+        """
+        Filter the sources in parallel.
+
+        :param sources: a sequence of sources
+        :param monitor: a Monitor instance
+        :returns: a dictionary src_group_id -> sources
+        """
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor),
             distribute='processpool').reduce()
@@ -392,4 +408,4 @@ class SourceFilter(object):
         return sources_by_grp
 
 
-source_site_noop_filter = SourceFilter(None, {})
+source_site_noop_filter = BaseFilter(None, {})

@@ -49,7 +49,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import (
-    get_distances, SourceFilter, FarAwayRupture)
+    NumpyFilter, FarAwayRupture)
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -491,7 +491,7 @@ class UCERFSource(object):
         :param ridx:
             List of indices composing the rupture sections
         :param src_filter:
-            SourceFilter instance
+            NumpyFilter instance
         :param mag:
             Magnitude of the rupture for consideration
         :returns:
@@ -617,7 +617,7 @@ class UCERFSource(object):
         Turn the background model of a given branch into a set of point sources
 
         :param src_filter:
-            SourceFilter instance
+            NumpyFilter instance
         """
         background_sids = self.get_background_sids(src_filter)
         with h5py.File(self.source_file, "r") as hdf5:
@@ -677,7 +677,7 @@ def build_idx_set(branch_id, start_date):
 def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     :param sources: a list with a single UCERF source
-    :param src_filter: a SourceFilter instance
+    :param src_filter: a NumpyFilter instance
     :param gsims: a list of GSIMs
     :param param: extra parameters
     :param monitor: a Monitor instance
@@ -761,7 +761,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.csm = get_composite_source_model(oq)
-        self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        self.csm.src_filter = NumpyFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol

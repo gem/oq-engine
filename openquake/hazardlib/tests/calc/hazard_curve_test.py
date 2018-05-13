@@ -23,7 +23,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
+from openquake.hazardlib.calc.filters import NumpyFilter, IntegrationDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import akkar_bommer_2010
 from openquake.hazardlib.pmf import PMF
@@ -97,7 +97,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
-        s_filter = SourceFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
+        s_filter = NumpyFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
         result = calc_hazard_curves(
             sources, s_filter, imts, gsims, truncation_level)['PGA']
         # there are two sources and four sites. The first source contains only
@@ -136,7 +136,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
 
         # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, {'default': 100})
+        s_filter = NumpyFilter(sitecol, {'default': 100})
         numpy.testing.assert_array_equal(
             s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
