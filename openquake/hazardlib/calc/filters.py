@@ -345,26 +345,27 @@ class SourceFilter(object):
 
     def __call__(self, sources):
         for src in self.filter(sources):
-            sites = (self.sitecol.filtered(src.indices)
-                     if hasattr(src, 'indices') else self.sitecol)
-            yield src, sites
+            yield src, self.sitecol.filtered(src.indices)
 
     def filter(self, sources):
         if self.prefilter == 'no':
             yield from sources
             return
-        if self.prefilter == 'rtree':
-            index = rtree.index.Index(self.indexpath)
+        index = None
         for src in sources:
+            if hasattr(src, 'indices'):   # already filtered
+                yield src
+                continue
             box = self.integration_distance.get_affected_box(src)
             if self.prefilter == 'rtree':
+                index = rtree.index.Index(self.indexpath)
                 indices = within(box, index)
             elif self.prefilter == 'numpy':
                 indices = self.sitecol.within_bbox(box)
             if len(indices):
                 src.indices = indices
                 yield src
-        if self.prefilter == 'rtree':
+        if index:
             index.close()
 
     def pfilter(self, sources, monitor, distribute='processpool'):
@@ -382,6 +383,7 @@ class SourceFilter(object):
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor),
             distribute='processpool').reduce()
+        Starmap.shutdown()  # close the process pool and save memory
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
