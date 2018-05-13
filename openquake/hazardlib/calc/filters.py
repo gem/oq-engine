@@ -57,16 +57,21 @@ faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed.
 """
 import sys
+import copy
+import operator
 import collections
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
 import rtree
+from openquake.baselib.parallel import Starmap
+from openquake.baselib.general import writetmp, groupby
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
+src_group_id = operator.attrgetter('src_group_id')
 
 
 @contextmanager
@@ -226,6 +231,18 @@ class IntegrationDistance(collections.Mapping):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
+    def get_affected_box(self, src):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        mag = src.get_min_max_mag()[1]
+        maxdist = self(src.tectonic_region_type, mag)
+        bbox = get_bounding_box(src, maxdist)
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise
         return dict(dic=self.dic, magdist=self.magdist)
@@ -243,12 +260,11 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def get_indices(sites):
+def prefilter(srcs, srcfilter, monitor):
     """
-    :returns the indices from a SiteCollection
+    :returns: a dict src_group_id -> sources
     """
-    return (numpy.arange(len(sites), dtype=numpy.float32)
-            if sites.indices is None else sites.indices)
+    return groupby(srcfilter.filter(srcs), src_group_id)
 
 
 class SourceFilter(object):
@@ -288,29 +304,20 @@ class SourceFilter(object):
         else:
             self.prefilter = 'no'
         if self.prefilter == 'rtree':
+            self.indexpath = writetmp('')
             lonlats = zip(sitecol.lons, sitecol.lats)
-            self.index = rtree.index.Index(
-                (i, (lon, lat, lon, lat), None)
-                for i, (lon, lat) in enumerate(lonlats))
-
-    def get_affected_box(self, src):
-        """
-        Get the enlarged bounding box of a source.
-
-        :param src: a source object
-        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
-        """
-        mag = src.get_min_max_mag()[1]
-        maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        bbox = get_bounding_box(src, maxdist)
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+            index = rtree.index.Index(self.indexpath)
+            for i, (lon, lat) in enumerate(lonlats):
+                index.insert(i, (lon, lat, lon, lat))
+            index.close()
 
     def get_rectangle(self, src):
         """
         :param src: a source object
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
-        min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
+        min_lon, min_lat, max_lon, max_lat = (
+            self.integration_distance.get_affected_box(src))
         return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
@@ -322,6 +329,7 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
+    # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
         """
         :param trt: a tectonic region type (used for the integration distance)
@@ -335,30 +343,46 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
-    def __call__(self, sources, sites=None):
-        if sites is None:
-            sites = self.sitecol
-        for src in sources:
-            if hasattr(src, 'indices'):  # already filtered
-                yield src, sites.filtered(src.indices)
-            elif self.prefilter == 'no':  # do not filter
-                yield src, sites
-            elif self.prefilter == 'rtree':
-                indices = within(self.get_affected_box(src), self.index)
-                if len(indices):
-                    src.indices = indices
-                    yield src, sites.filtered(src.indices)
-            elif self.prefilter == 'numpy':
-                s_sites = sites.within_bbox(self.get_affected_box(src))
-                if s_sites is not None:
-                    src.indices = get_indices(s_sites)
-                    yield src, s_sites
+    def __call__(self, sources):
+        for src in self.filter(sources):
+            sites = (self.sitecol.filtered(src.indices)
+                     if hasattr(src, 'indices') else self.sitecol)
+            yield src, sites
 
-    def __getstate__(self):
-        # 'rtree' cannot be used on the workers, so we use 'numpy' instead
-        pref = 'numpy' if self.prefilter == 'rtree' else self.prefilter
-        return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, prefilter=pref)
+    def filter(self, sources):
+        if self.prefilter == 'no':
+            yield from sources
+            return
+        if self.prefilter == 'rtree':
+            index = rtree.index.Index(self.indexpath)
+        for src in sources:
+            box = self.integration_distance.get_affected_box(src)
+            if self.prefilter == 'rtree':
+                indices = within(box, index)
+            elif self.prefilter == 'numpy':
+                indices = self.sitecol.within_bbox(box)
+            if len(indices):
+                src.indices = indices
+                yield src
+        if self.prefilter == 'rtree':
+            index.close()
+
+    def pfilter(self, sources, monitor, distribute='processpool'):
+        """
+        Filter the sources in parallel.
+
+        :param sources: a sequence of sources
+        :param monitor: a Monitor instance
+        :param distribution: distribution mechanism (default 'processpool')
+        :returns: a dictionary src_group_id -> sources
+        """
+        if self.prefilter == 'rtree':
+            self = copy.copy(self)
+            del self.sitecol  # hack to avoid transferring the sitecol
+        sources_by_grp = Starmap.apply(
+            prefilter, (sources, self, monitor),
+            distribute='processpool').reduce()
+        return sources_by_grp
 
 
 source_site_noop_filter = SourceFilter(None, {})
