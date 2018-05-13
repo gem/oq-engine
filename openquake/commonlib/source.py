@@ -27,7 +27,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5, node, performance
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
 from openquake.hazardlib import (
@@ -744,14 +744,14 @@ class CompositeSourceModel(collections.Sequence):
         :param weight: source weight function
         :returns: a new CompositeSourceModel instance
         """
+        sources_by_grp = src_filter.pfilter(
+            self.get_sources(), performance.Monitor())
         source_models = []
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
-                sg.sources = []
-                for src, _sites in src_filter(src_group.sources):
-                    sg.sources.append(src)
+                sg.sources = sources_by_grp.get(sg.id, [])
                 src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
