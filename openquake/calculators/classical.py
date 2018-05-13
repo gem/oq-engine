@@ -159,61 +159,46 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
-        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tasks_per_tile = math.ceil(oq.concurrent_tasks / math.sqrt(num_tiles))
-        if num_tiles > 1:
-            tiles = self.sitecol.split_in_tiles(num_tiles)
-        else:
-            tiles = [self.sitecol.complete]
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         totweight = 0
-        for tile_i, tile in enumerate(tiles, 1):
-            num_tasks = 0
-            num_sources = 0
-            src_filter = SourceFilter(tile, oq.maximum_distance,
-                                      oq.prefilter_sources)
-            if num_tiles > 1:
-                logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            monitor = self.monitor('prefiltering')
-            if oq.prefilter_sources != 'no' and self.prefilter:
-                logging.info(
-                    'Prefiltering sources with %s', oq.prefilter_sources)
-                csm = self.csm.filter(src_filter, monitor)
-            else:
-                csm = self.csm
+        num_tasks = 0
+        num_sources = 0
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
+                                  oq.prefilter_sources)
+        monitor = self.monitor('prefiltering')
+        if oq.prefilter_sources != 'no' and self.prefilter:
+            logging.info(
+                'Prefiltering sources with %s', oq.prefilter_sources)
+            csm = self.csm.filter(src_filter, monitor)
+        else:
+            csm = self.csm
 
-            if tile_i == 1:  # set it only on the first tile
-                maxweight = csm.get_maxweight(
-                    weight, tasks_per_tile, minweight)
-                if maxweight == minweight:
-                    logging.info('Using minweight=%d', minweight)
-                else:
-                    logging.info('Using maxweight=%d', maxweight)
-                totweight += csm.info.tot_weight
-            else:
-                totweight += csm.get_weight(weight)
-            if csm.has_dupl_sources and not opt:
-                logging.warn('Found %d duplicated sources',
-                             csm.has_dupl_sources)
-            for sg in csm.src_groups:
-                if sg.src_interdep == 'mutex' and len(sg) > 0:
-                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                    yield sg, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(sg.sources)
-            # NB: csm.get_sources_by_trt discards the mutex sources
-            for trt, sources in csm.get_sources_by_trt().items():
-                gsims = self.csm.info.gsim_lt.get_gsims(trt)
-                for block in block_splitter(sources, maxweight, weight):
-                    yield block, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(block)
-            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-            # cleanup filtering information for the next tile
-            for src in csm.get_sources():
-                if hasattr(src, 'indices'):
-                    del src.indices
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
+        if maxweight == minweight:
+            logging.info('Using minweight=%d', minweight)
+        else:
+            logging.info('Using maxweight=%d', maxweight)
+        totweight += csm.info.tot_weight
+
+        if csm.has_dupl_sources and not opt:
+            logging.warn('Found %d duplicated sources',
+                         csm.has_dupl_sources)
+
+        for sg in csm.src_groups:
+            if sg.src_interdep == 'mutex' and len(sg) > 0:
+                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                yield sg, src_filter, gsims, param, monitor
+                num_tasks += 1
+                num_sources += len(sg.sources)
+        # NB: csm.get_sources_by_trt discards the mutex sources
+        for trt, sources in csm.get_sources_by_trt().items():
+            gsims = self.csm.info.gsim_lt.get_gsims(trt)
+            for block in block_splitter(sources, maxweight, weight):
+                yield block, src_filter, gsims, param, monitor
+                num_tasks += 1
+                num_sources += len(block)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
