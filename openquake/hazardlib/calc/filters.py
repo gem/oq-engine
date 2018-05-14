@@ -51,7 +51,7 @@ the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
 filter function as well as a "no operation" filter (`source_site_noop_filter`).
-There is a class `NumpyFilter` to determine the sites
+There is a class `SourceFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed.
@@ -304,7 +304,7 @@ class BaseFilter(object):
             yield src, self.sitecol.filtered(src.indices)
 
 
-class NumpyFilter(BaseFilter):
+class SourceFilter(BaseFilter):
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
@@ -349,17 +349,17 @@ class NumpyFilter(BaseFilter):
 
 class RtreeFilter(BaseFilter):
     """
-    The NumpyFilter uses the rtree library. The index is generated at
+    The SourceFilter uses the rtree library. The index is generated at
     instantiation time and kept in memory. The filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
 
-      ss_filter = NumpyFilter(sitecol, integration_distance)
+      ss_filter = SourceFilter(sitecol, integration_distance)
       for src, sites in ss_filter(sources):
          do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that NumpyFilter
+    number of sites within the integration distance. Notice that SourceFilter
     instances can be pickled, but when unpickled the index is lost: the reason
     is that libspatialindex indices cannot be properly pickled
     (https://github.com/Toblerity/rtree/issues/65).

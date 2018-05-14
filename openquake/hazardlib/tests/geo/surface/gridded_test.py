@@ -82,7 +82,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertEqual(point.z, 0.1)
 
 
-# FIXME: this test is nearly useless, since the bugs are in the NumpyFilter,
+# FIXME: this test is nearly useless, since the bugs are in the SourceFilter,
 # not in surface.get_closest_points
 class GriddedSurfaceTestCaseIDL(unittest.TestCase):
 
