@@ -162,7 +162,13 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        csm = self.csm.filter(src_filter, self.monitor('prefilter'))
+        if oq.prefilter_sources == 'rtree':
+            rfilter = RtreeFilter(self.sitecol, oq.maximum_distance)
+            csm = self.csm.filter(rfilter, self.monitor('prefilter'))
+        if oq.prefilter_sources == 'numpy':
+            csm = self.csm.filter(src_filter, self.monitor('prefilter'))
+        else:
+            csm = self.csm
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(

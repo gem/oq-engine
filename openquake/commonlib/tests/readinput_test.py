@@ -264,8 +264,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # check that the warning was raised
         self.assertEqual(
             warn.call_args[0],
-            ('Association to %s km from site (%s %s)',
-             222.38985328911747, 2.0, 0.0))
+            ('Association to %d km from site (%s %s)', 222, 2.0, 0.0))
 
 
 class ExposureTestCase(unittest.TestCase):
