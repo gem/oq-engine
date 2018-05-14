@@ -161,23 +161,6 @@ class _GeographicObjects(object):
         return self.objects.filtered(sids), assets_by_site
 
 
-def get_min_distance(mesh1, mesh2):
-    """
-    :param mesh1: a object with .lons, .lats, .depths
-    :param mesh2: another object with .lons, .lats, .depths
-
-    Get the minimum distance between 3D meshes by using cKDTree.
-    Works by adding a .kdtree cached attribute to mesh1.
-    """
-    try:
-        kdtree = mesh1.kdtree
-    except AttributeError:
-        mesh1.kdtree = kdtree = _GeographicObjects(mesh1)
-    dists = [kdtree.get_closest(lon, lat, dep)[1]
-             for lon, lat, dep in zip(mesh2.lons, mesh2.lats, mesh2.depths)]
-    return min(dists)
-
-
 def assoc(objects, sitecol, assoc_dist, mode):
     """
     Associate geographic objects to a site collection.
