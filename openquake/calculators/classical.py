@@ -83,7 +83,6 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    prefilter = True
 
     def agg_dicts(self, acc, pmap_by_grp):
         """
@@ -170,13 +169,12 @@ class PSHACalculator(base.HazardCalculator):
         else:
             srcfilter = src_filter
         monitor = self.monitor('prefiltering')
-        if oq.prefilter_sources != 'no' and self.prefilter:
+        if oq.prefilter_sources != 'no':
             logging.info(
                 'Prefiltering sources with %s', oq.prefilter_sources)
             csm = self.csm.filter(srcfilter, monitor)
         else:
             csm = self.csm
-        src_filter.prefilter = 'numpy'
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
@@ -269,7 +267,6 @@ class PreCalculator(PSHACalculator):
     ruptures
     """
     core_task = count_ruptures
-    prefilter = False
 
 
 def fix_ones(pmap):
