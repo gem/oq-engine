@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to specify the `filter_distance` in the `job.ini`
   * Replaced Rtree with KDtree except in the source filtering
   * Parallelized the source prefiltering
   * Removed the tiling feature from the classical calculator
