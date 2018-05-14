@@ -338,7 +338,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
     Please note: the temporary file must be deleted by the caller.
@@ -366,7 +366,7 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
 @atexit.register
 def removetmp():
     """
-    Remove the temporary files created by writetmp
+    Remove the temporary files created by gettemp
     """
     for path in _tmp_paths:
         if os.path.exists(path):  # not removed yet
