@@ -36,7 +36,7 @@ from mock import Mock
 
 import openquake.hazardlib
 from openquake.hazardlib import geo
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import valid
 from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -59,7 +59,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
-        f = writetmp(files[filename], suffix='.' + filename)
+        f = gettemp(files[filename], suffix='.' + filename)
         super(_TestableSourceModelLogicTree, self).__init__(f, validate)
 
     def _get_source_model(self, filename):
