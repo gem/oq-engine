@@ -792,7 +792,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             save_ruptures=oq.save_ruptures)
+                             save_ruptures=oq.save_ruptures,
+                             filter_distance=oq.filter_distance)
                 allargs.append(
                     (srcs, self.csm.src_filter, gsims, param, monitor))
         return allargs
