@@ -20,7 +20,7 @@ import sys
 import unittest
 import numpy
 from nose.plugins.attrib import attr
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
 from openquake.calculators.views import view
@@ -132,7 +132,7 @@ producing too small PoEs.''')
         # this tests exercise the case of a complex logic tree; it also
         # prints the warning on poe_agg very different from the expected poe
         self.run_calc(case_master.__file__, 'job.ini')
-        fname = writetmp(view('mean_disagg', self.calc.datastore))
+        fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 

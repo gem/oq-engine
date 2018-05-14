@@ -23,7 +23,7 @@ import numpy
 import h5py
 from nose.plugins.attrib import attr
 
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, REFERENCE_OS)
@@ -124,14 +124,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         # vulnerability function with PMF
         self.run_calc(case_1g.__file__, 'job.ini')
-        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
         os.remove(fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
-        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
         os.remove(fname)
 
@@ -240,12 +240,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
-        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
 
         # check ruptures are stored correctly
-        fname = writetmp(view('ruptures_events', self.calc.datastore))
+        fname = gettemp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
@@ -258,7 +258,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
-        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss.txt', fname, delta=1E-5)
         os.remove(fname)
