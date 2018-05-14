@@ -27,7 +27,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5, node, performance
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
 from openquake.hazardlib import (
@@ -735,23 +735,22 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter):  # called once per tile
+    def filter(self, src_filter, monitor=performance.Monitor('prefilter')):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
-        :param weight: source weight function
+        :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
+        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
-                sg.sources = []
-                for src, _sites in src_filter(src_group.sources):
-                    sg.sources.append(src)
+                sg.sources = sources_by_grp.get(sg.id, [])
                 src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
@@ -759,7 +758,6 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
-        new.src_filter = src_filter
         return new
 
     def get_weight(self, weight):
@@ -819,24 +817,16 @@ class CompositeSourceModel(collections.Sequence):
             if sg.src_interdep == 'mutex':
                 yield sg
 
-    def get_sources(self, kind='all', maxweight=None):
+    def get_sources(self, kind='all'):
         """
         Extract the sources contained in the source models by optionally
-        filtering and splitting them, depending on the passed parameters.
+        filtering and splitting them, depending on the passed parameter.
         """
-        if kind != 'all':
-            assert kind in ('light', 'heavy') and maxweight is not None, (
-                kind, maxweight)
+        assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
         for src_group in self.src_groups:
-            if src_group.src_interdep == 'indep':
-                for src in src_group:
-                    if kind == 'all':
-                        sources.append(src)
-                    elif kind == 'light' and src.weight <= maxweight:
-                        sources.append(src)
-                    elif kind == 'heavy' and src.weight > maxweight:
-                        sources.append(src)
+            if kind in ('all', src_group.src_interdep):
+                sources.extend(src_group)
         return sources
 
     def get_sources_by_trt(self):
