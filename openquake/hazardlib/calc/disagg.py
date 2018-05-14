@@ -225,7 +225,7 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.source_site_noop_filter):
+        source_filter=filters.source_site_noop_filter, filter_distance='rjb'):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -294,7 +294,8 @@ def disaggregation(
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
+    cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance,
+                          filter_distance)
     iml4 = make_iml4(1, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}

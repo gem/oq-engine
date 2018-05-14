@@ -168,8 +168,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
-            imtls=oq.imtls, seed=oq.ses_seed,
-            maximum_distance=oq.maximum_distance,
+            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
 
         num_tasks = 0
