@@ -15,49 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
-Module :mod:`~openquake.hazardlib.calc.filters` contain filter functions for
-calculators.
 
-Filters are functions (or other callable objects) that should take generators
-and return generators. There are two different kinds of filter functions:
-
-1. Source-site filters. Those functions take a generator of two-item tuples,
-   each pair consists of seismic source object (that is, an instance of
-   a subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`)
-   and a site collection (instance of
-   :class:`~openquake.hazardlib.site.SiteCollection`).
-2. Rupture-site filters. Those also take a generator of pairs, but in this
-   case the first item in the pair is a rupture object (instance of
-   :class:`~openquake.hazardlib.source.rupture.Rupture`). The second element in
-   generator items is still site collection.
-
-The purpose of both kinds of filters is to limit the amount of calculation
-to be done based on some criteria, like the distance between the source
-and the site. So common design feature of all the filters is the loop over
-pairs of the provided generator, filtering the sites collection, and if
-there are no items left in it, skipping the pair and continuing to the next
-one. If some sites need to be considered together with that source / rupture,
-the pair gets generated out, with a (possibly) :meth:`limited
-<openquake.hazardlib.site.SiteCollection.filter>` site collection.
-
-Consistency of filters' input and output stream format allows several filters
-(obviously, of the same kind) to be chained together.
-
-Filter functions should not make assumptions about the ordering of items
-in the original generator or draw more than one pair at once. Ideally, they
-should also perform reasonably fast (filtering stage that takes longer than
-the actual calculation on unfiltered collection only decreases performance).
-
-Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
-filter function as well as a "no operation" filter (`source_site_noop_filter`).
-There is a class `SourceFilter` to determine the sites
-affected by a given source: the second one uses an R-tree index and it is
-faster if there are a lot of sources, i.e. if the initial time to prepare
-the index can be compensed.
-"""
 import sys
-import copy
 import operator
 import collections
 from contextlib import contextmanager
@@ -65,7 +24,7 @@ import numpy
 from scipy.interpolate import interp1d
 import rtree
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import writetmp, groupby
+from openquake.baselib.general import gettemp, groupby
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -268,14 +227,15 @@ def prefilter(srcs, srcfilter, monitor):
 
 
 class BaseFilter(object):
-    def __init__(self, sitecol, integration_distance):
-        if sitecol is not None and len(sitecol) < len(sitecol.complete):
-            raise ValueError('%s is not complete!' % sitecol)
-        self.sitecol = sitecol
-        self.integration_distance = (
-            IntegrationDistance(integration_distance)
-            if isinstance(integration_distance, dict)
-            else integration_distance)
+    """
+    Filter objects have a .filter method yielding filtered sources,
+    i.e. sources with an attribute .indices, containg the IDs of the sites
+    within the given maximum distance. There is also a .pfilter method
+    that filters the sources in parallel and returns a dictionary
+    src_group_id -> filtered sources.
+    """
+    integration_distance = {}
+    sitecol = None
 
     def get_rectangle(self, src):
         """
@@ -296,6 +256,9 @@ class BaseFilter(object):
             return source_sites[0][1]
 
     def __call__(self, sources):
+        """
+        :yields: pairs (src, sites)
+        """
         if not self.integration_distance:  # do not filter
             for src in sources:
                 yield src, self.sitecol
@@ -305,6 +268,19 @@ class BaseFilter(object):
 
 
 class SourceFilter(BaseFilter):
+    """
+    Filter the sources by using `self.sitecol.within_bbox` which is
+    based on numpy.
+    """
+    def __init__(self, sitecol, integration_distance):
+        if sitecol is not None and len(sitecol) < len(sitecol.complete):
+            raise ValueError('%s is not complete!' % sitecol)
+        self.sitecol = sitecol
+        self.integration_distance = (
+            IntegrationDistance(integration_distance)
+            if isinstance(integration_distance, dict)
+            else integration_distance)
+        self.distribute = None
 
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
@@ -321,6 +297,10 @@ class SourceFilter(BaseFilter):
         return bbs
 
     def filter(self, sources):
+        """
+        :param sources: a sequence of sources
+        :yields: sources with .indices
+        """
         for src in sources:
             if hasattr(src, 'indices'):   # already filtered
                 yield src
@@ -333,47 +313,51 @@ class SourceFilter(BaseFilter):
 
     def pfilter(self, sources, monitor):
         """
-        Filter the sources in parallel.
+        Filter the sources in parallel by using Starmap.apply
 
         :param sources: a sequence of sources
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor)).reduce()
+            prefilter, (sources, self, monitor), distribute=self.distribute
+        ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
         return sources_by_grp
 
 
-class RtreeFilter(BaseFilter):
+class RtreeFilter(SourceFilter):
     """
-    The SourceFilter uses the rtree library. The index is generated at
-    instantiation time and kept in memory. The filter should be
+    The RtreeFilter uses the rtree library. The index is generated at
+    instantiation time and stored in a temporary file. The filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
 
-      ss_filter = SourceFilter(sitecol, integration_distance)
-      for src, sites in ss_filter(sources):
+      rfilter = RtreeFilter(sitecol, integration_distance)
+      for src, sites in rfilter(sources):
          do_something(...)
 
-    As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that SourceFilter
-    instances can be pickled, but when unpickled the index is lost: the reason
-    is that libspatialindex indices cannot be properly pickled
-    (https://github.com/Toblerity/rtree/issues/65).
+    As a side effect, sets the `.indices` attribute of the source, i.e. the
+    number of sites within the integration distance. Notice that
+    libspatialindex indices cannot be properly pickled
+    (https://github.com/Toblerity/rtree/issues/65) this is why they must
+    be saved on the file system where they can be read from the workers.
+
+    NB: an RtreeFilter has an .indexpath attribute, but not a sitecol
+    attribute nor an .index attribute, so it can be pickled and transferred
+    easily.
 
     :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
+        :class:`openquake.hazardlib.site.SiteCollection` instance
     :param integration_distance:
         Integration distance dictionary (TRT -> distance in km)
-    :param prefilter:
-        by default "rtree", accepts also "numpy" and "no"
     """
     def __init__(self, sitecol, integration_distance):
         self.integration_distance = integration_distance
-        self.indexpath = writetmp('')
+        self.distribute = 'processpool'
+        self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
         for i, (lon, lat) in enumerate(lonlats):
@@ -381,30 +365,20 @@ class RtreeFilter(BaseFilter):
         index.close()
 
     def filter(self, sources):
-        index = rtree.index.Index(self.indexpath)
-        for src in sources:
-            box = self.integration_distance.get_affected_box(src)
-            indices = within(box, index)
-            if len(indices):
-                src.indices = indices
-                yield src
-        index.close()
-
-    def pfilter(self, sources, monitor):
         """
-        Filter the sources in parallel.
-
         :param sources: a sequence of sources
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
+        :yields: rtree-filtered sources
         """
-        sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor),
-            distribute='processpool').reduce()
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
-        return sources_by_grp
+        index = rtree.index.Index(self.indexpath)
+        try:
+            for src in sources:
+                box = self.integration_distance.get_affected_box(src)
+                indices = within(box, index)
+                if len(indices):
+                    src.indices = indices
+                    yield src
+        finally:
+            index.close()
 
 
-source_site_noop_filter = BaseFilter(None, {})
+source_site_noop_filter = BaseFilter()
