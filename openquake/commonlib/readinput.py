@@ -30,11 +30,10 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, DictArray, deprecated
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
-    calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source.rupture import EBRupture
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -383,16 +382,14 @@ def get_rlzs_by_gsim(oqparam):
     return dic
 
 
-def get_rupture_sitecol(oqparam, sitecol):
+def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        a pair (EBRupture, SiteCollection)
+        an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -401,18 +398,7 @@ def get_rupture_sitecol(oqparam, sitecol):
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.seed = oqparam.random_seed
-    maxdist = oqparam.maximum_distance['default']
-    sc = calc.filters.filter_sites_by_distance_to_rupture(
-        rup, maxdist, sitecol)
-    if sc is None:
-        raise RuntimeError(
-            'All sites were filtered out! maximum_distance=%s km' %
-            maxdist)
-    n = oqparam.number_of_ground_motion_fields
-    events = numpy.zeros(n, stored_event_dt)
-    events['eid'] = numpy.arange(n)
-    ebr = EBRupture(rup, sc.sids, events)
-    return ebr, sc
+    return rup
 
 
 def get_source_model_lt(oqparam):
@@ -447,7 +433,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(

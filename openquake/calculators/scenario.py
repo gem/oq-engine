@@ -22,6 +22,7 @@ import numpy
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, source, calc
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.calculators import base
 
 
@@ -36,7 +37,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Read the site collection and initialize GmfComputer and seeds
         """
-        super(ScenarioCalculator, self).pre_execute()
+        super().pre_execute()
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(oq)
         cinfo = source.CompositionInfo.fake(gsim_lt)
@@ -47,17 +48,22 @@ class ScenarioCalculator(base.HazardCalculator):
             logging.warn('There is no rupture_model, the calculator will just '
                          'import data without performing any calculation')
             return
-        ebr, self.sitecol = readinput.get_rupture_sitecol(oq, self.sitecol)
+        rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
+        trunc_level = oq.truncation_level
+        correl_model = oq.get_correl_model()
+        cmaker = ContextMaker(self.gsims, oq.maximum_distance)
+        self.sitecol, dctx = cmaker.filter(self.sitecol, rup)
+        n = oq.number_of_ground_motion_fields
+        events = numpy.zeros(n, readinput.stored_event_dt)
+        events['eid'] = numpy.arange(n)
+        ebr = EBRupture(rup, self.sitecol.sids, events)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
         rupser.close()
-        trunc_level = oq.truncation_level
-        correl_model = oq.get_correl_model()
         self.computer = GmfComputer(
-            ebr, self.sitecol, oq.imtls, ContextMaker(self.gsims),
-            trunc_level, correl_model)
+            ebr, self.sitecol, oq.imtls, cmaker, trunc_level, correl_model)
 
     def init(self):
         pass
