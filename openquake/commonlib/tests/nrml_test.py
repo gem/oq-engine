@@ -18,7 +18,7 @@
 
 import unittest
 import io
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import read, parse, node_to_xml, get_tag_version
 
@@ -97,7 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
         self.assertEqual(outfile.getvalue(), expected)
 
     def test_no_nrml(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?>
 <fragilityModel id="Ethiopia" assetCategory="buildings"
 lossCategory="structural" />
@@ -108,7 +108,7 @@ lossCategory="structural" />
                       str(ctx.exception))
 
     def test_invalid(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
   <fragilityModel id="Ethiopia" assetCategory="buildings"
@@ -130,7 +130,7 @@ lossCategory="structural" />
                       "Invalid IMT: 'SA', line 8", str(ctx.exception))
 
     def test_invalid_srcs_weights_length(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.5"
