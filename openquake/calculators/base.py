@@ -829,10 +829,10 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
     dic = general.group_array(gmfa, 'sid')
     lst = []
     if tot_sites is not None:
-        tot_sids = numpy.arange(tot_sites, dtype=U32)
+        all_sids = numpy.arange(tot_sites, dtype=U32)
     else:
-        tot_sids = sitecol.complete.sids
-    for sid in tot_sids:
+        all_sids = sitecol.complete.sids
+    for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
