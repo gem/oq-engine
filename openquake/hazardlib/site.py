@@ -203,6 +203,22 @@ class SiteCollection(object):
                 arr[name] = sitemodel[name]
         return self
 
+    def filtered(self, indices):
+        """
+        :param indices:
+           a subset of indices in the range [0 .. tot_sites - 1]
+        :returns:
+           a filtered SiteCollection instance if `indices` is a proper subset
+           of the available indices, otherwise returns the full SiteCollection
+        """
+        if len(indices) == len(self):
+            return self
+        new = object.__new__(self.__class__)
+        indices = numpy.uint32(sorted(indices))
+        new.array = self.array[indices]
+        new.complete = self.complete
+        return new
+
     def __init__(self, sites):
         """
         Build a complete SiteCollection from a list of Site objects
@@ -274,22 +290,6 @@ class SiteCollection(object):
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
                        self.z1pt0[i], self.z2pt5[i], self.backarc[i])
-
-    def filtered(self, indices):
-        """
-        :param indices:
-           a subset of indices in the range [0 .. tot_sites - 1]
-        :returns:
-           a filtered SiteCollection instance if `indices` is a proper subset
-           of the available indices, otherwise returns the full SiteCollection
-        """
-        if len(indices) == len(self):
-            return self
-        new = object.__new__(self.__class__)
-        indices = numpy.uint32(sorted(indices))
-        new.array = self.array[indices]
-        new.complete = self.complete
-        return new
 
     def filter(self, mask):
         """
