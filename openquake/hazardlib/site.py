@@ -333,7 +333,7 @@ class SiteCollection(object):
         :param bbox:
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
-            a site IDs within the bounding box
+            site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
         lons, lats = self.array['lons'], self.array['lats']

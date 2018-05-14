@@ -22,7 +22,7 @@ from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, occupants, case_master, case_shakemap)
 
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.commonlib.logictree import InvalidLogicTree
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
@@ -109,7 +109,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # this test is sensitive to the ordering of the epsilons
         # in openquake.riskinput.make_eps
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
-        fname = writetmp(view('totlosses', self.calc.datastore))
+        fname = gettemp(view('totlosses', self.calc.datastore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']
@@ -144,7 +144,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # testing the totlosses view
         dstore = self.calc.datastore
-        fname = writetmp(view('totlosses', dstore))
+        fname = gettemp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         # testing the npz export runs
