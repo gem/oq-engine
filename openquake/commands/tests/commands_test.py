@@ -25,7 +25,7 @@ import tempfile
 import unittest
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
 from openquake import commonlib
 from openquake.commands.info import info
@@ -127,7 +127,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
 class TidyTestCase(unittest.TestCase):
     def test_ok(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -169,7 +169,7 @@ xmlns:gml="http://www.opengis.net/gml"
 ''')
 
     def test_invalid(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">

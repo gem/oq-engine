@@ -114,7 +114,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)
-
                 # average losses
                 if param['avg_losses']:
                     rat = ratios.sum(axis=0) * param['ses_ratio']

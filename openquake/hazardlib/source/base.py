@@ -158,7 +158,7 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         The desired distance between two adjacent points in source's
         ruptures' mesh, in km. Mainly this parameter allows to balance
         the trade-off between time needed to compute the :meth:`distance
-        <openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_min_distance>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_min_distance>`
         between the rupture surface and a site and the precision of that
         computation.
     :param magnitude_scaling_relationship:

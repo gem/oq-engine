@@ -25,7 +25,7 @@ import math
 import numpy
 
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
@@ -52,7 +52,7 @@ def simple_fault_node(fault_trace, dip, upper_depth, lower_depth):
     return node
 
 
-class SimpleFaultSurface(BaseQuadrilateralSurface):
+class SimpleFaultSurface(BaseSurface):
     """
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
 
@@ -64,7 +64,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
     :meth:`from_fault_data`.
     """
     def __init__(self, mesh):
-        super().__init__()
         self.mesh = mesh
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")

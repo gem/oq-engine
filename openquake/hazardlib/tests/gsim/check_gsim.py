@@ -37,6 +37,7 @@ from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
 from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
                                      RSD595, RSD2080)
 
+
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
@@ -130,8 +131,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     return (
         errors,
         _format_stats(time.time() - started, discrepancies, errors, ctxs),
-        sctx, rctx, dctx, ctxs
-    )
+        sctx, rctx, dctx, ctxs)
 
 
 def _format_stats(time_spent, discrepancies, errors, ctxs):
@@ -333,30 +333,26 @@ if __name__ == '__main__':
     import argparse
 
     def gsim_by_import_path(import_path):
-        if not '.' in import_path:
+        if '.' not in import_path:
             raise argparse.ArgumentTypeError(
-                '%r is not well-formed import path' % import_path
-            )
+                '%r is not well-formed import path' % import_path)
         module_name, class_name = import_path.rsplit('.', 1)
         try:
             module = __import__(module_name, fromlist=[class_name])
         except ImportError:
             raise argparse.ArgumentTypeError(
                 'can not import module %r, make sure '
-                'it is in your $PYTHONPATH' % module_name
-            )
+                'it is in your $PYTHONPATH' % module_name)
         if not hasattr(module, class_name):
             raise argparse.ArgumentTypeError(
-                "module %r doesn't export name %r" % (module_name, class_name)
-            )
+                "module %r doesn't export name %r" % (module_name, class_name))
         gsim_class = getattr(module, class_name)
         if not isinstance(gsim_class, type) \
                 or not issubclass(gsim_class, GroundShakingIntensityModel):
             raise argparse.ArgumentTypeError(
                 "%r is not subclass of "
                 "openquake.hazardlib.gsim.base.GroundShakingIntensityModel"
-                % import_path
-            )
+                % import_path)
         return gsim_class
 
     parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
@@ -387,8 +383,7 @@ if __name__ == '__main__':
     errors, stats, _, _, _, _ = check_gsim(
         gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
-        debug=args.debug
-    )
+        debug=args.debug)
     if not args.quiet:
         print(stats, file=sys.stderr)
     if errors:
