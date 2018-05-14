@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -164,16 +164,19 @@ class PSHACalculator(base.HazardCalculator):
         totweight = 0
         num_tasks = 0
         num_sources = 0
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  oq.prefilter_sources)
-        with self.monitor('prefiltering'):
-            if oq.prefilter_sources != 'no' and self.prefilter:
-                logging.info(
-                    'Prefiltering sources with %s', oq.prefilter_sources)
-                csm = self.csm.filter(src_filter)
-            else:
-                csm = self.csm
-
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
+        if oq.prefilter_sources == 'rtree':
+            srcfilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
+        else:
+            srcfilter = src_filter
+        monitor = self.monitor('prefiltering')
+        if oq.prefilter_sources != 'no' and self.prefilter:
+            logging.info(
+                'Prefiltering sources with %s', oq.prefilter_sources)
+            csm = self.csm.filter(srcfilter, monitor)
+        else:
+            csm = self.csm
+        src_filter.prefilter = 'numpy'
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
