@@ -30,7 +30,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, DictArray, deprecated
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
