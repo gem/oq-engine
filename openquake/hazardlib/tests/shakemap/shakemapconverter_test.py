@@ -1,7 +1,7 @@
 import os.path
 import unittest
 import numpy
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.shakemapconverter import (
     get_shakemap_array, example_pga, example_sa)
 
@@ -13,7 +13,7 @@ CDIR = os.path.dirname(__file__)
 class ShakemapConverterTestCase(unittest.TestCase):
     def test_pga(self):
         imt_dt = numpy.dtype([('PGA', F32)])
-        array = get_shakemap_array(writetmp(example_pga))
+        array = get_shakemap_array(gettemp(example_pga))
         n = 3  # number of sites
         self.assertEqual(len(array), n)
         self.assertEqual(array.dtype.names,
@@ -31,7 +31,7 @@ class ShakemapConverterTestCase(unittest.TestCase):
     def test_sa(self):
         imt_dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32),
                               ('SA(1.0)', F32), ('SA(3.0)', F32)])
-        array = get_shakemap_array(writetmp(example_sa))
+        array = get_shakemap_array(gettemp(example_sa))
         n = 4  # number of sites
         self.assertEqual(len(array), n)
         self.assertEqual(array.dtype.names,

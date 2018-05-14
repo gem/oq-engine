@@ -24,7 +24,7 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, writetmp
+from openquake.baselib.general import group_array, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
@@ -219,7 +219,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
-        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        got = gettemp(rst_table(self.calc.datastore['gmdata'].value))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
