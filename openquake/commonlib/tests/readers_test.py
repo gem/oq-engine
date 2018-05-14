@@ -19,12 +19,12 @@
 import unittest
 import tempfile
 import numpy
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.readers import CurveReader
 from openquake.commonlib.writers import write_csv, read_composite_array
 
-fname = writetmp('''\
+fname = gettemp('''\
 asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.000000E+00,5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
@@ -32,7 +32,7 @@ a2,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,6.538710E+02
 a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
 ''')
 
-wrong1 = writetmp('''\
+wrong1 = gettemp('''\
 asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.000000E+00 5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
@@ -41,7 +41,7 @@ a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
 ''')
 
 
-wrong2 = writetmp('''\
+wrong2 = gettemp('''\
 asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.0 0.0,5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
@@ -82,7 +82,7 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
                       str(ctx.exception))
 
 
-hcurves = writetmp('''\
+hcurves = gettemp('''\
 lon,lat,PGA-0.1,PGA-0.4,PGA-0.6,SA(0.1)-0.1,SA(0.1)-0.4,SA(0.1)-0.6
 0.000000E+00,0.000000E+00,4.570135E-01,5.862679E-02,6.866165E-03,6.086748E-01,3.308305E-01,2.014712E-01
 ''')
