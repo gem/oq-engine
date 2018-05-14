@@ -345,7 +345,7 @@ class RtreeFilter(SourceFilter):
     (https://github.com/Toblerity/rtree/issues/65) this is why they must
     be saved on the file system where they can be read from the workers.
 
-    NB: an RtreeFilter has an .indexpath attribute, but not a sitecol
+    NB: an RtreeFilter has an .indexpath attribute, but not a .sitecol
     attribute nor an .index attribute, so it can be pickled and transferred
     easily.
 
