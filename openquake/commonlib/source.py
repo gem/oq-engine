@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
+from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -133,8 +133,8 @@ def _assert_equal_sources(nodes):
         for n in nodes[1:]:
             eq = n.to_str() == n0
             if not eq:
-                f0 = writetmp(n0)
-                f1 = writetmp(n.to_str())
+                f0 = gettemp(n0)
+                f1 = gettemp(n.to_str())
             assert eq, 'different parameters for source %s, run meld %s %s' % (
                 n['id'], f0, f1)
     return nodes
@@ -491,7 +491,7 @@ class CompositionInfo(object):
             # otherwise it would look in the current directory
             GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
-            tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+            tmp = gettemp(self.gsim_lt_xml, suffix='.xml')
             self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)

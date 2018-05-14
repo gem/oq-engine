@@ -34,7 +34,7 @@ import tempfile
 import string
 import random
 from django.test import Client
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
@@ -61,7 +61,7 @@ class EngineServerTestCase(unittest.TestCase):
         try:
             return json.loads(resp.content.decode('utf8'))
         except:
-            print('Invalid JSON, see %s' % writetmp(resp.content),
+            print('Invalid JSON, see %s' % gettemp(resp.content),
                   file=sys.stderr)
             return {}
 
