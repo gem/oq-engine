@@ -164,15 +164,12 @@ class PSHACalculator(base.HazardCalculator):
         num_tasks = 0
         num_sources = 0
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
-        if oq.prefilter_sources == 'rtree':
-            srcfilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
-        else:
-            srcfilter = src_filter
         monitor = self.monitor('prefiltering')
-        if oq.prefilter_sources != 'no':
-            logging.info(
-                'Prefiltering sources with %s', oq.prefilter_sources)
-            csm = self.csm.filter(srcfilter, monitor)
+        if oq.prefilter_sources == 'rtree':
+            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
+            csm = self.csm.filter(prefilter, monitor)
+        elif oq.prefilter_sources == 'numpy':
+            csm = self.csm.filter(src_filter, monitor)
         else:
             csm = self.csm
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)

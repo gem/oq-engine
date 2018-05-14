@@ -68,7 +68,7 @@ def getdefault(dic_with_default, key):
 def get_distances(rupture, mesh, param):
     """
     :param rupture: a rupture
-    :param mesh: a mesh of points
+    :param mesh: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
     :returns: an array of distances from the given mesh
     """
@@ -345,7 +345,7 @@ class RtreeFilter(SourceFilter):
     (https://github.com/Toblerity/rtree/issues/65) this is why they must
     be saved on the file system where they can be read from the workers.
 
-    NB: an RtreeFilter has an .indexpath attribute, but not a sitecol
+    NB: an RtreeFilter has an .indexpath attribute, but not a .sitecol
     attribute nor an .index attribute, so it can be pickled and transferred
     easily.
 
