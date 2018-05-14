@@ -236,7 +236,7 @@ class WithinBBoxTestCase(unittest.TestCase):
         cls.sites = SiteCollection.from_points(lons, lats)
 
     def test1(self):
-        assert_eq(self.sites.within_bbox((-182, -28, -178, -26)).sids, [0])
+        assert_eq(self.sites.within_bbox((-182, -28, -178, -26)), [0])
 
 
 class SiteCollectionIterTestCase(unittest.TestCase):
