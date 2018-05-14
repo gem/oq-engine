@@ -25,7 +25,7 @@ import time
 import operator
 import collections
 import numpy
-from openquake.baselib.general import AccumDict, deprecated
+from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import FarAwayRupture
@@ -42,11 +42,9 @@ event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
                         ('sample', U32)])
 
 
-@deprecated('Use sample_ruptures instead')
+# this is used in acceptance/stochastic_test.py, not in the engine
 def stochastic_event_set(
-        sources,
-        sites=None,
-        source_site_filter=filters.source_site_noop_filter):
+        sources, source_site_filter=filters.source_site_noop_filter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -65,31 +63,14 @@ def stochastic_event_set(
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param sites:
-        A list of sites to consider (or None)
     :param source_site_filter:
-        The source filter to use (only meaningful is sites is not None)
-    :param source_site_filter:
-        The rupture filter to use (only meaningful is sites is not None)
+        The source filter to use (default noop filter)
     :returns:
         Generator of :class:`~openquake.hazardlib.source.rupture.Rupture`
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
-    if sites is None:  # no filtering
-        for source in sources:
-            try:
-                for rupture in source.iter_ruptures():
-                    for i in range(rupture.sample_number_of_occurrences()):
-                        yield rupture
-            except Exception as err:
-                etype, err, tb = sys.exc_info()
-                msg = 'An error occurred with source id=%s. Error: %s'
-                msg %= (source.source_id, str(err))
-                raise_(etype, msg, tb)
-        return
-    # else apply filtering
-    for source, s_sites in source_site_filter(sources, sites):
+    for source, s_sites in source_site_filter(sources):
         try:
             for rupture in source.iter_ruptures():
                 for i in range(rupture.sample_number_of_occurrences()):
@@ -209,8 +190,8 @@ def _build_eb_ruptures(
         rup.serial = rup.seed - random_seed + 1
         with rup_mon:
             try:
-                rup.ctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.ctx[0].sids
+                rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
+                indices = rup.sctx.sids
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory

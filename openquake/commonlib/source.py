@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, writetmp, AccumDict
+from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -133,8 +133,8 @@ def _assert_equal_sources(nodes):
         for n in nodes[1:]:
             eq = n.to_str() == n0
             if not eq:
-                f0 = writetmp(n0)
-                f1 = writetmp(n.to_str())
+                f0 = gettemp(n0)
+                f1 = gettemp(n.to_str())
             assert eq, 'different parameters for source %s, run meld %s %s' % (
                 n['id'], f0, f1)
     return nodes
@@ -368,7 +368,7 @@ class CompositionInfo(object):
     a composite source model.
 
     :param source_model_lt: a SourceModelLogicTree object
-    :param source_models: a list of SourceModel instances
+    :param source_models: a list of LtSourceModel instances
     """
     @classmethod
     def fake(cls, gsimlt=None):
@@ -379,7 +379,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
-        fakeSM = logictree.SourceModel(
+        fakeSM = logictree.LtSourceModel(
             'scenario', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -491,7 +491,7 @@ class CompositionInfo(object):
             # otherwise it would look in the current directory
             GMPETable.GMPE_DIR = os.path.dirname(self.gsim_fname)
             trts = sorted(self.trts)
-            tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+            tmp = gettemp(self.gsim_lt_xml, suffix='.xml')
             self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
@@ -505,7 +505,7 @@ class CompositionInfo(object):
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
-            sm = logictree.SourceModel(
+            sm = logictree.LtSourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 rec['num_rlzs'], sm_id, rec['samples'])
             self.source_models.append(sm)
@@ -517,7 +517,7 @@ class CompositionInfo(object):
 
     def get_num_rlzs(self, source_model=None):
         """
-        :param source_model: a SourceModel instance (or None)
+        :param source_model: a LtSourceModel instance (or None)
         :returns: the number of realizations per source model (or all)
         """
         if source_model is None:
@@ -753,7 +753,7 @@ class CompositeSourceModel(collections.Sequence):
                 for src, _sites in src_filter(src_group.sources):
                     sg.sources.append(src)
                 src_groups.append(sg)
-            newsm = logictree.SourceModel(
+            newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
@@ -857,9 +857,9 @@ class CompositeSourceModel(collections.Sequence):
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
+                # src.src_group_id can be a list if get_sources_by_trt was
+                # called before
                 if len(grp) > 1 and not isinstance(src.src_group_id, list):
-                    # src.src_group_id could be a list because grouped in a
-                    # previous step (this may happen in presence of tiles)
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
         return dic

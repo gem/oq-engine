@@ -27,75 +27,6 @@ aae = numpy.testing.assert_almost_equal
 
 
 class StochasticEventSetTestCase(unittest.TestCase):
-    class FakeRupture(object):
-        def __init__(self, occurrences):
-            self.occurrences = occurrences
-
-        def sample_number_of_occurrences(self):
-            return self.occurrences
-
-    class FakeSource(object):
-        def __init__(self, source_id, ruptures):
-            self.source_id = source_id
-            self.ruptures = ruptures
-
-        def iter_ruptures(self):
-            return iter(self.ruptures)
-
-    class FailSource(FakeSource):
-        def iter_ruptures(self):
-            raise ValueError('Something bad happened')
-
-    def setUp(self):
-        self.time_span = 15
-        self.r1_1 = self.FakeRupture(1)
-        self.r1_0 = self.FakeRupture(0)
-        self.r1_2 = self.FakeRupture(2)
-        self.r2_1 = self.FakeRupture(1)
-        self.source1 = self.FakeSource(
-            1, [self.r1_1, self.r1_0, self.r1_2])
-        self.source2 = self.FakeSource(
-            2, [self.r2_1])
-
-    def test_no_filter(self):
-        ses = list(
-            stochastic_event_set(
-                [self.source1, self.source2]
-            ))
-        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
-
-    def test(self):
-        ses = list(stochastic_event_set(
-            [self.source1, self.source2]))
-        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
-
-    def test_source_errors(self):
-        # exercise the case where an error occurs while computing on a given
-        # seismic source; in this case, we expect an error to be raised which
-        # signals the id of the source in question
-        fail_source = self.FailSource(2, [self.r2_1])
-        with self.assertRaises(ValueError) as ae:
-            list(stochastic_event_set([self.source1, fail_source]))
-
-        expected_error = (
-            'An error occurred with source id=2. Error: Something bad happened'
-        )
-        self.assertEqual(expected_error, str(ae.exception))
-
-    def test_source_errors_with_sites(self):
-        # exercise the case where an error occurs while computing on a given
-        # seismic source; in this case, we expect an error to be raised which
-        # signals the id of the source in question
-        fail_source = self.FailSource(2, [self.r2_1])
-        fake_sites = SiteCollection.from_points([0], [0])
-        with self.assertRaises(ValueError) as ae:
-            list(stochastic_event_set([self.source1, fail_source],
-                                      sites=fake_sites))
-
-        expected_error = (
-            'An error occurred with source id=2. Error: Something bad happened'
-        )
-        self.assertEqual(expected_error, str(ae.exception))
 
     def test_nankai(self):
         # source model for the Nankai region provided by M. Pagani
@@ -128,3 +59,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         mesh = numpy.array([lonlat], [('lon', float), ('lat', float)])
         ebr = dic['eb_ruptures'][0]
         ebr.export(mesh)
+
+        # test no filtering
+        ruptures = list(stochastic_event_set(group))
+        self.assertEqual(len(ruptures), 19)
