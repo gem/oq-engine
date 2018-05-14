@@ -256,6 +256,9 @@ class BaseFilter(object):
             return source_sites[0][1]
 
     def __call__(self, sources):
+        """
+        :yields: pairs (src, sites)
+        """
         if not self.integration_distance:  # do not filter
             for src in sources:
                 yield src, self.sitecol
@@ -317,8 +320,7 @@ class SourceFilter(BaseFilter):
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor),
-            distribute=self.distribute
+            prefilter, (sources, self, monitor), distribute=self.distribute
         ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
@@ -329,7 +331,7 @@ class SourceFilter(BaseFilter):
 class RtreeFilter(SourceFilter):
     """
     The RtreeFilter uses the rtree library. The index is generated at
-    instantiation time and store in a temporary file. The filter should be
+    instantiation time and stored in a temporary file. The filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
 
@@ -342,6 +344,10 @@ class RtreeFilter(SourceFilter):
     libspatialindex indices cannot be properly pickled
     (https://github.com/Toblerity/rtree/issues/65) this is why they must
     be saved on the file system where they can be read from the workers.
+
+    NB: an RtreeFilter has an .indexpath attribute, but not a sitecol
+    attribute nor an .index attribute, so it can be pickled and transferred
+    easily.
 
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance
