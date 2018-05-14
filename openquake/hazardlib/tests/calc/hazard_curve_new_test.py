@@ -27,7 +27,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
-from openquake.hazardlib.calc.filters import NumpyFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
@@ -91,7 +91,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                               PMF([(0.7, 0), (0.3, 1)]),
                                               TRT.GEOTHERMAL)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
-        s_filter = NumpyFilter(SiteCollection([site]), {})
+        s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         gsim = SadighEtAl1997()
@@ -193,7 +193,7 @@ class NankaiTestCase(unittest.TestCase):
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
-        s_filter = NumpyFilter(SiteCollection([site]), {})
+        s_filter = SourceFilter(SiteCollection([site]), {})
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
         hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
