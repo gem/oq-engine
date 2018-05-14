@@ -105,10 +105,11 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sites = sitecol.within_bbox(bbox)
-    if sites is None:
+    indices = sitecol.within_bbox(bbox)
+    if len(indices) == 0:
         raise RuntimeError('There are no sites within the boundind box %s'
                            % str(bbox))
+    sites = sitecol.filtered(sitecol.sids[indices])
     logging.info('Associating %d GMVs to %d sites', len(array), len(sites))
     return geo.utils.assoc(array, sites, assoc_dist, 'warn')
 
