@@ -247,10 +247,10 @@ class SiteCollection(object):
         arr.flags.writeable = False
 
     def __eq__(self, other):
-        return (self.array == other.array).all()
+        return not self.__ne__(other)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return not_equal(self.array, other.array)
 
     def __toh5__(self):
         return self.array, {}
