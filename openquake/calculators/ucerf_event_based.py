@@ -49,7 +49,7 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import (
-    get_distances, SourceFilter, FarAwayRupture)
+    SourceFilter, FarAwayRupture)
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
