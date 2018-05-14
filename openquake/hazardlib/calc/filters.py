@@ -57,16 +57,21 @@ faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed.
 """
 import sys
+import copy
+import operator
 import collections
 from contextlib import contextmanager
 import numpy
 from scipy.interpolate import interp1d
 import rtree
+from openquake.baselib.parallel import Starmap
+from openquake.baselib.general import writetmp, groupby
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
 
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
+src_group_id = operator.attrgetter('src_group_id')
 
 
 @contextmanager
@@ -226,6 +231,18 @@ class IntegrationDistance(collections.Mapping):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
+    def get_affected_box(self, src):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        mag = src.get_min_max_mag()[1]
+        maxdist = self(src.tectonic_region_type, mag)
+        bbox = get_bounding_box(src, maxdist)
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+
     def __getstate__(self):
         # otherwise is not pickleable due to .piecewise
         return dict(dic=self.dic, magdist=self.magdist)
@@ -243,7 +260,94 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-class SourceFilter(object):
+def prefilter(srcs, srcfilter, monitor):
+    """
+    :returns: a dict src_group_id -> sources
+    """
+    return groupby(srcfilter.filter(srcs), src_group_id)
+
+
+class BaseFilter(object):
+    def __init__(self, sitecol, integration_distance):
+        if sitecol is not None and len(sitecol) < len(sitecol.complete):
+            raise ValueError('%s is not complete!' % sitecol)
+        self.sitecol = sitecol
+        self.integration_distance = (
+            IntegrationDistance(integration_distance)
+            if isinstance(integration_distance, dict)
+            else integration_distance)
+
+    def get_rectangle(self, src):
+        """
+        :param src: a source object
+        :returns: ((min_lon, min_lat), width, height), useful for plotting
+        """
+        min_lon, min_lat, max_lon, max_lat = (
+            self.integration_distance.get_affected_box(src))
+        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
+
+    def get_close_sites(self, source):
+        """
+        Returns the sites within the integration distance from the source,
+        or None.
+        """
+        source_sites = list(self([source]))
+        if source_sites:
+            return source_sites[0][1]
+
+    def __call__(self, sources):
+        if not self.integration_distance:  # do not filter
+            for src in sources:
+                yield src, self.sitecol
+            return
+        for src in self.filter(sources):
+            yield src, self.sitecol.filtered(src.indices)
+
+
+class SourceFilter(BaseFilter):
+
+    # used in the disaggregation calculator
+    def get_bounding_boxes(self, trt=None, mag=None):
+        """
+        :param trt: a tectonic region type (used for the integration distance)
+        :param mag: a magnitude (used for the integration distance)
+        :returns: a list of bounding boxes, one per site
+        """
+        bbs = []
+        for site in self.sitecol:
+            bb = self.integration_distance.get_bounding_box(
+                site.location.longitude, site.location.latitude, trt, mag)
+            bbs.append(bb)
+        return bbs
+
+    def filter(self, sources):
+        for src in sources:
+            if hasattr(src, 'indices'):   # already filtered
+                yield src
+                continue
+            box = self.integration_distance.get_affected_box(src)
+            indices = self.sitecol.within_bbox(box)
+            if len(indices):
+                src.indices = indices
+                yield src
+
+    def pfilter(self, sources, monitor):
+        """
+        Filter the sources in parallel.
+
+        :param sources: a sequence of sources
+        :param monitor: a Monitor instance
+        :returns: a dictionary src_group_id -> sources
+        """
+        sources_by_grp = Starmap.apply(
+            prefilter, (sources, self, monitor)).reduce()
+        # avoid task ordering issues
+        for sources in sources_by_grp.values():
+            sources.sort(key=operator.attrgetter('source_id'))
+        return sources_by_grp
+
+
+class RtreeFilter(BaseFilter):
     """
     The SourceFilter uses the rtree library. The index is generated at
     instantiation time and kept in memory. The filter should be
@@ -267,90 +371,40 @@ class SourceFilter(object):
     :param prefilter:
         by default "rtree", accepts also "numpy" and "no"
     """
-    def __init__(self, sitecol, integration_distance, prefilter='rtree'):
-        if sitecol is not None and len(sitecol) < len(sitecol.complete):
-            raise ValueError('%s is not complete!' % sitecol)
-        self.integration_distance = (
-            IntegrationDistance(integration_distance)
-            if isinstance(integration_distance, dict)
-            else integration_distance)
-        self.sitecol = sitecol
-        if integration_distance and sitecol is not None:
-            self.prefilter = prefilter
-        else:
-            self.prefilter = 'no'
-        if self.prefilter == 'rtree':
-            lonlats = zip(sitecol.lons, sitecol.lats)
-            self.index = rtree.index.Index(
-                (i, (lon, lat, lon, lat), None)
-                for i, (lon, lat) in enumerate(lonlats))
+    def __init__(self, sitecol, integration_distance):
+        self.integration_distance = integration_distance
+        self.indexpath = writetmp('')
+        lonlats = zip(sitecol.lons, sitecol.lats)
+        index = rtree.index.Index(self.indexpath)
+        for i, (lon, lat) in enumerate(lonlats):
+            index.insert(i, (lon, lat, lon, lat))
+        index.close()
 
-    def get_affected_box(self, src):
-        """
-        Get the enlarged bounding box of a source.
-
-        :param src: a source object
-        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
-        """
-        mag = src.get_min_max_mag()[1]
-        maxdist = self.integration_distance(src.tectonic_region_type, mag)
-        bbox = get_bounding_box(src, maxdist)
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
-
-    def get_rectangle(self, src):
-        """
-        :param src: a source object
-        :returns: ((min_lon, min_lat), width, height), useful for plotting
-        """
-        min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
-        return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
-
-    def get_close_sites(self, source):
-        """
-        Returns the sites within the integration distance from the source,
-        or None.
-        """
-        source_sites = list(self([source]))
-        if source_sites:
-            return source_sites[0][1]
-
-    def get_bounding_boxes(self, trt=None, mag=None):
-        """
-        :param trt: a tectonic region type (used for the integration distance)
-        :param mag: a magnitude (used for the integration distance)
-        :returns: a list of bounding boxes, one per site
-        """
-        bbs = []
-        for site in self.sitecol:
-            bb = self.integration_distance.get_bounding_box(
-                site.location.longitude, site.location.latitude, trt, mag)
-            bbs.append(bb)
-        return bbs
-
-    def __call__(self, sources, sites=None):
-        if sites is None:
-            sites = self.sitecol
+    def filter(self, sources):
+        index = rtree.index.Index(self.indexpath)
         for src in sources:
-            if hasattr(src, 'indices'):  # already filtered
-                yield src, sites.filtered(src.indices)
-            elif self.prefilter == 'no':  # do not filter
-                yield src, sites
-            elif self.prefilter == 'rtree':
-                indices = within(self.get_affected_box(src), self.index)
-                if len(indices):
-                    src.indices = indices
-                    yield src, sites.filtered(src.indices)
-            elif self.prefilter == 'numpy':
-                s_sites = sites.within_bbox(self.get_affected_box(src))
-                if s_sites is not None:
-                    src.indices = s_sites.sids
-                    yield src, s_sites
+            box = self.integration_distance.get_affected_box(src)
+            indices = within(box, index)
+            if len(indices):
+                src.indices = indices
+                yield src
+        index.close()
 
-    def __getstate__(self):
-        # 'rtree' cannot be used on the workers, so we use 'numpy' instead
-        pref = 'numpy' if self.prefilter == 'rtree' else self.prefilter
-        return dict(integration_distance=self.integration_distance,
-                    sitecol=self.sitecol, prefilter=pref)
+    def pfilter(self, sources, monitor):
+        """
+        Filter the sources in parallel.
+
+        :param sources: a sequence of sources
+        :param monitor: a Monitor instance
+        :returns: a dictionary src_group_id -> sources
+        """
+        sources_by_grp = Starmap.apply(
+            prefilter, (sources, self, monitor),
+            distribute='processpool').reduce()
+        # avoid task ordering issues
+        for sources in sources_by_grp.values():
+            sources.sort(key=operator.attrgetter('source_id'))
+        return sources_by_grp
 
 
-source_site_noop_filter = SourceFilter(None, {})
+source_site_noop_filter = BaseFilter(None, {})

@@ -333,7 +333,7 @@ class SiteCollection(object):
         :param bbox:
             a quartet (min_lon, min_lat, max_lon, max_lat)
         :returns:
-            a filtered SiteCollection within the bounding box or None
+            a site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
         lons, lats = self.array['lons'], self.array['lats']
@@ -342,7 +342,7 @@ class SiteCollection(object):
             min_lon, max_lon = min_lon % 360, max_lon % 360
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
-        return self.filter(mask)
+        return mask.nonzero()[0]
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

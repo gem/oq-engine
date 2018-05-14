@@ -27,7 +27,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_slices)
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -158,12 +158,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  oq.prefilter_sources)
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        csm = self.csm.filter(src_filter)
+        csm = self.csm.filter(src_filter, self.monitor('prefilter'))
+        src_filter.prefilter = 'numpy'
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
@@ -178,7 +178,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                if sg.src_interdep == 'mutex':
+                if sg.src_interdep == 'mutex':  # do not split
                     sg.samples = sm.samples
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
