@@ -109,7 +109,6 @@ def get_distances(rupture, mesh, param):
     :returns: an array of distances from the given mesh
     """
     if param == 'rrup':
-        # TODO: to be replaced with get_min_distance(mesh, rupture.mesh)
         dist = rupture.surface.get_min_distance(mesh)
     elif param == 'rx':
         dist = rupture.surface.get_rx_distance(mesh)
