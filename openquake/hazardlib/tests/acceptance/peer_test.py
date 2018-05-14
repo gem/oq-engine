@@ -230,8 +230,7 @@ class Set1TestCase(unittest.TestCase):
                     data['hypo_depths'][i, j]
                 )
                 rup = BaseRupture(data['mag'], data['rake'],
-                                  data['tectonic_region_type'], hypo, surf,
-                                  data['source_typology'])
+                                  data['tectonic_region_type'], hypo, surf)
                 ruptures.append((rup, data['pmf']))
         npss = NonParametricSeismicSource(
             'id', 'name', data['tectonic_region_type'], ruptures

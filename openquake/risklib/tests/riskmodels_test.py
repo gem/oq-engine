@@ -22,7 +22,7 @@ import unittest
 import mock
 import numpy
 from numpy.testing import assert_almost_equal
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.risklib import riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
@@ -35,7 +35,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different
         # vulnerability functions
-        vuln_content = writetmp(u"""\
+        vuln_content = gettemp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -76,7 +76,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         # multiple IMTs.
         # In this test input, we've defined two functions in separate sets
         # with the same ID and different IMTs.
-        vuln_content = writetmp(u"""\
+        vuln_content = gettemp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -114,7 +114,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     def test_lr_eq_0_cov_gt_0(self):
         # If a vulnerability function loss ratio is 0 and its corresponding CoV
         # is > 0, a ValueError should be raised
-        vuln_content = writetmp(u"""\
+        vuln_content = gettemp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -140,7 +140,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
                       str(ar.exception))
 
     def test_missing_minIML(self):
-        vuln_content = writetmp(u"""\
+        vuln_content = gettemp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -164,7 +164,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         self.assertIn("node IML: 'minIML', line 9", str(ar.exception))
 
     def test_missing_maxIML(self):
-        vuln_content = writetmp(u"""\
+        vuln_content = gettemp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -189,7 +189,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 
 
 class ParseConsequenceModelTestCase(unittest.TestCase):
-    wrong_csq_model_1 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+    wrong_csq_model_1 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 <consequenceModel id="example" assetCategory="buildings">
 
@@ -206,7 +206,7 @@ class ParseConsequenceModelTestCase(unittest.TestCase):
 </consequenceModel>
 </nrml>
 """)
-    wrong_csq_model_2 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+    wrong_csq_model_2 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 <consequenceModel id="example" assetCategory="buildings"
 lossCategory="contents">
@@ -223,7 +223,7 @@ lossCategory="contents">
 </consequenceModel>
 </nrml>
 """)
-    wrong_csq_model_3 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+    wrong_csq_model_3 = gettemp(u"""<?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 <consequenceModel id="example" assetCategory="buildings"
 lossCategory="contents">
