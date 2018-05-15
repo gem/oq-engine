@@ -3,8 +3,8 @@ event based risk with PMF
 
 ============== ===================
 checksum32     3,942,037,274      
-date           2018-04-30T11:21:46
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:03
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 8
@@ -98,7 +98,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          0.25559   2.141E-04  15        15        48    
+1         SimpleFaultSource 2            0.31780   0.0        15        15        48    
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -106,7 +106,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.25559   1     
+SimpleFaultSource 0.31780   1     
 ================= ========= ======
 
 Duplicated sources
@@ -117,30 +117,34 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-compute_ruptures   0.04545 0.01136 0.03205 0.06353 6        
+prefilter          0.00756 0.00192 0.00389 0.01162 15       
+compute_ruptures   0.06228 0.02409 0.03038 0.10236 6        
 ================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
-================ ========================================================================== ========
-task             sent                                                                       received
-compute_ruptures sources=11.6 KB src_filter=4.2 KB param=3.6 KB monitor=1.93 KB gsims=786 B 36.24 KB
-================ ========================================================================== ========
+================ =========================================================================== ========
+task             sent                                                                        received
+prefilter        srcs=19.36 KB monitor=4.73 KB srcfilter=3.35 KB                             19.96 KB
+compute_ruptures sources=10.76 KB src_filter=4.2 KB param=3.6 KB monitor=1.93 KB gsims=786 B 41.79 KB
+================ =========================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.27269   4.98438   6     
-managing sources               0.09665   0.0       1     
-making contexts                0.07281   0.0       31    
-saving ruptures                0.01430   0.0       6     
-reading composite source model 0.00639   0.0       1     
-store source_info              0.00406   0.0       1     
-reading exposure               0.00290   0.0       1     
-reading site collection        0.00245   0.0       1     
-unpickling compute_ruptures    0.00162   0.0       6     
-setting event years            0.00146   0.0       1     
-splitting sources              6.728E-04 0.0       1     
+total compute_ruptures         0.37368   4.75781   6     
+managing sources               0.18133   0.0       1     
+total prefilter                0.11335   5.07031   15    
+making contexts                0.08640   0.0       31    
+saving ruptures                0.01425   0.0       6     
+reading composite source model 0.00573   0.0       1     
+store source_info              0.00420   0.0       1     
+reading site collection        0.00220   0.0       1     
+unpickling compute_ruptures    0.00182   0.0       6     
+setting event years            0.00148   0.0       1     
+unpickling prefilter           0.00134   0.0       15    
+reading exposure               8.886E-04 0.0       1     
+splitting sources              6.030E-04 0.0       1     
 ============================== ========= ========= ======

@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-04-30T11:21:53
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:11
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -79,33 +79,33 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-1      SadighEtAl1997() rrup      vs30       mag rake  
-2      SadighEtAl1997() rrup      vs30       mag rake  
-3      SadighEtAl1997() rrup      vs30       mag rake  
-4      SadighEtAl1997() rrup      vs30       mag rake  
-5      SadighEtAl1997() rrup      vs30       mag rake  
-6      SadighEtAl1997() rrup      vs30       mag rake  
-7      SadighEtAl1997() rrup      vs30       mag rake  
-8      SadighEtAl1997() rrup      vs30       mag rake  
-9      SadighEtAl1997() rrup      vs30       mag rake  
-10     SadighEtAl1997() rrup      vs30       mag rake  
-11     SadighEtAl1997() rrup      vs30       mag rake  
-12     SadighEtAl1997() rrup      vs30       mag rake  
-13     SadighEtAl1997() rrup      vs30       mag rake  
-14     SadighEtAl1997() rrup      vs30       mag rake  
-15     SadighEtAl1997() rrup      vs30       mag rake  
-16     SadighEtAl1997() rrup      vs30       mag rake  
-17     SadighEtAl1997() rrup      vs30       mag rake  
-18     SadighEtAl1997() rrup      vs30       mag rake  
-19     SadighEtAl1997() rrup      vs30       mag rake  
-20     SadighEtAl1997() rrup      vs30       mag rake  
-21     SadighEtAl1997() rrup      vs30       mag rake  
-22     SadighEtAl1997() rrup      vs30       mag rake  
-23     SadighEtAl1997() rrup      vs30       mag rake  
-24     SadighEtAl1997() rrup      vs30       mag rake  
-25     SadighEtAl1997() rrup      vs30       mag rake  
-26     SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rjb rrup  vs30       mag rake  
+1      SadighEtAl1997() rjb rrup  vs30       mag rake  
+2      SadighEtAl1997() rjb rrup  vs30       mag rake  
+3      SadighEtAl1997() rjb rrup  vs30       mag rake  
+4      SadighEtAl1997() rjb rrup  vs30       mag rake  
+5      SadighEtAl1997() rjb rrup  vs30       mag rake  
+6      SadighEtAl1997() rjb rrup  vs30       mag rake  
+7      SadighEtAl1997() rjb rrup  vs30       mag rake  
+8      SadighEtAl1997() rjb rrup  vs30       mag rake  
+9      SadighEtAl1997() rjb rrup  vs30       mag rake  
+10     SadighEtAl1997() rjb rrup  vs30       mag rake  
+11     SadighEtAl1997() rjb rrup  vs30       mag rake  
+12     SadighEtAl1997() rjb rrup  vs30       mag rake  
+13     SadighEtAl1997() rjb rrup  vs30       mag rake  
+14     SadighEtAl1997() rjb rrup  vs30       mag rake  
+15     SadighEtAl1997() rjb rrup  vs30       mag rake  
+16     SadighEtAl1997() rjb rrup  vs30       mag rake  
+17     SadighEtAl1997() rjb rrup  vs30       mag rake  
+18     SadighEtAl1997() rjb rrup  vs30       mag rake  
+19     SadighEtAl1997() rjb rrup  vs30       mag rake  
+20     SadighEtAl1997() rjb rrup  vs30       mag rake  
+21     SadighEtAl1997() rjb rrup  vs30       mag rake  
+22     SadighEtAl1997() rjb rrup  vs30       mag rake  
+23     SadighEtAl1997() rjb rrup  vs30       mag rake  
+24     SadighEtAl1997() rjb rrup  vs30       mag rake  
+25     SadighEtAl1997() rjb rrup  vs30       mag rake  
+26     SadighEtAl1997() rjb rrup  vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -188,8 +188,8 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-SFLT2     SimpleFaultSource 89           0.00249   2.980E-05  61        61        0     
-SFLT1     SimpleFaultSource 132          0.00116   4.053E-06  32        32        0     
+SFLT2     SimpleFaultSource 89           0.00217   1.860E-05  61        61        0     
+SFLT1     SimpleFaultSource 132          0.00103   3.099E-06  32        32        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -197,7 +197,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.00365   2     
+SimpleFaultSource 0.00319   2     
 ================= ========= ======
 
 Duplicated sources
@@ -206,38 +206,40 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ========= ======= =========
-operation-duration mean    stddev  min       max     num_tasks
-count_ruptures     0.00194 0.00102 6.537E-04 0.00484 65       
-================== ======= ======= ========= ======= =========
+================== ======= ========= ========= ======= =========
+operation-duration mean    stddev    min       max     num_tasks
+prefilter          0.00844 0.00336   0.00354   0.01330 41       
+count_ruptures     0.00131 4.551E-04 5.226E-04 0.00228 65       
+================== ======= ========= ========= ======= =========
 
 Fastest task
 ------------
-taskno=54, weight=90, duration=0 s, sources="SFLT2"
+taskno=59, weight=210, duration=0 s, sources="SFLT2"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   1.00000 NaN    1   1   1
-weight   90      NaN    90  90  1
+weight   210     NaN    210 210 1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=1, weight=60, duration=0 s, sources="SFLT1"
+taskno=7, weight=89, duration=0 s, sources="SFLT2"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   60      NaN    60  60  1
+nsites   1.00000 0.0    1   1   2
+weight   44      21     29  60  2
 ======== ======= ====== === === =
 
 Informational data
 ------------------
 ============== ================================================================================= ========
 task           sent                                                                              received
-count_ruptures sources=82.59 KB srcfilter=45.45 KB param=26.66 KB monitor=20.95 KB gsims=7.62 KB 23.51 KB
+prefilter      srcs=55.52 KB monitor=13.05 KB srcfilter=9.17 KB                                  61.48 KB
+count_ruptures sources=83.28 KB srcfilter=45.51 KB param=26.66 KB monitor=21.14 KB gsims=7.62 KB 23.51 KB
 ============== ================================================================================= ========
 
 Slowest operations
@@ -245,13 +247,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.58731   0.0       1     
-total count_ruptures           0.12631   1.90625   65    
-managing sources               0.08177   0.0       1     
-store source_info              0.00668   0.0       1     
-unpickling count_ruptures      0.00259   0.0       65    
-splitting sources              0.00177   0.0       1     
-aggregate curves               0.00125   0.0       65    
-reading site collection        3.145E-04 0.0       1     
-saving probability maps        3.409E-05 0.0       1     
+reading composite source model 0.56067   0.0       1     
+total prefilter                0.34624   3.76562   41    
+managing sources               0.20502   0.0       1     
+total count_ruptures           0.08502   0.68750   65    
+store source_info              0.00744   0.0       1     
+unpickling prefilter           0.00536   0.0       41    
+unpickling count_ruptures      0.00289   0.0       65    
+splitting sources              0.00140   0.0       1     
+aggregate curves               0.00136   0.0       65    
+reading site collection        3.047E-04 0.0       1     
+saving probability maps        3.719E-05 0.0       1     
 ============================== ========= ========= ======

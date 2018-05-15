@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ===================
 checksum32     1,243,559,086      
-date           2018-04-30T11:22:58
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:14:22
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rjb rrup  vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -69,7 +69,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1.00000      1           
+source_model.xml 0      Active Shallow Crust 1            1           
 ================ ====== ==================== ============ ============
 
 Slowest sources
@@ -77,7 +77,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  1            0.01896   9.775E-06  1         1         2,037 
+1         PointSource  1            0.01956   0.0        1         1         2,037 
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.01896   1     
+PointSource  0.01956   1     
 ============ ========= ======
 
 Duplicated sources
@@ -96,14 +96,16 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-compute_ruptures   0.02142 NaN    0.02142 0.02142 1        
+prefilter          0.00143 NaN    0.00143 0.00143 1        
+compute_ruptures   0.02198 NaN    0.02198 0.02198 1        
 ================== ======= ====== ======= ======= =========
 
 Informational data
 ------------------
 ================ ====================================================================== ========
 task             sent                                                                   received
-compute_ruptures sources=1.38 KB src_filter=716 B param=577 B monitor=330 B gsims=120 B 53.97 KB
+prefilter        srcs=0 B srcfilter=0 B monitor=0 B                                     1.29 KB 
+compute_ruptures sources=1.34 KB src_filter=717 B param=577 B monitor=330 B gsims=120 B 54.12 KB
 ================ ====================================================================== ========
 
 Slowest operations
@@ -111,14 +113,16 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.04629   0.0       1     
-total compute_ruptures         0.02142   2.98047   1     
-saving ruptures                0.01266   0.0       1     
-setting event years            0.00487   0.0       1     
-store source_info              0.00393   0.0       1     
-reading composite source model 0.00310   0.0       1     
-making contexts                0.00136   0.0       1     
-splitting sources              4.642E-04 0.0       1     
-reading site collection        3.221E-04 0.0       1     
-unpickling compute_ruptures    2.751E-04 0.0       1     
+managing sources               0.05555   0.0       1     
+total compute_ruptures         0.02198   3.11719   1     
+saving ruptures                0.01444   0.0       1     
+setting event years            0.00555   0.0       1     
+store source_info              0.00415   0.0       1     
+reading composite source model 0.00308   0.0       1     
+making contexts                0.00191   0.0       1     
+total prefilter                0.00143   0.0       1     
+splitting sources              6.139E-04 0.0       1     
+reading site collection        3.178E-04 0.0       1     
+unpickling compute_ruptures    2.675E-04 0.0       1     
+unpickling prefilter           1.142E-04 0.0       1     
 ============================== ========= ========= ======
