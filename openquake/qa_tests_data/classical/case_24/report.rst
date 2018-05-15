@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2018-04-30T11:21:53
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:10
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 197
@@ -77,7 +77,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   260          3.521E-04 0.01561    52        52        0     
+1         AreaSource   260          6.242E-04 0.01763    52        52        0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   3.521E-04 1     
+AreaSource   6.242E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -94,10 +94,11 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-count_ruptures     0.00467 NaN    0.00467 0.00467 1        
-================== ======= ====== ======= ======= =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00325 0.00177 0.00118 0.00706 52       
+count_ruptures     0.00671 NaN     0.00671 0.00671 1        
+================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
@@ -125,7 +126,8 @@ Informational data
 ------------------
 ============== ======================================================================== ========
 task           sent                                                                     received
-count_ruptures sources=12.57 KB param=2.48 KB srcfilter=716 B monitor=330 B gsims=131 B 359 B   
+prefilter      srcs=64.69 KB monitor=16.55 KB srcfilter=11.63 KB                        68.7 KB 
+count_ruptures sources=24.87 KB param=2.48 KB srcfilter=717 B monitor=333 B gsims=131 B 359 B   
 ============== ======================================================================== ========
 
 Slowest operations
@@ -133,13 +135,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.01920   0.0       1     
-splitting sources              0.01614   0.0       1     
-managing sources               0.00880   0.0       1     
-total count_ruptures           0.00467   1.42578   1     
-store source_info              0.00349   0.0       1     
-reading site collection        2.701E-04 0.0       1     
-unpickling count_ruptures      4.244E-05 0.0       1     
-saving probability maps        3.052E-05 0.0       1     
-aggregate curves               2.170E-05 0.0       1     
+managing sources               0.18304   0.0       1     
+total prefilter                0.16895   3.37109   52    
+reading composite source model 0.02119   0.0       1     
+splitting sources              0.01821   0.0       1     
+total count_ruptures           0.00671   0.0       1     
+unpickling prefilter           0.00476   0.0       52    
+store source_info              0.00394   0.0       1     
+reading site collection        3.145E-04 0.0       1     
+unpickling count_ruptures      3.934E-05 0.0       1     
+saving probability maps        3.362E-05 0.0       1     
+aggregate curves               2.575E-05 0.0       1     
 ============================== ========= ========= ======
