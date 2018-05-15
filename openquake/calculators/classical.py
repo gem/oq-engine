@@ -335,7 +335,7 @@ class ClassicalCalculator(PSHACalculator):
                              ' with the --hc option')
             return {}
         # initialize datasets
-        N = len(self.sitecol)
+        N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         attrs = dict(
             __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
