@@ -3,8 +3,8 @@ Scenario Risk Maule Mw 8.8 reduced
 
 ============== ===================
 checksum32     4,058,514,510      
-date           2018-04-30T11:23:00
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:14:24
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 29, num_levels = 78
@@ -109,8 +109,8 @@ Slowest operations
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-building riskinputs     0.12568  0.0       1     
-reading exposure        0.03065  0.0       1     
-reading site collection 0.02129  0.0       1     
-building epsilons       0.00220  0.0       1     
+building riskinputs     0.08601  0.0       1     
+reading site collection 0.02148  0.0       1     
+reading exposure        0.01411  0.0       1     
+building epsilons       0.00244  0.0       1     
 ======================= ======== ========= ======
