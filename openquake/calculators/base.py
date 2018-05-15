@@ -644,7 +644,9 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building/saving GMFs'):
             gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
                            oq.truncation_level, E, oq.random_seed)
-            save_gmf_data(self.datastore, self.sitecol, gmfs)
+            tot_sites = self.datastore.get_attr('assetcol', 'tot_sites')
+            save_gmf_data(self.datastore, self.sitecol, gmfs,
+                          tot_sites=tot_sites)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
@@ -812,12 +814,10 @@ def save_gmfs(calculator):
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
-        idx = (slice(None) if haz_sitecol.indices is None
-               else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
@@ -828,7 +828,11 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
-    for sid in sitecol.complete.sids:
+    if tot_sites is not None:
+        all_sids = numpy.arange(tot_sites, dtype=U32)
+    else:
+        all_sids = sitecol.complete.sids
+    for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
