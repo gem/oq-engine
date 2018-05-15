@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 3
 
 ============== ===================
 checksum32     4,051,148,706      
-date           2018-04-30T11:21:55
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:13
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rjb rrup  vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -77,7 +77,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   31,353       0.33254   5.00681    31,353    31,353    0     
+1         AreaSource   31,353       0.42048   5.33301    31,353    31,353    0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.33254   1     
+AreaSource   0.42048   1     
 ============ ========= ======
 
 Duplicated sources
@@ -96,7 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-count_ruptures     0.05947 0.01843 0.02020 0.08800 32       
+prefilter          0.10376 0.03340 0.04792 0.19613 60       
+count_ruptures     0.06144 0.02195 0.01295 0.09681 32       
 ================== ======= ======= ======= ======= =========
 
 Fastest task
@@ -112,7 +113,7 @@ weight   0.10000 7.461E-09 0.10000 0.10000 353
 
 Slowest task
 ------------
-taskno=15, weight=100, duration=0 s, sources="1"
+taskno=1, weight=100, duration=0 s, sources="1"
 
 ======== ======= ========= ======= ======= ====
 variable mean    stddev    min     max     n   
@@ -125,7 +126,8 @@ Informational data
 ------------------
 ============== ================================================================================ ========
 task           sent                                                                             received
-count_ruptures sources=6.84 MB srcfilter=22.38 KB param=12.88 KB monitor=10.31 KB gsims=3.75 KB 11.22 KB
+prefilter      srcs=5.46 MB monitor=19.16 KB srcfilter=13.42 KB                                 6.75 MB 
+count_ruptures sources=7.22 MB srcfilter=22.41 KB param=12.88 KB monitor=10.41 KB gsims=3.75 KB 11.22 KB
 ============== ================================================================================ ========
 
 Slowest operations
@@ -133,13 +135,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-splitting sources              5.02267   8.76953   1     
-reading composite source model 4.93003   0.0       1     
-managing sources               2.45202   0.0       1     
-total count_ruptures           1.90319   1.96875   32    
-store source_info              0.00363   0.0       1     
-unpickling count_ruptures      0.00135   0.0       32    
-aggregate curves               5.941E-04 0.0       32    
-reading site collection        3.026E-04 0.0       1     
-saving probability maps        3.123E-05 0.0       1     
+total prefilter                6.22540   3.30859   60    
+splitting sources              5.34909   7.23828   1     
+reading composite source model 5.01801   0.0       1     
+managing sources               1.98192   0.0       1     
+total count_ruptures           1.96599   0.40234   32    
+unpickling prefilter           0.51662   0.0       60    
+store source_info              0.00390   0.0       1     
+unpickling count_ruptures      0.00153   0.0       32    
+aggregate curves               6.664E-04 0.0       32    
+reading site collection        2.403E-04 0.0       1     
+saving probability maps        3.266E-05 0.0       1     
 ============================== ========= ========= ======
