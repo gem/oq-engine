@@ -357,6 +357,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.dtype = numpy.dtype(ls)
 
     def init(self):
+        # the seed is reset in CompositeRiskModel.__init__
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
         self.set_distribution(None)
 
@@ -402,8 +403,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def sample(self, probs, _covs, idxs, epsilons):
         """
-        Sample the epsilons and applies the corrections to the probabilities.
-        This method is called only if there are epsilons.
+        Sample the .loss_ratios with the given probabilities.
 
         :param probs:
            array of E' floats
