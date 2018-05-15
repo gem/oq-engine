@@ -123,9 +123,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
-        self.run_calc(case_1g.__file__, 'job.ini')
-        fname = gettemp(view('mean_avg_losses', self.calc.datastore))
-        self.assertEqualFiles('expected/avg_losses.txt', fname)
+        self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini')
+        [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
     @attr('qa', 'risk', 'event_based_risk')
