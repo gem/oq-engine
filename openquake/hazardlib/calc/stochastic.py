@@ -128,7 +128,8 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
     # Compute and save stochastic event sets
     num_ruptures = 0
     eids = numpy.zeros(0)
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance,
+                          param['filter_distance'])
     for src, s_sites in src_filter(group):
         t0 = time.time()
         num_ruptures += src.num_ruptures

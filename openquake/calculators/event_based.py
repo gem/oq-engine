@@ -403,7 +403,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         rlzs_by_gsim[grp_id], block, sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
-                        samples_by_grp[grp_id])
+                        oq.filter_distance, samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
         U = len(self.datastore['ruptures'])
@@ -420,7 +420,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 getters.append(GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, samples_by_grp[grp_id]))
+                    correl_model, oq.filter_distance, samples_by_grp[grp_id]))
             yield getters, oq, monitor
 
     def execute(self):
