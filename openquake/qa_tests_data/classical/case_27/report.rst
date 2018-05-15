@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     1,195,921,690      
-date           2018-04-30T11:22:08
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:27
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 6
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ======================== ========= ========== ==============
 grp_id gsims                    distances siteparams ruptparams    
 ====== ======================== ========= ========== ==============
-0      SiMidorikawa1999SInter() rrup                 hypo_depth mag
+0      SiMidorikawa1999SInter() rjb rrup             hypo_depth mag
 ====== ======================== ========= ========== ==============
 
 Realizations per (TRT, GSIM)
@@ -77,21 +77,21 @@ Slowest sources
 ========= ========================== ============ ========= ========== ========= ========= ======
 source_id source_class               num_ruptures calc_time split_time num_sites num_split events
 ========= ========================== ============ ========= ========== ========= ========= ======
-case_01   NonParametricSeismicSource 1            5.722E-05 0.0        1         1         0     
-case_02   NonParametricSeismicSource 1            1.502E-05 0.0        1         1         0     
-case_03   NonParametricSeismicSource 1            1.049E-05 0.0        1         1         0     
-case_04   NonParametricSeismicSource 1            8.583E-06 0.0        1         1         0     
-case_05   NonParametricSeismicSource 1            8.583E-06 0.0        1         1         0     
-case_06   NonParametricSeismicSource 1            8.583E-06 0.0        1         1         0     
-case_07   NonParametricSeismicSource 1            8.583E-06 0.0        1         1         0     
-case_13   NonParametricSeismicSource 2            8.583E-06 0.0        1         1         0     
-case_09   NonParametricSeismicSource 1            8.345E-06 0.0        1         1         0     
-case_10   NonParametricSeismicSource 1            8.345E-06 0.0        1         1         0     
-case_14   NonParametricSeismicSource 2            8.345E-06 0.0        1         1         0     
-case_15   NonParametricSeismicSource 2            8.345E-06 0.0        1         1         0     
-case_12   NonParametricSeismicSource 2            8.106E-06 0.0        1         1         0     
-case_08   NonParametricSeismicSource 1            7.629E-06 0.0        1         1         0     
-case_11   NonParametricSeismicSource 1            7.629E-06 0.0        1         1         0     
+case_01   NonParametricSeismicSource 1            8.774E-05 0.0        1         1         0     
+case_02   NonParametricSeismicSource 1            2.313E-05 0.0        1         1         0     
+case_03   NonParametricSeismicSource 1            1.574E-05 0.0        1         1         0     
+case_04   NonParametricSeismicSource 1            1.311E-05 0.0        1         1         0     
+case_05   NonParametricSeismicSource 1            1.287E-05 0.0        1         1         0     
+case_10   NonParametricSeismicSource 1            1.287E-05 0.0        1         1         0     
+case_11   NonParametricSeismicSource 1            1.287E-05 0.0        1         1         0     
+case_13   NonParametricSeismicSource 2            1.287E-05 0.0        1         1         0     
+case_06   NonParametricSeismicSource 1            1.264E-05 0.0        1         1         0     
+case_07   NonParametricSeismicSource 1            1.264E-05 0.0        1         1         0     
+case_15   NonParametricSeismicSource 2            1.264E-05 0.0        1         1         0     
+case_08   NonParametricSeismicSource 1            1.240E-05 0.0        1         1         0     
+case_09   NonParametricSeismicSource 1            1.240E-05 0.0        1         1         0     
+case_12   NonParametricSeismicSource 2            1.240E-05 0.0        1         1         0     
+case_14   NonParametricSeismicSource 2            1.240E-05 0.0        1         1         0     
 ========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 1.824E-04 15    
+NonParametricSeismicSource 2.787E-04 15    
 ========================== ========= ======
 
 Duplicated sources
@@ -108,10 +108,11 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-count_ruptures     0.00610 NaN    0.00610 0.00610 1        
-================== ======= ====== ======= ======= =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00541 0.00165 0.00136 0.00775 15       
+count_ruptures     0.00670 NaN     0.00670 0.00670 1        
+================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
@@ -139,7 +140,8 @@ Informational data
 ------------------
 ============== ===================================================================== ========
 task           sent                                                                  received
-count_ruptures sources=1.08 MB srcfilter=716 B param=428 B monitor=330 B gsims=135 B 1.34 KB 
+prefilter      srcs=1.09 MB monitor=4.78 KB srcfilter=3.35 KB                        1.09 MB 
+count_ruptures sources=1.08 MB srcfilter=717 B param=428 B monitor=333 B gsims=135 B 1.34 KB 
 ============== ===================================================================== ========
 
 Slowest operations
@@ -147,13 +149,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.32225   0.0       1     
-managing sources               0.00762   0.0       1     
-total count_ruptures           0.00610   1.36328   1     
-store source_info              0.00409   0.0       1     
-splitting sources              4.609E-04 0.0       1     
-reading site collection        2.923E-04 0.0       1     
-unpickling count_ruptures      8.154E-05 0.0       1     
-aggregate curves               6.580E-05 0.0       1     
-saving probability maps        3.266E-05 0.0       1     
+reading composite source model 0.32538   0.0       1     
+total prefilter                0.08121   3.52344   15    
+managing sources               0.06945   0.0       1     
+total count_ruptures           0.00670   1.12500   1     
+store source_info              0.00443   0.0       1     
+unpickling prefilter           0.00143   0.0       15    
+splitting sources              4.876E-04 0.0       1     
+reading site collection        2.956E-04 0.0       1     
+unpickling count_ruptures      7.606E-05 0.0       1     
+aggregate curves               6.866E-05 0.0       1     
+saving probability maps        3.624E-05 0.0       1     
 ============================== ========= ========= ======
