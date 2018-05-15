@@ -1,5 +1,9 @@
   [Michele Simionato]
   * Made it possible to specify the `filter_distance` in the `job.ini`
+  * Optimized the SiteCollection class and doubled the speed of distance
+    calculations in most continental scale calculations
+  * Fixed an ordering bug in event based risk from GMFs when using a
+    vulnerability function with PMF
   * Replaced Rtree with KDtree except in the source filtering
   * Parallelized the source prefiltering
   * Removed the tiling feature from the classical calculator
