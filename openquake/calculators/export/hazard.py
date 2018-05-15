@@ -695,7 +695,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
-        oq.maximum_distance, oq.truncation_level, correl_model, samples)
+        oq.maximum_distance, oq.truncation_level, correl_model,
+        oq.filter_distance, samples)
     getter.init()
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
