@@ -109,7 +109,7 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     if len(indices) == 0:
         raise RuntimeError('There are no sites within the boundind box %s'
                            % str(bbox))
-    sites = sitecol.filtered(sitecol.sids[indices])
+    sites = sitecol.filtered(indices)
     logging.info('Associating %d GMVs to %d sites', len(array), len(sites))
     return geo.utils.assoc(array, sites, assoc_dist, 'warn')
 
