@@ -30,6 +30,7 @@ from openquake.risklib import scientific, riskmodels
 class ValidationError(Exception):
     pass
 
+
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
