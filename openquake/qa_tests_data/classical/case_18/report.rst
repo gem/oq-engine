@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-04-30T11:22:12
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:31
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -54,7 +54,7 @@ Required parameters per tectonic region type
 ====== ========================================================================================================================================== ========= ========== ==========
 grp_id gsims                                                                                                                                      distances siteparams ruptparams
 ====== ========================================================================================================================================== ========= ========== ==========
-0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo                mag       
+0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo rjb            mag       
 ====== ========================================================================================================================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -80,7 +80,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-VICM      AreaSource   2,430        9.282E-04 0.01035    90        30        0     
+VICM      AreaSource   2,430        6.936E-04 0.01066    90        30        0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -88,7 +88,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   9.282E-04 1     
+AreaSource   6.936E-04 1     
 ============ ========= ======
 
 Duplicated sources
@@ -99,7 +99,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-count_ruptures     0.00404 4.108E-04 0.00338 0.00471 8        
+prefilter          0.00391 0.00272   0.00114 0.01389 30       
+count_ruptures     0.00220 4.623E-04 0.00138 0.00264 8        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
@@ -115,7 +116,7 @@ weight   42      0.0    42  42  2
 
 Slowest task
 ------------
-taskno=2, weight=168, duration=0 s, sources="VICM"
+taskno=3, weight=168, duration=0 s, sources="VICM"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
@@ -126,23 +127,26 @@ weight   42      0.0    42  42  4
 
 Informational data
 ------------------
-============== ============================================================================== ========
-task           sent                                                                           received
-count_ruptures gsims=1.23 MB sources=16.92 KB srcfilter=6.44 KB param=6.41 KB monitor=2.58 KB 2.83 KB 
-============== ============================================================================== ========
+============== ============================================================================= ========
+task           sent                                                                          received
+prefilter      srcs=39.54 KB monitor=9.55 KB srcfilter=6.71 KB                               42.09 KB
+count_ruptures gsims=1.23 MB sources=23.51 KB srcfilter=6.45 KB param=6.41 KB monitor=2.6 KB 2.83 KB 
+============== ============================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.03231   1.90625   8     
-reading composite source model 0.02773   0.0       1     
-managing sources               0.01311   0.0       1     
-splitting sources              0.01089   0.0       1     
-store source_info              0.00501   0.0       1     
-reading site collection        7.067E-04 0.0       1     
-unpickling count_ruptures      3.326E-04 0.0       8     
-aggregate curves               1.469E-04 0.0       8     
-saving probability maps        3.529E-05 0.0       1     
+managing sources               0.15559   0.0       1     
+total prefilter                0.11732   3.43359   30    
+reading composite source model 0.02814   0.0       1     
+total count_ruptures           0.01757   1.25000   8     
+splitting sources              0.01118   0.0       1     
+store source_info              0.00498   0.0       1     
+unpickling prefilter           0.00356   0.0       30    
+reading site collection        6.022E-04 0.0       1     
+unpickling count_ruptures      3.252E-04 0.0       8     
+aggregate curves               1.650E-04 0.0       8     
+saving probability maps        3.624E-05 0.0       1     
 ============================== ========= ========= ======
