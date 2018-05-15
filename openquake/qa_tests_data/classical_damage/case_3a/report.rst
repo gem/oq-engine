@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     3,341,274,821      
-date           2018-04-30T11:21:32
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:12:47
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 20
@@ -55,7 +55,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rjb rrup  vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -93,7 +93,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          5.763E-04 2.155E-04  15        15        0     
+1         SimpleFaultSource 482          4.363E-04 2.162E-04  15        15        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 5.763E-04 1     
+SimpleFaultSource 4.363E-04 1     
 ================= ========= ======
 
 Duplicated sources
@@ -110,53 +110,57 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-count_ruptures     0.00241 7.411E-04 0.00166 0.00368 6        
-================== ======= ========= ======= ======= =========
+================== ======= ========= ========= ======= =========
+operation-duration mean    stddev    min       max     num_tasks
+prefilter          0.00799 0.00172   0.00493   0.01176 15       
+count_ruptures     0.00187 7.013E-04 8.271E-04 0.00289 6        
+================== ======= ========= ========= ======= =========
 
 Fastest task
 ------------
-taskno=4, weight=90, duration=0 s, sources="1"
+taskno=1, weight=60, duration=0 s, sources="1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   2
-weight   45      0.0    45  45  2
+nsites   1.00000 NaN    1   1   1
+weight   60      NaN    60  60  1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=6, weight=77, duration=0 s, sources="1"
+taskno=2, weight=93, duration=0 s, sources="1"
 
-======== ======= ======= ======= === =
-variable mean    stddev  min     max n
-======== ======= ======= ======= === =
-nsites   1.00000 0.0     1       1   6
-weight   12      8.01041 2.00000 24  6
-======== ======= ======= ======= === =
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 0.0    1   1   3
+weight   31      25     15  60  3
+======== ======= ====== === === =
 
 Informational data
 ------------------
-============== ========================================================================== ========
-task           sent                                                                       received
-count_ruptures sources=8.94 KB srcfilter=4.2 KB param=3.22 KB monitor=1.93 KB gsims=720 B 2.1 KB  
-============== ========================================================================== ========
+============== =========================================================================== ========
+task           sent                                                                        received
+prefilter      srcs=15.36 KB monitor=4.78 KB srcfilter=3.35 KB                             17 KB   
+count_ruptures sources=10.68 KB srcfilter=4.2 KB param=3.22 KB monitor=1.95 KB gsims=720 B 2.1 KB  
+============== =========================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.01779   0.0       1     
-total count_ruptures           0.01444   1.32031   6     
-reading composite source model 0.00630   0.0       1     
-store source_info              0.00375   0.0       1     
-reading exposure               0.00241   0.0       1     
-reading site collection        0.00189   0.0       1     
-splitting sources              6.664E-04 0.0       1     
-unpickling count_ruptures      2.406E-04 0.0       6     
-aggregate curves               1.063E-04 0.0       6     
-saving probability maps        3.338E-05 0.0       1     
+total prefilter                0.11984   5.07031   15    
+managing sources               0.06220   0.0       1     
+total count_ruptures           0.01124   1.26953   6     
+reading composite source model 0.00646   0.0       1     
+store source_info              0.00387   0.0       1     
+reading site collection        0.00182   0.0       1     
+unpickling prefilter           0.00105   0.0       15    
+reading exposure               8.368E-04 0.0       1     
+splitting sources              6.900E-04 0.0       1     
+unpickling count_ruptures      2.220E-04 0.0       6     
+aggregate curves               1.080E-04 0.0       6     
+saving probability maps        3.362E-05 0.0       1     
 ============================== ========= ========= ======
