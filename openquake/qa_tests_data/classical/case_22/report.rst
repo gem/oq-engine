@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     2,061,302,359      
-date           2018-04-30T11:21:55
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:13
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -82,8 +82,8 @@ Slowest sources
 ========= ================ ============ ========= ========== ========= ========= ======
 source_id source_class     num_ruptures calc_time split_time num_sites num_split events
 ========= ================ ============ ========= ========== ========= ========= ======
-2         MultiPointSource 1,104        1.924E-04 4.082E-04  5         4         0     
-1         MultiPointSource 160          0.0       1.698E-04  0         0         0     
+2         MultiPointSource 1,104        2.513E-04 3.793E-04  5         4         0     
+1         MultiPointSource 160          0.0       1.490E-04  0         0         0     
 ========= ================ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,7 +91,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 1.924E-04 2     
+MultiPointSource 2.513E-04 2     
 ================ ========= ======
 
 Duplicated sources
@@ -100,10 +100,11 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-count_ruptures     0.00251 NaN    0.00251 0.00251 1        
-================== ======= ====== ======= ======= =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00463 0.00109 0.00242 0.00616 14       
+count_ruptures     0.00455 NaN     0.00455 0.00455 1        
+================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
@@ -131,7 +132,8 @@ Informational data
 ------------------
 ============== ========================================================================= ========
 task           sent                                                                      received
-count_ruptures sources=3.06 KB srcfilter=1.76 KB param=1.62 KB gsims=418 B monitor=330 B 359 B   
+prefilter      srcs=21.95 KB monitor=4.46 KB srcfilter=3.13 KB                           7.04 KB 
+count_ruptures sources=4.04 KB srcfilter=1.76 KB param=1.62 KB gsims=418 B monitor=333 B 359 B   
 ============== ========================================================================= ========
 
 Slowest operations
@@ -139,13 +141,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.00621   0.0       1     
-managing sources               0.00492   0.0       1     
-store source_info              0.00387   0.0       1     
-total count_ruptures           0.00251   1.21484   1     
-splitting sources              0.00104   0.0       1     
-reading site collection        7.606E-04 0.0       1     
-unpickling count_ruptures      4.244E-05 0.0       1     
-saving probability maps        3.052E-05 0.0       1     
-aggregate curves               2.098E-05 0.0       1     
+total prefilter                0.06478   3.83594   14    
+managing sources               0.04500   0.0       1     
+reading composite source model 0.00532   0.0       1     
+total count_ruptures           0.00455   2.12109   1     
+store source_info              0.00368   0.0       1     
+splitting sources              9.542E-04 0.0       1     
+reading site collection        8.094E-04 0.0       1     
+unpickling prefilter           3.989E-04 0.0       14    
+unpickling count_ruptures      4.101E-05 0.0       1     
+saving probability maps        2.885E-05 0.0       1     
+aggregate curves               2.003E-05 0.0       1     
 ============================== ========= ========= ======
