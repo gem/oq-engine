@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the SiteCollection class and doubled the speed of distance
+    calculations in most continental scale calculations
   * Fixed an ordering bug in event based risk from GMFs when using a
     vulnerability function with PMF
   * Replaced Rtree with KDtree except in the source filtering
