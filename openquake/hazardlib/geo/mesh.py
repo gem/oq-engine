@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
 import numpy
+from scipy.spatial.distance import cdist
 import shapely.geometry
 import shapely.ops
 
@@ -167,8 +168,12 @@ class Mesh(object):
         """
         :returns: an array of shape (N, 3) with the cartesian coordinates
         """
+        if self.depths is None:
+            depths = numpy.zeros(self.lons.size)
+        else:
+            depths = self.depths.flatten()
         return geo_utils.spherical_to_cartesian(
-            self.lons, self.lats, self.depths)
+            self.lons.flatten(), self.lats.flatten(), depths)
 
     def __iter__(self):
         """
@@ -256,7 +261,7 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        return self._min_idx_dst(mesh)[1]
+        return cdist(self.xyz, mesh.xyz).min(axis=0)
 
     def get_closest_points(self, mesh):
         """
