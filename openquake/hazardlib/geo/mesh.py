@@ -24,6 +24,7 @@ import numpy
 import shapely.geometry
 import shapely.ops
 
+from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
@@ -160,6 +161,14 @@ class Mesh(object):
             The shape of this mesh as (rows, columns)
         """
         return self.lons.shape
+
+    @cached_property
+    def xyz(self):
+        """
+        :returns: an array of shape (N, 3) with the cartesian coordinates
+        """
+        return geo_utils.spherical_to_cartesian(
+            self.lons, self.lats, self.depths)
 
     def __iter__(self):
         """
