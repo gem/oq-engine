@@ -68,41 +68,6 @@ def getdefault(dic_with_default, key):
         return dic_with_default['default']
 
 
-def get_distances(rupture, mesh, param):
-    """
-    :param rupture: a rupture
-    :param mesh: a mesh of points or a site collection
-    :param param: the kind of distance to compute (default rjb)
-    :returns: an array of distances from the given mesh
-    """
-    if param == 'rrup':
-        dist = rupture.surface.get_min_distance(mesh)
-    elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(mesh)
-    elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(mesh)
-    elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(mesh)
-    elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(mesh)
-    elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
-    elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(mesh)
-    elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(mesh)
-    elif param == "rvolc":
-        # Volcanic distance not yet supported, defaulting to zero
-        dist = numpy.zeros_like(mesh.lons)
-    else:
-        raise ValueError('Unknown distance measure %r' % param)
-    return dist
-
-
-class FarAwayRupture(Exception):
-    """Raised if the rupture is outside the maximum distance for all sites"""
-
-
 class Piecewise(object):
     """
     Given two arrays x and y of non-decreasing values, build a piecewise
