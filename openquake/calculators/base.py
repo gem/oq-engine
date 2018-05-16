@@ -32,6 +32,8 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.calc.filters import (
+    BaseFilter, SourceFilter, RtreeFilter)
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -316,6 +318,22 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     precalc = None
+
+    def filter_csm(self):
+        """
+        :returns: (filtered CompositeSourceModel, SourceFilter)
+        """
+        oq = self.oqparam
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
+        monitor = self.monitor('prefiltering')
+        if oq.prefilter_sources == 'numpy' or sys.platform == 'darwin':
+            csm = self.csm.filter(src_filter, monitor)
+        elif oq.prefilter_sources == 'rtree':
+            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
+            csm = self.csm.filter(prefilter, monitor)
+        else:
+            csm = self.csm.filter(BaseFilter(), monitor)
+        return csm, src_filter
 
     def can_read_parent(self):
         """
