@@ -21,8 +21,11 @@ import operator
 import collections
 from contextlib import contextmanager
 import numpy
+try:
+    import rtree
+except ImportError:
+    rtree = None
 from scipy.interpolate import interp1d
-import rtree
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp, groupby
 from openquake.baselib.python3compat import raise_
@@ -320,7 +323,8 @@ class SourceFilter(BaseFilter):
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor), distribute=self.distribute
+            prefilter, (sources, self, monitor), distribute=self.distribute,
+            name='prefilter with %s' % self.__class__.__name__,
         ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
@@ -355,6 +359,8 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance):
+        if rtree is None:
+            raise ImportError('rtree')
         self.integration_distance = integration_distance
         self.distribute = 'processpool'
         self.indexpath = gettemp()
