@@ -291,7 +291,7 @@ class EbrCalculator(base.RiskCalculator):
                 getter = getters.GmfGetter(
                     rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
                     self.oqparam.maximum_distance, trunc_level, correl_model,
-                    samples)
+                    self.oqparam.filter_distance, samples)
                 ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
