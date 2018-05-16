@@ -326,8 +326,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
         monitor = self.monitor('prefiltering')
-        if (oq.prefilter_sources == 'numpy' or sys.platform == 'darwin' or
-                rtree is None):
+        if (oq.prefilter_sources == 'numpy' or rtree is None):
             csm = self.csm.filter(src_filter, monitor)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)

@@ -70,6 +70,8 @@ def convert_UCERFSource(self, node):
         msr=valid.SCALEREL[~node.magScaleRel](),
         mesh_spacing=self.rupture_mesh_spacing,
         trt=node["tectonicRegion"])
+
+
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
@@ -165,7 +167,8 @@ class UcerfPSHACalculator(PSHACalculator):
         acc.calc_times = {}
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
-        param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level)
+        param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
+                     filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
