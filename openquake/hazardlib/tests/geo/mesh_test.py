@@ -26,6 +26,8 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
+aac = numpy.testing.assert_allclose
+
 
 class _BaseMeshTestCase(unittest.TestCase):
     def _make_mesh(self, lons, lats, depths=None):
@@ -213,7 +215,7 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
                           for ti, mi in enumerate(expected_distance_indices)]
-        self.assertEqual(list(dists.flat), expected_dists)
+        aac(dists.flat, expected_dists, atol=1)
         closest_points_mesh = mesh.get_closest_points(target_mesh)
         numpy.testing.assert_equal(closest_points_mesh.lons.flat,
                                    mesh.lons.take(expected_distance_indices))
