@@ -358,6 +358,8 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance):
+        if rtree is None:
+            raise ImportError('rtree')
         self.integration_distance = integration_distance
         self.distribute = 'processpool'
         self.indexpath = gettemp()
