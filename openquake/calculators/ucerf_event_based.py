@@ -42,14 +42,13 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import min_idx_dst, min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, EBRupture)
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.calc.filters import (
-    SourceFilter, FarAwayRupture)
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
