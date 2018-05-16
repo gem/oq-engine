@@ -261,6 +261,7 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
+        # NB: a slower alternative is to use self._min_idx_dst(mesh)[1]
         return cdist(self.xyz, mesh.xyz).min(axis=0)
 
     def get_closest_points(self, mesh):
