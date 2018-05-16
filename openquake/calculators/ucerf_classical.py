@@ -26,7 +26,7 @@ from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
