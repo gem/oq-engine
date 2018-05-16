@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     177,006,542        
-date           2018-04-30T11:21:18
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:12:31
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 12, num_levels = 19
@@ -98,21 +98,21 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-232       AreaSource   1,612        0.00217   0.03315    750       124       0     
-225       AreaSource   520          4.430E-04 0.01117    36        18        0     
-101       AreaSource   559          0.0       0.01759    0         0         0     
-125       AreaSource   8,274        0.0       0.24921    0         0         0     
-135       AreaSource   3,285        0.0       0.12003    0         0         0     
-137       AreaSource   2,072        0.0       0.06928    0         0         0     
-253       AreaSource   3,058        0.0       0.07548    0         0         0     
-27        AreaSource   1,482        0.0       0.03750    0         0         0     
-299       AreaSource   710          0.0       0.01666    0         0         0     
-306       AreaSource   1,768        0.0       0.05912    0         0         0     
-359       AreaSource   2,314        0.0       0.05736    0         0         0     
-42        AreaSource   1,755        0.0       0.03327    0         0         0     
-57        AreaSource   840          0.0       0.01523    0         0         0     
-59        AreaSource   750          0.0       0.01630    0         0         0     
-8         AreaSource   4,832        0.0       0.32245    0         0         0     
+232       AreaSource   1,612        0.00188   0.03530    750       124       0     
+225       AreaSource   520          5.059E-04 0.01157    36        18        0     
+101       AreaSource   559          0.0       0.01870    0         0         0     
+125       AreaSource   8,274        0.0       0.25212    0         0         0     
+135       AreaSource   3,285        0.0       0.12258    0         0         0     
+137       AreaSource   2,072        0.0       0.07183    0         0         0     
+253       AreaSource   3,058        0.0       0.07593    0         0         0     
+27        AreaSource   1,482        0.0       0.03868    0         0         0     
+299       AreaSource   710          0.0       0.01754    0         0         0     
+306       AreaSource   1,768        0.0       0.06188    0         0         0     
+359       AreaSource   2,314        0.0       0.06034    0         0         0     
+42        AreaSource   1,755        0.0       0.03482    0         0         0     
+57        AreaSource   840          0.0       0.01603    0         0         0     
+59        AreaSource   750          0.0       0.01691    0         0         0     
+8         AreaSource   4,832        0.0       0.34058    0         0         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -120,7 +120,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.00261   15    
+AreaSource   0.00239   15    
 ============ ========= ======
 
 Duplicated sources
@@ -131,36 +131,38 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-count_ruptures     0.00684 0.00489 0.00339 0.01030 2        
+prefilter          0.01669 0.00601 0.00640 0.03341 60       
+count_ruptures     0.00471 0.00357 0.00219 0.00723 2        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=2, weight=83, duration=0 s, sources="232"
+taskno=2, weight=84, duration=0 s, sources="232"
 
 ======== ======= ======= ======= ======= ==
 variable mean    stddev  min     max     n 
 ======== ======= ======= ======= ======= ==
-nsites   6.07692 0.68836 5       7       26
-weight   3.19967 0.18270 2.90689 3.43948 26
+nsites   6.26923 0.66679 5       7       26
+weight   3.25045 0.17530 2.90689 3.43948 26
 ======== ======= ======= ======= ======= ==
 
 Slowest task
 ------------
-taskno=1, weight=345, duration=0 s, sources="225 232"
+taskno=1, weight=344, duration=0 s, sources="225 232"
 
 ======== ======= ======= ======= ======= ===
 variable mean    stddev  min     max     n  
 ======== ======= ======= ======= ======= ===
-nsites   5.41379 1.56076 2       7       116
-weight   2.98160 0.51148 1.83848 3.43948 116
+nsites   5.37069 1.54092 2       7       116
+weight   2.97022 0.50643 1.83848 3.43948 116
 ======== ======= ======= ======= ======= ===
 
 Informational data
 ------------------
 ============== ========================================================================== ========
 task           sent                                                                       received
-count_ruptures sources=40.43 KB srcfilter=2.56 KB param=1.06 KB monitor=660 B gsims=254 B 791 B   
+prefilter      srcs=603.23 KB monitor=19.1 KB srcfilter=13.42 KB                          40.92 KB
+count_ruptures sources=39.19 KB srcfilter=2.57 KB param=1.06 KB monitor=666 B gsims=254 B 791 B   
 ============== ========================================================================== ========
 
 Slowest operations
@@ -168,14 +170,16 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-splitting sources              1.13581   1.54297   1     
-reading composite source model 1.10439   0.0       1     
-managing sources               0.22197   0.0       1     
-total count_ruptures           0.01368   1.93359   2     
-reading exposure               0.00363   0.0       1     
-reading site collection        0.00345   0.0       1     
-store source_info              0.00316   0.0       1     
-unpickling count_ruptures      7.319E-05 0.0       2     
-aggregate curves               3.719E-05 0.0       2     
-saving probability maps        2.623E-05 0.0       1     
+reading composite source model 1.18013   0.0       1     
+splitting sources              1.17675   1.40625   1     
+total prefilter                1.00157   3.03906   60    
+managing sources               0.27073   0.0       1     
+total count_ruptures           0.00943   0.20703   2     
+store source_info              0.00430   0.0       1     
+reading site collection        0.00344   0.0       1     
+unpickling prefilter           0.00290   0.0       60    
+reading exposure               0.00171   0.0       1     
+unpickling count_ruptures      7.868E-05 0.0       2     
+aggregate curves               4.315E-05 0.0       2     
+saving probability maps        3.338E-05 0.0       1     
 ============================== ========= ========= ======

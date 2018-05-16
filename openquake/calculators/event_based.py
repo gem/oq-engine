@@ -27,7 +27,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_slices)
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib.calc.filters import (
+    BaseFilter, SourceFilter, RtreeFilter)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -158,17 +159,10 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        if oq.prefilter_sources == 'rtree':
-            rfilter = RtreeFilter(self.sitecol, oq.maximum_distance)
-            csm = self.csm.filter(rfilter, self.monitor('prefilter'))
-        if oq.prefilter_sources == 'numpy':
-            csm = self.csm.filter(src_filter, self.monitor('prefilter'))
-        else:
-            csm = self.csm
+        csm, src_filter = self.filter_csm()
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(

@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     2,561,387,143      
-date           2018-04-30T11:21:42
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:12:58
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 281, num_levels = 50
@@ -57,7 +57,7 @@ Required parameters per tectonic region type
 grp_id gsims                     distances siteparams ruptparams    
 ====== ========================= ========= ========== ==============
 0      AkkarBommer2010()         rjb       vs30       mag rake      
-1      AtkinsonBoore2003SInter() rrup      vs30       hypo_depth mag
+1      AtkinsonBoore2003SInter() rjb rrup  vs30       hypo_depth mag
 ====== ========================= ========= ========== ==============
 
 Realizations per (TRT, GSIM)
@@ -78,12 +78,12 @@ source_model.xml 0      Active Shallow Crust 2,558        2,558
 source_model.xml 1      Subduction Interface 3,945        3,945       
 ================ ====== ==================== ============ ============
 
-============= =====
-#TRT models   2    
-#eff_ruptures 6,503
-#tot_ruptures 6,503
-#tot_weight   0    
-============= =====
+============= ======
+#TRT models   2     
+#eff_ruptures 6,503 
+#tot_ruptures 6,503 
+#tot_weight   26,012
+============= ======
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -119,8 +119,8 @@ Slowest sources
 ========= ================== ============ ========= ========== ========= ========= ======
 source_id source_class       num_ruptures calc_time split_time num_sites num_split events
 ========= ================== ============ ========= ========== ========= ========= ======
-D         ComplexFaultSource 3,945        11        4.311E-04  84,224    47        2,177 
-F         ComplexFaultSource 2,558        5.93579   3.757E-04  62,720    35        267   
+D         ComplexFaultSource 1            12        0.0        84,224    47        2,177 
+F         ComplexFaultSource 52           6.43549   0.0        62,720    35        267   
 ========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -128,7 +128,7 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 17        2     
+ComplexFaultSource 18        2     
 ================== ========= ======
 
 Duplicated sources
@@ -139,30 +139,34 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-compute_ruptures   1.75092 0.51546 1.20830 3.05920 10       
+prefilter          0.00823 0.00376 0.00307 0.01652 41       
+compute_ruptures   1.88145 0.55659 1.37668 3.30509 10       
 ================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
-================ =============================================================================== ========
-task             sent                                                                            received
-compute_ruptures sources=1.17 MB src_filter=951.59 KB param=9.36 KB monitor=3.22 KB gsims=1.3 KB 19.95 MB
-================ =============================================================================== ========
+================ =============================================================================== =========
+task             sent                                                                            received 
+prefilter        srcs=82.43 KB monitor=12.93 KB srcfilter=9.17 KB                                175.53 KB
+compute_ruptures src_filter=951.6 KB sources=48.47 KB param=9.36 KB monitor=3.22 KB gsims=1.3 KB 44.49 MB 
+================ =============================================================================== =========
 
 Slowest operations
 ------------------
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         17       15        10    
-managing sources               3.27751  0.0       1     
-making contexts                2.62440  0.0       489   
-reading site collection        0.35075  0.0       1     
-reading composite source model 0.23143  0.0       1     
-reading exposure               0.16697  0.0       1     
-saving ruptures                0.04025  0.0       10    
-unpickling compute_ruptures    0.02336  0.0       10    
-store source_info              0.00736  0.0       1     
-setting event years            0.00372  0.0       1     
-splitting sources              0.00123  0.0       1     
+total compute_ruptures         18       24        10    
+managing sources               3.47383  0.0       1     
+making contexts                2.85160  0.0       489   
+reading site collection        0.37837  0.0       1     
+total prefilter                0.33752  4.44922   41    
+reading composite source model 0.28099  0.0       1     
+reading exposure               0.05786  0.0       1     
+unpickling compute_ruptures    0.05724  0.0       10    
+saving ruptures                0.05221  0.0       10    
+store source_info              0.00379  0.0       1     
+unpickling prefilter           0.00340  0.0       41    
+setting event years            0.00202  0.0       1     
+splitting sources              0.00147  0.0       1     
 ============================== ======== ========= ======

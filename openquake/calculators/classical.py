@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import math
 import time
 import logging
@@ -29,7 +27,6 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -164,15 +161,7 @@ class PSHACalculator(base.HazardCalculator):
         totweight = 0
         num_tasks = 0
         num_sources = 0
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
-        monitor = self.monitor('prefiltering')
-        if oq.prefilter_sources == 'rtree':
-            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
-            csm = self.csm.filter(prefilter, monitor)
-        elif oq.prefilter_sources == 'numpy':
-            csm = self.csm.filter(src_filter, monitor)
-        else:
-            csm = self.csm
+        csm, src_filter = self.filter_csm()
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
@@ -335,7 +324,7 @@ class ClassicalCalculator(PSHACalculator):
                              ' with the --hc option')
             return {}
         # initialize datasets
-        N = len(self.sitecol)
+        N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         attrs = dict(
             __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
