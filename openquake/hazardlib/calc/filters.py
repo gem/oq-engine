@@ -323,7 +323,8 @@ class SourceFilter(BaseFilter):
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor), distribute=self.distribute
+            prefilter, (sources, self, monitor), distribute=self.distribute,
+            name='prefilter with %s' % self.__class__.__name__,
         ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
