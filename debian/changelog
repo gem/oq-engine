@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to specify the `filter_distance` in the `job.ini`
   * Made rtree optional again and disabled it in macOS
   * Optimized the SiteCollection class and doubled the speed of distance
     calculations in most continental scale calculations

@@ -249,7 +249,7 @@ class GmfGetter(object):
     """
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
                  min_iml, maximum_distance, truncation_level,
-                 correlation_model, samples=1):
+                 correlation_model, filter_distance, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
@@ -260,9 +260,11 @@ class GmfGetter(object):
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(maximum_distance)
-            if isinstance(maximum_distance, dict) else maximum_distance)
+            if isinstance(maximum_distance, dict) else maximum_distance,
+            filter_distance)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
+        self.filter_distance = filter_distance
         self.samples = samples
         self.gmf_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32),
