@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2018-04-30T11:22:39
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:14:00
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 5
@@ -85,7 +85,7 @@ source_model2.xml 1      Active Shallow Crust 2,456        2,456
 #TRT models   2    
 #eff_ruptures 4,912
 #tot_ruptures 4,912
-#tot_weight   0    
+#tot_weight   491  
 ============= =====
 
 Slowest sources
@@ -93,7 +93,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= =======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events 
 ========= ============ ============ ========= ========== ========= ========= =======
-1         AreaSource   2,456        8.38414   0.05649    614       614       922,158
+1         PointSource  8            8.85184   0.0        614       614       922,158
 ========= ============ ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   8.38414   1     
+PointSource  8.85184   1     
 ============ ========= ======
 
 Duplicated sources
@@ -112,29 +112,33 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-compute_ruptures   1.45834 0.54545 0.78000 2.12810 6        
+prefilter          0.00604 0.00330 0.00233 0.01342 56       
+compute_ruptures   1.54923 0.68921 0.70385 2.39339 6        
 ================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
-================ ============================================================================== ========
-task             sent                                                                           received
-compute_ruptures sources=180.9 KB src_filter=4.2 KB param=3.47 KB monitor=1.93 KB gsims=1.88 KB 10.68 MB
-================ ============================================================================== ========
+================ =============================================================================== ========
+task             sent                                                                            received
+prefilter        srcs=209.74 KB monitor=17.66 KB srcfilter=12.52 KB                              235.8 KB
+compute_ruptures sources=152.46 KB src_filter=4.2 KB param=3.47 KB monitor=1.93 KB gsims=1.88 KB 10.77 MB
+================ =============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         8.75002   10        6     
-managing sources               2.37970   0.0       1     
-making contexts                1.92358   0.0       3,081 
-unpickling compute_ruptures    0.29570   0.0       6     
-saving ruptures                0.18782   0.0       6     
-reading composite source model 0.13504   0.0       1     
-splitting sources              0.12048   0.0       1     
-setting event years            0.02921   0.0       1     
-store source_info              0.00406   0.0       1     
-reading site collection        2.990E-04 0.0       1     
+total compute_ruptures         9.29535   8.85156   6     
+managing sources               2.85899   0.0       1     
+making contexts                2.03831   0.0       3,081 
+total prefilter                0.33820   3.37109   56    
+unpickling compute_ruptures    0.29606   0.0       6     
+saving ruptures                0.20600   0.0       6     
+splitting sources              0.15013   0.0       1     
+reading composite source model 0.14685   0.0       1     
+setting event years            0.02930   0.0       1     
+unpickling prefilter           0.01474   0.0       56    
+store source_info              0.00389   0.0       1     
+reading site collection        2.725E-04 0.0       1     
 ============================== ========= ========= ======

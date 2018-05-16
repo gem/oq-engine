@@ -335,8 +335,9 @@ def get_site_collection(oqparam):
         return sitecol
 
     # else use the default site params
-    return site.SiteCollection.from_points(
+    sitecol = site.SiteCollection.from_points(
         mesh.lons, mesh.lats, mesh.depths, oqparam)
+    return sitecol
 
 
 def get_gsim_lt(oqparam, trts=['*']):
