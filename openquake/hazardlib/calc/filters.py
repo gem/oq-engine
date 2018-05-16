@@ -21,8 +21,11 @@ import operator
 import collections
 from contextlib import contextmanager
 import numpy
+try:
+    import rtree
+except ImportError:
+    rtree = None
 from scipy.interpolate import interp1d
-import rtree
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp, groupby
 from openquake.baselib.python3compat import raise_
