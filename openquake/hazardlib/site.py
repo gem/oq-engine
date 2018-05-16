@@ -203,6 +203,8 @@ class SiteCollection(object):
                 arr[name] = sitemodel[name]
         return self
 
+    xyz = Mesh.xyz
+
     def filtered(self, indices):
         """
         :param indices:
