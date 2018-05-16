@@ -324,15 +324,13 @@ class HazardCalculator(BaseCalculator):
         :returns: (filtered CompositeSourceModel, SourceFilter)
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  oq.filter_distance)
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
         monitor = self.monitor('prefiltering')
         if (oq.prefilter_sources == 'numpy' or sys.platform == 'darwin' or
                 rtree is None):
             csm = self.csm.filter(src_filter, monitor)
         elif oq.prefilter_sources == 'rtree':
-            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    oq.filter_distance)
+            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
             csm = self.csm.filter(prefilter, monitor)
         else:
             csm = self.csm.filter(BaseFilter(), monitor)
