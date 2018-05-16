@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2018-04-30T11:21:48
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:05
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -100,8 +100,8 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   240          4.916E-04 0.00296    297       99        0     
-2         PointSource  15           2.909E-05 1.431E-06  3         1         0     
+1         AreaSource   240          0.00137   0.00308    297       99        0     
+2         PointSource  15           7.796E-05 1.669E-06  3         1         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -109,8 +109,8 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   4.916E-04 1     
-PointSource  2.909E-05 1     
+AreaSource   0.00137   1     
+PointSource  7.796E-05 1     
 ============ ========= ======
 
 Duplicated sources
@@ -121,7 +121,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-count_ruptures     0.05602 0.00159 0.05489 0.05714 2        
+prefilter          0.00354 0.00194 0.00128 0.00796 34       
+count_ruptures     0.00589 0.00533 0.00212 0.00966 2        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
@@ -150,7 +151,8 @@ Informational data
 ------------------
 ============== ========================================================================== ========
 task           sent                                                                       received
-count_ruptures sources=10.77 KB srcfilter=1.61 KB param=1.16 KB monitor=660 B gsims=430 B 737 B   
+prefilter      srcs=41.84 KB monitor=10.82 KB srcfilter=7.6 KB                            44.81 KB
+count_ruptures sources=17.42 KB srcfilter=1.61 KB param=1.16 KB monitor=666 B gsims=430 B 737 B   
 ============== ========================================================================== ========
 
 Slowest operations
@@ -158,13 +160,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.11203   3.12109   2     
-reading composite source model 0.07844   0.0       1     
-store source_info              0.00893   0.0       1     
-managing sources               0.00801   0.0       1     
-splitting sources              0.00667   0.0       1     
-reading site collection        4.139E-04 0.0       1     
-unpickling count_ruptures      1.249E-04 0.0       2     
-aggregate curves               9.346E-05 0.0       2     
-saving probability maps        5.412E-05 0.0       1     
+managing sources               0.12463   0.0       1     
+total prefilter                0.12023   3.36719   34    
+reading composite source model 0.01589   0.0       1     
+total count_ruptures           0.01177   0.75000   2     
+splitting sources              0.00688   0.0       1     
+store source_info              0.00498   0.0       1     
+unpickling prefilter           0.00280   0.0       34    
+reading site collection        3.064E-04 0.0       1     
+unpickling count_ruptures      7.463E-05 0.0       2     
+aggregate curves               4.697E-05 0.0       2     
+saving probability maps        3.123E-05 0.0       1     
 ============================== ========= ========= ======

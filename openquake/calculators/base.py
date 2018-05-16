@@ -32,6 +32,8 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.calc.filters import (
+    BaseFilter, SourceFilter, RtreeFilter, rtree)
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -317,6 +319,25 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
+    def filter_csm(self):
+        """
+        :returns: (filtered CompositeSourceModel, SourceFilter)
+        """
+        oq = self.oqparam
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
+                                  oq.filter_distance)
+        monitor = self.monitor('prefiltering')
+        if (oq.prefilter_sources == 'numpy' or sys.platform == 'darwin' or
+                rtree is None):
+            csm = self.csm.filter(src_filter, monitor)
+        elif oq.prefilter_sources == 'rtree':
+            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
+                                    oq.filter_distance)
+            csm = self.csm.filter(prefilter, monitor)
+        else:
+            csm = self.csm.filter(BaseFilter(), monitor)
+        return csm, src_filter
+
     def can_read_parent(self):
         """
         :returns:
@@ -409,7 +430,10 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_inputs()
         if hasattr(self, 'sitecol'):
-            self.datastore['sitecol'] = self.sitecol
+            if 'scenario' in self.oqparam.calculation_mode:
+                self.datastore['sitecol'] = self.sitecol
+            else:
+                self.datastore['sitecol'] = self.sitecol.complete
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
@@ -492,7 +516,6 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol = dstore['sitecol'].complete
             else:
                 haz_sitecol = readinput.get_site_collection(oq)
-        logging.info('There are %d hazard site(s)', len(haz_sitecol))
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if oq.shakemap_id or 'shakemap' in oq.inputs:
@@ -644,7 +667,9 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building/saving GMFs'):
             gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
                            oq.truncation_level, E, oq.random_seed)
-            save_gmf_data(self.datastore, self.sitecol, gmfs)
+            tot_sites = self.datastore.get_attr('assetcol', 'tot_sites')
+            save_gmf_data(self.datastore, self.sitecol, gmfs,
+                          tot_sites=tot_sites)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
@@ -812,12 +837,10 @@ def save_gmfs(calculator):
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
-        idx = (slice(None) if haz_sitecol.indices is None
-               else haz_sitecol.indices)
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, idx], eids)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
@@ -828,7 +851,11 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
-    for sid in sitecol.complete.sids:
+    if tot_sites is not None:
+        all_sids = numpy.arange(tot_sites, dtype=U32)
+    else:
+        all_sids = sitecol.complete.sids
+    for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))

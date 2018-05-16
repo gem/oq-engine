@@ -3,8 +3,8 @@ Event Based Risk QA Test 1
 
 ============== ===================
 checksum32     348,816,558        
-date           2018-04-30T11:21:46
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:03
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 25
@@ -103,9 +103,9 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            0.00945   8.583E-06  1         1         8     
-2         PointSource  6            0.00604   1.669E-06  1         1         14    
-3         PointSource  6            0.00562   1.192E-06  1         1         20    
+1         PointSource  6            0.01229   0.0        1         1         8     
+2         PointSource  6            0.00965   0.0        1         1         14    
+3         PointSource  6            0.00930   0.0        1         1         20    
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.02112   3     
+PointSource  0.03124   3     
 ============ ========= ======
 
 Duplicated sources
@@ -122,16 +122,18 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-compute_ruptures   0.02429 NaN    0.02429 0.02429 1        
-================== ======= ====== ======= ======= =========
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+prefilter          0.00352 2.349E-04 0.00332 0.00378 3        
+compute_ruptures   0.03747 NaN       0.03747 0.03747 1        
+================== ======= ========= ======= ======= =========
 
 Informational data
 ------------------
 ================ ======================================================================== ========
 task             sent                                                                     received
-compute_ruptures sources=2.31 KB param=1.01 KB src_filter=824 B monitor=330 B gsims=216 B 11.81 KB
+prefilter        srcs=3.91 KB monitor=969 B srcfilter=687 B                               4.05 KB 
+compute_ruptures sources=2.12 KB param=1.01 KB src_filter=825 B monitor=330 B gsims=216 B 12.37 KB
 ================ ======================================================================== ========
 
 Slowest operations
@@ -139,15 +141,17 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.03926   0.0       1     
-total compute_ruptures         0.02429   3.41797   1     
-making contexts                0.00750   0.0       9     
-store source_info              0.00421   0.0       1     
-reading site collection        0.00372   0.0       1     
-reading exposure               0.00370   0.0       1     
-reading composite source model 0.00335   0.0       1     
-saving ruptures                0.00328   0.0       1     
-setting event years            0.00142   0.0       1     
-unpickling compute_ruptures    6.969E-04 0.0       1     
-splitting sources              4.616E-04 0.0       1     
+managing sources               0.06748   0.0       1     
+total compute_ruptures         0.03747   3.36719   1     
+making contexts                0.01233   0.0       9     
+total prefilter                0.01056   2.24609   3     
+store source_info              0.00389   0.0       1     
+saving ruptures                0.00304   0.0       1     
+reading site collection        0.00293   0.0       1     
+reading composite source model 0.00283   0.0       1     
+setting event years            0.00145   0.0       1     
+reading exposure               0.00127   0.0       1     
+unpickling compute_ruptures    5.660E-04 0.0       1     
+splitting sources              4.051E-04 0.0       1     
+unpickling prefilter           2.277E-04 0.0       3     
 ============================== ========= ========= ======
