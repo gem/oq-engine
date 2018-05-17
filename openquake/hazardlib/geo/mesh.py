@@ -254,7 +254,7 @@ class Mesh(object):
         in another mesh.
 
         :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
+            numpy array of distances in km of shape (self.size, mesh.size)
 
         Method doesn't make any assumptions on arrangement of the points
         in either mesh and instead calculates the distance from each point of
