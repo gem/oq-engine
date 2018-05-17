@@ -443,7 +443,6 @@ class ParametricProbabilisticRupture(BaseRupture):
         :returns:
             The centered directivity prediction value of Chiou and Young
         """
-
         min_lon, max_lon, max_lat, min_lat = self.surface.get_bounding_box()
         min_lon -= buf
         max_lon += buf
@@ -451,24 +450,25 @@ class ParametricProbabilisticRupture(BaseRupture):
         max_lat += buf
 
         lons = numpy.arange(min_lon, max_lon + delta, delta)
+        # ex shape (233,)
         lats = numpy.arange(min_lat, max_lat + delta, delta)
-        target_rup = self.surface.get_min_distance(target)
-
+        # ex shape (204,)
         mesh = RectangularMesh(*numpy.meshgrid(lons, lats))
         mesh_rup = self.surface.get_min_distance(mesh)
-        cdpp = numpy.empty(len(target.lons))
+        # ex shape (204, 233)
 
+        target_rup = self.surface.get_min_distance(target)
+        # ex shape (2,)
+        cdpp = numpy.zeros_like(target.lons)
         for i, (target_lon, target_lat) in enumerate(
                 zip(target.lons, target.lats)):
-
-            cdpp_lats = mesh.lats[(mesh_rup <= target_rup[i] + space)
-                                  & (mesh_rup >= target_rup[i] - space)]
-            cdpp_lons = mesh.lons[(mesh_rup <= target_rup[i] + space)
-                                  & (mesh_rup >= target_rup[i] - space)]
-
+            # indices around target_rup[i]
+            around = (mesh_rup <= target_rup[i] + space) & (
+                mesh_rup >= target_rup[i] - space)
             dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
-            dpp_mean = numpy.mean([self.get_dppvalue(Point(lon, lat, 0.))
-                                   for lon, lat in zip(cdpp_lons, cdpp_lats)])
+            dpp_mean = numpy.mean(
+                [self.get_dppvalue(Point(lon, lat))
+                 for lon, lat in zip(mesh.lons[around], mesh.lats[around])])
             cdpp[i] = dpp_target - dpp_mean
 
         return cdpp
