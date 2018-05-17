@@ -151,6 +151,10 @@ class MasterKilled(KeyboardInterrupt):
     "Exception raised when a job is killed manually"
 
 
+def inhibitSigInt(signum, _stack):
+    logs.LOG.warn('Killing job, please wait')
+
+
 def raiseMasterKilled(signum, _stack):
     """
     When a SIGTERM is received, raise the MasterKilled
@@ -159,8 +163,10 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    msg = 'Received a signal %d' % signum
+    # Disable further CTRL-C to allow tasks revocation
+    signal.signal(signal.SIGINT, inhibitSigInt)
 
+    msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
 
