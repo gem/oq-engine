@@ -226,7 +226,7 @@ class SiteCollection(object):
         if self is self.complete:  # do nothing
             return
         # reset the site indices from 0 to N-1 and set self.complete to self
-        self.sids = numpy.arange(len(self), dtype=numpy.uint32)
+        self.array['sids'] = numpy.arange(len(self), dtype=numpy.uint32)
         self.complete = self
 
     def __init__(self, sites):
