@@ -427,65 +427,49 @@ class ParametricProbabilisticRupture(BaseRupture):
 
     def get_cdppvalue(self, target, buf=1.0, delta=0.01, space=2.):
         """
-        Get the directivity prediction value, centred DPP(cdpp) at
+        Get the directivity prediction value, centered DPP(cdpp) at
         a given site as described in Spudich et al. (2013), and this cdpp is
-        used in Chiou and Young(2014) GMPE for near-fault directivity
+        used in Chiou and Young (2014) GMPE for near-fault directivity
         term prediction.
 
         :param target_site:
             A mesh object representing the location of the target sites.
         :param buf:
-            A float vaule presents  the buffer distance in km to extend the
-            mesh borders to.
+            A buffer distance in km to extend the mesh borders
         :param delta:
-            A float vaule presents the desired distance between two adjacent
-            points in mesh
+            The distance between two adjacent points in the mesh
         :param space:
-            A float vaule presents the tolerance for the same distance of the
-            sites (default 2 km)
+            The tolerance for the distance of the sites (default 2 km)
         :returns:
-            A float value presents the centreed directivity predication value
-            which used in Chioud and Young(2014) GMPE for directivity term
+            The centered directivity prediction value of Chiou and Young
         """
-
         min_lon, max_lon, max_lat, min_lat = self.surface.get_bounding_box()
-
         min_lon -= buf
         max_lon += buf
         min_lat -= buf
         max_lat += buf
 
         lons = numpy.arange(min_lon, max_lon + delta, delta)
+        # ex shape (233,)
         lats = numpy.arange(min_lat, max_lat + delta, delta)
-        lons, lats = numpy.meshgrid(lons, lats)
+        # ex shape (204,)
+        mesh = RectangularMesh(*numpy.meshgrid(lons, lats))
+        mesh_rup = self.surface.get_min_distance(mesh)
+        # ex shape (204, 233)
 
         target_rup = self.surface.get_min_distance(target)
-        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
-        mesh_rup = self.surface.get_min_distance(mesh)
-        target_lons = target.lons
-        target_lats = target.lats
-        cdpp = numpy.empty(len(target_lons))
-
-        for iloc, (target_lon, target_lat) in enumerate(zip(target_lons,
-                                                        target_lats)):
-
-            cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
-                                        & (mesh_rup >= target_rup[iloc]
-                                        - space)]
-            cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
-                                        & (mesh_rup >= target_rup[iloc]
-                                        - space)]
-
-            dpp_sum = []
+        # ex shape (2,)
+        cdpp = numpy.zeros_like(target.lons)
+        for i, (target_lon, target_lat) in enumerate(
+                zip(target.lons, target.lats)):
+            # indices around target_rup[i]
+            around = (mesh_rup <= target_rup[i] + space) & (
+                mesh_rup >= target_rup[i] - space)
             dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
-
-            for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
-                site = Point(lon, lat, 0.)
-                dpp_one = self.get_dppvalue(site)
-                dpp_sum.append(dpp_one)
-
-            mean_dpp = numpy.mean(dpp_sum)
-            cdpp[iloc] = dpp_target - mean_dpp
+            dpp_mean = numpy.mean(
+                [self.get_dppvalue(Point(lon, lat))
+                 for lon, lat in zip(mesh.lons[around], mesh.lats[around])])
+            cdpp[i] = dpp_target - dpp_mean
 
         return cdpp
 
