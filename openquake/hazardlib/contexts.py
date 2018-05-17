@@ -233,11 +233,14 @@ class ContextMaker(object):
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
+        clo_mon = monitor('get_closest', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
                 orig_dctx = DistancesContext(
                     (param, get_distances(rupture, sitecol, param))
                     for param in self.REQUIRES_DISTANCES)
+            with clo_mon:  # this is really fast
+                closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
@@ -253,7 +256,6 @@ class ContextMaker(object):
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
-            closest_points = rupture.surface.get_closest_points(sitecol)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
