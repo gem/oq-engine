@@ -238,57 +238,6 @@ def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):
     return numpy.matrix(result, copy=False)
 
 
-def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
-                diameter=2*EARTH_RADIUS):
-    """
-    Calculate the minimum distance between a collection of points and a point.
-
-    This function allows to calculate a closest distance to a collection
-    of points for each point in another collection. Both collection can be
-    of any shape, although it doesn't make sense to use scalars for the first
-    one.
-
-    Implements the same formula as in :func:`geodetic_distance` for distance
-    along great circle arc and the same approach as in :func:`distance`
-    for combining it with depth distance.
-
-    :param mlons, mlats, mdepths:
-        Numpy arrays of the same shape representing a first collection
-        of points, the one distance to which is of interest -- longitudes,
-        latitudes (both in decimal degrees) and depths (in km).
-    :param slons, slats, sdepths:
-        Scalars, python lists or tuples or numpy arrays of the same shape,
-        representing a second collection: a list of points to find a minimum
-        distance from for.
-    :returns:
-        Indices and distances in km of the closest points. The result value is
-        a scalar if ``slons``, ``slats`` and ``sdepths`` are scalars and numpy
-        array of the same shape of those three otherwise.
-    """
-    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
-    mdepths = numpy.array(mdepths, float)
-    sdepths = numpy.array(sdepths, float)
-    assert mlons.shape == mdepths.shape
-    assert slons.shape == sdepths.shape
-
-    orig_shape = slons.shape
-
-    mlons = mlons.reshape(-1)
-    mlats = mlats.reshape(-1)
-    mdepths = mdepths.reshape(-1)
-    slons = slons.reshape(-1)
-    slats = slats.reshape(-1)
-    sdepths = sdepths.reshape(-1)
-
-    dst = pure_distances(mlons, mlats, slons, slats) * diameter
-    delta = numpy.array([[mdepth - sdepth for sdepth in sdepths]
-                         for mdepth in mdepths])
-    dist_squares = dst ** 2 + delta ** 2
-    min_idx = dist_squares.argmin(axis=0)  # (m, s) -> s
-    min_dst = numpy.sqrt(dist_squares.min(axis=0))  # (m, s) -> s
-    return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
-
-
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     """
     Find a list of points between two given ones that lie on the same
