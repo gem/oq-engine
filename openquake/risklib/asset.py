@@ -427,6 +427,21 @@ class AssetCollection(object):
         """
         :returns: a reduced AssetCollection on the given sitecol
         """
+        ok_indices = numpy.sum(
+            [self.array['site_id'] == sid for sid in sitecol.sids],
+            axis=0, dtype=bool)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = self.array[ok_indices]
+        new.asset_refs = self.asset_refs[ok_indices]
+        return new
+
+    def reduce_also(self, sitecol):
+        """
+        :returns: a reduced AssetCollection on the given sitecol
+        NB: diffently from .reduce, also the SiteCollection is reduced
+        and turned into a complete site collection.
+        """
         array = []
         asset_refs = []
         for idx, sid in enumerate(sitecol.sids):
