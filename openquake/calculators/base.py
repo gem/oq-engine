@@ -667,7 +667,7 @@ class RiskCalculator(HazardCalculator):
             sitecol, shakemap = get_sitecol_shakemap(
                 smap, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
-            assetcol = assetcol.reduce(sitecol)
+            assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
