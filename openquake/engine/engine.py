@@ -152,7 +152,7 @@ class MasterKilled(KeyboardInterrupt):
 
 
 def inhibitSigInt(signum, _stack):
-    logs.LOG.warn('Revoking tasks, please wait.')
+    logs.LOG.warn('Revoking tasks, please wait')
 
 
 def raiseMasterKilled(signum, _stack):
