@@ -533,7 +533,7 @@ class HazardCalculator(BaseCalculator):
                 self.sitecol = haz_sitecol.within(region)
             if hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
-                self.assetcol = assetcol.reduce(self.sitecol.sids)
+                self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
