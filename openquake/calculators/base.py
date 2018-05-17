@@ -845,7 +845,7 @@ def save_gmfs(calculator):
         save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
+def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
@@ -856,10 +856,7 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
-    if tot_sites is not None:
-        all_sids = numpy.arange(tot_sites, dtype=U32)
-    else:
-        all_sids = sitecol.complete.sids
+    all_sids = sitecol.complete.sids
     for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
