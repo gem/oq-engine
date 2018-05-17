@@ -125,8 +125,7 @@ class PlanarSurface(BaseSurface):
         # now set the attributes normal, d, uv1, uv2, zero_zero
         self._init_plane()
         # now we can check surface for validity
-        dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
-                                      self.corner_depths)
+        dists, xx, yy = self._project(self.mesh.xyz)
         # "length" of the rupture is measured along the top edge
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         # "width" of the rupture is measured along downdip direction
@@ -274,7 +273,7 @@ class PlanarSurface(BaseSurface):
         """
         return self.dip
 
-    def _project(self, lons, lats, depths):
+    def _project(self, points):
         """
         Project points to a surface's plane.
 
@@ -286,8 +285,6 @@ class PlanarSurface(BaseSurface):
             and surface's plane in km, "x" and "y" coordinates of points'
             projections to the plane (in a surface's coordinate space).
         """
-        points = geo_utils.spherical_to_cartesian(lons, lats, depths)
-
         # uses method from http://www.9math.com/book/projection-point-plane
         dists = (self.normal * points).sum(axis=-1) + self.d
         t0 = - dists
@@ -328,7 +325,7 @@ class PlanarSurface(BaseSurface):
         # the surface (translating coordinates of the projections to a local
         # 2d space) and at the same time calculate the distance to that
         # plane.
-        dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
+        dists, xx, yy = self._project(mesh.xyz)
         # the actual resulting distance is a square root of squares
         # of a distance from a point to a plane that contains the surface
         # and a distance from a projection of that point on that plane
@@ -409,7 +406,7 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
+        dists, xx, yy = self._project(mesh.xyz)
         mxx = xx.clip(0, self.length)
         myy = yy.clip(0, self.width)
         dists.fill(0)
