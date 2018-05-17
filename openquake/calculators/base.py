@@ -512,7 +512,7 @@ class HazardCalculator(BaseCalculator):
             else:
                 haz_sitecol = readinput.get_site_collection(oq)
                 if hasattr(self, 'rup'):
-                    # for scenario reduce the site collection to the sites
+                    # for scenario we reduce the site collection to the sites
                     # within the maximum distance from the rupture
                     haz_sitecol, _dctx = self.cmaker.filter(
                         haz_sitecol, self.rup)
