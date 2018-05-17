@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Made impossible to fire  multiple `CTRL-C` in sequence
+    to allow processes teardown and tasks revocation
+
   [Michele Simionato]
   * Made it possible to specify the `filter_distance` in the `job.ini`
   * Made rtree optional again and disabled it in macOS
