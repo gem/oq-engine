@@ -226,7 +226,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
         self.assertEqual(len(sitecol), 8)
-        # FIXME: dict(extract(self.calc.datastore, 'gmf_data')) is broken
+        gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
+        gmfa = gmfdict['rlz-000']
+        self.assertEqual(gmfa.shape, (8,))
+        self.assertEqual(gmfa.dtype.names,
+                         ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
         aac(agglosses['mean'], numpy.array([[314017.34]], numpy.float32),
             atol=.1)
