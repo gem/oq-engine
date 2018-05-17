@@ -131,10 +131,10 @@ class _GeographicObjects(object):
 
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
-        :param mode: 'strict' or 'warn'
+        :param mode: 'strict', 'warn' or 'filter'
         :returns: (filtered site collection, filtered assets by site)
         """
-        assert mode in 'strict warn', mode
+        assert mode in 'strict warn filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
         assets_by_sid = collections.defaultdict(list)
         for assets in assets_by_site:

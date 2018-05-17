@@ -357,9 +357,8 @@ class HazardCalculator(BaseCalculator):
         if 'scenario' not in self.oqparam.calculation_mode:
             self.csm = precalc.csm
         pre_attrs = vars(precalc)
-        for name in ('riskmodel', 'assets_by_site'):
-            if name in pre_attrs:
-                setattr(self, name, getattr(precalc, name))
+        if 'riskmodel' in pre_attrs:
+            self.riskmodel = precalc.riskmodel
         return precalc
 
     def read_previous(self, precalc_id):
@@ -513,6 +512,12 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol = dstore['sitecol'].complete
             else:
                 haz_sitecol = readinput.get_site_collection(oq)
+                if hasattr(self, 'rup'):
+                    # for scenario we reduce the site collection to the sites
+                    # within the maximum distance from the rupture
+                    haz_sitecol, _dctx = self.cmaker.filter(
+                        haz_sitecol, self.rup)
+                    haz_sitecol.make_complete()
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if oq.shakemap_id or 'shakemap' in oq.inputs:
