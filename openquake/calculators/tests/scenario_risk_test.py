@@ -226,6 +226,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
         self.assertEqual(len(sitecol), 8)
+        # FIXME: dict(extract(self.calc.datastore, 'gmf_data')) is broken
         agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
         aac(agglosses['mean'], numpy.array([[314017.34]], numpy.float32),
             atol=.1)
