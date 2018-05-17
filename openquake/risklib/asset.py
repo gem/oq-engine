@@ -787,7 +787,8 @@ class Exposure(object):
                             costs.append(Node('cost', a))
                         occupancies = Node('occupancies')
                         for period in occupancy_periods:
-                            a = dict(occupants=dic[period], period=period)
+                            a = dict(occupants=float(dic[period]),
+                                     period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
@@ -813,6 +814,8 @@ class Exposure(object):
         insurance_limits = {}
         retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
+        # FIXME: in case of an exposure split in CSV files the line number
+        # is None because param['fname'] points to the .xml file :-(
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)
             taxonomy = asset_node['taxonomy']
