@@ -37,34 +37,32 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Read the site collection and initialize GmfComputer and seeds
         """
-        super().pre_execute()
         oq = self.oqparam
-        gsim_lt = readinput.get_gsim_lt(oq)
-        cinfo = source.CompositionInfo.fake(gsim_lt)
+        cinfo = source.CompositionInfo.fake(readinput.get_gsim_lt(oq))
         self.datastore['csm_info'] = cinfo
-        self.datastore['oqparam'] = oq
-        self.rlzs_assoc = cinfo.get_rlzs_assoc()
         if 'rupture_model' not in oq.inputs:
             logging.warn('There is no rupture_model, the calculator will just '
                          'import data without performing any calculation')
+            super().pre_execute()
             return
-        rup = readinput.get_rupture(oq)
+        self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
-        trunc_level = oq.truncation_level
-        correl_model = oq.get_correl_model()
-        cmaker = ContextMaker(self.gsims, oq.maximum_distance,
-                              oq.filter_distance)
-        self.sitecol, dctx = cmaker.filter(self.sitecol, rup)
-        n = oq.number_of_ground_motion_fields
-        events = numpy.zeros(n, readinput.stored_event_dt)
-        events['eid'] = numpy.arange(n)
-        ebr = EBRupture(rup, self.sitecol.sids, events)
+        self.cmaker = ContextMaker(self.gsims, oq.maximum_distance,
+                                   oq.filter_distance)
+        super().pre_execute()
+        self.datastore['oqparam'] = oq
+        self.rlzs_assoc = cinfo.get_rlzs_assoc()
+        E = oq.number_of_ground_motion_fields
+        events = numpy.zeros(E, readinput.stored_event_dt)
+        events['eid'] = numpy.arange(E)
+        ebr = EBRupture(self.rup, self.sitecol.sids, events)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
         rupser.close()
         self.computer = GmfComputer(
-            ebr, self.sitecol, oq.imtls, cmaker, trunc_level, correl_model)
+            ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
+            oq.get_correl_model())
 
     def init(self):
         pass
@@ -77,9 +75,9 @@ class ScenarioCalculator(base.HazardCalculator):
         if 'rupture_model' not in self.oqparam.inputs:
             return self.gmfa
         with self.monitor('computing gmfs', autoflush=True):
-            n = self.oqparam.number_of_ground_motion_fields
+            E = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
-                gmfa = self.computer.compute(gsim, n)  # shape (I, N, E)
+                gmfa = self.computer.compute(gsim, E)  # shape (I, N, E)
                 self.gmfa[gsim] = gmfa.transpose(1, 2, 0)  # shape (N, E, I)
         return self.gmfa
 

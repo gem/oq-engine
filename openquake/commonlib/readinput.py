@@ -629,7 +629,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'warn'
+        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
         sitecol, assets_by = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         assets_by_site = [[] for _ in sitecol.complete.sids]
