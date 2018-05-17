@@ -174,11 +174,10 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         surface = PlanarSurface(20, 30, *Mesh(lons, lats, depths))
         aaae = numpy.testing.assert_array_almost_equal
 
-        plons, plats, pdepths = geo_utils.cartesian_to_spherical(
-            numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]], float)
-        )
+        xyz = numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]])
+        plons, plats, pdepths = geo_utils.cartesian_to_spherical(xyz)
 
-        dists, xx, yy = surface._project(plons, plats, pdepths)
+        dists, xx, yy = surface._project(xyz)
         aaae(xx, [0, 10, 0])
         aaae(yy, [0, 10, -1])
         aaae(dists, [0, 1, -10])
@@ -192,11 +191,11 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         surface = PlanarSurface(
             20, 30,
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
-            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90)
-        )
+            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
         plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
                                  [11., 12., 13.]]
-        dists, xx, yy = surface._project(plons, plats, pdepths)
+        xyz = geo_utils.spherical_to_cartesian(plons, plats, pdepths)
+        dists, xx, yy = surface._project(xyz)
         lons, lats, depths = surface._project_back(dists, xx, yy)
         aaae = numpy.testing.assert_array_almost_equal
         aaae(lons, plons)

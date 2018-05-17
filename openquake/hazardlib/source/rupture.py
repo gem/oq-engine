@@ -454,7 +454,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         lats = numpy.arange(min_lat, max_lat + delta, delta)
         # ex shape (204,)
         mesh = RectangularMesh(*numpy.meshgrid(lons, lats))
-        mesh_rup = self.surface.get_min_distance(mesh)
+        mesh_rup = self.surface.get_min_distance(mesh).reshape(mesh.shape)
         # ex shape (204, 233)
 
         target_rup = self.surface.get_min_distance(target)
