@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Made impossible to fire  multiple `CTRL-C` in sequence
+    to allow processes teardown and tasks revocation
+
   [Michele Simionato]
   * Used `scipy.spatial.distance.cdist` in `Mesh.get_min_distance`
   * Prefiltered sites and assets in scenario calculations
