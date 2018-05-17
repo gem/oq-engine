@@ -512,12 +512,12 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol = dstore['sitecol'].complete
             else:
                 haz_sitecol = readinput.get_site_collection(oq)
-                if hasattr(self, 'cmaker'):  # for scenario
-                    haz_sitecol, dctx = self.cmaker.filter(
+                if hasattr(self, 'rup'):
+                    # for scenario reduce the site collection to the sites
+                    # within the maximum distance from the rupture
+                    haz_sitecol, _dctx = self.cmaker.filter(
                         haz_sitecol, self.rup)
-                    haz_sitecol.sids = numpy.arange(
-                        len(haz_sitecol), dtype=numpy.uint32)
-                    haz_sitecol.complete = haz_sitecol  # hack
+                    haz_sitecol.make_complete()
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if oq.shakemap_id or 'shakemap' in oq.inputs:
