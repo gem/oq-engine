@@ -113,6 +113,9 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
+
         # compare the average losses for an event_based_risk
         # case_master calculation from ruptures
         f0 = gettemp(view('mean_avg_losses', calc0))
