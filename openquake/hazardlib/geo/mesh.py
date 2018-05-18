@@ -272,7 +272,7 @@ class Mesh(object):
             points from this one at respective indices.
         """
         dists = cdist(self.xyz, sites.xyz)  # shape (M, N)
-        min_idx = [d.argmin() for d in dists.T]
+        min_idx = dists.argmin(axis=0).reshape(sites.shape)
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
         if self.depths is None:
