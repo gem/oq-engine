@@ -61,7 +61,6 @@ Module exports :class:`NGAEastBaseGMPE`,
                :class:`HollenbackEtAl2015NGAEastEX`,
                :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
 """
-from __future__ import division
 import os
 import h5py
 import numpy as np

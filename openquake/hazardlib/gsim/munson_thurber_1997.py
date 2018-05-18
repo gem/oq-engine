@@ -20,8 +20,6 @@
 Module exports :class:`MunsonThurber1997`
                :class:`MunsonThurber1997Vector`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE

@@ -20,7 +20,6 @@
 Module exports :class:`RietbrockEtAl2013SelfSimilar`,
                :class:`RietbrockEtAl2013MagDependent`
 """
-from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

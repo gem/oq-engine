@@ -19,8 +19,6 @@
 """
 Module exports :class:`Bradley2013`, :class:`Bradley2013Volc`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

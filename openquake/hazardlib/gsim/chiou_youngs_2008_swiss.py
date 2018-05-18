@@ -22,8 +22,6 @@ Module exports
 :class:`ChiouYoungs2008SWISS06`,
 :class:`ChiouYoungs2008SWISS04`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (

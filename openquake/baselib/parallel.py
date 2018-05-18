@@ -144,7 +144,6 @@ the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
 """
-from __future__ import print_function
 import os
 import sys
 import mock

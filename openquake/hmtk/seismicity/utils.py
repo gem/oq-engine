@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -44,11 +45,9 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-#!/usr/bin/env python
 '''
 Utility functions for seismicity calculations
 '''
-from __future__ import division
 import numpy as np
 from shapely import geometry
 try:
