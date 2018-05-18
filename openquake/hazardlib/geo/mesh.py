@@ -271,7 +271,7 @@ class Mesh(object):
             :class:`Mesh` object of the same shape as `mesh` with closest
             points from this one at respective indices.
         """
-        min_idx = cdist(self.xyz, mesh.xyz).argmin(axis=0)  # loose shape
+        min_idx = cdist(self.xyz, mesh.xyz).argmin(axis=0)  # lose shape
         if hasattr(mesh, 'shape'):
             min_idx = min_idx.reshape(mesh.shape)
         lons = self.lons.take(min_idx)
