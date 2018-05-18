@@ -239,7 +239,7 @@ class ContextMaker(object):
                 orig_dctx = DistancesContext(
                     (param, get_distances(rupture, sitecol, param))
                     for param in self.REQUIRES_DISTANCES)
-            with clo_mon:  # this is really fast
+            with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
