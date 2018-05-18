@@ -263,16 +263,17 @@ class Mesh(object):
         """
         return cdist(self.xyz, mesh.xyz).min(axis=0)
 
-    def get_closest_points(self, sites):
+    def get_closest_points(self, mesh):
         """
-        Find closest point of this mesh for each site
+        Find closest point of this mesh for each point in the other mesh
 
         :returns:
-            :class:`Mesh` object of the same shape as `sites` with closest
+            :class:`Mesh` object of the same shape as `mesh` with closest
             points from this one at respective indices.
         """
-        dists = cdist(self.xyz, sites.xyz)  # shape (M, N)
-        min_idx = dists.argmin(axis=0).reshape(sites.shape)
+        min_idx = cdist(self.xyz, mesh.xyz).argmin(axis=0)  # loose shape
+        if hasattr(mesh, 'shape'):
+            min_idx = min_idx.reshape(mesh.shape)
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
         if self.depths is None:
