@@ -261,37 +261,24 @@ class Mesh(object):
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        # NB: a slower alternative is to use self._min_idx_dst(mesh)[1]
         return cdist(self.xyz, mesh.xyz).min(axis=0)
 
     def get_closest_points(self, mesh):
         """
-        Find closest point of this mesh for each one in ``mesh``.
+        Find closest point of this mesh for each point in the other mesh
 
         :returns:
-            :class:`Mesh` object of the same shape as ``mesh`` with closest
+            :class:`Mesh` object of the same shape as `mesh` with closest
             points from this one at respective indices.
         """
-        min_idx, min_dst = self._min_idx_dst(mesh)
+        min_idx = cdist(self.xyz, mesh.xyz).argmin(axis=0)  # lose shape
+        if hasattr(mesh, 'shape'):
+            min_idx = min_idx.reshape(mesh.shape)
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
         if self.depths is None:
-            depths = None
-        else:
-            depths = self.depths.take(min_idx)
-        return Mesh(lons, lats, depths)
-
-    def _min_idx_dst(self, mesh):
-        if self.depths is None:
-            depths1 = numpy.zeros_like(self.lons)
-        else:
-            depths1 = self.depths
-        if mesh.depths is None:
-            depths2 = numpy.zeros_like(mesh.lons)
-        else:
-            depths2 = mesh.depths
-        return geodetic.min_idx_dst(
-            self.lons, self.lats, depths1, mesh.lons, mesh.lats, depths2)
+            return Mesh(lons, lats)
+        return Mesh(lons, lats, self.depths.take(min_idx))
 
     def get_distance_matrix(self):
         """

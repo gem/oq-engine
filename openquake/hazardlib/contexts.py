@@ -130,8 +130,9 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             setattr(dctx, param, get_distances(rupture, sites, param))
-        # NB: returning a SitesContext makes .get_poes faster
-        return SitesContext(sites), dctx
+        # NB: returning a SitesContext make sures that the GSIM cannot
+        # access site parameters different from the ones declared
+        return SitesContext(sites, self.REQUIRES_SITES_PARAMETERS), dctx
 
     def filter_ruptures(self, src, sites):
         """
@@ -233,11 +234,14 @@ class ContextMaker(object):
         acc = AccumDict(accum=[])
         ctx_mon = monitor('disagg_contexts', measuremem=False)
         pne_mon = monitor('disaggregate_pne', measuremem=False)
+        clo_mon = monitor('get_closest', measuremem=False)
         for rupture in ruptures:
             with ctx_mon:
                 orig_dctx = DistancesContext(
                     (param, get_distances(rupture, sitecol, param))
                     for param in self.REQUIRES_DISTANCES)
+            with clo_mon:  # this is faster than computing orig_dctx
+                closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
             for r, gsim in self.gsim_by_rlzi.items():
                 dctx = orig_dctx.roundup(gsim.minimum_distance)
@@ -253,7 +257,6 @@ class ContextMaker(object):
                                     truncnorm, epsilons)
                                 cache[gsim, imt, iml] = pne
                         acc[poe, str(imt), r].append(pne)
-            closest_points = rupture.surface.get_closest_points(sitecol)
             acc['mags'].append(rupture.mag)
             acc['dists'].append(getattr(dctx, self.filter_distance))
             acc['lons'].append(closest_points.lons)
@@ -297,10 +300,10 @@ class SitesContext(BaseContext):
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
                'lons', 'lats')
 
-    def __init__(self, sitecol=None):
+    def __init__(self, sitecol=None, slots=None):
         if sitecol is not None:
             self.sids = sitecol.sids
-            for name in self._slots_:
+            for name in self._slots_ if slots is None else slots:
                 setattr(self, name, getattr(sitecol, name))
 
 
