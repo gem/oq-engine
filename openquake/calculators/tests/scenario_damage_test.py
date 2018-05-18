@@ -26,7 +26,7 @@ from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
 from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -44,7 +44,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            if REFERENCE_OS:  # broken on macOS
+            if NOT_DARWIN:  # broken on macOS
                 self.assertEqualFiles('expected/%s' % fname, actual)
 
     @attr('qa', 'risk', 'scenario_damage')
