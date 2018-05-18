@@ -277,10 +277,8 @@ class Mesh(object):
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
         if self.depths is None:
-            depths = None
-        else:
-            depths = self.depths.take(min_idx)
-        return Mesh(lons, lats, depths)
+            return Mesh(lons, lats)
+        return Mesh(lons, lats, self.depths.take(min_idx))
 
     def get_distance_matrix(self):
         """
