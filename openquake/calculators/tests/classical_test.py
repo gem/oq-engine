@@ -24,7 +24,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -316,7 +316,7 @@ hazard_uhs-mean.csv
 
         # check exporting a single realization in XML and CSV
         [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
-        if REFERENCE_OS:  # broken on macOS
+        if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
