@@ -28,7 +28,6 @@ Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
                :class:`Idriss2014NSHMPUpper`
                :class:`Idriss2014NSHMPLower`
 """
-from __future__ import division
 import numpy as np
 from openquake.hazardlib.gsim.base import _norm_sf, _truncnorm_sf
 from openquake.hazardlib import const

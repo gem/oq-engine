@@ -17,11 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`CampbellBozorgnia2008`, and 
+Module exports :class:`CampbellBozorgnia2008`, and
 :class:'CampbellBozorgnia2008Arbitrary'
 """
-from __future__ import division
-
 import numpy as np
 from math import log, exp
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

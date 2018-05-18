@@ -20,7 +20,6 @@
 """
 Utility functions of general interest.
 """
-from __future__ import division, print_function
 import os
 import sys
 import imp

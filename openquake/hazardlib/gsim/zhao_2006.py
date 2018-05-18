@@ -21,8 +21,6 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlab`, :class:`ZhaoEtAl2006SInterNSHMP2008` and
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -30,7 +28,7 @@ import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, SA
 
 
 class ZhaoEtAl2006Asc(GMPE):

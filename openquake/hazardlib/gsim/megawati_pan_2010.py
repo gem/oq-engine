@@ -19,9 +19,6 @@
 """
 Module exports :class:`megawatipan2010`.
 """
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
 from scipy.constants import g
 
