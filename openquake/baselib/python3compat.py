@@ -21,12 +21,7 @@ Compatibility layer for Python 2 and 3. Mostly copied from six and future,
 but reduced to the subset of utilities needed by GEM. This is done to
 avoid an external dependency.
 """
-from __future__ import print_function
-import os
-import sys
 import math
-import importlib
-import subprocess
 import builtins
 
 
