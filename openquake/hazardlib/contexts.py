@@ -68,7 +68,8 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, filter_distance='rjb'):
+    def __init__(self, gsims, maximum_distance=None, filter_distance='rjb',
+                 monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
         self.filter_distance = filter_distance
@@ -85,6 +86,9 @@ class ContextMaker(object):
             for gsim, rlzis in gsims.items():
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
+        self.ir_mon = monitor('iter_ruptures', measuremem=False)
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
+        self.poe_mon = monitor('get_poes', measuremem=False)
 
     def filter(self, sites, rupture):
         """
@@ -134,23 +138,6 @@ class ContextMaker(object):
         # access site parameters different from the ones declared
         return SitesContext(sites, self.REQUIRES_SITES_PARAMETERS), dctx
 
-    def filter_ruptures(self, src, sites):
-        """
-        :param src: a source object, already filtered and split
-        :param sites: a filtered SiteCollection
-        :return: a list of filtered ruptures with context attributes
-        """
-        ruptures = []
-        weight = 1. / (src.num_ruptures or src.count_ruptures())
-        for rup in src.iter_ruptures():
-            rup.weight = weight
-            try:
-                rup.sctx, rup.dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
-            ruptures.append(rup)
-        return ruptures
-
     def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
         """
         :param src: a source object
@@ -176,24 +163,32 @@ class ContextMaker(object):
         tildemap.eff_ruptures = len(ruptures)
         return tildemap
 
-    def poe_map(self, src, sites, imtls, trunclevel, ctx_mon, poe_mon,
-                rup_indep=True):
+    def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
         :param sites: a filtered SiteCollection
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
-        :param ctx_mon: a Monitor instance for make_context
-        :param poe_mon: a Monitor instance for get_poes
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        with ctx_mon:
-            ruptures = self.filter_ruptures(src, sites)
+        with self.ir_mon:
+            all_ruptures = list(src.iter_ruptures())
+        # all_ruptures can be empty only in UCERF
+        weight = 1. / (len(all_ruptures) or 1)
+        ruptures = []
+        with self.ctx_mon:
+            for rup in all_ruptures:
+                rup.weight = weight
+                try:
+                    rup.sctx, rup.dctx = self.make_contexts(sites, rup)
+                except FarAwayRupture:
+                    continue
+                ruptures.append(rup)
         if not ruptures:
             return {}
         try:
-            with poe_mon:
+            with self.poe_mon:
                 pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
         except Exception as err:
             etype, err, tb = sys.exc_info()
