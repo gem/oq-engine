@@ -30,8 +30,8 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
-                                           DistancesContext)
+from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
+                                          DistancesContext)
 from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
                                      RSD595, RSD2080)
 
