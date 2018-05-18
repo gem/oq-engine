@@ -29,7 +29,6 @@ from scipy.special import ndtr
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.python3compat import with_metaclass
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import *  # for backward compatibility
@@ -80,7 +79,7 @@ class MetaGSIM(abc.ABCMeta):
 
 
 @functools.total_ordering
-class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
+class GroundShakingIntensityModel(metaclass=MetaGSIM):
     """
     Base class for all the ground shaking intensity models.
 
