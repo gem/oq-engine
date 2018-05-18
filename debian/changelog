@@ -1,5 +1,8 @@
+  [Michele Simionato]
+  * Changed the default `filter_distance` from `rjb` to `rrup`
+
   [Daniele Viganò]
-  * Made impossible to fire  multiple `CTRL-C` in sequence
+  * Made it impossible to fire  multiple `CTRL-C` in sequence
     to allow processes teardown and tasks revocation
 
   [Michele Simionato]
