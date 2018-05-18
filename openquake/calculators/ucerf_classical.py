@@ -115,12 +115,10 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
         return acc
 
     # compute the ProbabilityMap
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance,
+                          monitor=monitor)
     imtls = DictArray(imtls)
-    ctx_mon = monitor('make_contexts', measuremem=False)
-    poe_mon = monitor('get_poes', measuremem=False)
-    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls,
-                          truncation_level, ctx_mon, poe_mon)
+    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls, truncation_level)
     nsites = len(s_sites)
     acc = AccumDict({grp_id: pmap})
     acc.calc_times = {
