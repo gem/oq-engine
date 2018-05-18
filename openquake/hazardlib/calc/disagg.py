@@ -86,9 +86,8 @@ def collect_bin_data(sources, sitecol, cmaker, iml4,
     truncnorm = scipy.stats.truncnorm(-truncation_level, truncation_level)
     epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
     acc = AccumDict(accum=[])
-    mon = monitor('iter_ruptures', measuremem=False)
     for source in sources:
-        with mon:
+        with cmaker.ir_mon:
             ruptures = list(source.iter_ruptures())
         try:
             acc += cmaker.disaggregate(
