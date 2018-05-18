@@ -19,8 +19,6 @@
 """
 Module exports :class:`ChiouYoungs2014`.
 """
-from __future__ import division
-
 import numpy as np
 import math
 

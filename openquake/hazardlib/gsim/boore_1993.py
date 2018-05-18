@@ -20,8 +20,6 @@
 Module exports :class:`BooreEtAl1993GSCBest`,
 :class:`BooreEtAl1993GSCUpperLimit`, :class:`BooreEtAl1993GSCLowerLimit`.
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g
 
