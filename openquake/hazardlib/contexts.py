@@ -174,7 +174,8 @@ class ContextMaker(object):
         """
         with self.ir_mon:
             all_ruptures = list(src.iter_ruptures())
-        weight = 1. / len(all_ruptures)
+        # all_ruptures can be empty only in UCERF
+        weight = 1. / (len(all_ruptures) or 1)
         ruptures = []
         with self.ctx_mon:
             for rup in all_ruptures:
