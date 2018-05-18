@@ -20,7 +20,6 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys

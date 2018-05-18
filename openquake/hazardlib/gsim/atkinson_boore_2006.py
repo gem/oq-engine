@@ -26,8 +26,6 @@ Module exports :class:`AtkinsonBoore2006`,
 :class:`AtkinsonBoore2006Mwbar200NSHMP2008`,
 :class:`AtkinsonBoore2006Modified2011`.
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

@@ -19,7 +19,6 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-from __future__ import division
 import abc
 import copy
 import bisect
