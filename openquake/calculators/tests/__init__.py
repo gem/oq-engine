@@ -31,7 +31,7 @@ from openquake.baselib import performance, datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
-REFERENCE_OS = 'darwin' not in platform.platform()
+NOT_DARWIN = 'darwin' not in platform.platform()
 
 
 class DifferentFiles(Exception):
