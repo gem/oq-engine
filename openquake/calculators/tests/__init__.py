@@ -22,7 +22,7 @@ import shutil
 import logging
 import tempfile
 import unittest
-import platform
+import sys
 
 import numpy
 
@@ -31,7 +31,7 @@ from openquake.baselib import performance, datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
-NOT_DARWIN = 'darwin' not in platform.platform()
+NOT_DARWIN = sys.platform() != 'darwin'
 
 
 class DifferentFiles(Exception):
