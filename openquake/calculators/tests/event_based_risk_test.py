@@ -26,7 +26,7 @@ from nose.plugins.attrib import attr
 from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
 from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
@@ -108,7 +108,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test the loss maps exporter
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
@@ -208,7 +208,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         assert fnames, 'loss_maps-rlzs not exported?'
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             for fname in fnames:
                 self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                       fname, delta=1E-5)
@@ -281,7 +281,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
     @attr('qa', 'hazard', 'event_based')
