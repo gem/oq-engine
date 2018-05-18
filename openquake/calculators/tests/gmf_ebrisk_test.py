@@ -98,8 +98,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('macOS')
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # single file event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
