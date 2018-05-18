@@ -617,7 +617,7 @@ def export_gmf_data_csv(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'])
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
-    if eid is None:  # new format; FIXME: we should use extract instead
+    if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(sitemesh), dtype=U32)
         sites = util.compose_arrays(sids, sitemesh, 'site_id')

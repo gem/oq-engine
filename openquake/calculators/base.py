@@ -520,8 +520,6 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol.make_complete()
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
-        if oq.shakemap_id or 'shakemap' in oq.inputs:
-            self.read_shakemap()
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.load_riskmodel()  # must be called *after* read_exposure
@@ -531,9 +529,15 @@ class HazardCalculator(BaseCalculator):
             if oq.region:
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
-            if hasattr(self, 'sitecol') and general.not_equal(
+            if oq.shakemap_id or 'shakemap' in oq.inputs:
+                self.sitecol, self.assetcol = self.read_shakemap(
+                    haz_sitecol, assetcol)
+                self.datastore['assetcol'] = self.assetcol
+                logging.info('Extracted %d/%d assets',
+                             len(self.assetcol), len(assetcol))
+            elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
-                self.assetcol = assetcol.reduce(self.sitecol.sids)
+                self.assetcol = assetcol.reduce(self.sitecol)
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
@@ -646,7 +650,7 @@ class RiskCalculator(HazardCalculator):
             self._R = self.datastore['csm_info'].get_num_rlzs()
             return self._R
 
-    def read_shakemap(self):
+    def read_shakemap(self, haz_sitecol, assetcol):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.
         Download, unzip, parse USGS shakemap files and build a corresponding
@@ -655,26 +659,25 @@ class RiskCalculator(HazardCalculator):
         """
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
-        haz_sitecol = self.datastore.parent['sitecol']
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
-            self.sitecol, shakemap = get_sitecol_shakemap(
+            sitecol, shakemap = get_sitecol_shakemap(
                 smap, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
+            assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
             gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
-                           oq.truncation_level, E, oq.random_seed)
-            tot_sites = self.datastore.get_attr('assetcol', 'tot_sites')
-            save_gmf_data(self.datastore, self.sitecol, gmfs,
-                          tot_sites=tot_sites)
+                           oq.truncation_level, E, oq.random_seed, oq.imtls)
+            save_gmf_data(self.datastore, sitecol, gmfs)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
+        return sitecol, assetcol
 
     def make_eps(self, num_ruptures):
         """
@@ -842,7 +845,7 @@ def save_gmfs(calculator):
         save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
+def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
@@ -853,10 +856,7 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=(), tot_sites=None):
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
-    if tot_sites is not None:
-        all_sids = numpy.arange(tot_sites, dtype=U32)
-    else:
-        all_sids = sitecol.complete.sids
+    all_sids = sitecol.complete.sids
     for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
