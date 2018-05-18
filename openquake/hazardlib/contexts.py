@@ -259,7 +259,7 @@ class ContextMaker(object):
         return acc
 
 
-class BaseContext(wmetaclass=abc.ABCMeta):
+class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
     """
