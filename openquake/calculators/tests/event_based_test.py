@@ -33,7 +33,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_17, case_18, mutex)
@@ -195,12 +195,12 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
@@ -247,7 +247,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         years = sorted(self.calc.datastore['events']['year'])
         self.assertEqual(years, [15, 29, 39, 43])
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')

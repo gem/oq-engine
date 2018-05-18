@@ -21,7 +21,7 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
 from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.commonlib.writers import scientificformat
 from openquake.calculators.export import export
 
@@ -111,7 +111,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         assert fnames  # sanity check
         # FIXME: on macOS the generation of loss maps stats is terribly wrong,
         # the number of losses do not match, this must be investigated
-        if REFERENCE_OS:
+        if NOT_DARWIN:
             for fname in fnames:
                 self.assertEqualFiles(
                     'expected/' + strip_calc_id(fname), fname)
