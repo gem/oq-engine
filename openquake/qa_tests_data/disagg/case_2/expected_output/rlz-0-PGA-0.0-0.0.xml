@@ -20,24 +20,24 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="15"
         iml="1.000000E-01"
-        poE="7.185372E-03"
+        poE="7.185383E-03"
         type="Mag"
         >
-            <prob index="0" value="6.022774E-04"/>
-            <prob index="1" value="5.982816E-04"/>
-            <prob index="2" value="5.908232E-04"/>
-            <prob index="3" value="5.797612E-04"/>
-            <prob index="4" value="5.655172E-04"/>
-            <prob index="5" value="5.479157E-04"/>
-            <prob index="6" value="5.271474E-04"/>
-            <prob index="7" value="5.034411E-04"/>
-            <prob index="8" value="4.770858E-04"/>
-            <prob index="9" value="4.484704E-04"/>
-            <prob index="10" value="4.180579E-04"/>
-            <prob index="11" value="3.863604E-04"/>
-            <prob index="12" value="3.539274E-04"/>
-            <prob index="13" value="3.213246E-04"/>
-            <prob index="14" value="2.891084E-04"/>
+            <prob index="0" value="6.022777E-04"/>
+            <prob index="1" value="5.982820E-04"/>
+            <prob index="2" value="5.908238E-04"/>
+            <prob index="3" value="5.797618E-04"/>
+            <prob index="4" value="5.655179E-04"/>
+            <prob index="5" value="5.479165E-04"/>
+            <prob index="6" value="5.271483E-04"/>
+            <prob index="7" value="5.034420E-04"/>
+            <prob index="8" value="4.770868E-04"/>
+            <prob index="9" value="4.484714E-04"/>
+            <prob index="10" value="4.180588E-04"/>
+            <prob index="11" value="3.863613E-04"/>
+            <prob index="12" value="3.539282E-04"/>
+            <prob index="13" value="3.213254E-04"/>
+            <prob index="14" value="2.891091E-04"/>
         </disaggMatrix>
     </disaggMatrices>
 </nrml>
