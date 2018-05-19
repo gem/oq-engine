@@ -112,7 +112,10 @@ class ContextMaker(object):
                 raise FarAwayRupture
         return sites, DistancesContext([(self.filter_distance, distances)])
 
-    def _add_rup_params(self, rupture):
+    def add_rup_params(self, rupture):
+        """
+        Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
+        """
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = rupture.mag
@@ -159,7 +162,7 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             setattr(dctx, param, get_distances(rupture, sites, param))
-        self._add_rup_params(rupture)
+        self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
         sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
@@ -262,7 +265,7 @@ class ContextMaker(object):
                 orig_dctx = DistancesContext(
                     (param, get_distances(rupture, sitecol, param))
                     for param in self.REQUIRES_DISTANCES)
-                self._add_rup_params(rupture)
+                self.add_rup_params(rupture)
             with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
