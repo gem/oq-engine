@@ -70,12 +70,12 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
+def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
-    with monitor:
+    hcalc = base.calculators(readinput.get_oqparam(job_haz))
+    with hcalc._monitor:
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                   exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
@@ -93,7 +93,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.Monitor('complete runtime', measuremem=True)
+    monitor = performance.Monitor('total runtime', measuremem=True)
     if len(job_inis) == 1:  # run hazard or risk
         if hc:
             hc_id = hc[0]
@@ -110,7 +110,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
                 raise SystemExit(
                     'There are %d old calculations, cannot '
                     'retrieve the %s' % (len(calc_ids), hc_id))
-        calc = base.calculators(oqparam, monitor)
+        calc = base.calculators(oqparam)
         with calc._monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
@@ -118,11 +118,10 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     else:  # run hazard + risk
         calc = run2(
             job_inis[0], job_inis[1], concurrent_tasks, pdb,
-            exports, params, monitor)
+            exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    monitor.flush()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
     calc_path = calc.datastore.calc_dir  # used for the .pstat filename
     return calc
