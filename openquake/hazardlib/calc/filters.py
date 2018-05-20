@@ -205,14 +205,6 @@ class BaseFilter(object):
     """
     integration_distance = {}
 
-    @property
-    def sitecol(self):
-        if 'sitecol' in vars(self):
-            return self.__dict__['sitecol']
-        with hdf5.File(self.hdf5path, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5['sitecol']
-        return sc
-
     def get_rectangle(self, src):
         """
         :param src: a source object
@@ -264,6 +256,14 @@ class SourceFilter(BaseFilter):
             else integration_distance)
         self.distribute = None
 
+    @property
+    def sitecol(self):
+        if 'sitecol' in vars(self):
+            return self.__dict__['sitecol']
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            self.__dict__['sitecol'] = sc = h5['sitecol']
+        return sc
+
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
         """
@@ -304,10 +304,9 @@ class SourceFilter(BaseFilter):
         monitor = performance.Monitor('prefilter', hdf5path=self.hdf5path)
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor), distribute=self.distribute,
-            name=self.__class__.__name__,
-        ).reduce()
+            name=self.__class__.__name__).reduce()
         Starmap.shutdown()  # close the processpool
-        Starmap.init()  # reopen it if necessary
+        Starmap.init()  # reopen it when necessary
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
