@@ -291,6 +291,7 @@ class SourceFilter(BaseFilter):
             prefilter, (sources, self, monitor), distribute=self.distribute,
             name=self.__class__.__name__,
         ).reduce()
+        Starmap.shutdown()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
