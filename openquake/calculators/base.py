@@ -123,9 +123,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
-        self._monitor = monitor
+    def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
+        self._monitor = Monitor('total runtime', measuremem=True)
+        self._monitor.hdf5path = self.datastore.hdf5path
         self.oqparam = oqparam
 
     def monitor(self, operation, **kw):
@@ -351,8 +352,7 @@ class HazardCalculator(BaseCalculator):
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
-            self.oqparam, self.monitor('precalculator'),
-            self.datastore.calc_id)
+            self.oqparam, self.datastore.calc_id)
         precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
             self.csm = precalc.csm
