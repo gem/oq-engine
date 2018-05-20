@@ -240,15 +240,16 @@ class SourceFilter(BaseFilter):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, hdf5path):
+    def __init__(self, sitecol, integration_distance, hdf5path=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
         self.hdf5path = hdf5path
-        if (config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):
+        if (hdf5path and
+                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.directory.shared_dir):  # store the sitecol
             with hdf5.File(hdf5path, 'w') as h5:
                 h5['sitecol'] = sitecol
-        else:
+        else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
         self.integration_distance = (
             IntegrationDistance(integration_distance)
