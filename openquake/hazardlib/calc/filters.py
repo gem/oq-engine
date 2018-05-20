@@ -340,7 +340,7 @@ class RtreeFilter(SourceFilter):
     :param integration_distance:
         Integration distance dictionary (TRT -> distance in km)
     """
-    def __init__(self, sitecol, integration_distance, hdf5path):
+    def __init__(self, sitecol, integration_distance, hdf5path=None):
         if rtree is None:
             raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
