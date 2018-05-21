@@ -187,7 +187,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check losses by taxonomy
         agglosses = extract(self.calc.datastore, 'agglosses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
-        aac(agglosses, [[1981.4679, 2363.5803],
+        aac(agglosses, [[1981.4681, 2363.5803],
                         [712.8535, 924.75616],
                         [986.7066, 1344.0371]])
 

@@ -144,7 +144,6 @@ the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
 """
-from __future__ import print_function
 import os
 import sys
 import mock
@@ -513,6 +512,7 @@ class Starmap(object):
     @classmethod
     def shutdown(cls, poolsize=None):
         if hasattr(cls, 'pool'):
+            logging.info('Closing process pool')
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()

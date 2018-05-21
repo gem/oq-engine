@@ -20,8 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
-from __future__ import division
 import numpy
+from scipy.spatial.distance import cdist
 from openquake.baselib.python3compat import round
 
 #: Earth radius in km.
@@ -161,7 +161,7 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
             seglons[0], seglats[0], seg_azim, lons[idx_in], lats[idx_in])
     if len(idx_out[0]):
         dists[idx_out] = min_geodetic_distance(
-            seglons, seglats, lons[idx_out], lats[idx_out])
+            (seglons, seglats), (lons[idx_out], lats[idx_out]))
 
     # Finally we correct the sign of the distances in order to make sure that
     # the points on the right semispace defined using as a reference the
@@ -180,42 +180,60 @@ def _reshape(array, orig_shape):
     return array[0]  # scalar array
 
 
-def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
+def spherical_to_cartesian(lons, lats, depths=None):
     """
-    Small wrapper around :func:`pure_distances`, suitable
-    for calculating the minimum distance between first mesh and each point
+    Return the position vectors (in Cartesian coordinates) of list of spherical
+    coordinates.
+
+    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+    Parameters are components of spherical coordinates in a form of scalars,
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
+    considered zero for all points.
+
+    :returns:
+        ``numpy.array`` of 3d vectors representing points' coordinates in
+        Cartesian space in km. The array has shape `lons.shape + (3,)`.
+        In particular, if ``lons`` and ``lats`` are scalars the result is a
+        3D vector and if they are vectors the result is a matrix of shape
+        (N, 3).
+
+    See also :func:`cartesian_to_spherical`.
+    """
+    phi = numpy.radians(lons)
+    theta = numpy.radians(lats)
+    if depths is None:
+        rr = EARTH_RADIUS
+    else:
+        rr = EARTH_RADIUS - numpy.array(depths)
+    cos_theta_r = rr * numpy.cos(theta)
+    try:
+        shape = lons.shape
+    except AttributeError:  # a list/tuple was passed
+        try:
+            shape = (len(lons),)
+        except TypeError:  # a scalar was passed
+            shape = ()
+    arr = numpy.zeros(shape + (3,))
+    arr[..., 0] = cos_theta_r * numpy.cos(phi)
+    arr[..., 1] = cos_theta_r * numpy.sin(phi)
+    arr[..., 2] = rr * numpy.sin(theta)
+    return arr
+
+
+def min_geodetic_distance(a, b):
+    """
+    Compute the minimum distance between first mesh and each point
     of the second mesh when both are defined on the earth surface.
-    """
-    mlons, mlats, slons, slats = _prepare_coords(
-        mlons.flatten(), mlats.flatten(), slons, slats)
-    return pure_distances(mlons, mlats, slons, slats).min(axis=0) * diameter
 
-
-# used to compute distances site-rupture for all sites
-def pure_distances(mlons, mlats, slons, slats):
+    :param a: a pair of (lons, lats) or an array of cartesian coordinates
+    :param b: a pair of (lons, lats) or an array of cartesian coordinates
     """
-    :param mlons: array of m longitudes (for the rupture)
-    :param mlats: array of m latitudes (for the rupture)
-    :param slons: array of s longitudes (for the sites)
-    :param slats: array of s latitudes (for the sites)
-    :returns: array of (m, s) distances to be multiplied by the Earth diameter
-    """
-    cos_mlats = numpy.cos(mlats)
-    cos_slats = numpy.cos(slats)
-    result = numpy.zeros(mlons.shape + slons.shape)
-    if len(mlons) < len(slons):  # lots of sites
-        for i in range(len(mlons)):
-            a = numpy.sin((mlats[i] - slats) / 2.0)
-            b = numpy.sin((mlons[i] - slons) / 2.0)
-            result[i, :] = numpy.arcsin(
-                numpy.sqrt(a * a + cos_mlats[i] * cos_slats * b * b))
-    else:  # few sites
-        for j in range(len(slons)):
-            a = numpy.sin((mlats - slats[j]) / 2.0)
-            b = numpy.sin((mlons - slons[j]) / 2.0)
-            result[:, j] = numpy.arcsin(
-                numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
-    return result
+    if isinstance(a, tuple):
+        a = spherical_to_cartesian(a[0].flatten(), a[1].flatten())
+    if isinstance(b, tuple):
+        b = spherical_to_cartesian(b[0].flatten(), b[1].flatten())
+    return cdist(a, b).min(axis=0)
 
 
 def distance_matrix(lons, lats, diameter=2*EARTH_RADIUS):

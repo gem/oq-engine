@@ -23,7 +23,6 @@ types.
 import re
 import operator
 import functools
-from openquake.baselib.python3compat import with_metaclass
 
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
@@ -70,7 +69,7 @@ class IMTMeta(type):
 
 
 @functools.total_ordering
-class _IMT(with_metaclass(IMTMeta, tuple)):
+class _IMT(tuple, metaclass=IMTMeta):
     """
     Base class for intensity measure type.
 

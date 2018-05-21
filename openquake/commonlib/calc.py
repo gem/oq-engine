@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import warnings
 import numpy
 import h5py
@@ -332,6 +330,7 @@ class RuptureData(object):
         data = []
         for ebr in ebruptures:
             rup = ebr.rupture
+            self.cmaker.add_rup_params(rup)
             ruptparams = tuple(getattr(rup, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()

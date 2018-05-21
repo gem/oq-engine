@@ -22,8 +22,6 @@ Module exports :class:`TavakoliPezeshk2005`,
 :class:`TavakoliPezeshk2005MblgJ1996NSHMP2008`,
 :class:`TavakoliPezeshk2005MwNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -32,8 +30,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
     mblg_to_mw_johnston_96,
-    clip_mean
-)
+    clip_mean)
 
 
 class TavakoliPezeshk2005(GMPE):

@@ -153,15 +153,6 @@ class TestDistance(unittest.TestCase):
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
 
-    def test_pure_distances(self):
-        # distances between a 1D mesh and a 2D mesh are a 3D mesh
-        mlons = numpy.array([.1, .2])
-        mlats = numpy.array([.11, .22])
-        slons = numpy.ones((3, 3))
-        slats = numpy.zeros((3, 3))
-        res = geodetic.pure_distances(mlons, mlats, slons, slats)
-        self.assertEqual(res.shape, (2, 3, 3))
-
 
 class MinDistanceToSegmentTest(unittest.TestCase):
 
@@ -188,7 +179,7 @@ class MinDistanceToSegmentTest(unittest.TestCase):
         dist = float(geodetic.min_distance_to_segment(
             self.slons, self.slats, lons=numpy.array([3.0]),
             lats=numpy.array([0.0])))
-        self.assertAlmostEqual(dist, 186.394507344)
+        self.assertAlmostEqual(dist, 186.38785969)
 
     def test_four(self):
         # Negative distance halfspace - outside segment
@@ -196,7 +187,7 @@ class MinDistanceToSegmentTest(unittest.TestCase):
             self.slons, self.slats,
             lons=numpy.array([-2.0]),
             lats=numpy.array([0.5])))
-        self.assertAlmostEqual(dist, -125.802091893)
+        self.assertAlmostEqual(dist, -125.8000481)
 
     def test_five(self):
         # Seglons with three elements

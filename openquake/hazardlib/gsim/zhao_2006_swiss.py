@@ -22,20 +22,16 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc
-
 from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS05,
     COEFFS_FS_ROCK_SWISS03,
-    COEFFS_FS_ROCK_SWISS08
-)
+    COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
