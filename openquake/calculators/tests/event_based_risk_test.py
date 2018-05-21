@@ -25,8 +25,7 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
