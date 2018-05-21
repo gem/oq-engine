@@ -20,7 +20,6 @@
 Module exports :class:'AllenEtAl2012',
                       'AllenEtAl2012Rhypo'
 """
-from __future__ import division
 import numpy as np
 
 from openquake.hazardlib.gsim.base import IPE, CoeffsTable

@@ -71,7 +71,6 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-from __future__ import print_function
 import io
 import re
 import sys

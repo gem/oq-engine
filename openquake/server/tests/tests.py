@@ -20,7 +20,6 @@
 Here there are some real functional tests starting an engine server and
 running computations.
 """
-from __future__ import print_function
 import io
 import os
 import re
