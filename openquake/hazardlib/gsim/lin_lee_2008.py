@@ -19,8 +19,6 @@
 """
 Module exports :class:`LinLee2008SInter`, class:`LinLee2008SSlab`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

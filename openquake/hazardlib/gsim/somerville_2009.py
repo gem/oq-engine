@@ -20,8 +20,6 @@
 Module exports :class:`SomervilleEtAl2009NonCratonic`,
 :class:`SomervilleEtAl2009YilgarnCraton`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

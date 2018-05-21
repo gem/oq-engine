@@ -26,6 +26,7 @@ try:
 except ImportError:
     rtree = None
 from scipy.interpolate import interp1d
+from openquake.baselib import hdf5, config, performance
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp, groupby
 from openquake.baselib.python3compat import raise_
@@ -194,16 +195,43 @@ def prefilter(srcs, srcfilter, monitor):
     return groupby(srcfilter.filter(srcs), src_group_id)
 
 
-class BaseFilter(object):
+class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,
     i.e. sources with an attribute .indices, containg the IDs of the sites
     within the given maximum distance. There is also a .pfilter method
     that filters the sources in parallel and returns a dictionary
     src_group_id -> filtered sources.
+    Filter the sources by using `self.sitecol.within_bbox` which is
+    based on numpy.
     """
-    integration_distance = {}
-    sitecol = None
+    def __init__(self, sitecol, integration_distance, hdf5path=None):
+        if sitecol is not None and len(sitecol) < len(sitecol.complete):
+            raise ValueError('%s is not complete!' % sitecol)
+        self.hdf5path = hdf5path
+        if hdf5path and (
+                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.directory.shared_dir):  # store the sitecol
+            with hdf5.File(hdf5path, 'w') as h5:
+                h5['sitecol'] = sitecol
+        else:  # keep the sitecol in memory
+            self.__dict__['sitecol'] = sitecol
+        self.integration_distance = (
+            IntegrationDistance(integration_distance)
+            if isinstance(integration_distance, dict)
+            else integration_distance)
+        self.distribute = None
+
+    @property
+    def sitecol(self):
+        """
+        Read the site collection from .hdf5path and cache it
+        """
+        if 'sitecol' in vars(self):
+            return self.__dict__['sitecol']
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            self.__dict__['sitecol'] = sc = h5['sitecol']
+        return sc
 
     def get_rectangle(self, src):
         """
@@ -234,22 +262,6 @@ class BaseFilter(object):
         for src in self.filter(sources):
             yield src, self.sitecol.filtered(src.indices)
 
-
-class SourceFilter(BaseFilter):
-    """
-    Filter the sources by using `self.sitecol.within_bbox` which is
-    based on numpy.
-    """
-    def __init__(self, sitecol, integration_distance):
-        if sitecol is not None and len(sitecol) < len(sitecol.complete):
-            raise ValueError('%s is not complete!' % sitecol)
-        self.sitecol = sitecol
-        self.integration_distance = (
-            IntegrationDistance(integration_distance)
-            if isinstance(integration_distance, dict)
-            else integration_distance)
-        self.distribute = None
-
     # used in the disaggregation calculator
     def get_bounding_boxes(self, trt=None, mag=None):
         """
@@ -279,7 +291,7 @@ class SourceFilter(BaseFilter):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, monitor):
+    def pfilter(self, sources):
         """
         Filter the sources in parallel by using Starmap.apply
 
@@ -287,10 +299,12 @@ class SourceFilter(BaseFilter):
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
+        monitor = performance.Monitor('prefilter', hdf5path=self.hdf5path)
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor), distribute=self.distribute,
-            name=self.__class__.__name__,
-        ).reduce()
+            name=self.__class__.__name__).reduce()
+        Starmap.shutdown()  # close the processpool
+        Starmap.init()  # reopen it when necessary
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
@@ -323,10 +337,10 @@ class RtreeFilter(SourceFilter):
     :param integration_distance:
         Integration distance dictionary (TRT -> distance in km)
     """
-    def __init__(self, sitecol, integration_distance):
+    def __init__(self, sitecol, integration_distance, hdf5path=None):
         if rtree is None:
             raise ImportError('rtree')
-        self.integration_distance = integration_distance
+        super().__init__(sitecol, integration_distance, hdf5path)
         self.distribute = 'processpool'
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)
@@ -352,4 +366,4 @@ class RtreeFilter(SourceFilter):
             index.close()
 
 
-source_site_noop_filter = BaseFilter()
+source_site_noop_filter = SourceFilter(None, {})
