@@ -32,7 +32,6 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 from urllib.request import urlopen, Request
-from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
@@ -238,23 +237,21 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         A comma-separated string of export types.
     """
     setproctitle('oq-job-%d' % job_id)
-    monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default()
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
-        calc = base.calculators(oqparam, monitor, calc_id=job_id)
-        monitor.hdf5path = calc.datastore.hdf5path
+        calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
-            duration = monitor.duration
+            duration = calc._monitor.duration
             expose_outputs(calc.datastore)
-            monitor.flush()
+            calc._monitor.flush()
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
             calc.datastore.close()

@@ -84,8 +84,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = performance.Monitor(self.testdir)
-        return base.calculators(oq, monitor)
+        return base.calculators(oq)
 
     def run_calc(self, testfile, job_ini, **kw):
         """
