@@ -387,9 +387,8 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [
             0, Point(0.5, 1).distance(Point(0.5, 0)),
-            Point(0.5, 5).distance(Point(0.5, 0))
-        ]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+            Point(0.5, 5).distance(Point(0.5, 0))]
+        aac(dists, expected_dists, atol=1)
 
     def test_mesh_of_two_points(self):
         lons = numpy.array([[0, 0.5, 1]], float)
@@ -399,7 +398,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [Point(0.5, 1).distance(Point(0.5, 0)), 0]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+        aac(dists, expected_dists, atol=.01)
 
     def test_mesh_of_one_point(self):
         lons = numpy.array([[1.]])
@@ -409,7 +408,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+        aac(dists, expected_dists, atol=0.2)
 
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()

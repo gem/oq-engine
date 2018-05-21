@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Reduced the data transfer when sending the site collection
-  * Changed the default `filter_distance` from `rjb` to `rrup`
+  * Changed the default `filter_distance`
 
   [Daniele Viganò]
   * Made it impossible to fire  multiple `CTRL-C` in sequence
