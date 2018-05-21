@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
-from __future__ import division
 import copy
 import math
 from openquake.baselib.python3compat import round

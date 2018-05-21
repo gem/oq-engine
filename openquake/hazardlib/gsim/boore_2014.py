@@ -36,8 +36,6 @@ Module exports :class:`BooreEtAl2014`,
                :class:`BooreEtAl2014HighQJapanBasinNoSOF`,
                :class:`BooreEtAl2014LowQJapanBasinNoSOF`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

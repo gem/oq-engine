@@ -22,16 +22,13 @@ Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`,
 :class:`Campbell2003MblgJ1996NSHMP2008`,
 :class:`Campbell2003MwNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
     mblg_to_mw_johnston_96,
-    clip_mean
-)
+    clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 

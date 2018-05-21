@@ -20,8 +20,6 @@
 Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlab`, and :class:`McVerry2006Volc`..
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

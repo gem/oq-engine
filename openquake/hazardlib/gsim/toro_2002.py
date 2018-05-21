@@ -19,11 +19,7 @@
 """
 Module exports :class:`ToroEtAl2002`, class:`ToroEtAl2002SHARE`.
 """
-from __future__ import division
-
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
 
 from openquake.hazardlib.gsim.campbell_2003 import _compute_faulting_style_term
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE

@@ -18,10 +18,9 @@ Module :mod:`openquake.hazardlib.mfd.base` defines base class for MFD --
 :class:`BaseMFD`.
 """
 import abc
-from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseMFD(with_metaclass(abc.ABCMeta)):
+class BaseMFD(metaclass=abc.ABCMeta):
     """
     Abstract base class for Magnitude-Frequency Distribution function.
     """
