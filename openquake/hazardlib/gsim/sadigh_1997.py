@@ -19,8 +19,6 @@
 """
 Module exports :class:`SadighEtAl1997`.
 """
-from __future__ import division
-
 import numpy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
