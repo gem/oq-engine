@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import (
-    BaseFilter, SourceFilter, RtreeFilter, rtree)
+from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -324,15 +323,17 @@ class HazardCalculator(BaseCalculator):
         :returns: (filtered CompositeSourceModel, SourceFilter)
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance)
-        monitor = self.monitor('prefiltering')
+        hdf5path = self.datastore.hdf5path.replace('calc_', 'temp_')
+        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
+                                  hdf5path)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter, monitor)
+            csm = self.csm.filter(src_filter)
         elif oq.prefilter_sources == 'rtree':
-            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance)
-            csm = self.csm.filter(prefilter, monitor)
-        else:
-            csm = self.csm.filter(BaseFilter(), monitor)
+            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
+                                    hdf5path)
+            csm = self.csm.filter(prefilter)
+        else:  # prefilter_sources='no'
+            csm = self.csm.filter(SourceFilter(None, {}))
         return csm, src_filter
 
     def can_read_parent(self):
@@ -599,7 +600,9 @@ class HazardCalculator(BaseCalculator):
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
                     value = getattr(row, name)
-                    if name == 'grp_id' and isinstance(value, list):
+                    if name == 'num_sites':
+                        value /= (row.num_split or 1)
+                    elif name == 'grp_id' and isinstance(value, list):
                         # same ID sources; store only the first
                         value = value[0]
                     array[i][name] = value
