@@ -111,34 +111,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
-    @property
-    def hypo_lon(self):
-        return self.hypocenter.longitude
-
-    @property
-    def hypo_lat(self):
-        return self.hypocenter.latitude
-
-    @property
-    def hypo_depth(self):
-        return self.hypocenter.depth
-
-    @general.cached_property
-    def strike(self):
-        return self.surface.get_strike()
-
-    @general.cached_property
-    def dip(self):
-        return self.surface.get_dip()
-
-    @general.cached_property
-    def ztor(self):
-        return self.surface.get_top_edge_depth()
-
-    @general.cached_property
-    def width(self):
-        return self.surface.get_width()
-
     def get_probability_no_exceedance(self, poes):
         """
         Compute and return the probability that in the time span for which the
