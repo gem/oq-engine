@@ -358,8 +358,8 @@ class Mesh(object):
         # if calculated geodetic distance is over some threshold.
         # get the highest slice from the 3D mesh
         distances = geodetic.min_geodetic_distance(
-            (self.lons, self.lats), mesh.xyz if mesh.depths is None
-            else (mesh.lons, mesh.lats))
+            self.xyz if self.depths is None else (self.lons, self.lats),
+            mesh.xyz if mesh.depths is None else (mesh.lons, mesh.lats))
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
         # lower values increase the maximum possible error, higher
