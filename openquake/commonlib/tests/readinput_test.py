@@ -48,8 +48,8 @@ class ParseConfigTestCase(unittest.TestCase):
 
     def test_no_absolute_path(self):
         temp_dir = tempfile.mkdtemp()
-        site_model_input = general.writetmp(dir=temp_dir, content="foo")
-        job_config = general.writetmp(dir=temp_dir, content="""
+        site_model_input = general.gettemp(dir=temp_dir, content="foo")
+        job_config = general.gettemp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [foo]
@@ -70,9 +70,9 @@ export_dir = %s
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
-        source_model_input = general.writetmp(dir=temp_dir)
-        site_model_input = general.writetmp(dir=temp_dir, content="foo")
-        job_config = general.writetmp(dir=temp_dir, content="""
+        source_model_input = general.gettemp(dir=temp_dir)
+        site_model_input = general.gettemp(dir=temp_dir, content="foo")
+        job_config = general.gettemp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [site]
@@ -123,9 +123,9 @@ export_dir = %s
             shutil.rmtree(temp_dir)
 
     def test_get_oqparam_with_sites_csv(self):
-        sites_csv = general.writetmp('1.0,2.1\n3.0,4.1\n5.0,6.1')
+        sites_csv = general.gettemp('1.0,2.1\n3.0,4.1\n5.0,6.1')
         try:
-            source = general.writetmp("""
+            source = general.gettemp("""
 [general]
 calculation_mode = scenario
 [geometry]
@@ -170,9 +170,9 @@ export_dir = %s
             os.unlink(sites_csv)
 
     def test_wrong_sites_csv(self):
-        sites_csv = general.writetmp(
+        sites_csv = general.gettemp(
             'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
 calculation_mode = scenario
 [geometry]
@@ -197,7 +197,7 @@ export_dir = %s
         os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
 calculation_mode = event_based
 region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
@@ -219,7 +219,7 @@ source_model_file = fake.xml
         self.assertIn('Could not discretize region', str(ctx.exception))
 
     def test_invalid_magnitude_distance_filter(self):
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
 maximum_distance=[(200, 8)]
 """)
@@ -264,12 +264,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # check that the warning was raised
         self.assertEqual(
             warn.call_args[0],
-            ('Association to %s km from site (%s %s)',
-             222.38985328911747, 2.0, 0.0))
+            ('Association to %d km from site (%s %s)', 222, 2.0, 0.0))
 
 
 class ExposureTestCase(unittest.TestCase):
-    exposure = general.writetmp('''\
+    exposure = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -302,7 +301,7 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
-    exposure0 = general.writetmp('''\
+    exposure0 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -335,7 +334,7 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
-    exposure1 = general.writetmp('''\
+    exposure1 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -356,7 +355,7 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
-    exposure2 = general.writetmp('''\
+    exposure2 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
   <exposureModel id="ep" category="buildings">
@@ -369,7 +368,7 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')  # wrong cost type "aggregate"
 
-    exposure3 = general.writetmp('''\
+    exposure3 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -675,7 +674,7 @@ PGA:float32,PGV:float32
 
     def test_two_nodes_on_the_same_point(self):
         # after rounding of the coordinates two points can collide
-        fname = general.writetmp('''\
+        fname = general.gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -699,7 +698,7 @@ class TestLoadCurvesTestCase(unittest.TestCase):
     Read the hazard curves from a NRML file
     """
     def test(self):
-        fname = general.writetmp('''\
+        fname = general.gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">

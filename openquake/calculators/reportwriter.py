@@ -49,7 +49,7 @@ class ReportWriter(object):
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',
         'ruptures_events': 'Specific information for event based',
         'rlzs_assoc': 'Realizations per (TRT, GSIM)',
-        'job_info': 'Informational data',
+        'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
@@ -140,6 +140,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(PSHACalculator, 'core_task', count_ruptures):
+        calc.prefilter = False
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
