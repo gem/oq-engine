@@ -68,16 +68,23 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, filter_distance='rjb',
+    def __init__(self, gsims, maximum_distance=None, filter_distance=None,
                  monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.filter_distance = filter_distance
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        if filter_distance is None:
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                filter_distance = 'rrup'
+            elif 'rjb' in self.REQUIRES_DISTANCES:
+                filter_distance = 'rjb'
+            else:
+                filter_distance = 'rrup'
+        self.filter_distance = filter_distance
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
