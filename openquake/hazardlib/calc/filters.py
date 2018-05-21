@@ -224,6 +224,9 @@ class SourceFilter(object):
 
     @property
     def sitecol(self):
+        """
+        Read the site collection from .hdf5path and cache it
+        """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
         with hdf5.File(self.hdf5path, 'r') as h5:
