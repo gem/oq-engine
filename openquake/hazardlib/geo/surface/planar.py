@@ -488,9 +488,7 @@ class PlanarSurface(BaseSurface):
         # corners' projections (we might not need all of those but it's
         # better to do that calculation once for all).
         dists_to_corners = geodetic.min_geodetic_distance(
-            self.corner_lons, self.corner_lats,
-            mesh.lons.flatten(), mesh.lats.flatten()
-        )
+            (self.corner_lons, self.corner_lats), mesh.xyz)
 
         # extract from ``dists_to_arcs`` signs (represent relative positions
         # of an arc and a point: +1 means on the left hand side, 0 means
