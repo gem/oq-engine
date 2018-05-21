@@ -959,7 +959,7 @@ class SourceInfo(object):
         ('num_ruptures', numpy.uint32),    # 2
         ('calc_time', numpy.float32),      # 3
         ('split_time', numpy.float32),     # 4
-        ('num_sites', numpy.uint32),       # 5
+        ('num_sites', numpy.float32),      # 5
         ('num_split',  numpy.uint32),      # 6
         ('events', numpy.uint32),          # 7
     ])
