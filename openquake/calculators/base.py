@@ -601,7 +601,7 @@ class HazardCalculator(BaseCalculator):
                 for name in array.dtype.names:
                     value = getattr(row, name)
                     if name == 'num_sites':
-                        value /= row.num_split
+                        value /= (row.num_split or 1)
                     elif name == 'grp_id' and isinstance(value, list):
                         # same ID sources; store only the first
                         value = value[0]
