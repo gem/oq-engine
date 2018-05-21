@@ -9,7 +9,8 @@ Here is the proposed workflow.
 
 First of all, one has to prepare a parent calculation containing the
 full exposure and risk functions for the region of interest, say South
-America. To that aim we will need a `job_hazard.ini` file like this one:
+America. To that aim the use will need to write a `job_hazard.ini` file
+like this one:
 
 ```
    [general]
@@ -18,31 +19,14 @@ America. To that aim we will need a `job_hazard.ini` file like this one:
    sites_csv = south_america.csv
    exposure_file = full_exposure_model.xml
    structural_vulnerability_file = structural_vulnerability_model.xml
-   
-   [site_params]
-   reference_vs30_type = measured
-   reference_vs30_value = 800.0
-   reference_depth_to_2pt5km_per_sec = 2.5
-   reference_depth_to_1pt0km_per_sec = 50.0
-   
-   [hazard_calculation]
-   maximum_distance = 300.0
-   gsim = ZhaoEtAl2006SInter
 ```
-   
-The `site_params` are needed, even if they will not be used (in particular
-the vs30 will be read from the shakemap).
-The `gsim` is also ignored, so you can put everything there. In the future
-I would like to remove the `gsim` and the `site_params` but for the moment
-they are artificially needed.
-
 By running the calculation
 
 ```bash
 $ oq engine --run job_hazard.ini
 ```
 
-you will store in the database the exposure and the risk functions. In
+the exposure and the risk functions will be imported in the datastore. In
 this example there are only vulnerability functions for the loss type
 `structural`, but there could be more, and even fragility functions.
 This is a particular kind of hazard calculation in which the only output
