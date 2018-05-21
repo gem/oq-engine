@@ -23,8 +23,6 @@ exports
 :class:`NathEtAl2012Lower`
 :class:`NathEtAl2012Upper`
 """
-
-from __future__ import division
 import numpy as np
 
 from openquake.hazardlib import const

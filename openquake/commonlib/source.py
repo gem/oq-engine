@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import os
 import re
 import copy
@@ -735,7 +733,7 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, monitor=performance.Monitor('prefilter')):
+    def filter(self, src_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
@@ -744,7 +742,7 @@ class CompositeSourceModel(collections.Sequence):
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
+        sources_by_grp = src_filter.pfilter(self.get_sources())
         source_models = []
         for sm in self.source_models:
             src_groups = []
@@ -959,7 +957,7 @@ class SourceInfo(object):
         ('num_ruptures', numpy.uint32),    # 2
         ('calc_time', numpy.float32),      # 3
         ('split_time', numpy.float32),     # 4
-        ('num_sites', numpy.uint32),       # 5
+        ('num_sites', numpy.float32),      # 5
         ('num_split',  numpy.uint32),      # 6
         ('events', numpy.uint32),          # 7
     ])

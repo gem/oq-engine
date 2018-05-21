@@ -3,7 +3,6 @@
 '''
 Parser for moment tensor catalogue in GCMT format into a set of GCMT classes
 '''
-from __future__ import division
 import re
 import datetime
 import numpy as np

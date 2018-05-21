@@ -36,6 +36,7 @@ U32 = numpy.uint32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
+spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 
 
@@ -410,47 +411,6 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     dist = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
     azimuth = geodetic.azimuth(lon1, lat1, lon2, lat2)
     return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
-
-
-def spherical_to_cartesian(lons, lats, depths):
-    """
-    Return the position vectors (in Cartesian coordinates) of list of spherical
-    coordinates.
-
-    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
-
-    Parameters are components of spherical coordinates in a form of scalars,
-    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
-    considered zero for all points.
-
-    :returns:
-        ``numpy.array`` of 3d vectors representing points' coordinates in
-        Cartesian space in km. The array has shape `lons.shape + (3,)`.
-        In particular, if ``lons`` and ``lats`` are scalars the result is a
-        3D vector and if they are vectors the result is a matrix of shape
-        (N, 3).
-
-    See also :func:`cartesian_to_spherical`.
-    """
-    phi = numpy.radians(lons)
-    theta = numpy.radians(lats)
-    if depths is None:
-        rr = EARTH_RADIUS
-    else:
-        rr = EARTH_RADIUS - numpy.array(depths)
-    cos_theta_r = rr * numpy.cos(theta)
-    try:
-        shape = lons.shape
-    except AttributeError:  # a list/tuple was passed
-        try:
-            shape = (len(lons),)
-        except TypeError:  # a scalar was passed
-            shape = ()
-    arr = numpy.zeros(shape + (3,))
-    arr[..., 0] = cos_theta_r * numpy.cos(phi)
-    arr[..., 1] = cos_theta_r * numpy.sin(phi)
-    arr[..., 2] = rr * numpy.sin(theta)
-    return arr
 
 
 def cartesian_to_spherical(vectors):
