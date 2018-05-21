@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,220,765,868      
-date           2018-04-19T05:03:22
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:13:36
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -42,19 +42,19 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-========= ====== ====================== ================
-smlt_path weight gsim_logic_tree        num_realizations
-========= ====== ====================== ================
-b1        1.000  complex(4,0,4,0,5,1,2) 4/4             
-========= ====== ====================== ================
+========= ======= ====================== ================
+smlt_path weight  gsim_logic_tree        num_realizations
+========= ======= ====================== ================
+b1        1.00000 complex(0,5,2,4,4,1,0) 4/160           
+========= ======= ====================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ==================================================================================== ========== ========== ==============
-grp_id gsims                                                                                distances  siteparams ruptparams    
-====== ==================================================================================== ========== ========== ==============
-4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rrup vs30       hypo_depth mag
-====== ==================================================================================== ========== ========== ==============
+====== ==================================================================================== ============== ========== ==============
+grp_id gsims                                                                                distances      siteparams ruptparams    
+====== ==================================================================================== ============== ========== ==============
+4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rjb rrup vs30       hypo_depth mag
+====== ==================================================================================== ============== ========== ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -80,24 +80,24 @@ Slowest sources
 ========= ================== ============ ========= ========== ========= ========= ======
 source_id source_class       num_ruptures calc_time split_time num_sites num_split events
 ========= ================== ============ ========= ========== ========= ========= ======
-s46       AreaSource         7,770        0.170     0.137      370       370       0     
-scr301    AreaSource         17,268       0.0       0.693      0         0         0     
-i20       ComplexFaultSource 9,241        0.0       0.002      0         0         0     
-scr299    AreaSource         1,572        0.0       0.045      0         0         0     
-s34       AreaSource         12,327       0.0       0.237      0         0         0     
-sh13      AreaSource         41,952       0.0       1.199      0         0         0     
-sh14      AreaSource         41,952       0.0       1.170      0         0         0     
-s35       AreaSource         12,327       0.0       0.188      0         0         0     
-s72       AreaSource         17,871       0.0       0.303      0         0         0     
-v4        AreaSource         168          0.0       0.008      0         0         0     
-i17       ComplexFaultSource 33,383       0.0       0.005      0         0         0     
-s13       AreaSource         12,726       0.0       0.209      0         0         0     
-scr304    AreaSource         574          0.0       0.013      0         0         0     
-s70       AreaSource         17,871       0.0       0.302      0         0         0     
-v1        AreaSource         42           0.0       0.003      0         0         0     
-s40       AreaSource         12,327       0.0       0.252      0         0         0     
-sh6       AreaSource         12,900       0.0       0.383      0         0         0     
-scr293    AreaSource         61,740       0.0       2.976      0         0         0     
+s46       AreaSource         7,770        0.00619   0.09082    370       370       0     
+i17       ComplexFaultSource 33,383       0.0       0.00200    0         0         0     
+i20       ComplexFaultSource 9,241        0.0       7.007E-04  0         0         0     
+v1        AreaSource         42           0.0       0.00201    0         0         0     
+v4        AreaSource         168          0.0       0.00541    0         0         0     
+sh13      AreaSource         41,952       0.0       0.78898    0         0         0     
+sh14      AreaSource         41,952       0.0       0.78446    0         0         0     
+sh6       AreaSource         12,900       0.0       0.19663    0         0         0     
+scr293    AreaSource         61,740       0.0       1.81797    0         0         0     
+scr299    AreaSource         1,572        0.0       0.03044    0         0         0     
+scr301    AreaSource         17,268       0.0       0.46800    0         0         0     
+scr304    AreaSource         574          0.0       0.00889    0         0         0     
+s13       AreaSource         12,726       0.0       0.13919    0         0         0     
+s34       AreaSource         12,327       0.0       0.12364    0         0         0     
+s35       AreaSource         12,327       0.0       0.12563    0         0         0     
+s40       AreaSource         12,327       0.0       0.12407    0         0         0     
+s70       AreaSource         17,871       0.0       0.20080    0         0         0     
+s72       AreaSource         17,871       0.0       0.20194    0         0         0     
 ========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -105,7 +105,7 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.170     16    
+AreaSource         0.00619   16    
 ComplexFaultSource 0.0       2     
 ================== ========= ======
 
@@ -115,30 +115,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.007 0.005  0.003 0.025 34       
-================== ===== ====== ===== ===== =========
+================== ======= ========= ========= ======= =========
+operation-duration mean    stddev    min       max     num_tasks
+prefilter          0.14030 0.13438   0.06181   1.07302 60       
+count_ruptures     0.00184 7.328E-04 7.298E-04 0.00336 34       
+================== ======= ========= ========= ======= =========
+
+Fastest task
+------------
+taskno=34, weight=58, duration=0 s, sources="s46"
+
+======== ======= ========= ======= ======= =
+variable mean    stddev    min     max     n
+======== ======= ========= ======= ======= =
+nsites   1.00000 0.0       1       1       7
+weight   8.40000 1.030E-06 8.40000 8.40000 7
+======== ======= ========= ======= ======= =
+
+Slowest task
+------------
+taskno=8, weight=92, duration=0 s, sources="s46"
+
+======== ======= ========= ======= ======= ==
+variable mean    stddev    min     max     n 
+======== ======= ========= ======= ======= ==
+nsites   1.00000 0.0       1       1       11
+weight   8.40000 1.000E-06 8.40000 8.40000 11
+======== ======= ========= ======= ======= ==
 
 Informational data
 ------------------
-============== =================================================================================== ========
-task           sent                                                                                received
-count_ruptures sources=111.57 KB param=38.78 KB srcfilter=24.57 KB gsims=12.88 KB monitor=10.96 KB 12.15 KB
-============== =================================================================================== ========
+============== ================================================================================== ========
+task           sent                                                                               received
+prefilter      srcs=3.55 MB monitor=19.16 KB srcfilter=14.47 KB                                   85.91 KB
+count_ruptures sources=136.86 KB param=38.58 KB srcfilter=24.4 KB gsims=12.88 KB monitor=11.06 KB 11.95 KB
+============== ================================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 10        0.0       1     
-splitting sources              8.146     0.043     1     
-managing sources               7.903     0.0       1     
-total count_ruptures           0.243     2.520     34    
-store source_info              0.032     0.0       1     
-unpickling count_ruptures      0.002     0.0       34    
-aggregate curves               6.826E-04 0.0       34    
-reading site collection        2.542E-04 0.0       1     
-saving probability maps        3.910E-05 0.0       1     
+total prefilter                8.41803   4.63672   60    
+reading composite source model 6.73057   0.0       1     
+splitting sources              5.12198   0.0       1     
+managing sources               1.30785   0.0       1     
+total count_ruptures           0.06270   0.00391   34    
+store source_info              0.01504   0.0       1     
+unpickling prefilter           0.00404   0.0       60    
+unpickling count_ruptures      0.00103   0.0       34    
+aggregate curves               4.513E-04 0.0       34    
+reading site collection        2.854E-04 0.0       1     
+saving probability maps        2.718E-05 0.0       1     
 ============================== ========= ========= ======

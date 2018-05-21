@@ -26,6 +26,8 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
+aac = numpy.testing.assert_allclose
+
 
 class _BaseMeshTestCase(unittest.TestCase):
     def _make_mesh(self, lons, lats, depths=None):
@@ -213,7 +215,7 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
                           for ti, mi in enumerate(expected_distance_indices)]
-        self.assertEqual(list(dists.flat), expected_dists)
+        aac(dists.flat, expected_dists, atol=1)
         closest_points_mesh = mesh.get_closest_points(target_mesh)
         numpy.testing.assert_equal(closest_points_mesh.lons.flat,
                                    mesh.lons.take(expected_distance_indices))
@@ -821,6 +823,22 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                               [8., 9.]])
         expected_coords = [(-0.1, -0.1), (-0.1, 0.1), (0.1, 0.1), (0.1, -0.1),
                            (-0.1, -0.1)]
+        polygon = self._test(lons, lats, depths, expected_coords)
+
+        coords2d = numpy.array(polygon.exterior.coords)
+        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
+                             (11.12, -11.12), (-11.12, -11.12)]
+        numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
+                                          decimal=2)
+    def test_idl(self):
+        lons = numpy.array([[179.9, -179.9],
+                            [179.9, -179.9]])
+        lats = numpy.array([[-0.1, -0.1],
+                            [0.1, 0.1]])
+        depths = numpy.array([[2., 3.],
+                              [8., 9.]])
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
+                           (-179.9, -0.1), (179.9, -0.1)]
         polygon = self._test(lons, lats, depths, expected_coords)
 
         coords2d = numpy.array(polygon.exterior.coords)

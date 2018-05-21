@@ -8,6 +8,7 @@
 			</costTypes>
 		</conversions>
 		<tagNames>NAME_1 NAME_2 NAME_3 NAME_4</tagNames>
+                <occupancyPeriods>night</occupancyPeriods> 
 		<assets>
 			<asset id="a1" number="1"  taxonomy="Wood" >
 				<location lon="83.31382" lat="29.46117" />

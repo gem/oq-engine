@@ -18,7 +18,7 @@
 import os
 import unittest
 from numpy.testing import assert_almost_equal as aae
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
@@ -85,7 +85,7 @@ class SourceFilterTestCase(unittest.TestCase):
 
     def test_international_date_line_2(self):
         # from a bug affecting a calculation in New Zealand
-        fname = writetmp(characteric_source)
+        fname = gettemp(characteric_source)
         [[src]] = nrml.to_python(fname)
         os.remove(fname)
         maxdist = IntegrationDistance({'default': 200})

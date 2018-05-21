@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2018-04-19T05:03:19
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:13:33
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -42,15 +42,15 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============================================= ====== =============== ================
-smlt_path                                     weight gsim_logic_tree num_realizations
-============================================= ====== =============== ================
-b11_b21_b32_b41_b52_b61_b72_b81_b92_b101_b112 0.100  trivial(1)      1/1             
-b11_b22_b32_b42_b52_b62_b72_b82_b92_b102_b112 0.100  trivial(1)      4/1             
-b11_b23_b32_b43_b52_b63_b72_b83_b92_b103_b112 0.100  trivial(1)      1/1             
-b11_b23_b33_b43_b53_b63_b73_b83_b93_b103_b113 0.100  trivial(1)      3/1             
-b11_b24_b33_b44_b53_b64_b73_b84_b93_b104_b113 0.100  trivial(1)      1/1             
-============================================= ====== =============== ================
+============================================= ======= =============== ================
+smlt_path                                     weight  gsim_logic_tree num_realizations
+============================================= ======= =============== ================
+b11_b21_b32_b41_b52_b61_b72_b81_b92_b101_b112 0.10000 trivial(1)      1/1             
+b11_b22_b32_b42_b52_b62_b72_b82_b92_b102_b112 0.10000 trivial(1)      4/1             
+b11_b23_b32_b43_b52_b63_b72_b83_b92_b103_b112 0.10000 trivial(1)      1/1             
+b11_b23_b33_b43_b53_b63_b73_b83_b93_b103_b113 0.10000 trivial(1)      3/1             
+b11_b24_b33_b44_b53_b64_b73_b84_b93_b104_b113 0.10000 trivial(1)      1/1             
+============================================= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -100,11 +100,11 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   425          0.061     0.008      225       225       0     
-5         AreaSource   425          0.054     0.007      168       168       0     
-2         AreaSource   510          0.042     0.009      241       241       0     
-4         AreaSource   425          0.033     0.008      127       127       0     
-3         AreaSource   510          0.022     0.009      163       163       0     
+2         AreaSource   510          0.00386   0.00673    241       241       0     
+1         AreaSource   425          0.00343   0.00627    225       225       0     
+3         AreaSource   510          0.00288   0.00662    163       163       0     
+5         AreaSource   425          0.00262   0.00456    168       168       0     
+4         AreaSource   425          0.00212   0.00618    127       127       0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -112,7 +112,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.212     5     
+AreaSource   0.01491   5     
 ============ ========= ======
 
 Duplicated sources
@@ -121,30 +121,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.025 0.012  0.011 0.040 11       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00610 0.00228 0.00139 0.01380 57       
+count_ruptures     0.00700 0.00266 0.00385 0.01256 11       
+================== ======= ======= ======= ======= =========
+
+Fastest task
+------------
+taskno=11, weight=78, duration=0 s, sources="4 5"
+
+======== ======= ========= ======= ======= ==
+variable mean    stddev    min     max     n 
+======== ======= ========= ======= ======= ==
+nsites   1.00000 0.0       1       1       46
+weight   1.70000 4.821E-07 1.70000 1.70000 46
+======== ======= ========= ======= ======= ==
+
+Slowest task
+------------
+taskno=3, weight=99, duration=0 s, sources="1 2 3 5"
+
+======== ======= ====== ======= ======= ==
+variable mean    stddev min     max     n 
+======== ======= ====== ======= ======= ==
+nsites   1.00000 0.0    1       1       66
+weight   1.50000 0.0    1.50000 1.50000 66
+======== ======= ====== ======= ======= ==
 
 Informational data
 ------------------
-============== =============================================================================== ========
-task           sent                                                                            received
-count_ruptures sources=147.47 KB srcfilter=7.76 KB param=4.49 KB monitor=3.54 KB gsims=1.41 KB 5.52 KB 
-============== =============================================================================== ========
+============== ============================================================================== =========
+task           sent                                                                           received 
+prefilter      srcs=182.63 KB monitor=18.15 KB srcfilter=12.75 KB                             213.08 KB
+count_ruptures sources=188.51 KB srcfilter=7.7 KB param=4.43 KB monitor=3.58 KB gsims=1.41 KB 5.46 KB  
+============== ============================================================================== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.452     0.0       1     
-splitting sources              0.282     0.0       1     
-total count_ruptures           0.278     2.605     11    
-managing sources               0.194     0.0       1     
-store source_info              0.007     0.0       1     
-unpickling count_ruptures      5.951E-04 0.0       11    
-aggregate curves               3.238E-04 0.0       11    
-reading site collection        2.480E-04 0.0       1     
-saving probability maps        3.886E-05 0.0       1     
+total prefilter                0.34758   2.93359   57    
+managing sources               0.26973   0.0       1     
+reading composite source model 0.18903   0.0       1     
+splitting sources              0.15198   0.0       1     
+total count_ruptures           0.07703   0.40625   11    
+unpickling prefilter           0.01464   0.0       57    
+store source_info              0.00491   0.0       1     
+unpickling count_ruptures      4.992E-04 0.0       11    
+reading site collection        3.009E-04 0.0       1     
+aggregate curves               2.556E-04 0.0       11    
+saving probability maps        3.529E-05 0.0       1     
 ============================== ========= ========= ======
