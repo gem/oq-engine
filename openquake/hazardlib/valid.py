@@ -54,8 +54,15 @@ def disagg_outputs(value):
     return values
 
 
-class FromFile(object):  # fake GSIM
-    def __str__(self):
+class FromFile(object):
+    """
+    Fake GSIM to be used when the GMFs are imported from an
+    external file and not computed with a GSIM.
+    """
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
+    REQUIRES_SITES_PARAMETERS = set()
+
+    def __repr__(self):
         return 'FromFile'
 
 
