@@ -20,8 +20,6 @@
 Module exports :class:`KaleEtAl2015Turkey`
                :class:`KaleEtAl2015Iran`.
 """
-from __future__ import division
-
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

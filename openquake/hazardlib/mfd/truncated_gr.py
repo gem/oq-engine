@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.mfd.truncated_gr` defines a Truncated
 Gutenberg-Richter MFD.
 """
-from __future__ import division
 import math
 
 from openquake.baselib.python3compat import round

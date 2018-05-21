@@ -22,8 +22,6 @@ Module exports :class:`KothaEtAl2016`,
                :class:`KothaEtAl2016Turkey`,
                :class:`KothaEtAl2016Others`,
 """
-from __future__ import division
-
 import numpy as np
 
 from scipy.constants import g
@@ -31,6 +29,7 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
 
 class KothaEtAl2016(GMPE):
     """

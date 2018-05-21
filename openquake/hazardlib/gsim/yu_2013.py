@@ -21,13 +21,8 @@ Module exports :class:`YuEtAl2013`, :class:`YuEtAl2013Tibet`,
 :class:`YuEtAl2013Eastern`, :class:`YuEtAl2013Stable`
 
 """
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
-
 from scipy.constants import g
-from scipy.optimize import minimize
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

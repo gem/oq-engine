@@ -23,16 +23,13 @@ Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
 :class:`SiMidorikawa1999SSlabNorthEastCorrection` and
 :class:`SiMidorikawa1999SSlabSouthWestCorrection`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib.geo import (
-    Mesh, RectangularMesh, SimpleFaultSurface
-)
+    Mesh, RectangularMesh, SimpleFaultSurface)
 
 
 # Subduction trench coordinates (table 3.5.2-1) page 3-150

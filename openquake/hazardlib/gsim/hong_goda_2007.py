@@ -18,8 +18,6 @@
 """
 module exports :class:`HongGoda2007RotD100`.
 """
-from __future__ import division
-
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

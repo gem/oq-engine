@@ -21,8 +21,6 @@ Module exports :class:`CauzziFaccioli2008SWISS01`
                :class:`CauzziFaccioli2008SWISS04`
                :class:`CauzziFaccioli2008SWISS08`.
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from openquake.hazardlib import const
