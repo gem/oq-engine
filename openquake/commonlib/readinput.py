@@ -30,11 +30,10 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, DictArray, deprecated
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
-    calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source.rupture import EBRupture
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -170,7 +169,7 @@ def gen_sm_paths(smlt):
         yield paths
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -183,6 +182,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
         valid choices for `calculation_mode`
     :param hc_id:
         Not None only when called from a post calculation
+    :param validate:
+        Flag. By default it is true and the parameters are validated
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -201,7 +202,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     oqparam = OqParam(**job_ini)
-    oqparam.validate()
+    if validate:
+        oqparam.validate()
     return oqparam
 
 
@@ -333,8 +335,9 @@ def get_site_collection(oqparam):
         return sitecol
 
     # else use the default site params
-    return site.SiteCollection.from_points(
+    sitecol = site.SiteCollection.from_points(
         mesh.lons, mesh.lats, mesh.depths, oqparam)
+    return sitecol
 
 
 def get_gsim_lt(oqparam, trts=['*']):
@@ -380,16 +383,14 @@ def get_rlzs_by_gsim(oqparam):
     return dic
 
 
-def get_rupture_sitecol(oqparam, sitecol):
+def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        a pair (EBRupture, SiteCollection)
+        an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -398,18 +399,7 @@ def get_rupture_sitecol(oqparam, sitecol):
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.seed = oqparam.random_seed
-    maxdist = oqparam.maximum_distance['default']
-    sc = calc.filters.filter_sites_by_distance_to_rupture(
-        rup, maxdist, sitecol)
-    if sc is None:
-        raise RuntimeError(
-            'All sites were filtered out! maximum_distance=%s km' %
-            maxdist)
-    n = oqparam.number_of_ground_motion_fields
-    events = numpy.zeros(n, stored_event_dt)
-    events['eid'] = numpy.arange(n)
-    ebr = EBRupture(rup, sc.sids, events)
-    return ebr, sc
+    return rup
 
 
 def get_source_model_lt(oqparam):
@@ -444,7 +434,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
@@ -639,7 +629,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'warn'
+        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
         sitecol, assets_by = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         assets_by_site = [[] for _ in sitecol.complete.sids]

@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     3,756,725,912      
-date           2018-04-19T05:04:10
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:14:14
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 38
@@ -43,12 +43,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b11       0.100  simple(3)       4/3             
-b12       0.100  simple(3)       6/3             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b11       0.10000 simple(3)       4/3             
+b12       0.10000 simple(3)       6/3             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -84,7 +84,7 @@ source_model2.xml 1      Active Shallow Crust 2,456        2,456
 #TRT models   2    
 #eff_ruptures 4,912
 #tot_ruptures 4,912
-#tot_weight   0    
+#tot_weight   491  
 ============= =====
 
 Slowest sources
@@ -92,7 +92,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= =======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events 
 ========= ============ ============ ========= ========== ========= ========= =======
-1         AreaSource   2,456        6.294     0.056      1,170     614       521,838
+1         PointSource  8            8.10933   0.0        1,264     614       521,838
 ========= ============ ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   6.294     1     
+PointSource  8.10933   1     
 ============ ========= ======
 
 Duplicated sources
@@ -109,31 +109,35 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.152 0.407  0.638 1.632 6        
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00716 0.00350 0.00241 0.01957 56       
+compute_ruptures   1.41753 0.54135 0.63015 2.12780 6        
+================== ======= ======= ======= ======= =========
 
 Informational data
 ------------------
-================ =============================================================================== ========
-task             sent                                                                            received
-compute_ruptures sources=159.13 KB param=5.5 KB src_filter=4.86 KB monitor=1.93 KB gsims=1.88 KB 7.18 MB 
-================ =============================================================================== ========
+================ ================================================================================ =========
+task             sent                                                                             received 
+prefilter        srcs=209.74 KB monitor=17.66 KB srcfilter=12.52 KB                               238.34 KB
+compute_ruptures sources=152.46 KB param=5.47 KB src_filter=4.83 KB monitor=1.93 KB gsims=1.88 KB 7.3 MB   
+================ ================================================================================ =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         6.913     4.355     6     
-making contexts                2.092     0.0       2,667 
-managing sources               1.904     0.0       1     
-unpickling compute_ruptures    0.347     0.0       6     
-saving ruptures                0.141     0.0       6     
-splitting sources              0.112     0.0       1     
-reading composite source model 0.110     0.0       1     
-setting event years            0.016     0.0       1     
-store source_info              0.004     0.0       1     
-reading site collection        2.451E-04 0.0       1     
+total compute_ruptures         8.50517   4.91016   6     
+managing sources               2.49219   0.0       1     
+making contexts                2.19016   0.0       2,667 
+total prefilter                0.40072   3.37109   56    
+unpickling compute_ruptures    0.26496   0.0       6     
+saving ruptures                0.16691   0.0       6     
+reading composite source model 0.15130   0.0       1     
+splitting sources              0.15096   0.0       1     
+setting event years            0.01985   0.0       1     
+unpickling prefilter           0.01374   0.0       56    
+store source_info              0.00476   0.0       1     
+reading site collection        3.283E-04 0.0       1     
 ============================== ========= ========= ======

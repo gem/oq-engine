@@ -45,6 +45,8 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PPID = os.getppid()  # the controlling terminal PID
+
 if OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default():
@@ -149,6 +151,10 @@ class MasterKilled(KeyboardInterrupt):
     "Exception raised when a job is killed manually"
 
 
+def inhibitSigInt(signum, _stack):
+    logs.LOG.warn('Killing job, please wait')
+
+
 def raiseMasterKilled(signum, _stack):
     """
     When a SIGTERM is received, raise the MasterKilled
@@ -157,11 +163,24 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    parallel.Starmap.shutdown()
+    # Disable further CTRL-C to allow tasks revocation
+    signal.signal(signal.SIGINT, inhibitSigInt)
+
+    msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
-    else:
-        msg = 'Received a signal %d' % signum
+
+    # kill the calculation only if os.getppid() != _PPID, i.e. the controlling
+    # terminal died; in the workers, do nothing
+    # NB: there is no SIGHUP on Windows
+    if hasattr(signal, 'SIGHUP'):
+        if signum == signal.SIGHUP:
+            if os.getppid() == _PPID:
+                return
+            else:
+                msg = 'The openquake master lost its controlling terminal'
+
+    parallel.Starmap.shutdown()
     raise MasterKilled(msg)
 
 
@@ -172,6 +191,8 @@ def raiseMasterKilled(signum, _stack):
 try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 
@@ -240,12 +261,12 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, duration)
             logs.dbcmd('finish', job_id, 'complete')
-        except:
+        except BaseException:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
                 logs.dbcmd('finish', job_id, 'failed')
-            except:  # an OperationalError may always happen
+            except BaseException:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
         finally:
@@ -255,7 +276,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             try:
                 if OQ_DISTRIBUTE.startswith('celery'):
                     celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
-            except:
+            except BaseException:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)

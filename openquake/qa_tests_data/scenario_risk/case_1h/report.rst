@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2018-04-19T05:04:17
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:14:23
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 2, num_levels = 8
@@ -43,11 +43,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -66,20 +66,20 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   2         2         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   2         2         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.011     0.0       1     
-reading exposure        0.003     0.0       1     
-saving gmfs             0.003     0.0       1     
-reading site collection 0.003     0.0       1     
-building epsilons       3.433E-04 0.0       1     
-computing gmfs          3.343E-04 0.0       1     
+building riskinputs     0.01043   0.0       1     
+saving gmfs             0.00405   0.0       1     
+reading site collection 0.00303   0.0       1     
+reading exposure        0.00131   0.0       1     
+building epsilons       3.765E-04 0.0       1     
+computing gmfs          3.695E-04 0.0       1     
 ======================= ========= ========= ======

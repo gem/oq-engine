@@ -26,7 +26,7 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh
 
 
 class GriddedSurface(BaseSurface):
@@ -42,9 +42,6 @@ class GriddedSurface(BaseSurface):
         An unstructured mesh of points ideally representing a rupture surface.
         Must be an instance of :class:`~openquake.hazardlib.geo.mesh.Mesh`
     """
-    def __init__(self, mesh):
-        self.mesh = mesh
-
     @property
     def surface_nodes(self):
         """
@@ -69,7 +66,7 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
-        return cls(RectangularMesh.from_points_list([points]))
+        return cls(Mesh.from_points_list(points))
 
     def get_bounding_box(self):
         """
@@ -88,46 +85,6 @@ class GriddedSurface(BaseSurface):
         """
         min_lon, min_lat, max_lon, max_lat = self.get_bounding_box()
         return [[min_lon, max_lon]], [[min_lat, max_lat]]
-
-    def get_min_distance(self, mesh):
-        """
-        Compute and return the minimum distance from the surface to each point
-        of ``mesh``. This distance is sometimes called ``Rrup``.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
-            minimum distance to.
-        :returns:
-            A numpy array of distances in km.
-        """
-        return self.mesh.get_min_distance(mesh)
-
-    def get_closest_points(self, mesh):
-        """
-        For each point from ``mesh`` find a closest point belonging to surface.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to find
-            closest points to.
-        :returns:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
-            ``mesh`` with closest surface's points on respective indices.
-        """
-        return self.mesh.get_closest_points(mesh)
-
-    def get_joyner_boore_distance(self, mesh):
-        """
-        Compute and return Joyner-Boore (also known as ``Rjb``) distance
-        to each point of ``mesh``.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
-            Joyner-Boore distance to.
-        :returns:
-            Numpy array of closest distances between the projections of surface
-            and each point of the ``mesh`` to the earth surface.
-        """
-        return self.mesh.get_joyner_boore_distance(mesh)
 
     def get_rx_distance(self, mesh):
         """
@@ -215,13 +172,13 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        # the mesh has shape (1, N)
-        lon_bar = np.mean(self.mesh.lons[0])
-        lat_bar = np.mean(self.mesh.lats[0])
-        idx = np.argmin((self.mesh.lons[0] - lon_bar)**2 +
-                        (self.mesh.lats[0] - lat_bar)**2)
-        return Point(self.mesh.lons[0, idx], self.mesh.lats[0, idx],
-                     self.mesh.depths[0, idx])
+        lons = self.mesh.lons.squeeze()
+        lats = self.mesh.lats.squeeze()
+        depths = self.mesh.depths.squeeze()
+        lon_bar = lons.mean()
+        lat_bar = lats.mean()
+        idx = np.argmin((lons - lon_bar)**2 + (lats - lat_bar)**2)
+        return Point(lons[idx], lats[idx], depths[idx])
 
     def get_ry0_distance(self, mesh):
         """

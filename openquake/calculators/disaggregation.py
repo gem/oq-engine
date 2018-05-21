@@ -73,6 +73,7 @@ def compute_disagg(src_filter, sources, cmaker, iml4, trti, bin_edges,
         (sid, rlzi, poe, imt, iml, trti).
     """
     result = {'trti': trti, 'num_ruptures': 0}
+    # all the time is spent in collect_bin_data
     bin_data = disagg.collect_bin_data(
         sources, src_filter.sitecol, cmaker, iml4,
         oqparam.truncation_level, oqparam.num_epsilon_bins, monitor)
@@ -120,6 +121,7 @@ producing too small PoEs.'''
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+            self.sitecol = cl.sitecol
 
     def execute(self):
         """Performs the disaggregation"""
@@ -212,9 +214,8 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
-                                  use_rtree=False)
-        csm = self.csm.filter(src_filter)  # fine filtering
+        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        csm = self.csm
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
 
@@ -283,7 +284,8 @@ producing too small PoEs.'''
                 sources = sum([grp.sources for grp in groups], [])
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance)
+                    rlzs_by_gsim, src_filter.integration_distance,
+                    oq.filter_distance)
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,

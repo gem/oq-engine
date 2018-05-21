@@ -2,9 +2,9 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     4,202,240,792      
-date           2018-04-19T05:01:58
-engine_version 3.1.0-git9c5da5b   
+checksum32     2,048,857,716      
+date           2018-05-15T04:12:41
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 26
@@ -43,11 +43,11 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -66,19 +66,19 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-Wood     1.000 NaN    1   1   1         1         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+Wood     1.00000 NaN    1   1   1         1         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-building riskinputs     0.027    0.0       1     
-saving gmfs             0.021    0.0       1     
-reading exposure        0.003    0.0       1     
-computing gmfs          0.003    0.0       1     
-reading site collection 0.003    0.0       1     
-======================= ======== ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+building riskinputs     0.00642   0.0       1     
+saving gmfs             0.00420   0.0       1     
+computing gmfs          0.00271   0.0       1     
+reading site collection 0.00264   0.0       1     
+reading exposure        6.928E-04 0.0       1     
+======================= ========= ========= ======
