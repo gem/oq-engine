@@ -24,10 +24,7 @@ Module exports :class:`BindiEtAl2014Rjb`,
                :class:`BindiEtAl2014RhypEC8`,
                :class:`BindiEtAl2014RhypEC8NoSOF`
 """
-from __future__ import division
-
 import numpy as np
-
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

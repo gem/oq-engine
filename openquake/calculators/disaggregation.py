@@ -19,7 +19,6 @@
 """
 Disaggregation calculator core functionality
 """
-from __future__ import division
 import logging
 import operator
 import numpy
@@ -220,6 +219,12 @@ producing too small PoEs.'''
             raise RuntimeError('All sources were filtered away!')
 
         R = len(self.rlzs_assoc.realizations)
+        I = len(oq.imtls)
+        P = len(oq.poes_disagg) or 1
+        if R * I * P > 10:
+            logging.warn(
+                'You have %d realizations, %d IMTs and %d poes_disagg: the '
+                'disaggregation will be heavy and memory consuming', R, I, P)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         if oq.disagg_by_src:

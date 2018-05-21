@@ -69,12 +69,12 @@ class OqParam(valid.ParamSet):
     exports = valid.Param(valid.export_formats, ())
     prefilter_sources = valid.Param(valid.Choice('rtree', 'numpy', 'no'),
                                     'rtree')
-    filter_distance = valid.Param(valid.Choice('rjb', 'rrup'), 'rrup')
+    filter_distance = valid.Param(valid.Choice('rjb', 'rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
-    gsim = valid.Param(valid.gsim, None)
+    gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
@@ -201,7 +201,7 @@ class OqParam(valid.ParamSet):
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
-            if self.gsim:
+            if not isinstance(self.gsim, valid.FromFile):
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(

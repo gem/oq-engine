@@ -27,8 +27,6 @@ Module exports
 :class:`EdwardsFah2013Alpine90Bars`,
 :class:`EdwardsFah2013Alpine120Bars`.
 """
-
-from __future__ import division
 import numpy as np
 from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE

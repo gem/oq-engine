@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import with_metaclass, raise_
+from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
 
@@ -68,16 +68,23 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, filter_distance='rjb',
+    def __init__(self, gsims, maximum_distance=None, filter_distance=None,
                  monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.filter_distance = filter_distance
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        if filter_distance is None:
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                filter_distance = 'rrup'
+            elif 'rjb' in self.REQUIRES_DISTANCES:
+                filter_distance = 'rjb'
+            else:
+                filter_distance = 'rrup'
+        self.filter_distance = filter_distance
         self.REQUIRES_DISTANCES.add(self.filter_distance)
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
@@ -112,6 +119,34 @@ class ContextMaker(object):
                 raise FarAwayRupture
         return sites, DistancesContext([(self.filter_distance, distances)])
 
+    def add_rup_params(self, rupture):
+        """
+        Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
+        """
+        for param in self.REQUIRES_RUPTURE_PARAMETERS:
+            if param == 'mag':
+                value = rupture.mag
+            elif param == 'strike':
+                value = rupture.surface.get_strike()
+            elif param == 'dip':
+                value = rupture.surface.get_dip()
+            elif param == 'rake':
+                value = rupture.rake
+            elif param == 'ztor':
+                value = rupture.surface.get_top_edge_depth()
+            elif param == 'hypo_lon':
+                value = rupture.hypocenter.longitude
+            elif param == 'hypo_lat':
+                value = rupture.hypocenter.latitude
+            elif param == 'hypo_depth':
+                value = rupture.hypocenter.depth
+            elif param == 'width':
+                value = rupture.surface.get_width()
+            else:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (type(self).__name__, param))
+            setattr(rupture, param, value)
+
     def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
@@ -134,9 +169,11 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             setattr(dctx, param, get_distances(rupture, sites, param))
+        self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
-        return SitesContext(sites, self.REQUIRES_SITES_PARAMETERS), dctx
+        sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
+        return sctx, dctx
 
     def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
         """
@@ -235,6 +272,7 @@ class ContextMaker(object):
                 orig_dctx = DistancesContext(
                     (param, get_distances(rupture, sitecol, param))
                     for param in self.REQUIRES_DISTANCES)
+                self.add_rup_params(rupture)
             with clo_mon:  # this is faster than computing orig_dctx
                 closest_points = rupture.surface.get_closest_points(sitecol)
             cache = {}
@@ -259,7 +297,7 @@ class ContextMaker(object):
         return acc
 
 
-class BaseContext(with_metaclass(abc.ABCMeta)):
+class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
     """
