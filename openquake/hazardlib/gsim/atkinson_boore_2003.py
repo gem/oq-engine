@@ -27,8 +27,6 @@ Module exports
 :class:`AtkinsonBoore2003SSlabJapan`
 :class:`AtkinsonBoore2003SSlabJapanNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

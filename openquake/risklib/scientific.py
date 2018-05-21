@@ -19,7 +19,6 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-from __future__ import division
 import abc
 import copy
 import bisect
@@ -33,7 +32,6 @@ from scipy import interpolate, stats, random
 from openquake.baselib.general import CallableDict, group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import utils
-from openquake.baselib.python3compat import with_metaclass
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -727,7 +725,7 @@ class FragilityModel(dict):
 DISTRIBUTIONS = CallableDict()
 
 
-class Distribution(with_metaclass(abc.ABCMeta)):
+class Distribution(metaclass=abc.ABCMeta):
     """
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
