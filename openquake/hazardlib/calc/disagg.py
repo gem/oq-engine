@@ -21,7 +21,6 @@
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
-from __future__ import division
 import sys
 import warnings
 import operator

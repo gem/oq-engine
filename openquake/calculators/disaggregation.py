@@ -19,7 +19,6 @@
 """
 Disaggregation calculator core functionality
 """
-from __future__ import division
 import logging
 import operator
 import numpy

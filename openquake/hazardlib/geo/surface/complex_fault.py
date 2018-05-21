@@ -20,7 +20,6 @@
 Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 :class:`ComplexFaultSurface`.
 """
-from __future__ import division
 import numpy
 import shapely
 

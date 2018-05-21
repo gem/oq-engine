@@ -19,10 +19,9 @@ spatially-distributed ground-shaking intensities.
 """
 import abc
 import numpy
-from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
+class BaseCorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models for spatially-distributed ground-shaking
     intensities.

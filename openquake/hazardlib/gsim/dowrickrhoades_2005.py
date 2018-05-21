@@ -20,7 +20,6 @@
 Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
-from __future__ import division
 import numpy as np
 from openquake.hazardlib.gsim.base import IPE, CoeffsTable
 from openquake.hazardlib import const

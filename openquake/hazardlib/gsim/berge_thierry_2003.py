@@ -19,15 +19,12 @@
 """
 Module exports :class:`BergeThierryEtAl2003SIGMA`.
 """
-from __future__ import division
-
 import numpy as np
+from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-
-from scipy.constants import g
 
 
 class BergeThierryEtAl2003SIGMA(GMPE):

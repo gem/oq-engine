@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import with_metaclass, raise_
+from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
 
@@ -297,7 +297,7 @@ class ContextMaker(object):
         return acc
 
 
-class BaseContext(with_metaclass(abc.ABCMeta)):
+class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
     """

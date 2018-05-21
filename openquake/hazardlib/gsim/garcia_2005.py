@@ -21,13 +21,9 @@ Module exports :class:'GarciaEtAl2005SSlab',
 :class:'GarciaEtAl2005SSlabVert'
 
 """
-from __future__ import division
-
 import numpy as np
-
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
-
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
