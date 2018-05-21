@@ -600,7 +600,9 @@ class HazardCalculator(BaseCalculator):
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
                     value = getattr(row, name)
-                    if name == 'grp_id' and isinstance(value, list):
+                    if name == 'num_sites':
+                        value /= row.num_split
+                    elif name == 'grp_id' and isinstance(value, list):
                         # same ID sources; store only the first
                         value = value[0]
                     array[i][name] = value
