@@ -115,8 +115,7 @@ producing too small PoEs.'''
             base.HazardCalculator.pre_execute(self)
         else:
             # we need to run a PSHACalculator
-            cl = classical.PSHACalculator(oq, self.monitor('classical'),
-                                          calc_id=self.datastore.calc_id)
+            cl = classical.PSHACalculator(oq, self.datastore.calc_id)
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
