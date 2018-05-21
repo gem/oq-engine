@@ -120,9 +120,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
-        self._monitor = monitor
+    def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
+        self._monitor = Monitor('total runtime', measuremem=True)
+        self._monitor.hdf5path = self.datastore.hdf5path
         self.oqparam = oqparam
 
     def monitor(self, operation, **kw):
@@ -162,50 +163,52 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Run the calculation and return the exported outputs.
         """
         global logversion
-        self.close = close
-        self.set_log_format()
-        if logversion:  # make sure this is logged only once
-            logging.info('Running %s', self.oqparam.inputs['job_ini'])
-            logging.info('Using engine version %s', engine_version)
-            logversion = False
-        if concurrent_tasks is None:  # use the job.ini parameter
-            ct = self.oqparam.concurrent_tasks
-        else:  # used the parameter passed in the command-line
-            ct = concurrent_tasks
-        if ct == 0:  # disable distribution temporarily
-            oq_distribute = os.environ.get('OQ_DISTRIBUTE')
-            os.environ['OQ_DISTRIBUTE'] = 'no'
-        if ct != self.oqparam.concurrent_tasks:
-            # save the used concurrent_tasks
-            self.oqparam.concurrent_tasks = ct
-        self.save_params(**kw)
-        Starmap.init()
-        try:
-            if pre_execute:
-                self.pre_execute()
-            self.result = self.execute()
-            if self.result is not None:
-                self.post_execute(self.result)
-            self.before_export()
-            self.export(kw.get('exports', ''))
-        except Exception:
-            if kw.get('pdb'):  # post-mortem debug
-                tb = sys.exc_info()[2]
-                traceback.print_tb(tb)
-                pdb.post_mortem(tb)
-            else:
-                logging.critical('', exc_info=True)
-                raise
-        finally:
-            # cleanup globals
-            if ct == 0:  # restore OQ_DISTRIBUTE
-                if oq_distribute is None:  # was not set
-                    del os.environ['OQ_DISTRIBUTE']
+        with self._monitor:
+            self.close = close
+            self.set_log_format()
+            if logversion:  # make sure this is logged only once
+                logging.info('Running %s', self.oqparam.inputs['job_ini'])
+                logging.info('Using engine version %s', engine_version)
+                logversion = False
+            if concurrent_tasks is None:  # use the job.ini parameter
+                ct = self.oqparam.concurrent_tasks
+            else:  # used the parameter passed in the command-line
+                ct = concurrent_tasks
+            if ct == 0:  # disable distribution temporarily
+                oq_distribute = os.environ.get('OQ_DISTRIBUTE')
+                os.environ['OQ_DISTRIBUTE'] = 'no'
+            if ct != self.oqparam.concurrent_tasks:
+                # save the used concurrent_tasks
+                self.oqparam.concurrent_tasks = ct
+            self.save_params(**kw)
+            Starmap.init()
+            try:
+                if pre_execute:
+                    self.pre_execute()
+                self.result = self.execute()
+                if self.result is not None:
+                    self.post_execute(self.result)
+                self.before_export()
+                self.export(kw.get('exports', ''))
+            except Exception:
+                if kw.get('pdb'):  # post-mortem debug
+                    tb = sys.exc_info()[2]
+                    traceback.print_tb(tb)
+                    pdb.post_mortem(tb)
                 else:
-                    os.environ['OQ_DISTRIBUTE'] = oq_distribute
-            readinput.pmap = None
-            readinput.exposure = None
-            Starmap.shutdown()
+                    logging.critical('', exc_info=True)
+                    raise
+            finally:
+                # cleanup globals
+                if ct == 0:  # restore OQ_DISTRIBUTE
+                    if oq_distribute is None:  # was not set
+                        del os.environ['OQ_DISTRIBUTE']
+                    else:
+                        os.environ['OQ_DISTRIBUTE'] = oq_distribute
+                readinput.pmap = None
+                readinput.exposure = None
+                Starmap.shutdown()
+        self._monitor.flush()
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -350,8 +353,7 @@ class HazardCalculator(BaseCalculator):
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
-            self.oqparam, self.monitor('precalculator'),
-            self.datastore.calc_id)
+            self.oqparam, self.datastore.calc_id)
         precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
             self.csm = precalc.csm
