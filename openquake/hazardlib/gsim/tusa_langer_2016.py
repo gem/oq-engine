@@ -23,10 +23,7 @@ Module exports :class:`TusaLanger2016RepiBA08SE`,
                :class:`TusaLanger2016RepiSP87DE`,
                :class:`TusaLanger2016Rhypo`
 """
-from __future__ import division
-
 import numpy as np
-
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

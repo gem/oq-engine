@@ -53,7 +53,6 @@ NB: the implementation in the engine is smarter and more
 efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
-from __future__ import division
 import time
 import operator
 import numpy

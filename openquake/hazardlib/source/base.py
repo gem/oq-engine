@@ -17,15 +17,13 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
-from __future__ import division
 import abc
 import math
 from openquake.baselib.slots import with_slots
-from openquake.baselib.python3compat import with_metaclass
 
 
 @with_slots
-class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
+class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
     Base class representing a seismic source, that is a structure generating
     earthquake ruptures.
@@ -145,7 +143,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
 
 
 @with_slots
-class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
+class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
     """
     Parametric Seismic Source generates earthquake ruptures from source
     parameters, and associated probabilities of occurrence are defined through

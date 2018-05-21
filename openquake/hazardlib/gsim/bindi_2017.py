@@ -21,8 +21,6 @@ Module exports :class:`BindiEtAl2017Rjb`,
                :class:`BindiEtAl2017Rhypo`
 
 """
-from __future__ import division
-
 import numpy as np
 
 from scipy.constants import g
