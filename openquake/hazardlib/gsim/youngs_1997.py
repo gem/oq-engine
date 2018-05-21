@@ -22,8 +22,6 @@ Module exports :class:`YoungsEtAl1997SInter`, :class:`YoungsEtAl1997SSlab`,
 :class:`YoungsEtAl1997GSCSSlabLowerLimit`,
 :class:`YoungsEtAl1997SInterNSHMP2008`.
 """
-from __future__ import division
-
 import numpy as np
 import copy
 

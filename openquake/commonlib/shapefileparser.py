@@ -19,7 +19,6 @@
 """
 Support for converting NRML source models to ESRI shapefiles and vice versa
 """
-from __future__ import print_function
 import os
 import numpy
 import operator
