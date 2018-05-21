@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     3,909,444,611      
-date           2018-04-19T05:03:11
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:13:28
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -42,40 +42,40 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========================= ====== =============== ================
-smlt_path                 weight gsim_logic_tree num_realizations
-========================= ====== =============== ================
-sm1_sg1_cog1_char_complex 0.070  trivial(1)      1/1             
-sm1_sg1_cog1_char_plane   0.105  trivial(1)      1/1             
-sm1_sg1_cog1_char_simple  0.175  trivial(1)      1/1             
-sm1_sg1_cog2_char_complex 0.070  trivial(1)      1/1             
-sm1_sg1_cog2_char_plane   0.105  trivial(1)      1/1             
-sm1_sg1_cog2_char_simple  0.175  trivial(1)      1/1             
-sm1_sg2_cog1_char_complex 0.030  trivial(1)      1/1             
-sm1_sg2_cog1_char_plane   0.045  trivial(1)      1/1             
-sm1_sg2_cog1_char_simple  0.075  trivial(1)      1/1             
-sm1_sg2_cog2_char_complex 0.030  trivial(1)      1/1             
-sm1_sg2_cog2_char_plane   0.045  trivial(1)      1/1             
-sm1_sg2_cog2_char_simple  0.075  trivial(1)      1/1             
-========================= ====== =============== ================
+========================= ======= =============== ================
+smlt_path                 weight  gsim_logic_tree num_realizations
+========================= ======= =============== ================
+sm1_sg1_cog1_char_complex 0.07000 trivial(1)      1/1             
+sm1_sg1_cog1_char_plane   0.10500 trivial(1)      1/1             
+sm1_sg1_cog1_char_simple  0.17500 trivial(1)      1/1             
+sm1_sg1_cog2_char_complex 0.07000 trivial(1)      1/1             
+sm1_sg1_cog2_char_plane   0.10500 trivial(1)      1/1             
+sm1_sg1_cog2_char_simple  0.17500 trivial(1)      1/1             
+sm1_sg2_cog1_char_complex 0.03000 trivial(1)      1/1             
+sm1_sg2_cog1_char_plane   0.04500 trivial(1)      1/1             
+sm1_sg2_cog1_char_simple  0.07500 trivial(1)      1/1             
+sm1_sg2_cog2_char_complex 0.03000 trivial(1)      1/1             
+sm1_sg2_cog2_char_plane   0.04500 trivial(1)      1/1             
+sm1_sg2_cog2_char_simple  0.07500 trivial(1)      1/1             
+========================= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-1      SadighEtAl1997() rrup      vs30       mag rake  
-2      SadighEtAl1997() rrup      vs30       mag rake  
-3      SadighEtAl1997() rrup      vs30       mag rake  
-4      SadighEtAl1997() rrup      vs30       mag rake  
-5      SadighEtAl1997() rrup      vs30       mag rake  
-6      SadighEtAl1997() rrup      vs30       mag rake  
-7      SadighEtAl1997() rrup      vs30       mag rake  
-8      SadighEtAl1997() rrup      vs30       mag rake  
-9      SadighEtAl1997() rrup      vs30       mag rake  
-10     SadighEtAl1997() rrup      vs30       mag rake  
-11     SadighEtAl1997() rrup      vs30       mag rake  
+0      SadighEtAl1997() rjb rrup  vs30       mag rake  
+1      SadighEtAl1997() rjb rrup  vs30       mag rake  
+2      SadighEtAl1997() rjb rrup  vs30       mag rake  
+3      SadighEtAl1997() rjb rrup  vs30       mag rake  
+4      SadighEtAl1997() rjb rrup  vs30       mag rake  
+5      SadighEtAl1997() rjb rrup  vs30       mag rake  
+6      SadighEtAl1997() rjb rrup  vs30       mag rake  
+7      SadighEtAl1997() rjb rrup  vs30       mag rake  
+8      SadighEtAl1997() rjb rrup  vs30       mag rake  
+9      SadighEtAl1997() rjb rrup  vs30       mag rake  
+10     SadighEtAl1997() rjb rrup  vs30       mag rake  
+11     SadighEtAl1997() rjb rrup  vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -128,9 +128,9 @@ Slowest sources
 ========= ========================= ============ ========= ========== ========= ========= ======
 source_id source_class              num_ruptures calc_time split_time num_sites num_split events
 ========= ========================= ============ ========= ========== ========= ========= ======
-SFLT1     SimpleFaultSource         58           0.235     4.959E-05  46        46        0     
-CHAR1     CharacteristicFaultSource 1            0.100     2.861E-06  23        23        0     
-COMFLT1   ComplexFaultSource        62           0.043     2.384E-06  12        12        0     
+SFLT1     SimpleFaultSource         58           0.00127   1.907E-05  46        46        0     
+COMFLT1   ComplexFaultSource        62           5.543E-04 1.431E-06  12        12        0     
+CHAR1     CharacteristicFaultSource 1            4.759E-04 1.192E-06  23        23        0     
 ========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -138,9 +138,9 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.100     1     
-ComplexFaultSource        0.043     1     
-SimpleFaultSource         0.235     1     
+CharacteristicFaultSource 4.759E-04 1     
+ComplexFaultSource        5.543E-04 1     
+SimpleFaultSource         0.00127   1     
 ========================= ========= ======
 
 Duplicated sources
@@ -149,30 +149,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.017 0.015  0.003 0.050 25       
-================== ===== ====== ===== ===== =========
+================== ======= ========= ========= ======= =========
+operation-duration mean    stddev    min       max     num_tasks
+prefilter          0.00571 0.00297   0.00168   0.01107 48       
+count_ruptures     0.00161 5.070E-04 7.761E-04 0.00242 25       
+================== ======= ========= ========= ======= =========
+
+Fastest task
+------------
+taskno=12, weight=248, duration=0 s, sources="COMFLT1"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 NaN    1   1   1
+weight   248     NaN    248 248 1
+======== ======= ====== === === =
+
+Slowest task
+------------
+taskno=5, weight=57, duration=0 s, sources="CHAR1 SFLT1"
+
+======== ======= ====== ======= === =
+variable mean    stddev min     max n
+======== ======= ====== ======= === =
+nsites   1.00000 0.0    1       1   3
+weight   19      15     1.00000 30  3
+======== ======= ====== ======= === =
 
 Informational data
 ------------------
-============== ================================================================================ ========
-task           sent                                                                             received
-count_ruptures sources=106.48 KB srcfilter=17.63 KB param=10.4 KB monitor=8.06 KB gsims=2.93 KB 9.88 KB 
-============== ================================================================================ ========
+============== ================================================================================ =========
+task           sent                                                                             received 
+prefilter      srcs=119.53 KB monitor=15.28 KB srcfilter=10.73 KB                               124.11 KB
+count_ruptures sources=112.33 KB srcfilter=17.5 KB param=10.25 KB monitor=8.13 KB gsims=2.93 KB 9.73 KB  
+============== ================================================================================ =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.979     0.0       1     
-total count_ruptures           0.430     4.363     25    
-managing sources               0.105     0.0       1     
-store source_info              0.008     0.0       1     
-splitting sources              0.002     0.0       1     
-unpickling count_ruptures      0.001     0.0       25    
-aggregate curves               6.018E-04 0.0       25    
-reading site collection        2.193E-04 0.0       1     
-saving probability maps        3.886E-05 0.0       1     
+reading composite source model 1.03790   0.0       1     
+total prefilter                0.27402   4.63281   48    
+managing sources               0.20659   0.0       1     
+total count_ruptures           0.04015   0.00391   25    
+store source_info              0.00542   0.0       1     
+unpickling prefilter           0.00518   0.0       48    
+unpickling count_ruptures      9.449E-04 0.0       25    
+splitting sources              9.136E-04 0.0       1     
+aggregate curves               5.014E-04 0.0       25    
+reading site collection        3.204E-04 0.0       1     
+saving probability maps        3.505E-05 0.0       1     
 ============================== ========= ========= ======

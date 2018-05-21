@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     3,691,355,175      
-date           2018-04-19T05:04:20
-engine_version 3.1.0-git9c5da5b   
+date           2018-05-15T04:14:28
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -43,19 +43,19 @@ source_model_logic_tree `source_model_lt_col18_full_model_S_test_slab.xml <sourc
 
 Composite source model
 ----------------------
-========= ====== ================ ================
-smlt_path weight gsim_logic_tree  num_realizations
-========= ====== ================ ================
-b1        1.000  trivial(1,0,0,0) 1/1             
-========= ====== ================ ================
+========= ======= ================ ================
+smlt_path weight  gsim_logic_tree  num_realizations
+========= ======= ================ ================
+b1        1.00000 trivial(0,1,0,0) 1/1             
+========= ======= ================ ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ======================= ========= ============ ==============
 grp_id gsims                   distances siteparams   ruptparams    
 ====== ======================= ========= ============ ==============
-0      MontalvaEtAl2016SSlab() rhypo     backarc vs30 hypo_depth mag
-1      MontalvaEtAl2016SSlab() rhypo     backarc vs30 hypo_depth mag
+0      MontalvaEtAl2016SSlab() rhypo rjb backarc vs30 hypo_depth mag
+1      MontalvaEtAl2016SSlab() rhypo rjb backarc vs30 hypo_depth mag
 ====== ======================= ========= ============ ==============
 
 Realizations per (TRT, GSIM)
@@ -88,8 +88,8 @@ Slowest sources
 ========= ========================== ============ ========= ========== ========= ========= ======
 source_id source_class               num_ruptures calc_time split_time num_sites num_split events
 ========= ========================== ============ ========= ========== ========= ========= ======
-buc06pt05 NonParametricSeismicSource 7            0.035     4.053E-05  14        14        0     
-buc16pt75 NonParametricSeismicSource 8            0.032     3.099E-05  16        16        0     
+buc06pt05 NonParametricSeismicSource 7            1.800E-04 3.266E-05  14        14        0     
+buc16pt75 NonParametricSeismicSource 8            1.214E-04 2.122E-05  16        16        0     
 ========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -97,7 +97,7 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 0.067     2     
+NonParametricSeismicSource 3.014E-04 2     
 ========================== ========= ======
 
 Duplicated sources
@@ -106,16 +106,40 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.072 NaN    0.072 0.072 1        
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+prefilter          0.00483 0.00131 0.00292 0.00823 15       
+count_ruptures     0.00265 NaN     0.00265 0.00265 1        
+================== ======= ======= ======= ======= =========
+
+Fastest task
+------------
+taskno=1, weight=15, duration=0 s, sources="buc06pt05 buc16pt75"
+
+======== ======= ====== ======= ======= ==
+variable mean    stddev min     max     n 
+======== ======= ====== ======= ======= ==
+nsites   1.00000 0.0    1       1       15
+weight   1.00000 0.0    1.00000 1.00000 15
+======== ======= ====== ======= ======= ==
+
+Slowest task
+------------
+taskno=1, weight=15, duration=0 s, sources="buc06pt05 buc16pt75"
+
+======== ======= ====== ======= ======= ==
+variable mean    stddev min     max     n 
+======== ======= ====== ======= ======= ==
+nsites   1.00000 0.0    1       1       15
+weight   1.00000 0.0    1.00000 1.00000 15
+======== ======= ====== ======= ======= ==
 
 Informational data
 ------------------
 ============== ====================================================================== ========
 task           sent                                                                   received
-count_ruptures sources=12.99 KB srcfilter=722 B param=548 B monitor=330 B gsims=129 B 457 B   
+prefilter      srcs=22.65 KB monitor=4.78 KB srcfilter=3.35 KB                        23.25 KB
+count_ruptures sources=15.12 KB srcfilter=717 B param=542 B monitor=333 B gsims=129 B 451 B   
 ============== ====================================================================== ========
 
 Slowest operations
@@ -123,13 +147,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.072     3.738     1     
-managing sources               0.021     0.0       1     
-reading composite source model 0.012     0.0       1     
-store source_info              0.009     0.0       1     
-splitting sources              5.350E-04 0.0       1     
-reading site collection        2.248E-04 0.0       1     
-unpickling count_ruptures      6.008E-05 0.0       1     
-saving probability maps        5.484E-05 0.0       1     
-aggregate curves               5.436E-05 0.0       1     
+total prefilter                0.07244   3.41016   15    
+managing sources               0.06064   0.0       1     
+reading composite source model 0.01165   0.0       1     
+store source_info              0.00476   0.0       1     
+total count_ruptures           0.00265   0.00391   1     
+unpickling prefilter           0.00124   0.0       15    
+splitting sources              5.646E-04 0.0       1     
+reading site collection        3.393E-04 0.0       1     
+unpickling count_ruptures      4.172E-05 0.0       1     
+saving probability maps        3.552E-05 0.0       1     
+aggregate curves               3.171E-05 0.0       1     
 ============================== ========= ========= ======

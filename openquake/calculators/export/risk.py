@@ -146,15 +146,10 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt()
-    all_losses = dstore[ekey[0]].value
-    eids = dstore['events']['eid']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(loss_dt).squeeze()
-        writer.save(compose_arrays(eids, data, 'event_id'), dest)
+    dest = dstore.build_fname('losses_by_event', '', 'csv')
+    writer.save(dstore['losses_by_event'].value.view(dtlist), dest)
     return writer.getsaved()
 
 
@@ -226,7 +221,7 @@ def export_agg_losses_ebr(ekey, dstore):
         logging.warn('There are no ruptures in the datastore')
         return []
     name, ext = export.keyfunc(ekey)
-    agg_losses = dstore[name]
+    agg_losses = dstore['losses_by_event']
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),

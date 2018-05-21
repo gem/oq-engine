@@ -92,8 +92,9 @@ def export_ruptures_csv(ekey, dstore):
     rows = []
     ruptures_by_grp = get_ruptures_by_grp(dstore)
     for grp_id, trt in sorted(grp_trt.items()):
+        rups = ruptures_by_grp.get(grp_id, [])
         rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
-        for r in rup_data.to_array(ruptures_by_grp.get(grp_id, [])):
+        for r in rup_data.to_array(rups):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
@@ -616,7 +617,7 @@ def export_gmf_data_csv(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'])
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
-    if eid is None:  # new format
+    if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(sitemesh), dtype=U32)
         sites = util.compose_arrays(sids, sitemesh, 'site_id')
@@ -694,7 +695,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
-        oq.maximum_distance, oq.truncation_level, correl_model, samples)
+        oq.maximum_distance, oq.truncation_level, correl_model,
+        oq.filter_distance, samples)
     getter.init()
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
