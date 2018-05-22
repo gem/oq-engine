@@ -328,8 +328,14 @@ def extract_mfd_params(src):
     tags = get_taglist(src)
     if "incrementalMFD" in tags:
         mfd_node = src.nodes[tags.index("incrementalMFD")]
-    elif "truncGutenbergRichterMFD":
+    elif "truncGutenbergRichterMFD" in tags:
         mfd_node = src.nodes[tags.index("truncGutenbergRichterMFD")]
+    elif "arbitraryMFD" in tags:
+        mfd_node = src.nodes[tags.index("arbitraryMFD")]
+    elif "YoungsCoppersmithMFD" in tags:
+        mfd_node = src.nodes[tags.index("arbitraryMFD")]
+    elif "multiMFD" in tags:
+        mfd_node = src.nodes[tags.index("arbitraryMFD")]
     else:
         raise ValueError("Source %s contains no supported MFD type!" % src.tag)
     data = []
