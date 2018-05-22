@@ -23,7 +23,8 @@ from openquake.qa_tests_data.classical_damage import (
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a, case_master)
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 
 import numpy
 
@@ -166,4 +167,5 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_master(self):
-        self.check(case_master)
+        if NOT_DARWIN:  # skip on macOS
+            self.check(case_master)
