@@ -23,16 +23,13 @@ Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
 :class:`SiMidorikawa1999SSlabNorthEastCorrection` and
 :class:`SiMidorikawa1999SSlabSouthWestCorrection`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib.geo import (
-    Mesh, RectangularMesh, SimpleFaultSurface
-)
+    Mesh, RectangularMesh, SimpleFaultSurface)
 
 
 # Subduction trench coordinates (table 3.5.2-1) page 3-150
@@ -88,7 +85,7 @@ def _get_min_distance_to_sub_trench(lons, lats):
     depth.
     The 10 km depth value is arbitrary given that distance calculation depend
     only on top edge depth. The method calls then
-    :meth:`openquake.hazardlib.geo.base.BaseQuadrilateralSurface.get_rx_distance`
+    :meth:`openquake.hazardlib.geo.base.BaseSurface.get_rx_distance`
     and return its absolute value.
     """
     trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)

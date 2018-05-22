@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
@@ -74,7 +72,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='0.1', exports='csv')
+                            maximum_distance='5.0', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 

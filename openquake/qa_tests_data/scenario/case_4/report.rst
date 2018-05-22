@@ -2,9 +2,9 @@ Scenario QA Test, Case 1
 ========================
 
 ============== ===================
-checksum32     3,130,447,207      
-date           2018-03-26T15:54:48
-engine_version 2.10.0-git543cfb0  
+checksum32     125,955,823        
+date           2018-05-15T04:12:43
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -41,11 +41,11 @@ site_model    `site_model.xml <site_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,5 +60,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 5.009E-04 0.0       1     
+reading site collection 4.511E-04 0.0       1     
 ======================= ========= ========= ======

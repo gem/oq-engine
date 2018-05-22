@@ -1,5 +1,7 @@
 ## Technology Stack
 
+A 64bit operating system and 64bit capable hardware are required.
+
 ### Main dependencies
  
 * Python - Implementation language
@@ -7,10 +9,10 @@
 * HDF5 - Used for storing and managing data
 * numpy and scipy - Fundamental packages for scientific computing with Python
 * pyzmq - Used for internal inter-process communications
+* Rtree - a wrapper of libspatialindex that provides a number of advanced spatial indexing features
 
 ### Optional dependencies
 
-* Rtree - a wrapper of libspatialindex that provides a number of advanced spatial indexing features 
 * Celery - Distributed task queue library, using the `iterator_native()`
 * RabbitMQ - Message broker for Celery tasks, logging channels, and other signalling
 

@@ -95,10 +95,10 @@ class GmfComputer(object):
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
         try:
-            self.ctx = rupture.ctx
+            self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
-            self.ctx = cmaker.make_contexts(sitecol, rupture)
-        self.sids = self.ctx[0].sids
+            self.sctx, self.dctx = cmaker.make_contexts(sitecol, rupture)
+        self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.filtered(self.sids)
 
@@ -129,14 +129,14 @@ class GmfComputer(object):
         :param imt: an IMT instance
         :returns: a 32 bit array of shape (num_sites, num_events)
         """
+        rctx = getattr(self.rupture, 'rupture', self.rupture)
         if seed is not None:
             numpy.random.seed(seed)
-        sctx, rctx, dctx = self.ctx
-        dctx = dctx.roundup(gsim.minimum_distance)
+        dctx = self.dctx.roundup(gsim.minimum_distance)
         if self.truncation_level == 0:
             assert self.correlation_model is None
             mean, _stddevs = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, stddev_types=[])
+                self.sctx, rctx, dctx, imt, stddev_types=[])
             mean = gsim.to_imt_unit_values(mean)
             mean.shape += (1, )
             mean = mean.repeat(num_events, axis=1)
@@ -159,7 +159,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, [StdDev.TOTAL])
+                self.sctx, rctx, dctx, imt, [StdDev.TOTAL])
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
@@ -168,7 +168,7 @@ class GmfComputer(object):
             gmf = gsim.to_imt_unit_values(mean + total_residual)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt,
+                self.sctx, rctx, dctx, imt,
                 [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))

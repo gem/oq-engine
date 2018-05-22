@@ -20,13 +20,12 @@
 Module exports :class:`BooreAtkinson2011`,
                :class:`Atkinson2008prime`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
+
 
 class BooreAtkinson2011(BooreAtkinson2008):
     """

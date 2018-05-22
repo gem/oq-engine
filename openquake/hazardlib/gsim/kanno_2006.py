@@ -23,18 +23,12 @@ exports
 :class:`Kanno2006Shallow`
 :class:`Kanno2006Deep`
 """
-# :class:`Kanno2006ShallowNortheastJapan`
-# :class:`Kanno2006DeepNortheastJapan`
-
-from __future__ import division
 import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-# from openquake.hazardlib.gsim.si_midorikawa_1999 \
-#    import _get_min_distance_to_sub_trench
 
 
 class Kanno2006Shallow(GMPE):

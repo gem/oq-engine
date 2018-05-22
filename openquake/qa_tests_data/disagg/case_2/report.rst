@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     131,107,173        
-date           2018-03-26T15:57:45
-engine_version 2.10.0-git543cfb0  
+date           2018-05-15T04:14:26
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -43,19 +43,19 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============== ====== =============== ================
-smlt_path      weight gsim_logic_tree num_realizations
-============== ====== =============== ================
-source_model_1 0.500  simple(1,2)     2/2             
-source_model_2 0.500  simple(1,2)     2/2             
-============== ====== =============== ================
+============== ======= =============== ================
+smlt_path      weight  gsim_logic_tree num_realizations
+============== ======= =============== ================
+source_model_1 0.50000 simple(2,1)     2/2             
+source_model_2 0.50000 simple(2,1)     2/2             
+============== ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
+0      YoungsEtAl1997SSlab()                 rjb rrup    vs30                    hypo_depth mag   
 1      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 ====== ===================================== =========== ======================= =================
@@ -77,7 +77,7 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.095     0.0       1     
-splitting sources              0.053     0.0       1     
-reading site collection        5.198E-05 0.0       1     
+reading composite source model 0.06580   0.0       1     
+splitting sources              0.06049   0.0       1     
+reading site collection        6.628E-05 0.0       1     
 ============================== ========= ========= ======

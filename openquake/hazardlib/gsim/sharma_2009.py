@@ -22,8 +22,6 @@ Module
 exports
 :class:`SharmaEtAl2009`
 """
-
-from __future__ import division
 import warnings
 import numpy as np
 from scipy.constants import g
