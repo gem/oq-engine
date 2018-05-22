@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import io
 import inspect
 import logging
@@ -63,6 +61,7 @@ def extract(what, calc_id=-1, server_url=None):
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         if server_url:
+            print('Calling %s%s' % (server_url, urlpath))
             data = urlopen(server_url.rstrip('/') + urlpath).read()
             items = (item for item in numpy.load(io.BytesIO(data)).items())
         else:

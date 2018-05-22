@@ -71,7 +71,6 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-from __future__ import print_function
 import io
 import re
 import sys
@@ -109,8 +108,6 @@ class SourceModel(collections.Sequence):
                  start_time=None):
         self.src_groups = src_groups
         self.name = name
-        if investigation_time is not None:
-            investigation_time = valid.positivefloat(investigation_time)
         self.investigation_time = investigation_time
         self.start_time = start_time
 
@@ -139,6 +136,7 @@ def to_python(fname, *args):
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
 
+
 parse = deprecated('Use nrml.to_python instead')(to_python)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
@@ -148,6 +146,7 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 @node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
+
 
 default = sourceconverter.SourceConverter()
 
@@ -184,8 +183,13 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return SourceModel(sorted(groups), node.get('name'),
-                       node.get('investigation_time'), node.get('start_time'))
+    itime = node.get('investigation_time')
+    if itime is not None:
+        itime = valid.positivefloat(itime)
+    stime = node.get('start_time')
+    if stime is not None:
+        stime = valid.positivefloat(stime)
+    return SourceModel(sorted(groups), node.get('name'), itime, stime)
 
 
 validators = {
@@ -279,6 +283,7 @@ class SourceModelParser(object):
         self.converter = converter
         self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
 
     def parse_src_groups(self, fname, apply_uncertainties):
         """
@@ -299,6 +304,7 @@ class SourceModelParser(object):
                 if changed:
                     # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
+                    self.changed_sources += 1
         self.fname_hits[fname] += 1
         return groups
 

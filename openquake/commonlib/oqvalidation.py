@@ -57,6 +57,8 @@ class OqParam(valid.ParamSet):
         valid.positiveint, multiprocessing.cpu_count() * 3)  # by M. Simionato
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
+    cross_correlation = valid.Param(
+        valid.Choice('cross', 'no correlation', 'full correlation'), 'cross')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
@@ -65,11 +67,14 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
+    prefilter_sources = valid.Param(valid.Choice('rtree', 'numpy', 'no'),
+                                    'rtree')
+    filter_distance = valid.Param(valid.Choice('rjb', 'rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
-    gsim = valid.Param(valid.gsim, None)
+    gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
@@ -112,8 +117,7 @@ class OqParam(valid.ParamSet):
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
     reference_backarc = valid.Param(valid.boolean, False)
-    region = valid.Param(valid.coordinates, None)
-    region_constraint = valid.Param(valid.wkt_polygon, None)
+    region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     optimize_same_id_sources = valid.Param(valid.boolean, False)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
@@ -131,7 +135,6 @@ class OqParam(valid.ParamSet):
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 30000)  # by M. Simionato
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
@@ -162,6 +165,13 @@ class OqParam(valid.ParamSet):
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             raise InvalidFile('Missing calculation_mode in %s' % job_ini)
+        if 'region_constraint' in names_vals:
+            if 'region' in names_vals:
+                raise InvalidFile('You cannot have both region and '
+                                  'region_constraint in %s' % job_ini)
+            logging.warn('region_constraint is obsolete, use region instead')
+            self.region = valid.wkt_polygon(
+                names_vals.pop('region_constraint'))
         self.risk_investigation_time = (
             self.risk_investigation_time or self.investigation_time)
         if ('intensity_measure_types_and_levels' in names_vals and
@@ -191,7 +201,7 @@ class OqParam(valid.ParamSet):
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
-            if self.gsim:
+            if not isinstance(self.gsim, valid.FromFile):
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(
@@ -486,18 +496,11 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_region(self):
-        """
-        If there is a region a region_grid_spacing must be given
-        """
-        return self.region_grid_spacing if self.region else True
-
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
         one of sites, sites_csv, hazard_curves_csv, gmfs_csv,
-        region and exposure_file is set. You did set more than
-        one, or nothing.
+        region is set. You did set more than one, or nothing.
         """
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
@@ -513,12 +516,11 @@ class OqParam(valid.ParamSet):
             sites_csv=self.inputs.get('sites', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmfs_csv=self.inputs.get('gmfs', 0),
-            region=bool(self.region),
-            exposure=self.inputs.get('exposure', 0))
+            region=bool(self.region and self.region_grid_spacing))
         # NB: below we check that all the flags
         # are mutually exclusive
         return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
-            'site_model')
+            'exposure') or self.inputs.get('site_model')
 
     def is_valid_poes(self):
         """

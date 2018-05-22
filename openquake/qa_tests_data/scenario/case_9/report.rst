@@ -3,8 +3,8 @@ Scenario QA Test, Case 9, Multiple GSIMs
 
 ============== ===================
 checksum32     572,372,510        
-date           2018-03-26T15:54:48
-engine_version 2.10.0-git543cfb0  
+date           2018-05-15T04:12:42
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -41,11 +41,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 simple(2)       2/2             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -61,5 +61,5 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 4.005E-05 0.0       1     
+reading site collection 5.555E-05 0.0       1     
 ======================= ========= ========= ======

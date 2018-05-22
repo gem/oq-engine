@@ -98,7 +98,7 @@ def extract_calc_id_datadir(hdf5path, datadir=None):
         return get_last_calc_id(datadir) + 1, datadir
     try:
         calc_id = int(hdf5path)
-    except:
+    except ValueError:
         datadir = os.path.dirname(hdf5path)
         mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
         if mo is None:
@@ -344,7 +344,7 @@ class DataStore(collections.MutableMapping):
         if hasattr(postfix, 'sm_lt_path'):  # is a realization
             fname = '%s-rlz-%03d.%s' % (prefix, postfix.ordinal, fmt)
         else:
-            fname = '%s-%s.%s' % (prefix, postfix, fmt)
+            fname = prefix + ('-%s' % postfix if postfix else '') + '.' + fmt
         return self.export_path(fname, export_dir)
 
     def flush(self):
@@ -389,6 +389,8 @@ class DataStore(collections.MutableMapping):
             return default
 
     def __getitem__(self, key):
+        if self.hdf5 == ():  # the datastore is closed
+            raise ValueError('Cannot find %s in %s' % (key, self))
         try:
             val = self.hdf5[key]
         except KeyError:
@@ -457,54 +459,3 @@ class DataStore(collections.MutableMapping):
     def __repr__(self):
         status = 'open' if self.hdf5 else 'closed'
         return '<%s %d, %s>' % (self.__class__.__name__, self.calc_id, status)
-
-
-def persistent_attribute(key):
-    """
-    Persistent attributes are persisted to the datastore and cached.
-    Modifications to mutable objects are not automagically persisted.
-    If you have a huge object that does not fit in memory use the datastore
-    directory (for instance, open a HDF5 file to create an empty array, then
-    populate it). Notice that you can use any dict-like data structure in
-    place of the datastore, provided you can set attributes on it.
-    Here is an example:
-
-    >>> class Datastore(dict):
-    ...     "A fake datastore"
-
-    >>> class Store(object):
-    ...     a = persistent_attribute('a')
-    ...     def __init__(self, a):
-    ...         self.datastore = Datastore()
-    ...         self.a = a  # this assegnation will store the attribute
-
-    >>> store = Store([1])
-    >>> store.a  # this retrieves the attribute
-    [1]
-    >>> store.a.append(2)
-    >>> store.a = store.a  # remember to store the modified attribute!
-
-    :param key: the name of the attribute to be made persistent
-    :returns: a property to be added to a class with a .datastore attribute
-    """
-    privatekey = '_' + key
-
-    def getter(self):
-        # Try to get the value from the privatekey attribute (i.e. from
-        # the cache of the datastore); if not possible, get the value
-        # from the datastore and set the cache; if not possible, get the
-        # value from the parent and set the cache. If the value cannot
-        # be retrieved, raise an AttributeError.
-        try:
-            return getattr(self.datastore, privatekey)
-        except AttributeError:
-            value = self.datastore[key]
-            setattr(self.datastore, privatekey, value)
-            return value
-
-    def setter(self, value):
-        # Update the datastore and the private key
-        self.datastore[key] = value
-        setattr(self.datastore, privatekey, value)
-
-    return property(getter, setter)

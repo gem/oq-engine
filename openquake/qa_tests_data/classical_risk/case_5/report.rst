@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2018-03-26T15:54:47
-engine_version 2.10.0-git543cfb0  
+date           2018-05-15T04:12:41
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -42,20 +42,20 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  simple(4,1)     4/4             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 simple(1,4)     4/4             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================================================================== ========== ========== ==============
-grp_id gsims                                                                                    distances  siteparams ruptparams    
-====== ======================================================================================== ========== ========== ==============
-0      AkkarBommer2010()                                                                        rjb        vs30       mag rake      
-1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rhypo rrup vs30       hypo_depth mag
-====== ======================================================================================== ========== ========== ==============
+====== ======================================================================================== ============== ========== ==============
+grp_id gsims                                                                                    distances      siteparams ruptparams    
+====== ======================================================================================== ============== ========== ==============
+0      AkkarBommer2010()                                                                        rjb            vs30       mag rake      
+1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rhypo rjb rrup vs30       hypo_depth mag
+====== ======================================================================================== ============== ========== ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -87,19 +87,19 @@ source_model.xml 1      Subduction Interface 23           23
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-A         PointSource  23           6.950E-04 6.199E-06  1         1        
-B         PointSource  23           5.932E-04 2.384E-06  1         1        
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+A         PointSource  23           9.227E-05 1.001E-05  1         1         0     
+B         PointSource  23           7.677E-05 1.907E-06  1         1         0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.001     2     
+PointSource  1.690E-04 2     
 ============ ========= ======
 
 Duplicated sources
@@ -108,30 +108,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.002 2.397E-04 0.002 0.002 2        
-================== ===== ========= ===== ===== =========
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+prefilter          0.00294 5.449E-04 0.00255 0.00332 2        
+count_ruptures     0.00300 8.598E-05 0.00294 0.00307 2        
+================== ======= ========= ======= ======= =========
+
+Fastest task
+------------
+taskno=2, weight=9, duration=0 s, sources="B"
+
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   9.20000 NaN    9.20000 9.20000 1
+======== ======= ====== ======= ======= =
+
+Slowest task
+------------
+taskno=1, weight=2, duration=0 s, sources="A"
+
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   2.30000 NaN    2.30000 2.30000 1
+======== ======= ====== ======= ======= =
 
 Informational data
 ------------------
-============== ========================================================================= ========
-task           sent                                                                      received
-count_ruptures sources=2.32 KB param=1.57 KB srcfilter=1.41 KB monitor=660 B gsims=519 B 728 B   
-============== ========================================================================= ========
+============== ======================================================================== ========
+task           sent                                                                     received
+prefilter      srcs=2.27 KB monitor=652 B srcfilter=458 B                               2.5 KB  
+count_ruptures sources=2.59 KB param=1.56 KB srcfilter=1.4 KB monitor=666 B gsims=519 B 716 B   
+============== ======================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.007     0.0       1     
-store source_info              0.006     0.0       1     
-managing sources               0.005     0.0       1     
-total count_ruptures           0.004     2.023     2     
-splitting sources              5.898E-04 0.0       1     
-reading site collection        2.060E-04 0.0       1     
-unpickling count_ruptures      1.128E-04 0.0       2     
-aggregate curves               5.627E-05 0.0       2     
-saving probability maps        4.005E-05 0.0       1     
+managing sources               0.01684   0.0       1     
+total count_ruptures           0.00601   1.37109   2     
+total prefilter                0.00588   2.43359   2     
+store source_info              0.00474   0.0       1     
+reading composite source model 0.00425   0.0       1     
+splitting sources              4.969E-04 0.0       1     
+reading site collection        2.675E-04 0.0       1     
+unpickling prefilter           1.595E-04 0.0       2     
+unpickling count_ruptures      8.202E-05 0.0       2     
+aggregate curves               5.031E-05 0.0       2     
+saving probability maps        3.600E-05 0.0       1     
 ============================== ========= ========= ======

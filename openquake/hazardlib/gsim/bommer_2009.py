@@ -19,8 +19,6 @@
 """
 Module exports :class:`BommerEtAl2009RSD`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE

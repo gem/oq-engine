@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
 import math
 import os.path
 import itertools
@@ -26,8 +25,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, block_splitter, humansize, split_in_slices)
-from openquake.hazardlib.calc.filters import SourceFilter
+    AccumDict, block_splitter, split_in_slices)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -158,17 +156,16 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
 
         def weight(src):
             return src.num_ruptures * src.RUPTURE_WEIGHT
-        csm = self.csm.filter(src_filter)
+        csm, src_filter = self.filter_csm()
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         param = dict(
             truncation_level=oq.truncation_level,
-            imtls=oq.imtls, seed=oq.ses_seed,
-            maximum_distance=oq.maximum_distance,
+            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
 
         num_tasks = 0
@@ -177,7 +174,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 gsims = csm.info.gsim_lt.get_gsims(sg.trt)
                 csm.add_infos(sg.sources)
-                if sg.src_interdep == 'mutex':
+                if sg.src_interdep == 'mutex':  # do not split
                     sg.samples = sm.samples
                     yield sg, src_filter, gsims, param, monitor
                     num_tasks += 1
@@ -313,27 +310,6 @@ def compute_gmfs_and_curves(getters, oq, monitor):
     return results
 
 
-def save_gmdata(calc, n_rlzs):
-    """
-    Save a composite array `gmdata` in the datastore.
-
-    :param calc: a calculator with a dictionary .gmdata {rlz: data}
-    :param n_rlzs: the total number of realizations
-    """
-    n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
-              [('events', U32), ('nbytes', U32)])
-    array = numpy.zeros(n_rlzs, dtlist)
-    for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
-        events = data[-2]
-        nbytes = data[-1]
-        gmv = data[:-2] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events, nbytes)
-    calc.datastore['gmdata'] = array
-    logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
-
-
 def update_nbytes(dstore, key, array):
     nbytes = dstore.get_attr(key, 'nbytes', 0)
     dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
@@ -418,7 +394,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         rlzs_by_gsim[grp_id], block, sitecol,
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
-                        samples_by_grp[grp_id])
+                        oq.filter_distance, samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
         U = len(self.datastore['ruptures'])
@@ -435,7 +411,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 getters.append(GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, samples_by_grp[grp_id]))
+                    correl_model, oq.filter_distance, samples_by_grp[grp_id]))
             yield getters, oq, monitor
 
     def execute(self):
@@ -465,7 +441,7 @@ class EventBasedCalculator(base.HazardCalculator):
             self.precalc.result.clear()
         acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
             r: ProbabilityMap(L) for r in range(R)})
-        save_gmdata(self, R)
+        base.save_gmdata(self, R)
         if self.indices:
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
@@ -521,7 +497,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
             # one could also set oq.number_of_logic_tree_samples = 0
-            self.cl = ClassicalCalculator(oq, self.monitor('classical'))
+            self.cl = ClassicalCalculator(oq)
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation

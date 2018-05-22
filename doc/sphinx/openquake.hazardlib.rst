@@ -13,6 +13,14 @@ Subpackages
     openquake.hazardlib.scalerel
     openquake.hazardlib.source
 
+contexts
+--------------------------------------
+
+.. automodule:: openquake.hazardlib.contexts
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 const
 --------------------------------
 

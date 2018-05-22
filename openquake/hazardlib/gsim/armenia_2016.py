@@ -26,8 +26,6 @@ Module exports :class:`AkkarEtAlRjb2014Armenia`,
 :class:`KothaEtAl2016Armenia`,
 :class:`ChiouYoungs2014Armenia`
 """
-from __future__ import division
-
 import numpy as np
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014

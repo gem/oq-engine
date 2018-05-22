@@ -24,8 +24,6 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2014HighQJapanSite`
                :class:`CampbellBozorgnia2014LowQJapanSite`
 """
-from __future__ import division
-
 import numpy as np
 from math import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

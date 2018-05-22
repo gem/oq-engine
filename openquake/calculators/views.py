@@ -15,9 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
 import ast
-import math
 import os.path
 import numbers
 import operator
@@ -66,7 +64,7 @@ def form(value):
     >>> form(103.4)
     '103'
     >>> form(9.3)
-    '9.300'
+    '9.30000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -76,7 +74,7 @@ def form(value):
         elif value < .001:
             return '%.3E' % value
         elif value < 10 and isinstance(value, FLOAT):
-            return '%.3f' % value
+            return '%.5f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -243,25 +241,20 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_ruptures = 0
     csm_info = dstore['csm_info']
-    oq = dstore['oqparam']
-    num_sites = len(dstore['sitecol'])
-    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures / num_tiles
+            er = src_group.eff_ruptures
             if er:
                 num_trts += 1
                 eff_ruptures += er
                 tbl.append(
-                    (sm.names, src_group.id, trt, er, src_group.tot_ruptures))
+                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
             tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
             ('#tot_weight', csm_info.tot_weight)]
-    if num_tiles > 1:
-        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -364,7 +357,7 @@ def ebr_data_transfer(token, dstore):
     """
     Display the data transferred in an event based risk calculation
     """
-    attrs = dstore['agg_loss_table'].attrs
+    attrs = dstore['losses_by_event'].attrs
     sent = humansize(attrs['sent'])
     received = humansize(attrs['tot_received'])
     return 'Event Based Risk: sent %s, received %s' % (sent, received)
@@ -394,7 +387,7 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
     R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
@@ -621,7 +614,11 @@ def view_task_classical(token, dstore):
      $ oq show task_classical:0  # the fastest task
      $ oq show task_classical:-1  # the slowest task
     """
-    data = dstore['task_info/classical'].value
+    tasks = set(dstore['task_info'])
+    if 'classical' in tasks:
+        data = dstore['task_info/classical'].value
+    else:
+        data = dstore['task_info/count_ruptures'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -778,7 +775,7 @@ def view_elt(token, dstore):
     """
     oq = dstore['oqparam']
     R = len(dstore['csm_info'].rlzs)
-    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
     header = oq.loss_dt().names
     tbl = []
     for rlzi in range(R):

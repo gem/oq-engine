@@ -22,8 +22,6 @@ Module exports :class:`YoungsEtAl1997SInter`, :class:`YoungsEtAl1997SSlab`,
 :class:`YoungsEtAl1997GSCSSlabLowerLimit`,
 :class:`YoungsEtAl1997SInterNSHMP2008`.
 """
-from __future__ import division
-
 import numpy as np
 import copy
 
@@ -58,8 +56,8 @@ class YoungsEtAl1997SInter(GMPE):
 
     #: Supported intensity measure component is the average horizontal
     #: component
-    #attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
-    #paragraph : 'Analysis of peak horizontal accelerations', p. 59.
+    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, see
+    #: paragraph: 'Analysis of peak horizontal accelerations', p. 59.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, table 2, page 67.
