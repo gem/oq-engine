@@ -25,7 +25,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import hdf5, node, performance
+from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
 from openquake.hazardlib import (
