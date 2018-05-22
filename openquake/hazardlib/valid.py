@@ -24,10 +24,8 @@ import re
 import ast
 import logging
 import collections
-from decimal import Decimal
 import numpy
 
-from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
@@ -56,8 +54,15 @@ def disagg_outputs(value):
     return values
 
 
-class FromFile(object):  # fake GSIM
-    def __str__(self):
+class FromFile(object):
+    """
+    Fake GSIM to be used when the GMFs are imported from an
+    external file and not computed with a GSIM.
+    """
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
+    REQUIRES_SITES_PARAMETERS = set()
+
+    def __repr__(self):
         return 'FromFile'
 
 
@@ -1075,7 +1080,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
+class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:

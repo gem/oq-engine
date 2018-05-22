@@ -24,8 +24,6 @@ Module exports :class:`CauzziEtAl2014`,
                :class:`CauzziEtAl2014Eurocode8`,
                :class:`CauzziEtAl2014Eurocode8NoSOF`,
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

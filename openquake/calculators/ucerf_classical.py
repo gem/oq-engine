@@ -26,7 +26,7 @@ from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, util
 from openquake.hazardlib.sourceconverter import SourceConverter
@@ -70,6 +70,8 @@ def convert_UCERFSource(self, node):
         msr=valid.SCALEREL[~node.magScaleRel](),
         mesh_spacing=self.rupture_mesh_spacing,
         trt=node["tectonicRegion"])
+
+
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
@@ -113,12 +115,10 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
         return acc
 
     # compute the ProbabilityMap
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance,
+                          monitor=monitor)
     imtls = DictArray(imtls)
-    ctx_mon = monitor('make_contexts', measuremem=False)
-    poe_mon = monitor('get_poes', measuremem=False)
-    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls,
-                          truncation_level, ctx_mon, poe_mon)
+    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls, truncation_level)
     nsites = len(s_sites)
     acc = AccumDict({grp_id: pmap})
     acc.calc_times = {
@@ -141,7 +141,8 @@ class UcerfPSHACalculator(PSHACalculator):
         parse the logic tree and source model input
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
-        self.sitecol = readinput.get_site_collection(self.oqparam)
+        sitecol = readinput.get_site_collection(self.oqparam)
+        self.datastore['sitecol'] = self.sitecol = sitecol
         self.csm = get_composite_source_model(self.oqparam)
         self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
                              for sm in self.csm.source_models
@@ -164,7 +165,8 @@ class UcerfPSHACalculator(PSHACalculator):
         acc.calc_times = {}
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
-        param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level)
+        param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
+                     filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]

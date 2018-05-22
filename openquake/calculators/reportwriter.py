@@ -20,46 +20,18 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
 import mock
-import time
-import numpy
-from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import PSHACalculator
+from openquake.calculators.classical import PSHACalculator, count_ruptures
 from openquake.calculators import views
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
-
-
-def count_ruptures(sources, srcfilter, gsims, param, monitor):
-    """
-    Count the number of ruptures contained in the given sources by applying a
-    raw source filtering on the integration distance. Return a dictionary
-    src_group_id -> {}.
-    All sources must belong to the same tectonic region type.
-    """
-    dic = groupby(sources, lambda src: src.src_group_ids[0])
-    acc = AccumDict({grp_id: {} for grp_id in dic})
-    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
-    for grp_id in dic:
-        for src in sources:
-            t0 = time.time()
-            src_id = src.source_id.split(':')[0]
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
-                acc.calc_times[src_id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
-    return acc
 
 
 class ReportWriter(object):
@@ -76,7 +48,7 @@ class ReportWriter(object):
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',
         'ruptures_events': 'Specific information for event based',
         'rlzs_assoc': 'Realizations per (TRT, GSIM)',
-        'job_info': 'Informational data',
+        'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
@@ -132,7 +104,8 @@ class ReportWriter(object):
             self.add('dupl_sources')
         if 'task_info' in ds:
             self.add('task_info')
-            if 'classical' in ds['task_info']:
+            tasks = set(ds['task_info'])
+            if 'classical' in tasks or 'count_ruptures' in tasks:
                 self.add('task_classical:0')
                 self.add('task_classical:-1')
             self.add('job_info')
@@ -166,6 +139,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(PSHACalculator, 'core_task', count_ruptures):
+        calc.prefilter = False
         if calc.pre_calculator == 'event_based_risk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
