@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check on the Python version in the `oq` command
   * Reduced the data transfer when sending the site collection
   * Changed the default `filter_distance`
 
