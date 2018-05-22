@@ -36,7 +36,7 @@ from mock import Mock
 
 import openquake.hazardlib
 from openquake.hazardlib import geo
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import valid
 from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -59,7 +59,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
-        f = writetmp(files[filename], suffix='.' + filename)
+        f = gettemp(files[filename], suffix='.' + filename)
         super(_TestableSourceModelLogicTree, self).__init__(f, validate)
 
     def _get_source_model(self, filename):
@@ -1668,7 +1668,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             bottom_right = geo.Point(plane[2, 0], plane[2, 1], plane[2, 2])
             bottom_left = geo.Point(plane[3, 0], plane[3, 1], plane[3, 2])
             surfaces.append(geo.PlanarSurface.from_corner_points(
-                1.0, top_left, top_right, bottom_right, bottom_left))
+                top_left, top_right, bottom_right, bottom_left))
 
         if len(surfaces) > 1:
             return geo.MultiSurface(surfaces)
@@ -1902,7 +1902,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
                                    max_mag=6.5, bin_width=0.1),
                 surface=openquake.hazardlib.geo.PlanarSurface(
-                    mesh_spacing=1.0, strike=0.0, dip=90.0,
+                    strike=0.0, dip=90.0,
                     top_left=points[0], top_right=points[1],
                     bottom_right=points[3], bottom_left=points[2]
                 ),
@@ -1915,9 +1915,9 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
     def test_source_type(self):
         bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
-        for source in (self.simple_fault, self.complex_fault, self.point,
-                       self.characteristic_fault):
-            self.assertEqual(bs.filter_source(source), False)
+        for src in (self.simple_fault, self.complex_fault, self.point,
+                    self.characteristic_fault):
+            self.assertEqual(bs.filter_source(src), False)
         self.assertEqual(bs.filter_source(self.area), True)
 
         bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
@@ -2064,8 +2064,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>""")
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            'only uncertainties of type "gmpeModel" are allowed in gmpe '
-            'logic tree')
+            '<StringIO>: only uncertainties of type "gmpeModel" are allowed '
+            'in gmpe logic tree')
 
     def test_two_branchsets_in_one_level(self):
         xml = _make_nrml("""\
@@ -2094,8 +2094,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        self.parse_invalid(xml, logictree.InvalidLogicTree,
-                           'Branching level bl1 has multiple branchsets')
+        self.parse_invalid(
+            xml, logictree.InvalidLogicTree,
+            '<StringIO>: Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
         xml = _make_nrml("""\
@@ -2131,7 +2132,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree, "Duplicated branchSetID bs1")
+            xml, logictree.InvalidLogicTree,
+            "<StringIO>: Duplicated branchSetID bs1")
 
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
@@ -2184,7 +2186,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         """)
         self.parse_invalid(
             xml, logictree.InvalidLogicTree,
-            "Found duplicated applyToTectonicRegionType="
+            "<StringIO>: Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
     def test_SHARE(self):

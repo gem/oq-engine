@@ -20,9 +20,6 @@
 Module exports :class:`MontalvaEtAl2016SInter`
                :class:`MontalvaEtAl2016SSlab`
 """
-
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable

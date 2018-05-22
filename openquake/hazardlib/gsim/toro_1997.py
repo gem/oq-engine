@@ -20,14 +20,11 @@
 Module exports :class:`ToroEtAl1997MblgNSHMP2008`,
 :class:`ToroEtAl1997MwNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
-)
+    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 

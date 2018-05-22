@@ -26,6 +26,8 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
+aac = numpy.testing.assert_allclose
+
 
 class _BaseMeshTestCase(unittest.TestCase):
     def _make_mesh(self, lons, lats, depths=None):
@@ -213,7 +215,7 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
                           for ti, mi in enumerate(expected_distance_indices)]
-        self.assertEqual(list(dists.flat), expected_dists)
+        aac(dists.flat, expected_dists, atol=1)
         closest_points_mesh = mesh.get_closest_points(target_mesh)
         numpy.testing.assert_equal(closest_points_mesh.lons.flat,
                                    mesh.lons.take(expected_distance_indices))
@@ -385,9 +387,8 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [
             0, Point(0.5, 1).distance(Point(0.5, 0)),
-            Point(0.5, 5).distance(Point(0.5, 0))
-        ]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+            Point(0.5, 5).distance(Point(0.5, 0))]
+        aac(dists, expected_dists, atol=1)
 
     def test_mesh_of_two_points(self):
         lons = numpy.array([[0, 0.5, 1]], float)
@@ -397,7 +398,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [Point(0.5, 1).distance(Point(0.5, 0)), 0]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+        aac(dists, expected_dists, atol=.01)
 
     def test_mesh_of_one_point(self):
         lons = numpy.array([[1.]])
@@ -407,7 +408,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+        aac(dists, expected_dists, atol=0.2)
 
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()
@@ -821,6 +822,22 @@ class RectangularMeshGetProjectionEnclosingPolygonTestCase(unittest.TestCase):
                               [8., 9.]])
         expected_coords = [(-0.1, -0.1), (-0.1, 0.1), (0.1, 0.1), (0.1, -0.1),
                            (-0.1, -0.1)]
+        polygon = self._test(lons, lats, depths, expected_coords)
+
+        coords2d = numpy.array(polygon.exterior.coords)
+        expected_coords2d = [(-11.12, -11.12), (-11.12, 11.12), (11.12, 11.12),
+                             (11.12, -11.12), (-11.12, -11.12)]
+        numpy.testing.assert_almost_equal(coords2d, expected_coords2d,
+                                          decimal=2)
+    def test_idl(self):
+        lons = numpy.array([[179.9, -179.9],
+                            [179.9, -179.9]])
+        lats = numpy.array([[-0.1, -0.1],
+                            [0.1, 0.1]])
+        depths = numpy.array([[2., 3.],
+                              [8., 9.]])
+        expected_coords = [(179.9, -0.1), (179.9, 0.1), (-179.9, 0.1), 
+                           (-179.9, -0.1), (179.9, -0.1)]
         polygon = self._test(lons, lats, depths, expected_coords)
 
         coords2d = numpy.array(polygon.exterior.coords)

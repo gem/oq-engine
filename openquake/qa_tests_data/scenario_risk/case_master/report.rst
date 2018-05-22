@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     1,697,824,437      
-date           2018-03-26T15:57:43
-engine_version 2.10.0-git543cfb0  
+checksum32     3,937,057,297      
+date           2018-05-15T04:14:25
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -48,11 +48,11 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 simple(2)       2/2             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -72,23 +72,23 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.038     0.0       1     
-computing gmfs          0.017     0.0       1     
-reading exposure        0.012     0.0       1     
-saving gmfs             0.008     0.0       1     
-building epsilons       8.004E-04 0.0       1     
-reading site collection 5.007E-05 0.0       1     
+building riskinputs     0.03760   0.0       1     
+computing gmfs          0.01773   0.0       1     
+saving gmfs             0.00972   0.0       1     
+reading site collection 0.00605   0.0       1     
+reading exposure        0.00201   0.0       1     
+building epsilons       9.787E-04 0.0       1     
 ======================= ========= ========= ======

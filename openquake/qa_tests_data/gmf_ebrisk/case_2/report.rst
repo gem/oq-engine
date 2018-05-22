@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     3,482,777,328      
-date           2018-03-26T15:56:34
-engine_version 2.10.0-git543cfb0  
+checksum32     4,081,447,500      
+date           2018-05-15T04:13:50
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 3, num_levels = 10
@@ -44,11 +44,11 @@ structural_vulnerability `vulnerability_2IM.xml <vulnerability_2IM.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -71,19 +71,19 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-RM       1.000 0.0    1   1   2         2         
-RC       1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   3         3         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+RM       1.00000 0.0    1   1   2         2         
+RC       1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   3         3         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.010     0.0       1     
-reading exposure        0.005     0.0       1     
-reading site collection 2.818E-04 0.0       1     
+building riskinputs     0.00876   0.0       1     
+reading site collection 0.00181   0.0       1     
+reading exposure        7.606E-04 0.0       1     
 ======================= ========= ========= ======

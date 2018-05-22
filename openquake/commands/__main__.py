@@ -25,6 +25,10 @@ from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
 
+# check for Python version
+if sys.version < '3.5':
+    sys.exit('Python 3.5+ is required, you are using %s', sys.executable)
+
 # force cluster users to use `oq engine` so that we have centralized logs
 if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
     print('You are on a cluster and you are using oq run?? '

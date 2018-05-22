@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
 import itertools
 import collections
 import logging
@@ -146,14 +145,10 @@ def export_losses_by_event(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt()
-    all_losses = dstore[ekey[0]].value
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    dtlist = [('eid', U64), ('rlzi', U16)] + dstore['oqparam'].loss_dt_list()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(loss_dt)
-        writer.save(data, dest)
+    dest = dstore.build_fname('losses_by_event', '', 'csv')
+    writer.save(dstore['losses_by_event'].value.view(dtlist), dest)
     return writer.getsaved()
 
 
@@ -225,7 +220,7 @@ def export_agg_losses_ebr(ekey, dstore):
         logging.warn('There are no ruptures in the datastore')
         return []
     name, ext = export.keyfunc(ekey)
-    agg_losses = dstore[name]
+    agg_losses = dstore['losses_by_event']
     has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F32),
                   ('centroid_lon', F32),
@@ -363,38 +358,21 @@ def export_dmg_by_asset_npz(ekey, dstore):
     return [fname]
 
 
-@export.add(('dmg_by_tag', 'csv'))
-@depr('This output will be removed soon')
-def export_dmg_by_tag_csv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore)
-    tags = add_quotes(dstore['assetcol'].tagcol)
+@export.add(('dmg_by_event', 'csv'))
+def export_dmg_by_event(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    damage_dt = build_damage_dt(dstore, mean_std=False)
+    all_losses = dstore[ekey[0]].value
+    eids = dstore['events']['eid']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    data = dstore[ekey[0]]
-    writer = writers.CsvWriter(fmt='%.6E')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        dmg_by_tag = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        array = compose_arrays(tags, dmg_by_tag, 'tag')
-        writer.save(array, fname)
-    return writer.getsaved()
-
-
-@export.add(('dmg_total', 'csv'))
-@depr('This output will be removed soon')
-def export_dmg_totalcsv(ekey, dstore):
-    damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    dset = dstore[ekey[0]]
-    writer = writers.CsvWriter(fmt='%.6E')
-    for rlz in rlzs:
-        dmg_total = build_damage_array(dset[rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
-        data = [['loss_type', 'damage_state', 'damage_value']]
-        for loss_type in dmg_total.dtype.names:
-            tot = dmg_total[loss_type]
-            for name in tot.dtype.names:
-                data.append((loss_type, name, tot[name]))
-        writer.save(data, fname)
+        dest = dstore.build_fname('dmg_by_event', rlz, 'csv')
+        data = all_losses[:, rlz.ordinal].copy().view(damage_dt).squeeze()
+        writer.save(compose_arrays(eids, data, 'event_id'), dest)
     return writer.getsaved()
 
 
@@ -479,8 +457,7 @@ def get_paths(rlz):
 @export.add(('bcr-rlzs', 'csv'), ('bcr-stats', 'csv'))
 def export_bcr_map(ekey, dstore):
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol/array'].value
-    arefs = dstore['assetcol/asset_refs'].value
+    assets = get_assets(dstore)
     bcr_data = dstore[ekey[0]]
     N, R = bcr_data.shape
     if ekey[0].endswith('stats'):
@@ -490,16 +467,8 @@ def export_bcr_map(ekey, dstore):
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for t, tag in enumerate(tags):
-        rlz_data = bcr_data[:, t]
         path = dstore.build_fname('bcr', tag, 'csv')
-        data = [['lon', 'lat', 'asset_ref', 'average_annual_loss_original',
-                 'average_annual_loss_retrofitted', 'bcr']]
-        for aref, ass, value in zip(arefs, assetcol, rlz_data):
-            data.append((ass['lon'], ass['lat'], aref,
-                         value['annual_loss_orig'],
-                         value['annual_loss_retro'],
-                         value['bcr']))
-        writer.save(data, path)
+        writer.save(compose_arrays(assets, bcr_data[:, t]), path)
         fnames.append(path)
     return writer.getsaved()
 

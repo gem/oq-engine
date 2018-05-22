@@ -21,9 +21,10 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.classical_damage import (
     case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
-    case_7c, case_8a)
+    case_7c, case_8a, case_master)
 from openquake.calculators.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import (
+    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 
 import numpy
 
@@ -94,8 +95,13 @@ class ClassicalDamageTestCase(CalculatorTestCase):
         self.run_calc(case.__file__, 'job_haz.ini')
         self.run_calc(case.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/damages.csv', fname)
+        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        if len(fnames) == 1:
+            self.assertEqualFiles('expected/damages.csv', fnames[0])
+        else:
+            for fname in fnames:
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1a(self):
@@ -158,3 +164,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7c(self):
         self.check(case_7c)
+
+    @attr('qa', 'risk', 'classical_damage')
+    def test_case_master(self):
+        if NOT_DARWIN:  # skip on macOS
+            self.check(case_master)

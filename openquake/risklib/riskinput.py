@@ -30,6 +30,7 @@ from openquake.risklib import scientific, riskmodels
 class ValidationError(Exception):
     pass
 
+
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
@@ -251,7 +252,17 @@ class CompositeRiskModel(collections.Mapping):
                           for lt in self.loss_types]  # imt for each loss type
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
-                        if isinstance(haz, numpy.ndarray):  # gmf-based calc
+                        if isinstance(haz, numpy.ndarray):
+                            # NB: in GMF-based calculations the order in which
+                            # the gmfs are stored is random since it depends on
+                            # which hazard task ends first; here we reorder
+                            # the gmfs by event ID; this is convenient in
+                            # general and mandatory for the case of
+                            # VulnerabilityFunctionWithPMF, otherwise the
+                            # sample method would receive the means in random
+                            # order and produce random results even if the
+                            # seed is set correctly; very tricky indeed! (MS)
+                            haz.sort(order='eid')
                             eids = haz['eid']
                             data = [(haz['gmv'][:, imti[imt]], eids)
                                     for imt in imt_lt]

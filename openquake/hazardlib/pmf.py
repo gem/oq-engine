@@ -38,18 +38,15 @@ class PMF(object):
         those can be objects of any (mixed or homogeneous) type.
 
     :param epsilon:
-        the tolerance for the sum of the probabilities (default 1E-15)
+        the tolerance for the sum of the probabilities (default 1E-12)
 
     :raises ValueError:
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
-
-    NB: in the engine the sum is checked to be exactly one by using
-    Decimal numbers.
     """
     _slots_ = ['data']
 
-    def __init__(self, data, epsilon=1E-15):
+    def __init__(self, data, epsilon=1E-12):
         probs, values = list(zip(*data))
         if any(prob < 0 for prob in probs):
             raise ValueError('a probability in %s is not positive'
