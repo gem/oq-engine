@@ -23,7 +23,7 @@ import math
 import zipfile
 import logging
 import numpy
-from scipy.stats import truncnorm
+from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
 from openquake.hazardlib import geo, site, imt, correlation
@@ -266,8 +266,11 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
                       for imt in imts for j in range(N)])
     # mu has shape (M * N, E)
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
-    Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
-                      size=(M * N, num_gmfs), random_state=seed)
+    if trunclevel:
+        Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
+                          size=(M * N, num_gmfs), random_state=seed)
+    else:
+        Z = norm.rvs(loc=0, scale=1, size=(M * N, num_gmfs), random_state=seed)
     # Z has shape (M * N, E)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
