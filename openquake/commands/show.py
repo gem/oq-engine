@@ -48,7 +48,8 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     sitecol = dstore['sitecol']
     pmaps = getter.get_pmaps(sitecol.sids)
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']

@@ -752,7 +752,7 @@ class RiskCalculator(HazardCalculator):
                         reduced_eps[ass.ordinal] = eps[ass.ordinal]
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, sids, self.rlzs_assoc)
+                getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
                 getter = GmfDataGetter(dstore, sids, self.R, num_events)
