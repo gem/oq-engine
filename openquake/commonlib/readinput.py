@@ -707,6 +707,8 @@ def get_gmfs(oqparam):
         sitecol, eids, gmf array of shape (R, N, E, M)
     """
     M = len(oqparam.imtls)
+    assert M, ('oqparam.imtls is empty, did you call '
+               'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname).array
