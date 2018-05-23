@@ -54,7 +54,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
                                      stddev_types):
                 pass
 
-        super(_FakeGSIMTestCase, self).setUp()
+        super().setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
         self.cmaker = ContextMaker([self.gsim])

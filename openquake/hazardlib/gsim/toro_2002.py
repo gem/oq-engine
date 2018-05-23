@@ -184,8 +184,8 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
         # given imt
         C_ADJ = self.COEFFS_FS_ROCK[imt]
 
-        mean, stddevs = super(ToroEtAl2002SHARE, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         # apply faulting style and rock adjustment factor for mean and std
         mean = np.log(np.exp(mean) *
