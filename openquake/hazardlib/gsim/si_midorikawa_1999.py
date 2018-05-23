@@ -320,14 +320,12 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = \
-            super(SiMidorikawa1999SInterNorthEastCorrection, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         x_tr = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
         mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup
-        )
+            mean, x_tr, rup.hypo_depth, dists.rrup)
 
         return mean, stddevs
 
@@ -348,9 +346,8 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = \
-            super(SiMidorikawa1999SInterSouthWestCorrection, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
@@ -403,14 +400,12 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = \
-            super(SiMidorikawa1999SSlabNorthEastCorrection, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         x_tr = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
         mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup
-        )
+            mean, x_tr, rup.hypo_depth, dists.rrup)
 
         return mean, stddevs
 
@@ -431,9 +426,8 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = \
-            super(SiMidorikawa1999SSlabSouthWestCorrection, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
