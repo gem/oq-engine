@@ -155,6 +155,7 @@ def extract_hazard(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     yield 'sitecol', sitecol
     yield 'oqparam', oq
     yield 'imtls', oq.imtls
@@ -163,7 +164,7 @@ def extract_hazard(dstore, what):
     nsites = len(sitecol)
     M = len(oq.imtls)
     P = len(oq.poes)
-    for kind, pmap in getters.PmapGetter(dstore).items(what):
+    for kind, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
             key = 'hcurves/%s/%s' % (imt, kind)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
@@ -233,9 +234,10 @@ def extract_hcurves(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol, complete=False)
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         dic[kind] = hcurves.convert_npy(oq.imtls, sitecol.sids)
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
@@ -248,10 +250,11 @@ def extract_hmaps(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol)
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
@@ -265,8 +268,9 @@ def extract_uhs(dstore, what):
     """
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore).items(what):
+    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 

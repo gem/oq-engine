@@ -155,7 +155,8 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]))
+        pgetter = getters.PmapGetter(
+            self.datastore, self.rlzs_assoc, numpy.array([sid]))
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)
@@ -450,7 +451,8 @@ producing too small PoEs.'''
         logging.warn('Disaggregation by source is experimental')
         oq = self.oqparam
         poes_disagg = oq.poes_disagg or (None,)
-        pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
+        pmap_by_grp = getters.PmapGetter(
+            self.datastore, self.rlzs_assoc, self.sitecol.sids).pmap_by_grp
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(poes_disagg)

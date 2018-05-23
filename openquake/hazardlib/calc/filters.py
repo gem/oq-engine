@@ -291,7 +291,7 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources):
+    def pfilter(self, sources, monitor):
         """
         Filter the sources in parallel by using Starmap.apply
 
@@ -299,7 +299,6 @@ class SourceFilter(object):
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
-        monitor = performance.Monitor('prefilter', hdf5path=self.hdf5path)
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor), distribute=self.distribute,
             name=self.__class__.__name__).reduce()
