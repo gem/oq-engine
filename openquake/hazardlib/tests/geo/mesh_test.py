@@ -700,11 +700,10 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
 
 class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
     def setUp(self):
-        super(RectangularMeshGetCellDimensionsTestCase, self).setUp()
+        super().setUp()
         self.original_spherical_to_cartesian = geo_utils.spherical_to_cartesian
         geo_utils.spherical_to_cartesian = lambda lons, lats, depths: (
-            self.points
-        )
+            self.points)
 
     def tearDown(self):
         geo_utils.spherical_to_cartesian = self.original_spherical_to_cartesian
@@ -714,7 +713,7 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
         self.points = numpy.array(points, dtype=float)
         mesh = RectangularMesh(fake_coords, fake_coords, fake_coords)
         cell_center, cell_length, cell_width, cell_area \
-                = mesh.get_cell_dimensions()
+            = mesh.get_cell_dimensions()
         self.assertTrue(numpy.allclose(cell_length, lengths),
                         '%s != %s' % (cell_length, lengths))
         self.assertTrue(numpy.allclose(cell_width, widths),

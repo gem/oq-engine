@@ -38,7 +38,7 @@ class MultiPointSource(ParametricSeismicSource):
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution, mesh):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
-        super(MultiPointSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd,
             rupture_mesh_spacing, magnitude_scaling_relationship,
             rupture_aspect_ratio, temporal_occurrence_model)
