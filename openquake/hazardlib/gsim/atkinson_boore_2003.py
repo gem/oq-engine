@@ -357,8 +357,8 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
