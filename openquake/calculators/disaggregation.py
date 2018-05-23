@@ -155,8 +155,8 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]),
-                                     rlzs_assoc=self.rlzs_assoc)
+        pgetter = getters.PmapGetter(
+            self.datastore, self.rlzs_assoc, numpy.array([sid]))
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)
@@ -452,8 +452,7 @@ producing too small PoEs.'''
         oq = self.oqparam
         poes_disagg = oq.poes_disagg or (None,)
         pmap_by_grp = getters.PmapGetter(
-            self.datastore, self.sitecol.sids,
-            rlzs_assoc=self.rlzs_assoc).pmap_by_grp
+            self.datastore, self.rlzs_assoc, self.sitecol.sids).pmap_by_grp
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(poes_disagg)
