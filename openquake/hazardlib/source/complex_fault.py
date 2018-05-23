@@ -176,7 +176,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                  rupture_aspect_ratio, temporal_occurrence_model,
                  # complex fault specific parameters
                  edges, rake):
-        super(ComplexFaultSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
