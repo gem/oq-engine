@@ -25,7 +25,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import hdf5, node
+from openquake.baselib import performance, hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
 from openquake.hazardlib import (
@@ -735,7 +735,7 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, monitor):
+    def filter(self, src_filter, monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
