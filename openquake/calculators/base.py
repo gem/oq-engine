@@ -324,17 +324,18 @@ class HazardCalculator(BaseCalculator):
         :returns: (filtered CompositeSourceModel, SourceFilter)
         """
         oq = self.oqparam
+        mon = self.monitor('prefilter')
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter)
+            csm = self.csm.filter(src_filter, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.filter(prefilter)
+            csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
-            csm = self.csm.filter(SourceFilter(None, {}))
+            csm = self.csm.filter(SourceFilter(None, {}), mon)
         return csm, src_filter
 
     def can_read_parent(self):
