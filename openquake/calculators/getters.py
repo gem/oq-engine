@@ -21,7 +21,7 @@ import logging
 import numpy
 from openquake.baselib.general import (
     AccumDict, groupby, group_array, get_array, block_splitter)
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
@@ -286,9 +286,15 @@ class GmfGetter(object):
         self.computers = []
         eids = []
         for ebr in self.ebruptures:
-            computer = calc.gmf.GmfComputer(
-                ebr, self.sitecol, self.imtls, self.cmaker,
-                self.truncation_level, self.correlation_model)
+            try:
+                computer = calc.gmf.GmfComputer(
+                    ebr, self.sitecol, self.imtls, self.cmaker,
+                    self.truncation_level, self.correlation_model)
+            except FarAwayRupture:
+                # due to numeric errors ruptures within the maximum_distance
+                # when written can be outside when read; I found a case with
+                # a distance of 99.9996936 km over a maximum distance of 100 km
+                continue
             self.computers.append(computer)
             eids.append(ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
