@@ -221,10 +221,10 @@ class PSHACalculator(base.HazardCalculator):
                     self.datastore['disagg_by_src/source_id'] = numpy.array(
                         sorted(data), grp_source_dt)
 
-        # save a copy of the poes in hdf5temp
-        if not hasattr(self, 'hdf5temp'):  # ucerf
+        # save a copy of the poes in parentpath
+        if not hasattr(self, 'parentpath'):  # ucerf
             return
-        with hdf5.File(self.hdf5temp) as dest:
+        with hdf5.File(self.parentpath) as dest:
             dest['oqparam'] = oq
             dest['csm_info'] = self.csm.info
             self.datastore.hdf5.copy('poes', dest)
