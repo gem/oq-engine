@@ -233,7 +233,7 @@ def extract_hcurves(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['rlzs_assoc'].get_rlzs_assoc()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol, complete=False)
     dic = {}
     for kind, hcurves in getters.PmapGetter(
