@@ -248,8 +248,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc.from_engine = True
         tb = 'None\n'
         try:
-            logs.dbcmd('update_job', job_id, {'pid': _PID})
-            logs.dbcmd('set_status', job_id, 'executing')
+            logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                              'pid': _PID})
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             duration = calc._monitor.duration
             expose_outputs(calc.datastore)
