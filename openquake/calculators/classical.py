@@ -213,20 +213,18 @@ class PSHACalculator(base.HazardCalculator):
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
-            if 'poes' in self.datastore:
-                self.datastore.set_nbytes('poes')
-                if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
-                    # this is useful for disaggregation, which is implemented
-                    # only for the case of a single realization
-                    self.datastore['disagg_by_src/source_id'] = numpy.array(
-                        sorted(data), grp_source_dt)
+        if 'poes' in self.datastore and hasattr(self, 'hdf5cache'):
+            self.datastore.set_nbytes('poes')
+            if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
+                # this is useful for disaggregation, which is implemented
+                # only for the case of a single realization
+                self.datastore['disagg_by_src/source_id'] = numpy.array(
+                    sorted(data), grp_source_dt)
 
-        # save a copy of the poes in hdf5cache
-        if not hasattr(self, 'hdf5cache'):  # ucerf
-            return
-        with hdf5.File(self.hdf5cache) as dest:
-            dest['oqparam'] = oq
-            self.datastore.hdf5.copy('poes', dest)
+            # save a copy of the poes in hdf5cache
+            with hdf5.File(self.hdf5cache) as dest:
+                dest['oqparam'] = oq
+                self.datastore.hdf5.copy('poes', dest)
 
 
 # used in PreClassicalCalculator
