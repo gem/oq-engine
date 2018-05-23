@@ -62,7 +62,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
 
 class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def setUp(self):
-        super(SeismicSourceGetAnnOccRatesTestCase, self).setUp()
+        super().setUp()
         self.source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
                                                occurrence_rates=[5, 0, 7, 0])
 

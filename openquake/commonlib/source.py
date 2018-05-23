@@ -25,7 +25,7 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import hdf5, node, performance
+from openquake.baselib import performance, hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
 from openquake.hazardlib import (
@@ -569,7 +569,9 @@ class CompositionInfo(object):
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
-                if before > after:
+                if sm_lt_path and before > after:
+                    # print the warning only when saving the logic tree,
+                    # i.e. when called with sm_lt_path in store_source_info
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
                 gsim_rlzs = list(gsim_lt)
@@ -733,7 +735,7 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter):
+    def filter(self, src_filter, monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
@@ -742,7 +744,7 @@ class CompositeSourceModel(collections.Sequence):
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(self.get_sources())
+        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []

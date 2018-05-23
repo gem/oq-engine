@@ -116,7 +116,7 @@ class ContextMaker(object):
             if mask.any():
                 sites, distances = sites.filter(mask), distances[mask]
             else:
-                raise FarAwayRupture
+                raise FarAwayRupture(rupture.serial)
         return sites, DistancesContext([(self.filter_distance, distances)])
 
     def add_rup_params(self, rupture):
@@ -332,6 +332,7 @@ class SitesContext(BaseContext):
     # _slots_ is used in hazardlib check_gsim and in the SMTK
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
                'lons', 'lats')
+    # lons, lats are needed in si_midorikawa_1999_test.py
 
     def __init__(self, sitecol=None, slots=None):
         if sitecol is not None:
