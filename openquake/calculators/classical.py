@@ -220,6 +220,10 @@ class PSHACalculator(base.HazardCalculator):
                     # only for the case of a single realization
                     self.datastore['disagg_by_src/source_id'] = numpy.array(
                         sorted(data), grp_source_dt)
+
+        # save a copy of the poes in hdf5temp
+        if not hasattr(self, 'hdf5temp'):  # ucerf
+            return
         with hdf5.File(self.hdf5temp) as dest:
             dest['oqparam'] = oq
             dest['csm_info'] = self.csm.info
@@ -357,9 +361,7 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        parent = self.can_read_parent()
-        if parent is None:
-            parent = self.datastore
+        parent = self.can_read_parent() or self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
             if parent is self.datastore:  # read now, not in the workers
