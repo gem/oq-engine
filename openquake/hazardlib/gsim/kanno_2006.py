@@ -407,7 +407,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        ``log(pre_A) = log(pre) + A``
 #        """
 #        # compute mean and standard deviations as per parent class
-#        parent = super(Kanno2006ShallowNortheastJapan, self)
+#        parent = super()
 #        ln_mean, [ln_stddevs] = parent.get_mean_and_stddevs(
 #            sites, rup, dists, imt, stddev_types)
 #

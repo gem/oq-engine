@@ -248,20 +248,19 @@ class File(h5py.File):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
         else:
-            super(File, self).__setitem__(path, obj)
+            super().__setitem__(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
-            a = super(File, self).__getitem__(path).attrs
+            a = super().__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
 
     def __getitem__(self, path):
-        h5obj = super(File, self).__getitem__(path)
+        h5obj = super().__getitem__(path)
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
-            # NB: the `decode` below is needed for Python 3
-            cls = dotname2cls(decode(h5attrs['__pyclass__']))
+            cls = dotname2cls(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
@@ -277,7 +276,7 @@ class File(h5py.File):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = super(File, self).__getitem__(key)
+        obj = super().__getitem__(key)
         if nbytes is not None:  # size set from outside
             obj.attrs['nbytes'] = nbytes
         else:  # recursively determine the size of the datagroup
@@ -293,8 +292,8 @@ class File(h5py.File):
         :param nodedict:
             a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
         """
-        setitem = super(File, self).__setitem__
-        getitem = super(File, self).__getitem__
+        setitem = super().__setitem__
+        getitem = super().__getitem__
         tag = nodedict['tag']
         text = nodedict.get('text', None)
         if hasattr(text, 'strip'):

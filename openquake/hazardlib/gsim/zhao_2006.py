@@ -430,8 +430,8 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(ZhaoEtAl2006SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
@@ -659,6 +659,5 @@ class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
-        return super(
-            ZhaoEtAl2006AscSGS, self).get_mean_and_stddevs(
-                sites, rup, dists_mod, imt, stddev_types)
+        return super().get_mean_and_stddevs(
+            sites, rup, dists_mod, imt, stddev_types)
