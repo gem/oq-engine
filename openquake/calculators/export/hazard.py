@@ -373,7 +373,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in PmapGetter(dstore).items(kind):
+    for kind, hcurves in PmapGetter(dstore, rlzs_assoc=rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
