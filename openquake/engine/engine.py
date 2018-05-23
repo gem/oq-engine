@@ -163,8 +163,9 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Disable further CTRL-C to allow tasks revocation
-    signal.signal(signal.SIGINT, inhibitSigInt)
+    # Disable further CTRL-C to allow tasks revocation when Celery is used
+    if USE_CELERY:
+        signal.signal(signal.SIGINT, inhibitSigInt)
 
     msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
