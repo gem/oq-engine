@@ -26,7 +26,7 @@ try:
 except ImportError:
     rtree = None
 from scipy.interpolate import interp1d
-from openquake.baselib import hdf5, config, performance
+from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp, groupby
 from openquake.baselib.python3compat import raise_
