@@ -260,7 +260,6 @@ class File(h5py.File):
         h5obj = super().__getitem__(path)
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
-            # NB: the `decode` below is needed for Python 3
             cls = dotname2cls(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if hasattr(h5obj, 'items'):  # is group
