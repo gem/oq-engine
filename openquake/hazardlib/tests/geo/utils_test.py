@@ -43,7 +43,7 @@ class CleanPointTestCase(unittest.TestCase):
 
 class LineIntersectsItselfTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(LineIntersectsItselfTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.line_intersects_itself
 
     def test_too_few_points(self):
@@ -106,7 +106,7 @@ class GetLongitudinalExtentTestCase(unittest.TestCase):
 
 class GetSphericalBoundingBox(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(GetSphericalBoundingBox, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.get_spherical_bounding_box
 
     def test_one_point(self):

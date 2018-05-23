@@ -125,8 +125,8 @@ class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(AbrahamsonEtAl2014NSHMPUpper, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -145,8 +145,8 @@ class AbrahamsonEtAl2014NSHMPLower(AbrahamsonEtAl2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(AbrahamsonEtAl2014NSHMPLower, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -184,12 +184,12 @@ class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(BooreEtAl2014NSHMPUpper, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
-        return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
-            stddevs
+        return mean + nga_west2_epistemic_adjustment(
+            rctx.mag, dctx.rrup), stddevs
 
 
 class BooreEtAl2014NSHMPLower(BooreEtAl2014):
@@ -207,8 +207,8 @@ class BooreEtAl2014NSHMPLower(BooreEtAl2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(BooreEtAl2014NSHMPLower, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -245,8 +245,8 @@ class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(CampbellBozorgnia2014NSHMPUpper, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -265,8 +265,8 @@ class CampbellBozorgnia2014NSHMPLower(CampbellBozorgnia2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(CampbellBozorgnia2014NSHMPLower, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -300,8 +300,8 @@ class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(ChiouYoungs2014NSHMPUpper, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -320,8 +320,8 @@ class ChiouYoungs2014NSHMPLower(ChiouYoungs2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(ChiouYoungs2014NSHMPLower, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -355,8 +355,8 @@ class Idriss2014NSHMPUpper(Idriss2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(Idriss2014NSHMPUpper, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
@@ -375,8 +375,8 @@ class Idriss2014NSHMPLower(Idriss2014):
         for spec of input and result values.
         """
         # Get original mean and standard deviations
-        mean, stddevs = super(Idriss2014NSHMPLower, self).\
-            get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
