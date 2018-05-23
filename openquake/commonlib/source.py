@@ -569,7 +569,9 @@ class CompositionInfo(object):
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts_)
                 after = gsim_lt.get_num_paths()
-                if before > after:
+                if sm_lt_path and before > after:
+                    # print the warning only when saving the logic tree,
+                    # i.e. when called with sm_lt_path in store_source_info
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
                 gsim_rlzs = list(gsim_lt)
