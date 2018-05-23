@@ -6,6 +6,8 @@
   * Changed the default `filter_distance`
 
   [Daniele Viganò]
+  * Fixed a bug where the PID was not saved into the database
+    when using the command line interface
   * Made it impossible to fire  multiple `CTRL-C` in sequence
     to allow processes teardown and tasks revocation
 
