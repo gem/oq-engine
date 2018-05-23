@@ -79,8 +79,8 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 
         sites.vs30 = 700 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(CauzziFaccioli2008SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         C = CauzziFaccioli2008SWISS01.COEFFS
 

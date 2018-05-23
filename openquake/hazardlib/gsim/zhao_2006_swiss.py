@@ -78,8 +78,8 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
         sites.vs30 = 700 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tauC'
         log_phi_ss = 1.00
