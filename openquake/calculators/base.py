@@ -324,17 +324,18 @@ class HazardCalculator(BaseCalculator):
         :returns: (filtered CompositeSourceModel, SourceFilter)
         """
         oq = self.oqparam
-        hdf5path = self.datastore.hdf5path.replace('calc_', 'temp_')
+        mon = self.monitor('prefilter')
+        self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  hdf5path)
+                                  self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter)
+            csm = self.csm.filter(src_filter, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    hdf5path)
-            csm = self.csm.filter(prefilter)
+                                    self.hdf5cache)
+            csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
-            csm = self.csm.filter(SourceFilter(None, {}))
+            csm = self.csm.filter(SourceFilter(None, {}), mon)
         return csm, src_filter
 
     def can_read_parent(self):
@@ -346,8 +347,11 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        if (self.oqparam.hazard_calculation_id and read_access
-                and 'gmf_data' not in self.datastore.hdf5):
+        hdf5cache = getattr(self.precalc, 'hdf5cache', None)
+        if hdf5cache and read_access:
+            return hdf5cache
+        elif (self.oqparam.hazard_calculation_id and read_access and
+              'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
@@ -749,7 +753,7 @@ class RiskCalculator(HazardCalculator):
                         reduced_eps[ass.ordinal] = eps[ass.ordinal]
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, sids, self.rlzs_assoc)
+                getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
                 getter = GmfDataGetter(dstore, sids, self.R, num_events)

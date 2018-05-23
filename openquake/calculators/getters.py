@@ -19,6 +19,7 @@ import collections
 import operator
 import logging
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, groupby, group_array, get_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -41,19 +42,21 @@ class PmapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
 
-    :param dstore: a DataStore instance
+    :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, sids=None, rlzs_assoc=None):
-        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+    def __init__(self, dstore, rlzs_assoc, sids=None):
         self.dstore = dstore
-        self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.sids = sids
+        self.rlzs_assoc = rlzs_assoc
         self.eids = None
         self.nbytes = 0
-        if sids is None:
-            self.sids = dstore['sitecol'].complete.sids
+        self.sids = sids
+
+    @property
+    def weights(self):
+        return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
     def init(self):
         """
@@ -61,7 +64,12 @@ class PmapGetter(object):
         """
         if hasattr(self, 'data'):  # already initialized
             return
-        self.dstore.open()  # if not
+        if isinstance(self.dstore, str):
+            self.dstore = hdf5.File(self.dstore)
+        else:
+            self.dstore.open()  # if not
+        if self.sids is None:
+            self.sids = self.dstore['sitecol'].complete.sids
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         try:
