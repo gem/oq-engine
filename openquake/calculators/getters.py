@@ -19,6 +19,7 @@ import collections
 import operator
 import logging
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, groupby, group_array, get_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -41,7 +42,7 @@ class PmapGetter(object):
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
 
-    :param dstore: a DataStore instance
+    :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
@@ -61,7 +62,10 @@ class PmapGetter(object):
         """
         if hasattr(self, 'data'):  # already initialized
             return
-        self.dstore.open()  # if not
+        if isinstance(self.dstore, str):
+            self.dstore = hdf5.File(self.dstore)
+        else:
+            self.dstore.open()  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].complete.sids
         if self.rlzs_assoc is None:
