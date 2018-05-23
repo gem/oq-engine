@@ -222,9 +222,9 @@ class PSHACalculator(base.HazardCalculator):
                     sorted(data), grp_source_dt)
 
             # save a copy of the poes in hdf5cache
-            with hdf5.File(self.hdf5cache) as dest:
-                dest['oqparam'] = oq
-                self.datastore.hdf5.copy('poes', dest)
+            with hdf5.File(self.hdf5cache) as cache:
+                cache['oqparam'] = oq
+                self.datastore.hdf5.copy('poes', cache)
 
 
 # used in PreClassicalCalculator
