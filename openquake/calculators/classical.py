@@ -220,6 +220,10 @@ class PSHACalculator(base.HazardCalculator):
                     # only for the case of a single realization
                     self.datastore['disagg_by_src/source_id'] = numpy.array(
                         sorted(data), grp_source_dt)
+        with hdf5.File(self.hdf5temp) as dest:
+            dest['oqparam'] = oq
+            dest['csm_info'] = self.csm.info
+            self.datastore.hdf5.copy('poes', dest.require_group('poes'))
 
 
 # used in PreClassicalCalculator
