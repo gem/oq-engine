@@ -226,7 +226,6 @@ class PSHACalculator(base.HazardCalculator):
             return
         with hdf5.File(self.hdf5cache) as dest:
             dest['oqparam'] = oq
-            dest['csm_info'] = self.csm.info
             self.datastore.hdf5.copy('poes', dest)
 
 
