@@ -223,7 +223,7 @@ class PSHACalculator(base.HazardCalculator):
         with hdf5.File(self.hdf5temp) as dest:
             dest['oqparam'] = oq
             dest['csm_info'] = self.csm.info
-            self.datastore.hdf5.copy('poes', dest.require_group('poes'))
+            self.datastore.hdf5.copy('poes', dest)
 
 
 # used in PreClassicalCalculator
