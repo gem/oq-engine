@@ -44,6 +44,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
 if OQ_DISTRIBUTE == 'zmq':
@@ -247,7 +248,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc.from_engine = True
         tb = 'None\n'
         try:
-            logs.dbcmd('set_status', job_id, 'executing')
+            logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                              'pid': _PID})
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             duration = calc._monitor.duration
             expose_outputs(calc.datastore)
