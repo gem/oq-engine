@@ -49,7 +49,8 @@ def plot_hmaps(calc_id):
     """
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
-    mean = getters.PmapGetter(dstore).get_mean()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     M, P = len(oq.imtls), len(oq.poes)
     array = hmaps.array.reshape(len(hmaps.array), M, P)

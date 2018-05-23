@@ -55,7 +55,8 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 
 
 def get_pmaps(dstore, indices):
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
     pmaps = getter.get_pmaps(indices)
     weights = dstore['csm_info'].rlzs['weight']

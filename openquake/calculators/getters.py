@@ -46,15 +46,17 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, sids=None, rlzs_assoc=None):
+    def __init__(self, dstore, rlzs_assoc, sids=None):
         self.dstore = dstore
         self.sids = sids
         self.rlzs_assoc = rlzs_assoc
-        if rlzs_assoc is not None:
-            self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.eids = None
         self.nbytes = 0
         self.sids = sids
+
+    @property
+    def weights(self):
+        return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
     def init(self):
         """
@@ -68,9 +70,6 @@ class PmapGetter(object):
             self.dstore.open()  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].complete.sids
-        if self.rlzs_assoc is None:
-            self.rlzs_assoc = self.dstore['csm_info'].get_rlzs_assoc()
-            self.weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         try:
