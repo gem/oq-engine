@@ -31,8 +31,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-EVENTS = -2
-NBYTES = -1
+EVENTS = -1
 
 BaseRupture.init()  # initialize rupture codes
 
@@ -226,7 +225,7 @@ class GmfDataGetter(collections.Mapping):
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
         self.imtls = self.dstore['oqparam'].imtls
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
 
     def get_hazard(self, gsim=None):
         """
@@ -307,7 +306,7 @@ class GmfGetter(object):
             eids.append(ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 2, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
@@ -316,7 +315,6 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        itemsize = F32(self.gmf_data_dt.itemsize)
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
         gsims = self.rlzs_by_gsim if gsim is None else [gsim]
@@ -354,7 +352,6 @@ class GmfGetter(object):
                             gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                gmdata[NBYTES] += itemsize
                                 yield rlzi, sid, eid, gmv
                     n += e
             sample += len(rlzs)
