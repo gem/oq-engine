@@ -511,6 +511,7 @@ class HazardCalculator(BaseCalculator):
         site collection, possibly extracted from the exposure.
         """
         oq = self.oqparam
+        self.load_riskmodel()  # must be called first
         with self.monitor('reading site collection', autoflush=True):
             if oq.hazard_calculation_id:
                 with datastore.read(oq.hazard_calculation_id) as dstore:
@@ -527,7 +528,6 @@ class HazardCalculator(BaseCalculator):
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
-            self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
