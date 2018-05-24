@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, occupants, case_master, case_shakemap)
+    case_6a, case_7, case_8, case_9, occupants, case_master, case_shakemap)
 
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logictree import InvalidLogicTree
@@ -218,6 +218,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_9(self):
+        # using gmfs.xml
+        self.run_calc(case_9.__file__, 'job.ini')
+        agglosses = extract(self.calc.datastore, 'agglosses/structural')
+        aac(agglosses.array, [7306.7124])
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_shakemap(self):
