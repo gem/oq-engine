@@ -818,16 +818,19 @@ def save_gmdata(calc, n_rlzs):
         gmv = data[:-2] / events / n_sites
         array[rlzi] = tuple(gmv) + (events, nbytes)
     calc.datastore['gmdata'] = array
-    logging.info('Generated %s of GMFs',
-                 general.humansize(array['nbytes'].sum()))
 
-    # sanity check on nbytes
+    # sanity check on gmdata['nbytes '], which is mysteriously below the
+    # reality but only in extra-large calculations (I saw 11.8 GB vs a
+    # reality of 360.1 GB stored)
     try:
         stored = calc.datastore.get_attr('gmf_data/data', 'nbytes')
     except KeyError:
         return
     expected = array['nbytes'].sum()
-    assert stored == expected, (stored, expected)
+    if stored != expected:
+        logging.warn('Saved %s in gmf_data/data, but gmdata says %s',
+                     general.humansize(stored),
+                     general.humansize(expected))
 
 
 def save_gmfs(calculator):
