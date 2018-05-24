@@ -204,6 +204,9 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
     # we need new connections, see https://github.com/gem/oq-engine/pull/3002
     db.close()
 
+    # reset any computation left in the 'executing' state
+    actions.reset_is_running(db)
+
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(db, addr).start()  # expects to be killed with CTRL-C
