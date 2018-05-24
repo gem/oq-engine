@@ -215,7 +215,7 @@ _wait_ssh () {
 
 add_custom_pkg_repo () {
     # install package to manage repository properly
-    ssh "$lxc_ip" "sudo apt-get install -y python-software-properties software-properties-common"
+    ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
 
     # add custom packages
     if ! ssh "$lxc_ip" ls repo/custom_pkgs >/dev/null ; then
@@ -452,8 +452,6 @@ _builddoc_innervm_run () {
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
 
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
-    # install package to manage repository properly
-    # ssh "$lxc_ip" sudo apt-get install -y python-software-properties
 
     ssh "$lxc_ip" mkdir -p "repo"
 
@@ -500,7 +498,7 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     # install package to manage repository properly
-    ssh "$lxc_ip" "sudo apt-get install -y python-software-properties"
+    ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
