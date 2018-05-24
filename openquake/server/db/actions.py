@@ -690,7 +690,7 @@ SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
     for r in rows:
         # if r.pid is 0 it means that such information
         # is not available in the database
-        if psutil.pid_exists(r.pid) and r.pid != 0:
+        if r.pid and psutil.pid_exists(r.pid):
             running.append(r)
     return running
 
