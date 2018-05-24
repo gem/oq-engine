@@ -511,6 +511,7 @@ class HazardCalculator(BaseCalculator):
         site collection, possibly extracted from the exposure.
         """
         oq = self.oqparam
+        self.load_riskmodel()  # must be called *after* read_exposure
         with self.monitor('reading site collection', autoflush=True):
             if oq.hazard_calculation_id:
                 with datastore.read(oq.hazard_calculation_id) as dstore:
@@ -527,9 +528,8 @@ class HazardCalculator(BaseCalculator):
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
-            self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
-        elif 'assetcol' in self.datastore.parent:
+        if 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
                 region = wkt.loads(self.oqparam.region)
@@ -831,11 +831,12 @@ def save_gmfs(calculator):
     oq = calculator.oqparam
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
+        # TODO: check if import_gmfs can be removed
         eids, num_rlzs, calculator.gmdata = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
         save_gmdata(calculator, calculator.R)
     else:  # XML
-        eids, gmfs = readinput.get_gmfs(oq)
+        eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
