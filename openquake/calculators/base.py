@@ -529,7 +529,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-        if 'assetcol' in self.datastore.parent:
+        elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
                 region = wkt.loads(self.oqparam.region)
