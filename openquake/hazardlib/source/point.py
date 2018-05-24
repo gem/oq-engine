@@ -114,7 +114,7 @@ class PointSource(ParametricSeismicSource):
                  # point-specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  location, nodal_plane_distribution, hypocenter_distribution):
-        super(PointSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)

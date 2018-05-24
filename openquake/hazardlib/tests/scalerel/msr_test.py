@@ -52,7 +52,7 @@ class BaseMSRTestCase(unittest.TestCase):
     MSR_CLASS = None
 
     def setUp(self):
-        super(BaseMSRTestCase, self).setUp()
+        super().setUp()
         self.msr = self.MSR_CLASS()
 
     def _test_get_median_area(self, mag, rake, expected_value, places=7):

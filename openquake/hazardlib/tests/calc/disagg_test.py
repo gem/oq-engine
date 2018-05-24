@@ -83,7 +83,7 @@ class DisaggregateTestCase(unittest.TestCase):
 
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
-        super(PMFExtractorsTestCase, self).setUp()
+        super().setUp()
         self.aae = numpy.testing.assert_almost_equal
 
         # test matrix is not normalized, but that's fine for test
