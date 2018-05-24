@@ -324,17 +324,18 @@ class HazardCalculator(BaseCalculator):
         :returns: (filtered CompositeSourceModel, SourceFilter)
         """
         oq = self.oqparam
-        hdf5path = self.datastore.hdf5path.replace('calc_', 'temp_')
+        mon = self.monitor('prefilter')
+        self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  hdf5path)
+                                  self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter)
+            csm = self.csm.filter(src_filter, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    hdf5path)
-            csm = self.csm.filter(prefilter)
+                                    self.hdf5cache)
+            csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
-            csm = self.csm.filter(SourceFilter(None, {}))
+            csm = self.csm.filter(SourceFilter(None, {}), mon)
         return csm, src_filter
 
     def can_read_parent(self):
@@ -346,8 +347,11 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        if (self.oqparam.hazard_calculation_id and read_access
-                and 'gmf_data' not in self.datastore.hdf5):
+        hdf5cache = getattr(self.precalc, 'hdf5cache', None)
+        if hdf5cache and read_access:
+            return hdf5cache
+        elif (self.oqparam.hazard_calculation_id and read_access and
+              'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
@@ -507,6 +511,7 @@ class HazardCalculator(BaseCalculator):
         site collection, possibly extracted from the exposure.
         """
         oq = self.oqparam
+        self.load_riskmodel()  # must be called first
         with self.monitor('reading site collection', autoflush=True):
             if oq.hazard_calculation_id:
                 with datastore.read(oq.hazard_calculation_id) as dstore:
@@ -523,7 +528,6 @@ class HazardCalculator(BaseCalculator):
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
             self.read_exposure(haz_sitecol)
-            self.load_riskmodel()  # must be called *after* read_exposure
             self.datastore['assetcol'] = self.assetcol
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
@@ -749,7 +753,7 @@ class RiskCalculator(HazardCalculator):
                         reduced_eps[ass.ordinal] = eps[ass.ordinal]
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, sids, self.rlzs_assoc)
+                getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
                 getter = GmfDataGetter(dstore, sids, self.R, num_events)
@@ -804,18 +808,14 @@ def save_gmdata(calc, n_rlzs):
     :param n_rlzs: the total number of realizations
     """
     n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
-              [('events', U32), ('nbytes', U32)])
+    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] + [('events', U32)])
     array = numpy.zeros(n_rlzs, dtlist)
     for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
-        events = data[-2]
-        nbytes = data[-1]
-        gmv = data[:-2] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events, nbytes)
+        data = calc.gmdata[rlzi]  # (imts, events)
+        events = data[-1]
+        gmv = data[:-1] / events / n_sites
+        array[rlzi] = tuple(gmv) + (events,)
     calc.datastore['gmdata'] = array
-    logging.info('Generated %s of GMFs',
-                 general.humansize(array['nbytes'].sum()))
 
 
 def save_gmfs(calculator):
@@ -827,11 +827,12 @@ def save_gmfs(calculator):
     oq = calculator.oqparam
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
+        # TODO: check if import_gmfs can be removed
         eids, num_rlzs, calculator.gmdata = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
         save_gmdata(calculator, calculator.R)
     else:  # XML
-        eids, gmfs = readinput.get_gmfs(oq)
+        eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
     calculator.eids = eids
     if hasattr(oq, 'number_of_ground_motion_fields'):
@@ -910,11 +911,10 @@ def import_gmfs(dstore, fname, sids):
 
     # compute gmdata
     dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
-    gmdata = {r: numpy.zeros(n_imts + 2, F32) for r in range(num_rlzs)}
+    gmdata = {r: numpy.zeros(n_imts + 1, F32) for r in range(num_rlzs)}
     for r in dic:
         gmv = dic[r]['gmv']
-        rec = gmdata[r]  # (imt1, ..., imtM, nevents, nbytes)
-        rec[:-2] += gmv.sum(axis=0)
-        rec[-2] += len(gmv)
-        rec[-1] += gmv.nbytes
+        rec = gmdata[r]  # (imt1, ..., imtM, nevents)
+        rec[:-1] += gmv.sum(axis=0)
+        rec[-1] += len(gmv)
     return eids, num_rlzs, gmdata
