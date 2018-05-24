@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a regression when reading GMFs from an XML in absence of a sites.csv
+    file
+
   [Robin Gee]
   * Extend `oq to_shapefile` method to also work with `YoungsCoppersmithMFD`
     and `arbitraryMFD` MFD typologies.
