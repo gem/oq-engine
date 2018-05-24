@@ -821,6 +821,12 @@ def save_gmdata(calc, n_rlzs):
     logging.info('Generated %s of GMFs',
                  general.humansize(array['nbytes'].sum()))
 
+    if 'gmf_data' in calc.datastore:
+        # sanity check on nbytes
+        stored = calc.datastore.get_attr('gmf_data/data', 'nbytes')
+        expected = array['nbytes'].sum()
+        assert stored == expected, (stored, expected)
+
 
 def save_gmfs(calculator):
     """
