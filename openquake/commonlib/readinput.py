@@ -213,6 +213,9 @@ pmap = None  # set as side effect when the user reads hazard_curves from a file
 exposure = None  # set as side effect when the user reads the site mesh
 # this hack is necessary, otherwise we would have to parse the exposure twice
 
+gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
+# this hack is necessary, otherwise we would have to parse the file twice
+
 
 def get_mesh(oqparam):
     """
@@ -222,7 +225,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure
+    global pmap, exposure, gmfs, eids
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
@@ -258,6 +261,9 @@ def get_mesh(oqparam):
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
+    elif 'gmfs' in oqparam.inputs:
+        eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
+        return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region and oqparam.region_grid_spacing:
         poly = geo.Polygon.from_wkt(oqparam.region)
         try:
@@ -699,13 +705,7 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
-def get_gmfs(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        sitecol, eids, gmf array of shape (R, N, E, M)
-    """
+def _get_gmfs(oqparam):
     M = len(oqparam.imtls)
     assert M, ('oqparam.imtls is empty, did you call '
                'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
@@ -841,7 +841,7 @@ def get_scenario_from_nrml(oqparam, fname):
     :param fname:
         the NRML files containing the GMFs
     :returns:
-        a triple (sitecol, eids, gmf array)
+        a pair (eids, gmf array)
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
