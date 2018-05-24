@@ -31,7 +31,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-EVENTS = -1
 
 BaseRupture.init()  # initialize rupture codes
 
@@ -342,7 +341,7 @@ class GmfGetter(object):
                 for r, rlzi in enumerate(rlzs):
                     e = len(all_eids[r])
                     gmdata = self.gmdata[rlzi]
-                    gmdata[EVENTS] += e
+                    gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(all_eids[r]):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
