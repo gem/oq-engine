@@ -40,9 +40,6 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-EVENTS = -2
-NBYTES = -1
-
 # ############## utilities for the classical calculator ############### #
 
 
