@@ -371,6 +371,10 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
                     for f in os.listdir(self.OUTDIR)]
         from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
 
+    def tearDown(self):
+        # comment out the line below if you need to debug the test
+        shutil.rmtree(self.OUTDIR)
+
 
 class DbTestCase(unittest.TestCase):
     def test_db(self):
