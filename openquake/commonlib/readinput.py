@@ -830,7 +830,11 @@ def _extract_eids_sitecounts(gmfset):
         eids.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(eids), numpy.uint64), counter
+    eids = numpy.array(sorted(eids), numpy.uint64)
+    if (eids != numpy.arange(len(eids), dtype=numpy.uint64)).any():
+        raise ValueError('There are ruptureIds in the gmfs_file not in the '
+                         'range [0, %d)' % len(eids))
+    return eids, counter
 
 
 @deprecated('Use the .csv format for the GMFs instead')
