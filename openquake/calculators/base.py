@@ -511,7 +511,7 @@ class HazardCalculator(BaseCalculator):
         site collection, possibly extracted from the exposure.
         """
         oq = self.oqparam
-        self.load_riskmodel()  # must be called *after* read_exposure
+        self.load_riskmodel()  # must be called first
         with self.monitor('reading site collection', autoflush=True):
             if oq.hazard_calculation_id:
                 with datastore.read(oq.hazard_calculation_id) as dstore:
