@@ -808,28 +808,14 @@ def save_gmdata(calc, n_rlzs):
     :param n_rlzs: the total number of realizations
     """
     n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
-              [('events', U32), ('nbytes', F32)])
+    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] + [('events', U32)])
     array = numpy.zeros(n_rlzs, dtlist)
     for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
-        events = data[-2]
-        nbytes = data[-1]
-        gmv = data[:-2] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events, nbytes)
+        data = calc.gmdata[rlzi]  # (imts, events)
+        events = data[-1]
+        gmv = data[:-1] / events / n_sites
+        array[rlzi] = tuple(gmv) + (events,)
     calc.datastore['gmdata'] = array
-
-    # sanity check on gmdata['nbytes '], which is mysteriously below the
-    # reality but only in extra-large calculations (I saw 11.8 GB vs a
-    # reality of 360.1 GB stored)
-    try:
-        stored = calc.datastore.get_attr('gmf_data/data', 'nbytes')
-    except KeyError:
-        return
-    expected = array['nbytes'].sum()
-    if stored != expected:
-        logging.warn('Saved %s in gmf_data/data, but gmdata says %s',
-                     stored, expected)
 
 
 def save_gmfs(calculator):
@@ -924,11 +910,10 @@ def import_gmfs(dstore, fname, sids):
 
     # compute gmdata
     dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
-    gmdata = {r: numpy.zeros(n_imts + 2, F32) for r in range(num_rlzs)}
+    gmdata = {r: numpy.zeros(n_imts + 1, F32) for r in range(num_rlzs)}
     for r in dic:
         gmv = dic[r]['gmv']
-        rec = gmdata[r]  # (imt1, ..., imtM, nevents, nbytes)
-        rec[:-2] += gmv.sum(axis=0)
-        rec[-2] += len(gmv)
-        rec[-1] += gmv.nbytes
+        rec = gmdata[r]  # (imt1, ..., imtM, nevents)
+        rec[:-1] += gmv.sum(axis=0)
+        rec[-1] += len(gmv)
     return eids, num_rlzs, gmdata
