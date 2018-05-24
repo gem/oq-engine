@@ -1,3 +1,7 @@
+  [Robin Gee]
+  * Extend `oq to_shapefile` method to also work with `YoungsCoppersmithMFD`
+    and `arbitraryMFD` MFD typologies.
+
   [Michele Simionato]
   * Now the hazard statistics can be computed efficiently even in a single
     calculation, i.e. without the `--hc` option
