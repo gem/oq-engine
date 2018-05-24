@@ -164,7 +164,7 @@ def raiseMasterKilled(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if USE_CELERY:
+    if OQ_DISTRIBUTE.startswith('celery'):
         signal.signal(signal.SIGINT, inhibitSigInt)
 
     msg = 'Received a signal %d' % signum
