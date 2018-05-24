@@ -44,7 +44,7 @@ class BooreAtkinson2011(BooreAtkinson2008):
         """
 
         # get mean and std using the superclass
-        mean, stddevs = super(BooreAtkinson2011, self).get_mean_and_stddevs(
+        mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
         # correction factor (see Atkinson and Boore, 2011; equation 5 at
@@ -72,7 +72,7 @@ class Atkinson2008prime(BooreAtkinson2011):
         """
 
         # get mean and std using the superclass
-        mean, stddevs = super(Atkinson2008prime, self).get_mean_and_stddevs(
+        mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         
         A08 = self.A08_COEFFS[imt]

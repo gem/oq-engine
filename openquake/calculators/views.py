@@ -683,7 +683,8 @@ def view_flat_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    mean = getters.PmapGetter(dstore).get_mean()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -701,9 +702,10 @@ def view_flat_hmaps(token, dstore):
     """
     oq = dstore['oqparam']
     assert oq.poes
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     nsites = len(dstore['sitecol'])
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    mean = getters.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     array = calc.convert_to_array(hmaps, nsites, pdic)
     res = numpy.zeros(1, array.dtype)
@@ -793,7 +795,8 @@ def view_pmap(token, dstore):
     """
     name = token.split(':')[1]  # called as pmap:name
     pmap = {}
-    pgetter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    pgetter = getters.PmapGetter(dstore, rlzs_assoc)
     for grp, dset in dstore['poes'].items():
         if dset.attrs['name'] == name:
             pmap = pgetter.get_mean(grp)

@@ -194,7 +194,7 @@ class OqParam(valid.ParamSet):
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
-        if self.hazard_precomputed():
+        if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'warn')
             self.check_missing('gsim_logic_tree', 'warn')
             self.check_missing('source_model_logic_tree', 'warn')
@@ -255,12 +255,12 @@ class OqParam(valid.ParamSet):
                     'for classical_damage calculations' % job_ini)
 
         # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk'
-                and self.asset_correlation not in (0, 1)):
+        if (self.calculation_mode == 'event_based_risk' and
+                self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
-        elif (self.calculation_mode == 'event_based_risk'
-              and self.conditional_loss_poes and not self.asset_loss_table):
+        elif (self.calculation_mode == 'event_based_risk' and
+              self.conditional_loss_poes and not self.asset_loss_table):
             raise InvalidFile(
                 '%s: asset_loss_table is not set, probably you want to remove'
                 ' conditional_loss_poes' % job_ini)
@@ -269,6 +269,10 @@ class OqParam(valid.ParamSet):
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
             raise InvalidFile('%s: You forgot sites|sites_csv' % job_ini)
+        elif (self.inputs.get('gmfs', '').endswith('.xml') and
+                'sites' in self.inputs):
+            raise InvalidFile('%s: You cannot have both sites_csv and '
+                              'gmfs_file' % job_ini)
 
         # checks for ucerf
         if 'ucerf' in self.calculation_mode:

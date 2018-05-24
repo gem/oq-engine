@@ -59,7 +59,8 @@ def plot_uhs(calc_id, sites='0'):
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
     oq = dstore['oqparam']
     indices = list(map(int, sites.split(',')))

@@ -44,6 +44,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
 if OQ_DISTRIBUTE == 'zmq':
@@ -162,8 +163,9 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    # Disable further CTRL-C to allow tasks revocation
-    signal.signal(signal.SIGINT, inhibitSigInt)
+    # Disable further CTRL-C to allow tasks revocation when Celery is used
+    if OQ_DISTRIBUTE.startswith('celery'):
+        signal.signal(signal.SIGINT, inhibitSigInt)
 
     msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
@@ -247,7 +249,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc.from_engine = True
         tb = 'None\n'
         try:
-            logs.dbcmd('set_status', job_id, 'executing')
+            logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                              'pid': _PID})
             _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             duration = calc._monitor.duration
             expose_outputs(calc.datastore)
