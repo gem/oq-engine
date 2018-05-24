@@ -809,7 +809,7 @@ def save_gmdata(calc, n_rlzs):
     """
     n_sites = len(calc.sitecol)
     dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
-              [('events', U32), ('nbytes', U32)])
+              [('events', U32), ('nbytes', F32)])
     array = numpy.zeros(n_rlzs, dtlist)
     for rlzi in sorted(calc.gmdata):
         data = calc.gmdata[rlzi]  # (imts, events, nbytes)
@@ -829,8 +829,7 @@ def save_gmdata(calc, n_rlzs):
     expected = array['nbytes'].sum()
     if stored != expected:
         logging.warn('Saved %s in gmf_data/data, but gmdata says %s',
-                     general.humansize(stored),
-                     general.humansize(expected))
+                     stored, expected)
 
 
 def save_gmfs(calculator):

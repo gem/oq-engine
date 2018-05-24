@@ -316,7 +316,7 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        itemsize = self.gmf_data_dt.itemsize
+        itemsize = F32(self.gmf_data_dt.itemsize)
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
         gsims = self.rlzs_by_gsim if gsim is None else [gsim]
