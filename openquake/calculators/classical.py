@@ -210,9 +210,6 @@ class PSHACalculator(base.HazardCalculator):
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=grp_trt[grp_id])
-                    if hasattr(self, 'hdf5cache'):
-                        with hdf5.File(self.hdf5cache) as cache:
-                            cache[key] = pmap
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
@@ -223,9 +220,12 @@ class PSHACalculator(base.HazardCalculator):
                 # only for the case of a single realization
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
                     sorted(data), grp_source_dt)
+
+        # save a copy of the poes in hdf5cache
         if hasattr(self, 'hdf5cache'):
             with hdf5.File(self.hdf5cache) as cache:
                 cache['oqparam'] = oq
+                self.datastore.hdf5.copy('poes', cache)
 
 
 # used in PreClassicalCalculator
