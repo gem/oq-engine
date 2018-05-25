@@ -339,7 +339,7 @@ _pkgbuild_innervm_run () {
     ssh "$lxc_ip" sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
-    ssh "$lxc_ip" cd build-deb \&\& export PATH=/opt/openquake/bin:$PATH \; export PYBUILD_INTERPRETERS=python3 \; export PYBUILD_VERSIONS=3.5.4 \; dpkg-buildpackage $DPBP_FLAG
+    ssh "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
     scp "$lxc_ip:"*.{tar.gz,changes,dsc} ../
     if echo "$DPBP_FLAG" | grep -q -v -- '-S'; then
         scp "$lxc_ip:"*.deb ../
@@ -1338,9 +1338,6 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
         exit $inner_ret
     fi
 else
-    export PATH=/opt/openquake/bin:$PATH
-    export PYBUILD_INTERPRETERS=python3
-    export PYBUILD_VERSIONS=3.5.4
     dpkg-buildpackage $DPBP_FLAG
 fi
 cd -
