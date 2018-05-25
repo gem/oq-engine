@@ -122,7 +122,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
-        self._monitor = Monitor('total runtime', measuremem=True)
+        self._monitor = Monitor(
+            '%s.run' % self.__class__.__name__, measuremem=True)
         self._monitor.hdf5path = self.datastore.hdf5path
         self.oqparam = oqparam
 

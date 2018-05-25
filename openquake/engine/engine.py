@@ -251,7 +251,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})
-            _do_run_calc(calc, exports, hazard_calculation_id, **kw)
+            calc.run(exports=exports,
+                     hazard_calculation_id=hazard_calculation_id,
+                     close=False, **kw)  # don't close the datastore too soon
             duration = calc._monitor.duration
             expose_outputs(calc.datastore)
             calc._monitor.flush()
@@ -281,12 +283,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
     return calc
-
-
-def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
-    with calc._monitor:
-        calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)  # don't close the datastore too soon
 
 
 def version_triple(tag):
@@ -323,7 +319,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
-    except:  # page not available or wrong version tag
+    except Exception:  # page not available or wrong version tag
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '
