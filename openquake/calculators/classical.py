@@ -221,11 +221,11 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
                     sorted(data), grp_source_dt)
 
-        # save a copy of the poes in hdf5cache
-        if hasattr(self, 'hdf5cache'):
-            with hdf5.File(self.hdf5cache) as cache:
-                cache['oqparam'] = oq
-                self.datastore.hdf5.copy('poes', cache)
+            # save a copy of the poes in hdf5cache
+            if hasattr(self, 'hdf5cache'):
+                with hdf5.File(self.hdf5cache) as cache:
+                    cache['oqparam'] = oq
+                    self.datastore.hdf5.copy('poes', cache)
 
 
 # used in PreClassicalCalculator
