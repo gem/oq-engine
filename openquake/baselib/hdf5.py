@@ -272,14 +272,6 @@ class File(h5py.File):
         else:
             return h5obj
 
-    def set_attrs(self, key, **kw):
-        """
-        Set the HDF5 attributes of the given key
-        """
-        attrs = super().__getitem__(key).attrs
-        for k, v in kw.items():
-            attrs[k] = v
-
     def set_nbytes(self, key, nbytes=None):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
