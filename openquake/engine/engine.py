@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import json
+import time
 import signal
 import traceback
 import platform
@@ -251,10 +252,11 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})
+            to = time.time()
             calc.run(exports=exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
-            duration = calc._monitor.duration
+            duration = time.time() - t0
             expose_outputs(calc.datastore)
             calc._monitor.flush()
             records = views.performance_view(calc.datastore)
