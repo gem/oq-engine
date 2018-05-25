@@ -252,7 +252,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})
-            to = time.time()
+            t0 = time.time()
             calc.run(exports=exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
