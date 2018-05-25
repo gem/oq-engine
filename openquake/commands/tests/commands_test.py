@@ -221,8 +221,10 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('poes', self.calc_id)
-        self.assertEqual('nbytes 48', str(p))
+            show_attrs('sitecol', self.calc_id)
+        self.assertEqual(
+            '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 54',
+            str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()

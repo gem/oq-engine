@@ -334,13 +334,15 @@ class ProbabilityMap(dict):
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
             array[i] = self[sid].array
-        return array, dict(sids=sids)
+        return dict(array=array, sids=sids), {}
 
-    def __fromh5__(self, array, attrs):
+    def __fromh5__(self, dic, attrs):
         # rebuild the map from sids and probs arrays
+        array = dic['array']
+        sids = dic['sids']
         self.shape_y = array.shape[1]
         self.shape_z = array.shape[2]
-        for sid, prob in zip(attrs['sids'], array):
+        for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
 
 
