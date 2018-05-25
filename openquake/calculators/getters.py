@@ -93,8 +93,10 @@ class PmapGetter(object):
         if 'poes' in self.dstore:
             # build probability maps restricted to the given sids
             for grp, dset in self.dstore['poes'].items():
-                sid2idx = {sid: i for i, sid in enumerate(dset.attrs['sids'])}
-                L, I = dset.shape[1:]
+                arr = dset['array'].value
+                sids = dset['sids'].value
+                sid2idx = {sid: i for i, sid in enumerate(sids)}
+                L, I = arr.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, I)
                 for sid in self.sids:
                     try:
@@ -102,7 +104,7 @@ class PmapGetter(object):
                     except KeyError:
                         continue
                     else:
-                        pmap[sid] = probability_map.ProbabilityCurve(dset[idx])
+                        pmap[sid] = probability_map.ProbabilityCurve(arr[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
         return self._pmap_by_grp
