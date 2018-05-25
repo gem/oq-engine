@@ -548,9 +548,7 @@ class HazardCalculator(BaseCalculator):
                              len(self.assetcol), len(assetcol))
             else:
                 self.assetcol = assetcol
-            self.load_riskmodel()
         else:  # no exposure
-            self.load_riskmodel()
             self.sitecol = haz_sitecol
 
         if oq_hazard:

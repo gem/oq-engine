@@ -213,7 +213,7 @@ class PSHACalculator(base.HazardCalculator):
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
-        if 'poes' in self.datastore and hasattr(self, 'hdf5cache'):
+        if 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
             if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
                 # this is useful for disaggregation, which is implemented
@@ -222,9 +222,10 @@ class PSHACalculator(base.HazardCalculator):
                     sorted(data), grp_source_dt)
 
             # save a copy of the poes in hdf5cache
-            with hdf5.File(self.hdf5cache) as cache:
-                cache['oqparam'] = oq
-                self.datastore.hdf5.copy('poes', cache)
+            if hasattr(self, 'hdf5cache'):
+                with hdf5.File(self.hdf5cache) as cache:
+                    cache['oqparam'] = oq
+                    self.datastore.hdf5.copy('poes', cache)
 
 
 # used in PreClassicalCalculator
@@ -331,15 +332,17 @@ class ClassicalCalculator(PSHACalculator):
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        attrs = dict(
-            __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
-            sids=numpy.arange(N, dtype=numpy.uint32))
+        pyclass = 'openquake.hazardlib.probability_map.ProbabilityMap'
+        all_sids = self.sitecol.complete.sids
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
         if num_rlzs > 1:
             for name, stat in oq.hazard_stats():
                 self.datastore.create_dset(
-                    'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
+                    'hcurves/%s/array' % name, F32, (N, L, 1))
+                self.datastore['hcurves/%s/sids' % name] = all_sids
+                self.datastore.set_attrs(
+                    'hcurves/%s' % name, __pyclass__=pyclass)
                 totbytes += nbytes
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
@@ -378,7 +381,7 @@ class ClassicalCalculator(PSHACalculator):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
                 if pmap:
-                    key = 'hcurves/' + kind
+                    key = 'hcurves/%s/array' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
                         dset[sid] = pmap[sid].array
