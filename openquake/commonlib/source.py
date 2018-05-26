@@ -27,7 +27,8 @@ import numpy
 
 from openquake.baselib import performance, hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, gettemp, AccumDict
+from openquake.baselib.general import (
+    groupby, group_array, gettemp, AccumDict, random_filter)
 from openquake.hazardlib import (
     nrml, source, sourceconverter, InvalidFile, probability_map, stats)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -677,10 +678,11 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
-    def split_all(self):
+    def split_all(self, sample_factor=None):
         """
         Split all sources in the composite source model.
 
+        :param samples_factor: if given, sample the sources
         :returns: a dictionary source_id -> split_time
         """
         ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
@@ -697,6 +699,8 @@ class CompositeSourceModel(collections.Sequence):
                     for src in src_group:
                         s = src.source_id
                         self.infos[s].split_time = stime[s]
+                    if sample_factor:
+                        srcs = random_filter(srcs, 1 / float(sample_factor))
                     src_group.sources = srcs
                     split_time += stime
         return split_time
