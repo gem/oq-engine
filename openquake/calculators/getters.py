@@ -67,7 +67,7 @@ class PmapGetter(object):
         else:
             self.dstore.open()  # if not
         if self.sids is None:
-            self.sids = self.dstore['sitecol'].complete.sids
+            self.sids = self.dstore['sitecol'].sids
         self.imtls = self.dstore['oqparam'].imtls
         self.data = collections.OrderedDict()
         try:
@@ -92,19 +92,14 @@ class PmapGetter(object):
         self._pmap_by_grp = {}
         if 'poes' in self.dstore:
             # build probability maps restricted to the given sids
+            ok_sids = set(self.sids)
             for grp, dset in self.dstore['poes'].items():
-                arr = dset['array'].value
-                sids = dset['sids'].value
-                sid2idx = {sid: i for i, sid in enumerate(sids)}
-                L, I = arr.shape[1:]
+                ds = dset['array']
+                L, I = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, I)
-                for sid in self.sids:
-                    try:
-                        idx = sid2idx[sid]
-                    except KeyError:
-                        continue
-                    else:
-                        pmap[sid] = probability_map.ProbabilityCurve(arr[idx])
+                for idx, sid in enumerate(dset['sids'].value):
+                    if sid in ok_sids:
+                        pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
         return self._pmap_by_grp
