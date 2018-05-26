@@ -921,6 +921,21 @@ def deprecated(message):
     return decorator(_deprecated)
 
 
+def random_filter(objects, reduction_factor, seed=42):
+    """
+    Given a list of objects, returns a sublist by extracting randomly
+    some elements. The reduction factor (< 1) tells how small is the extracted
+    list compared to the original list.
+    """
+    assert 0 < reduction_factor <= 1, reduction_factor
+    rnd = random.Random(seed)
+    out = []
+    for obj in objects:
+        if rnd.random() <= reduction_factor:
+            out.append(obj)
+    return out
+
+
 def safeprint(*args, **kwargs):
     """
     Convert and print characters using the proper encoding
