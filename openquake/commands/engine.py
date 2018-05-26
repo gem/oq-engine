@@ -62,8 +62,8 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
     job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = eng.job_from_file(
         job_ini, getpass.getuser(), hazard_calculation_id)
-    calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id, **kw)
+    eng.run_calc(job_id, oqparam, log_level, log_file, exports,
+                 hazard_calculation_id=hazard_calculation_id, **kw)
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
     return job_id

@@ -19,14 +19,17 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+import io
 import os
 import re
 import sys
 import json
 import time
 import signal
+import logging
 import traceback
 import platform
+import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -36,6 +39,7 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
+from openquake.hazardlib import nrml
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, views, export
@@ -199,6 +203,61 @@ except ValueError:
     pass
 
 
+def zip(job_ini, archive_zip):
+    """
+    Zip the given job.ini file into the given archive, together with all
+    related files.
+    """
+    if not os.path.exists(job_ini):
+        sys.exit('%s does not exist' % job_ini)
+    if isinstance(archive_zip, str):  # actually it should be path-like
+        if not archive_zip.endswith('.zip'):
+            sys.exit('%s does not end with .zip' % archive_zip)
+        if os.path.exists(archive_zip):
+            sys.exit('%s exists already' % archive_zip)
+    logging.basicConfig(level=logging.INFO)
+    # do not validate to avoid permissions error on the export_dir
+    oq = readinput.get_oqparam(job_ini, validate=False)
+    files = set()
+
+    # collect .hdf5 tables for the GSIMs, if any
+    if 'gsim_logic_tree' in oq.inputs or oq.gsim:
+        gsim_lt = readinput.get_gsim_lt(oq)
+        for gsims in gsim_lt.values.values():
+            for gsim in gsims:
+                table = getattr(gsim, 'GMPE_TABLE', None)
+                if table:
+                    files.add(table)
+
+    # collect exposure.csv, if any
+    exposure_xml = oq.inputs.get('exposure')
+    if exposure_xml:
+        dname = os.path.dirname(exposure_xml)
+        expo = nrml.read(exposure_xml, stop='asset')[0]
+        if not expo.assets:
+            exposure_csv = (~expo.assets).strip()
+            for csv in exposure_csv.split():
+                if csv and os.path.exists(os.path.join(dname, csv)):
+                    files.add(os.path.join(dname, csv))
+
+    # collection .hdf5 UCERF file, if any
+    if oq.calculation_mode.startswith('ucerf_'):
+        sm = nrml.read(oq.inputs['source_model'])
+        fname = sm.sourceModel.UCERFSource['filename']
+        f = os.path.join(os.path.dirname(oq.inputs['source_model']), fname)
+        files.add(os.path.normpath(f))
+
+    # collect all other files
+    for key in oq.inputs:
+        fname = oq.inputs[key]
+        if isinstance(fname, list):
+            for f in fname:
+                files.add(os.path.normpath(f))
+        else:
+            files.add(os.path.normpath(fname))
+    general.zipfiles(files, archive_zip, log=logging.info)
+
+
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     Create a full job profile from a job config file.
@@ -248,6 +307,13 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
+        job_zip = oqparam.inputs.get('job_zip')
+        if job_zip:  # the input was zipped from the beginning
+            calc.datastore['job_zip'] = numpy.array(open(job_zip, 'rb').read())
+        else:  # zip the input
+            bio = io.BytesIO()
+            zip(oqparam.inputs['job_ini'], bio)
+            calc.datastore['job_zip'] = numpy.array(bio.getvalue())
         tb = 'None\n'
         try:
             logs.dbcmd('update_job', job_id, {'status': 'executing',
