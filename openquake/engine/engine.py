@@ -203,7 +203,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip):
+def zip(job_ini, archive_zip, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -217,7 +217,7 @@ def zip(job_ini, archive_zip):
             sys.exit('%s exists already' % archive_zip)
     logging.basicConfig(level=logging.INFO)
     # do not validate to avoid permissions error on the export_dir
-    oq = readinput.get_oqparam(job_ini, validate=False)
+    oq = oq or readinput.get_oqparam(job_ini, validate=False)
     files = set()
 
     # collect .hdf5 tables for the GSIMs, if any
@@ -255,7 +255,7 @@ def zip(job_ini, archive_zip):
                 files.add(os.path.normpath(f))
         else:
             files.add(os.path.normpath(fname))
-    general.zipfiles(files, archive_zip, log=logging.info)
+    general.zipfiles(files, archive_zip, log=log)
 
 
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
@@ -312,7 +312,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             calc.datastore['job_zip'] = numpy.array(open(job_zip, 'rb').read())
         else:  # zip the input
             bio = io.BytesIO()
-            zip(oqparam.inputs['job_ini'], bio)
+            zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
             calc.datastore['job_zip'] = numpy.array(bio.getvalue())
         tb = 'None\n'
         try:
