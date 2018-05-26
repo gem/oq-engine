@@ -94,16 +94,15 @@ class PmapGetter(object):
             # build probability maps restricted to the given sids
             ok_sids = set(self.sids)
             for grp, dset in self.dstore['poes'].items():
-                idxsid = []
+                sid_arr = []
+                ds = dset['array']
                 for idx, sid in enumerate(dset['sids'].value):
                     if sid in ok_sids:
-                        idxsid.append((idx, sid))
-                idxsid = sorted(idxsid)  # shape (N, 2)
-                arr = dset['array'][[item[0] for item in idxsid]]
-                L, I = arr.shape[1:]
+                        sid_arr.append((sid, ds[idx]))
+                L, I = ds.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, I)
-                for idx, sid in idxsid:
-                    pmap[sid] = probability_map.ProbabilityCurve(arr[idx])
+                for sid, arr in sid_arr:
+                    pmap[sid] = probability_map.ProbabilityCurve(arr)
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
         return self._pmap_by_grp
