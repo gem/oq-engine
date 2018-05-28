@@ -305,20 +305,19 @@ def calc_list(request, id=None):
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
-
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
                            utils.get_acl_on(request), id)
 
     response_data = []
+    username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
-                if (psutil.Process(pid).username() ==
-                        psutil.Process(os.getpid()).username()):
+                if psutil.Process(pid).username() == username:
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
