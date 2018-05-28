@@ -308,15 +308,16 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
         job_zip = oqparam.inputs.get('job_zip')
-        if job_zip:  # the input was zipped from the beginning
-            calc.datastore['job_zip'] = numpy.array(open(job_zip, 'rb').read())
-        else:  # zip the input
-            logs.LOG.info('zipping and storing the input files')
-            bio = io.BytesIO()
-            zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
-            calc.datastore['job_zip'] = numpy.array(bio.getvalue())
         tb = 'None\n'
         try:
+            if job_zip:  # the input was zipped from the beginning
+                calc.datastore['job_zip'] = numpy.array(
+                    open(job_zip, 'rb').read())
+            else:  # zip the input
+                logs.LOG.info('zipping and storing the input files')
+                bio = io.BytesIO()
+                zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
+                calc.datastore['job_zip'] = numpy.array(bio.getvalue())
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})
             t0 = time.time()
