@@ -176,9 +176,9 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <precise|trusty|xenial>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (precise, trusty or xenial),"
-    echo "           (default precise)"
+    echo "    $0 [<-s|--serie> <trusty|xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (trusty, xenial or bionic),"
+    echo "           (default xenial)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
     echo "       if -R is present update the local repository to the new current package"
@@ -216,9 +216,7 @@ _wait_ssh () {
 
 add_custom_pkg_repo () {
     # install package to manage repository properly
-    ssh "$lxc_ip" mkdir "repo"
-    ssh "$lxc_ip" "sudo apt-get install -y python-software-properties software-properties-common"
-    return
+    ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
 
     # add custom packages
     if ! ssh "$lxc_ip" ls repo/custom_pkgs >/dev/null ; then
@@ -455,8 +453,6 @@ _builddoc_innervm_run () {
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
 
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
-    # install package to manage repository properly
-    # ssh "$lxc_ip" sudo apt-get install -y python-software-properties
 
     ssh "$lxc_ip" mkdir -p "repo"
 
@@ -503,7 +499,7 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" "sudo apt-get -y upgrade"
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     # install package to manage repository properly
-    ssh "$lxc_ip" "sudo apt-get install -y python-software-properties"
+    ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
@@ -626,9 +622,7 @@ celery_wait $GEM_MAXLOOP
 
         ssh "$lxc_ip" "oq engine --make-html-report today
         oq engine --show-log -1
-        oq engine --delete-calculation 1 --yes
-        oq engine --dc 1 --yes
-        oq purge -1; oq reset --yes"
+        oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
         # WebUI command check
@@ -1124,7 +1118,7 @@ BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
-BUILD_UBUVER_REFERENCE="precise"
+BUILD_UBUVER_REFERENCE="xenial"
 BUILD_UBUVER="$BUILD_UBUVER_REFERENCE"
 BUILD_ON_LXC=0
 BUILD_FLAGS=""
@@ -1144,7 +1138,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" ]; then
+            if [ "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo

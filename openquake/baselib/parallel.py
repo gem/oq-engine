@@ -144,7 +144,6 @@ the single core processing the slow task). The OpenQuake engine does
 a great deal of work trying to split slow sources in more manageable
 fast sources.
 """
-from __future__ import print_function
 import os
 import sys
 import mock
@@ -502,12 +501,12 @@ class Starmap(object):
     calc_id = None
 
     @classmethod
-    def init(cls, poolsize=None):
-        if OQ_DISTRIBUTE == 'processpool' and not hasattr(cls, 'pool'):
+    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
+        if distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
             cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
-        elif OQ_DISTRIBUTE == 'threadpool' and not hasattr(cls, 'pool'):
+        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
 
     @classmethod
@@ -548,7 +547,7 @@ class Starmap(object):
         return cls(task, task_args, name, distribute).submit_all()
 
     def __init__(self, task_func, task_args, name=None, distribute=None):
-        self.__class__.init()  # if not already
+        self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.name = name or task_func.__name__
         self.task_args = task_args

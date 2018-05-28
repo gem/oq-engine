@@ -19,7 +19,6 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-from __future__ import division
 import abc
 import copy
 import bisect
@@ -33,7 +32,6 @@ from scipy import interpolate, stats, random
 from openquake.baselib.general import CallableDict, group_array
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import utils
-from openquake.baselib.python3compat import with_metaclass
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -357,6 +355,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.dtype = numpy.dtype(ls)
 
     def init(self):
+        # the seed is reset in CompositeRiskModel.__init__
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
         self.set_distribution(None)
 
@@ -402,8 +401,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def sample(self, probs, _covs, idxs, epsilons):
         """
-        Sample the epsilons and applies the corrections to the probabilities.
-        This method is called only if there are epsilons.
+        Sample the .loss_ratios with the given probabilities.
 
         :param probs:
            array of E' floats
@@ -727,7 +725,7 @@ class FragilityModel(dict):
 DISTRIBUTIONS = CallableDict()
 
 
-class Distribution(with_metaclass(abc.ABCMeta)):
+class Distribution(metaclass=abc.ABCMeta):
     """
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
@@ -1292,8 +1290,7 @@ def losses_by_period(losses, return_periods, num_events, eff_time):
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /len(losses). Outside the interval they
-    have NaN values. If there are less losses than events, the array
-    is filled with zeros. Here is an example:
+    have NaN values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)

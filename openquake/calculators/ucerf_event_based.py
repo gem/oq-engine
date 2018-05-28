@@ -18,7 +18,6 @@
 
 import os
 import copy
-import time
 import math
 import os.path
 import logging
@@ -40,16 +39,16 @@ from openquake.calculators.event_based_risk import (
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.geodetic import min_idx_dst, min_geodetic_distance
+from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, EBRupture)
-from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.calc.filters import SourceFilter, FarAwayRupture
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -288,7 +287,7 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
                                depths[i][0])
         ruptures.append(ParametricProbabilisticRupture(
             mag, nodal_planes[i][1].rake, trt, hypocentre, surface,
-            PointSource, rupture_probability, tom))
+            rupture_probability, tom))
     return ruptures
 
 
@@ -499,8 +498,7 @@ class UCERFSource(object):
         """
         centroids = self.get_centroids(ridx)
         distance = min_geodetic_distance(
-            centroids[:, 0], centroids[:, 1],
-            src_filter.sitecol.lons, src_filter.sitecol.lats)
+            (centroids[:, 0], centroids[:, 1]), src_filter.sitecol.xyz)
         idist = src_filter.integration_distance(DEFAULT_TRT, mag)
         return src_filter.sitecol.filter(distance <= idist)
 
@@ -512,13 +510,11 @@ class UCERFSource(object):
         """
         branch_key = self.idx_set["grid_key"]
         idist = src_filter.integration_distance(DEFAULT_TRT)
-        lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"].value
-            n_locations = bg_locations.shape[0]
-            distances = min_idx_dst(lons, lats, numpy.zeros_like(lons),
-                                    bg_locations[:, 0], bg_locations[:, 1],
-                                    numpy.zeros(n_locations))[1]
+            distances = min_geodetic_distance(
+                src_filter.sitecol.xyz,
+                (bg_locations[:, 0], bg_locations[:, 1]))
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = self.msr.get_median_area(
                 hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
@@ -535,7 +531,6 @@ class UCERFSource(object):
         :param src_filter:
             Sites for consideration and maximum distance
         """
-        mesh_spacing = self.mesh_spacing
         trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
         mag = self.mags[iloc]
@@ -565,8 +560,7 @@ class UCERFSource(object):
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[iloc], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), CharacteristicFaultSource,
-            self.rate[iloc], self.tom)
+            MultiSurface(surface_set), self.rate[iloc], self.tom)
 
         return rupture
 
@@ -695,7 +689,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    idist = src_filter.integration_distance
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
@@ -707,11 +701,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     rup.serial = serial
                     rup.seed = seed
                     try:
-                        r_sites, rrup = idist.get_closest(sitecol, rup)
+                        rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
+                        indices = rup.sctx.sids
                     except FarAwayRupture:
                         continue
-                    indices = (numpy.arange(len(r_sites)) if r_sites.indices
-                               is None else r_sites.indices)
                     events = []
                     for _ in range(n_occ):
                         events.append((0, src.src_group_id, ses_idx, sample))
@@ -767,6 +760,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
+        self.datastore['sitecol'] = self.sitecol
         self.datastore['csm_info'] = self.csm_info = self.csm.info
         self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.infos = []
@@ -794,7 +788,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             save_ruptures=oq.save_ruptures)
+                             save_ruptures=oq.save_ruptures,
+                             filter_distance=oq.filter_distance)
                 allargs.append(
                     (srcs, self.csm.src_filter, gsims, param, monitor))
         return allargs

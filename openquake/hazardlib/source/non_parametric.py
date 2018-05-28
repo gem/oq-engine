@@ -17,10 +17,8 @@
 Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
-import numpy
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
@@ -50,8 +48,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data):
-        super(NonParametricSeismicSource, self). \
-            __init__(source_id, name, tectonic_region_type)
+        super().__init__(source_id, name, tectonic_region_type)
         self.data = data
 
     def iter_ruptures(self):
@@ -66,7 +63,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         for rup, pmf in self.data:
             yield NonParametricProbabilisticRupture(
                 rup.mag, rup.rake, self.tectonic_region_type, rup.hypocenter,
-                rup.surface, rup.source_typology, pmf)
+                rup.surface, pmf)
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split

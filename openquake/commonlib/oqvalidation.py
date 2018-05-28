@@ -67,12 +67,14 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    prefilter_sources = valid.Param(valid.Choice('rtree', 'numpy', 'no'), 'rtree')
+    prefilter_sources = valid.Param(valid.Choice('rtree', 'numpy', 'no'),
+                                    'rtree')
+    filter_distance = valid.Param(valid.Choice('rjb', 'rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, False)
-    gsim = valid.Param(valid.gsim, None)
+    gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
@@ -133,7 +135,6 @@ class OqParam(valid.ParamSet):
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 30000)  # by M. Simionato
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
@@ -193,14 +194,14 @@ class OqParam(valid.ParamSet):
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
-        if self.hazard_precomputed():
+        if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'warn')
             self.check_missing('gsim_logic_tree', 'warn')
             self.check_missing('source_model_logic_tree', 'warn')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
-            if self.gsim:
+            if not isinstance(self.gsim, valid.FromFile):
                 raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
                                   ' must be no `gsim` key' % job_ini)
             path = os.path.join(
@@ -254,12 +255,12 @@ class OqParam(valid.ParamSet):
                     'for classical_damage calculations' % job_ini)
 
         # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk'
-                and self.asset_correlation not in (0, 1)):
+        if (self.calculation_mode == 'event_based_risk' and
+                self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
-        elif (self.calculation_mode == 'event_based_risk'
-              and self.conditional_loss_poes and not self.asset_loss_table):
+        elif (self.calculation_mode == 'event_based_risk' and
+              self.conditional_loss_poes and not self.asset_loss_table):
             raise InvalidFile(
                 '%s: asset_loss_table is not set, probably you want to remove'
                 ' conditional_loss_poes' % job_ini)
@@ -268,6 +269,10 @@ class OqParam(valid.ParamSet):
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
                 'sites' not in self.inputs):
             raise InvalidFile('%s: You forgot sites|sites_csv' % job_ini)
+        elif (self.inputs.get('gmfs', '').endswith('.xml') and
+                'sites' in self.inputs):
+            raise InvalidFile('%s: You cannot have both sites_csv and '
+                              'gmfs_file' % job_ini)
 
         # checks for ucerf
         if 'ucerf' in self.calculation_mode:

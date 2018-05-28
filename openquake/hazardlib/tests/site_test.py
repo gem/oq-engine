@@ -213,10 +213,8 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.mesh.lons, [0])
         arreq(filtered2.mesh.lats, [2])
         arreq(filtered2.mesh.depths, [0])
-        arreq(filtered.indices, [0, 2, 3])
-        arreq(filtered2.indices, [2])
         filtered2 = filtered.filter(numpy.array([True, False, True]))
-        arreq(filtered2.indices, [0, 3])
+        arreq(filtered2.vs30, [1.2, 4.])
 
     def test_within_region(self):
         region = wkt.loads('POLYGON((0 0, 9 0, 9 9, 0 9, 0 0))')
@@ -238,7 +236,7 @@ class WithinBBoxTestCase(unittest.TestCase):
         cls.sites = SiteCollection.from_points(lons, lats)
 
     def test1(self):
-        assert_eq(self.sites.within_bbox((-182, -28, -178, -26)).sids, [0])
+        assert_eq(self.sites.within_bbox((-182, -28, -178, -26)), [0])
 
 
 class SiteCollectionIterTestCase(unittest.TestCase):

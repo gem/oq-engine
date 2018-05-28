@@ -26,6 +26,8 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.tests import assert_angles_equal
 from openquake.hazardlib.tests.geo import _mesh_test_data
 
+aac = numpy.testing.assert_allclose
+
 
 class _BaseMeshTestCase(unittest.TestCase):
     def _make_mesh(self, lons, lats, depths=None):
@@ -213,7 +215,7 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         dists = mesh.get_min_distance(target_mesh)
         expected_dists = [mesh_points[mi].distance(target_points[ti])
                           for ti, mi in enumerate(expected_distance_indices)]
-        self.assertEqual(list(dists.flat), expected_dists)
+        aac(dists.flat, expected_dists, atol=1)
         closest_points_mesh = mesh.get_closest_points(target_mesh)
         numpy.testing.assert_equal(closest_points_mesh.lons.flat,
                                    mesh.lons.take(expected_distance_indices))
@@ -385,9 +387,8 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [
             0, Point(0.5, 1).distance(Point(0.5, 0)),
-            Point(0.5, 5).distance(Point(0.5, 0))
-        ]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+            Point(0.5, 5).distance(Point(0.5, 0))]
+        aac(dists, expected_dists, atol=1)
 
     def test_mesh_of_two_points(self):
         lons = numpy.array([[0, 0.5, 1]], float)
@@ -397,7 +398,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [Point(0.5, 1).distance(Point(0.5, 0)), 0]
-        numpy.testing.assert_almost_equal(dists, expected_dists)
+        aac(dists, expected_dists, atol=.01)
 
     def test_mesh_of_one_point(self):
         lons = numpy.array([[1.]])
@@ -407,7 +408,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
         dists = mesh.get_joyner_boore_distance(target_mesh)
         expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+        aac(dists, expected_dists, atol=0.2)
 
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()
@@ -699,11 +700,10 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
 
 class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
     def setUp(self):
-        super(RectangularMeshGetCellDimensionsTestCase, self).setUp()
+        super().setUp()
         self.original_spherical_to_cartesian = geo_utils.spherical_to_cartesian
         geo_utils.spherical_to_cartesian = lambda lons, lats, depths: (
-            self.points
-        )
+            self.points)
 
     def tearDown(self):
         geo_utils.spherical_to_cartesian = self.original_spherical_to_cartesian
@@ -713,7 +713,7 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
         self.points = numpy.array(points, dtype=float)
         mesh = RectangularMesh(fake_coords, fake_coords, fake_coords)
         cell_center, cell_length, cell_width, cell_area \
-                = mesh.get_cell_dimensions()
+            = mesh.get_cell_dimensions()
         self.assertTrue(numpy.allclose(cell_length, lengths),
                         '%s != %s' % (cell_length, lengths))
         self.assertTrue(numpy.allclose(cell_width, widths),

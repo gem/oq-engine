@@ -20,7 +20,6 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function, unicode_literals
 from openquake.baselib.python3compat import decode
 import os
 import sys
@@ -49,7 +48,7 @@ class ReportWriter(object):
         'ruptures_per_trt': 'Number of ruptures per tectonic region type',
         'ruptures_events': 'Specific information for event based',
         'rlzs_assoc': 'Realizations per (TRT, GSIM)',
-        'job_info': 'Informational data',
+        'job_info': 'Data transfer',
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',

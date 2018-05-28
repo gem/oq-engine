@@ -22,8 +22,6 @@ Module exports :class:`BooreEtAl1997GeometricMean`,
                :class:'BooreEtAl1997ArbitraryHorizontal' and
                :class:'BooreEtAl1997ArbitraryHorizontalUnspecfied'
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
