@@ -216,6 +216,9 @@ _wait_ssh () {
 add_custom_pkg_repo () {
     # install package to manage repository properly
     ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
+    if [ "$BUILD_UBUVER" == 'trusty' ]; then
+        ssh "$lxc_ip" "sudo apt-get install -y python-software-properties"
+    fi
 
     # add custom packages
     if ! ssh "$lxc_ip" ls repo/custom_pkgs >/dev/null ; then
@@ -499,6 +502,9 @@ _pkgtest_innervm_run () {
     gpg -a --export | ssh "$lxc_ip" "sudo apt-key add -"
     # install package to manage repository properly
     ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
+    if [ "$BUILD_UBUVER" == 'trusty' ]; then
+        ssh "$lxc_ip" "sudo apt-get install -y python-software-properties"
+    fi
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
