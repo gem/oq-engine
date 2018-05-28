@@ -678,13 +678,14 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
-    def split_all(self, sample_factor=None):
+    def split_all(self):
         """
         Split all sources in the composite source model.
 
         :param samples_factor: if given, sample the sources
         :returns: a dictionary source_id -> split_time
         """
+        sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
         ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         split_time = AccumDict()
         for sm in self.source_models:
