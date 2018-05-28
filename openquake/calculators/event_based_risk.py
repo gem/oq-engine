@@ -45,30 +45,18 @@ def build_loss_tables(dstore):
     Compute the total losses by rupture and losses by rlzi.
     """
     oq = dstore['oqparam']
+    L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    loss_dt = oq.loss_dt()
     events = dstore['events']
+    serials = dstore['ruptures']['serial']
     rup_by_eid = dict(zip(events['eid'], events['rup_id']))
-    losses_by_rup = {}
-    lbr = numpy.zeros((R, len(loss_dt.names)))  # losses by rlz
+    idx_by_ser = dict(zip(serials, range(len(serials))))
+    tbl = numpy.zeros((len(serials), L), F32)
+    lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'].value:  # call .value for speed
         rupid = rup_by_eid[rec['eid']]
-        if rupid in losses_by_rup:
-            losses_by_rup[rupid] += rec['loss']
-        else:
-            losses_by_rup[rupid] = rec['loss'].copy()
+        tbl[idx_by_ser[rupid]] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
-
-    assert losses_by_rup, 'Empty losses_by_event'
-    serials = dstore['ruptures']['serial']
-    tbl = numpy.zeros(len(serials), loss_dt)
-    for i, serial in enumerate(serials):
-        row = tbl[i]
-        try:
-            for l, lt in enumerate(loss_dt.names):
-                row[lt] = losses_by_rup[serial][l]
-        except KeyError:
-            pass
     return tbl, lbr
 
 
@@ -556,7 +544,7 @@ class EbrCalculator(base.RiskCalculator):
                 rlt, lbr = build_loss_tables(dstore)
                 dstore['rup_loss_table'] = rlt
                 dstore['losses_by_rlzi'] = lbr
-                ridx = [rlt[lt].argmax() for lt in oq.loss_dt().names]
+                ridx = [rlt[:, lti].argmax() for lti in range(self.L)]
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
