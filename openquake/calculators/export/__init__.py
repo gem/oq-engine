@@ -74,6 +74,6 @@ def export_job_zip(ekey, dstore):
     Export the bytes in the job_zip dataset in a job.zip file
     """
     dest = dstore.export_path('job.zip')
-    zbytes = dstore['job_zip'].value + b'\x00' * 4
+    zbytes = dstore['job_zip'].value + b'\x00' * 4  # magic trick!
     open(dest, 'wb').write(zbytes)
     return [dest]
