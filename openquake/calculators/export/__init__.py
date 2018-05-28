@@ -74,6 +74,10 @@ def export_job_zip(ekey, dstore):
     Export the bytes in the job_zip dataset in a job.zip file
     """
     dest = dstore.export_path('job.zip')
-    zbytes = dstore['job_zip'].value + b'\x00' * 4  # magic trick!
+    nbytes = dstore.get_attr('job_zip', 'nbytes')
+    zbytes = dstore['job_zip'].value
+    # when reading job_zip some terminating null bytes are truncated (for
+    # unknown reasons) therefore they must be restored
+    zbytes += b'\x00' * (nbytes - len(zbytes))
     open(dest, 'wb').write(zbytes)
     return [dest]
