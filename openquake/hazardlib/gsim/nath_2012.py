@@ -23,8 +23,6 @@ exports
 :class:`NathEtAl2012Lower`
 :class:`NathEtAl2012Upper`
 """
-
-from __future__ import division
 import numpy as np
 
 from openquake.hazardlib import const
@@ -179,9 +177,7 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
 
         ``P' = P x Correction_factor``
         """
-
-        parent = super(NathEtAl2012Upper, self)
-        ln_mean, [ln_stddev] = parent.get_mean_and_stddevs(
+        ln_mean, [ln_stddev] = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
         # compute site corrections, equation (9)

@@ -19,7 +19,6 @@
 """
 Disaggregation calculator core functionality
 """
-from __future__ import division
 import logging
 import operator
 import numpy
@@ -116,11 +115,11 @@ producing too small PoEs.'''
             base.HazardCalculator.pre_execute(self)
         else:
             # we need to run a PSHACalculator
-            cl = classical.PSHACalculator(oq, self.monitor('classical'),
-                                          calc_id=self.datastore.calc_id)
+            cl = classical.PSHACalculator(oq, self.datastore.calc_id)
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
+            self.sitecol = cl.sitecol
 
     def execute(self):
         """Performs the disaggregation"""
@@ -156,7 +155,8 @@ producing too small PoEs.'''
         """
         dic = {}
         imtls = self.oqparam.imtls
-        pgetter = getters.PmapGetter(self.datastore, sids=numpy.array([sid]))
+        pgetter = getters.PmapGetter(
+            self.datastore, self.rlzs_assoc, numpy.array([sid]))
         for rlz in self.rlzs_assoc.realizations:
             try:
                 pmap = pgetter.get(rlz.ordinal)
@@ -213,13 +213,18 @@ producing too small PoEs.'''
         """
         oq = self.oqparam
         tl = oq.truncation_level
-        src_filter = SourceFilter(self.sitecol, oq.maximum_distance,
-                                  prefilter='numpy')
-        csm = self.csm.filter(src_filter)  # fine filtering
+        src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        csm = self.csm
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away!')
 
         R = len(self.rlzs_assoc.realizations)
+        I = len(oq.imtls)
+        P = len(oq.poes_disagg) or 1
+        if R * I * P > 10:
+            logging.warn(
+                'You have %d realizations, %d IMTs and %d poes_disagg: the '
+                'disaggregation will be heavy and memory consuming', R, I, P)
         iml4 = disagg.make_iml4(
             R, oq.iml_disagg, oq.imtls, oq.poes_disagg or (None,), curves)
         if oq.disagg_by_src:
@@ -284,7 +289,8 @@ producing too small PoEs.'''
                 sources = sum([grp.sources for grp in groups], [])
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
-                    rlzs_by_gsim, src_filter.integration_distance)
+                    rlzs_by_gsim, src_filter.integration_distance,
+                    oq.filter_distance)
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
@@ -445,7 +451,8 @@ producing too small PoEs.'''
         logging.warn('Disaggregation by source is experimental')
         oq = self.oqparam
         poes_disagg = oq.poes_disagg or (None,)
-        pmap_by_grp = getters.PmapGetter(self.datastore).pmap_by_grp
+        pmap_by_grp = getters.PmapGetter(
+            self.datastore, self.rlzs_assoc, self.sitecol.sids).pmap_by_grp
         grp_ids = numpy.array(sorted(int(grp[4:]) for grp in pmap_by_grp))
         G = len(pmap_by_grp)
         P = len(poes_disagg)

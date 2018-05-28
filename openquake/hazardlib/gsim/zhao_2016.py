@@ -24,10 +24,7 @@ Module exports :class:`ZhaoEtAl2016Asc`,
                :class:`ZhaoEtAl2016SInterSiteSigma`,
                :class:`ZhaoEtAl2016SSlab`,
                :class:`ZhaoEtAl2016SSlabSiteSigma`
-               
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

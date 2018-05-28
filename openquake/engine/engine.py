@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import json
+import time
 import signal
 import traceback
 import platform
@@ -32,7 +33,6 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 from urllib.request import urlopen, Request
-from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, datastore, __version__, zeromq as z)
@@ -45,6 +45,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+_PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
 if OQ_DISTRIBUTE == 'zmq':
@@ -151,6 +152,10 @@ class MasterKilled(KeyboardInterrupt):
     "Exception raised when a job is killed manually"
 
 
+def inhibitSigInt(signum, _stack):
+    logs.LOG.warn('Killing job, please wait')
+
+
 def raiseMasterKilled(signum, _stack):
     """
     When a SIGTERM is received, raise the MasterKilled
@@ -159,8 +164,11 @@ def raiseMasterKilled(signum, _stack):
     :param int signum: the number of the received signal
     :param _stack: the current frame object, ignored
     """
-    msg = 'Received a signal %d' % signum
+    # Disable further CTRL-C to allow tasks revocation when Celery is used
+    if OQ_DISTRIBUTE.startswith('celery'):
+        signal.signal(signal.SIGINT, inhibitSigInt)
 
+    msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
         msg = 'The openquake master process was killed manually'
 
@@ -232,23 +240,25 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         A comma-separated string of export types.
     """
     setproctitle('oq-job-%d' % job_id)
-    monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default()
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
-        calc = base.calculators(oqparam, monitor, calc_id=job_id)
-        monitor.hdf5path = calc.datastore.hdf5path
+        calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
         tb = 'None\n'
         try:
-            logs.dbcmd('set_status', job_id, 'executing')
-            _do_run_calc(calc, exports, hazard_calculation_id, **kw)
-            duration = monitor.duration
+            logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                              'pid': _PID})
+            t0 = time.time()
+            calc.run(exports=exports,
+                     hazard_calculation_id=hazard_calculation_id,
+                     close=False, **kw)  # don't close the datastore too soon
+            duration = time.time() - t0
             expose_outputs(calc.datastore)
-            monitor.flush()
+            calc._monitor.flush()
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
             calc.datastore.close()
@@ -275,12 +285,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
     return calc
-
-
-def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
-    with calc._monitor:
-        calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
-                 close=False, **kw)  # don't close the datastore too soon
 
 
 def version_triple(tag):
@@ -317,7 +321,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
-    except:  # page not available or wrong version tag
+    except Exception:  # page not available or wrong version tag
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '

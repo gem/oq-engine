@@ -1,4 +1,3 @@
-from __future__ import division
 # The Hazard Library
 # Copyright (C) 2012-2018 GEM Foundation
 #
@@ -15,9 +14,6 @@ from __future__ import division
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
-import numpy
-
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -27,7 +23,6 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
-
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
 from openquake.hazardlib.tests import assert_pickleable

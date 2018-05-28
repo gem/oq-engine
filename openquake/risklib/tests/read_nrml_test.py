@@ -17,13 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import nrml
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
     def test_invalid_vf_pmf(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?> 
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"> 
 	<vulnerabilityModel id="Vulnerabilidad" assetCategory="MI_AIS" lossCategory="structural"> 

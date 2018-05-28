@@ -17,7 +17,10 @@ import unittest
 import collections
 
 import numpy
-import rtree
+try:
+    import rtree
+except ImportError:
+    rtree = None
 import shapely.geometry
 
 from openquake.hazardlib import geo
@@ -40,7 +43,7 @@ class CleanPointTestCase(unittest.TestCase):
 
 class LineIntersectsItselfTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(LineIntersectsItselfTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.line_intersects_itself
 
     def test_too_few_points(self):
@@ -103,7 +106,7 @@ class GetLongitudinalExtentTestCase(unittest.TestCase):
 
 class GetSphericalBoundingBox(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(GetSphericalBoundingBox, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.func = utils.get_spherical_bounding_box
 
     def test_one_point(self):
@@ -374,7 +377,10 @@ class WithinTestCase(unittest.TestCase):
     """
     Test geo.utils.within(bbox, lonlat_index)
     """
-    def setUp(self):
+
+    def test(self):
+        if rtree is None:  # not installed
+            raise unittest.SkipTest
         self.lons = [
             -179.75, -179.5, -179.25, -179.0, -178.75, -178.5, -178.25, -178.0,
             -177.75, -177.5, -177.25, -177.0, -176.75, -176.5, -176.25, -176.0,
@@ -385,7 +391,6 @@ class WithinTestCase(unittest.TestCase):
             (i, (x, y, x, y), None)
             for i, (x, y) in enumerate(zip(self.lons, self.lats)))
 
-    def test(self):
         all_sites = numpy.arange(27, dtype=numpy.uint32)
         expected = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23,
                     24, 25, 26]

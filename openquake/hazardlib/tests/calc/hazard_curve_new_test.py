@@ -148,7 +148,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         src.src_group_id = [0]
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
-        param = dict(imtls=self.imtls)
+        param = dict(imtls=self.imtls, filter_distance='rjb')
         crv = classical(group, self.sites, gsim_by_trt, param)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv[0].array[:, 0], decimal=4)
@@ -198,7 +198,7 @@ class NankaiTestCase(unittest.TestCase):
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
         hcurves = calc_hazard_curves(groups, s_filter, imtls, gsim_by_trt)
         npt.assert_almost_equal(
-            [1.11315443e-01, 3.92180097e-03, 3.02064427e-05],
+            [1.1262869e-01, 3.9968668e-03, 3.1005840e-05],
             hcurves['PGV'][0])
 
 

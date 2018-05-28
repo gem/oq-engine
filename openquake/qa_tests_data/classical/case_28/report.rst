@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     576,018,697        
-date           2018-04-30T11:22:13
-engine_version 3.1.0-gitb0812f0   
+date           2018-05-15T04:13:33
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -95,7 +95,7 @@ Slowest sources
 ========= ================ ============ ========= ========== ========= ========= ======
 source_id source_class     num_ruptures calc_time split_time num_sites num_split events
 ========= ================ ============ ========= ========== ========= ========= ======
-21        MultiPointSource 260          2.797E-04 2.763E-04  4         4         0     
+21        MultiPointSource 260          2.449E-04 2.792E-04  4         4         0     
 ========= ================ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -103,7 +103,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 2.797E-04 1     
+MultiPointSource 2.449E-04 1     
 ================ ========= ======
 
 Duplicated sources
@@ -114,7 +114,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-count_ruptures     0.00196 1.657E-04 0.00185 0.00208 2        
+prefilter          0.00345 2.523E-04 0.00324 0.00381 4        
+count_ruptures     0.00194 1.972E-05 0.00192 0.00195 2        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
@@ -141,23 +142,26 @@ weight   52      0.0    52  52  2
 
 Informational data
 ------------------
-============== ======================================================================== ========
-task           sent                                                                     received
-count_ruptures param=3.69 KB sources=3.55 KB srcfilter=1.5 KB gsims=794 B monitor=660 B 720 B   
-============== ======================================================================== ========
+============== ========================================================================= ========
+task           sent                                                                      received
+prefilter      srcs=5.45 KB monitor=1.27 KB srcfilter=916 B                              5.76 KB 
+count_ruptures sources=4.13 KB param=3.69 KB srcfilter=1.51 KB gsims=794 B monitor=666 B 720 B   
+============== ========================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.00609   0.0       1     
-reading composite source model 0.00570   0.0       1     
-store source_info              0.00558   0.0       1     
-total count_ruptures           0.00393   0.90625   2     
-splitting sources              0.00112   0.0       1     
-reading site collection        5.500E-04 0.0       1     
-unpickling count_ruptures      8.440E-05 0.0       2     
-aggregate curves               4.292E-05 0.0       2     
-saving probability maps        3.195E-05 0.0       1     
+managing sources               0.02601   0.0       1     
+total prefilter                0.01382   3.08984   4     
+store source_info              0.00617   0.0       1     
+reading composite source model 0.00581   0.0       1     
+total count_ruptures           0.00387   0.49609   2     
+splitting sources              0.00120   0.0       1     
+reading site collection        7.555E-04 0.0       1     
+unpickling prefilter           3.843E-04 0.0       4     
+unpickling count_ruptures      7.915E-05 0.0       2     
+aggregate curves               4.935E-05 0.0       2     
+saving probability maps        3.529E-05 0.0       1     
 ============================== ========= ========= ======

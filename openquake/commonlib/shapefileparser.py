@@ -19,7 +19,6 @@
 """
 Support for converting NRML source models to ESRI shapefiles and vice versa
 """
-from __future__ import print_function
 import os
 import numpy
 import operator
@@ -61,6 +60,7 @@ MFD_PARAMS = [
     ('minMag', 'min_mag', 'f'), ('maxMag', 'max_mag', 'f'),
     ('aValue', 'a_val', 'f'), ('bValue', 'b_val', 'f'),
     ('binWidth', 'bin_width', 'f'),
+    ('characteristicMag', 'characteristic_mag','f')
 ]
 
 
@@ -329,8 +329,12 @@ def extract_mfd_params(src):
     tags = get_taglist(src)
     if "incrementalMFD" in tags:
         mfd_node = src.nodes[tags.index("incrementalMFD")]
-    elif "truncGutenbergRichterMFD":
+    elif "truncGutenbergRichterMFD" in tags:
         mfd_node = src.nodes[tags.index("truncGutenbergRichterMFD")]
+    elif "arbitraryMFD" in tags:
+        mfd_node = src.nodes[tags.index("arbitraryMFD")]
+    elif "YoungsCoppersmithMFD" in tags:
+        mfd_node = src.nodes[tags.index("YoungsCoppersmithMFD")]
     else:
         raise ValueError("Source %s contains no supported MFD type!" % src.tag)
     data = []
@@ -340,7 +344,7 @@ def extract_mfd_params(src):
             data.append((param, mfd_node.attrib[key]))
         else:
             data.append((param, None))
-    if "incrementalMFD" in mfd_node.tag:
+    if ("incrementalMFD" or "arbitraryMFD") in mfd_node.tag:
         # Extract Rates
         rates = ~mfd_node.occurRates
         n_r = len(rates)
@@ -348,6 +352,9 @@ def extract_mfd_params(src):
             raise ValueError("Number of rates in source %s too large "
                              "to be placed into shapefile" % src.tag)
         rate_dict = OrderedDict([(key, rates[i] if i < n_r else None)
+                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+    elif "YoungsCoppersmithMFD" in mfd_node.tag:
+        rate_dict = OrderedDict([(key, mfd_node.attrib['characteristicRate'])
                                  for i, (key, _) in enumerate(RATE_PARAMS)])
     else:
         rate_dict = OrderedDict([(key, None)

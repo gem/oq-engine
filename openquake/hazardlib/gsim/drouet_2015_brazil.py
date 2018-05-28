@@ -20,8 +20,6 @@
 Module exports :class:`DrouetBrazil2015`
                :class:`DrouetBrazil2015_with_depth`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE

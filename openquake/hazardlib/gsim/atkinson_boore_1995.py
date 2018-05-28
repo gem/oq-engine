@@ -21,8 +21,6 @@ Module exports :class:`AtkinsonBoore1995GSCBest`,
 :class:`AtkinsonBoore1995GSCLowerLimit`,
 :class:`AtkinsonBoore1995GSCUpperLimit`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

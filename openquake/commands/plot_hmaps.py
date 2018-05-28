@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 from openquake.baselib import sap, datastore
 from openquake.calculators import getters
 from openquake.commonlib import calc
@@ -51,7 +49,8 @@ def plot_hmaps(calc_id):
     """
     dstore = datastore.read(calc_id)
     oq = dstore['oqparam']
-    mean = getters.PmapGetter(dstore).get_mean()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     M, P = len(oq.imtls), len(oq.poes)
     array = hmaps.array.reshape(len(hmaps.array), M, P)

@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
@@ -56,7 +55,8 @@ def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
 
 
 def get_pmaps(dstore, indices):
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
     pmaps = getter.get_pmaps(indices)
     weights = dstore['csm_info'].rlzs['weight']
