@@ -27,7 +27,8 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib.general import AccumDict, DictArray, deprecated
+from openquake.baselib.general import (
+    AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
@@ -326,21 +327,27 @@ def get_site_collection(oqparam):
             depth = None
         if mesh is None:
             # extract the site collection directly from the site model
-            return site.SiteCollection.from_points(
+            sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm)
-        # associate the site parameters to the mesh
+        else:
+            # associate the site parameters to the mesh
+            sitecol = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths)
+            sc, params = geo.utils.assoc(
+                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            for sid, param in zip(sc.sids, params):
+                for name in site_model_dt.names[2:]:  # except lon, lat
+                    sitecol.array[sid][name] = param[name]
+    else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths)
-        sc, params = geo.utils.assoc(
-            sm, sitecol, oqparam.max_site_model_distance, 'warn')
-        for sid, param in zip(sc.sids, params):
-            for name in site_model_dt.names[2:]:  # all names except lon, lat
-                sitecol.array[sid][name] = param[name]
-        return sitecol
-
-    # else use the default site params
-    sitecol = site.SiteCollection.from_points(
-        mesh.lons, mesh.lats, mesh.depths, oqparam)
+            mesh.lons, mesh.lats, mesh.depths, oqparam)
+    ss = os.environ.get('OQ_SAMPLE_SITES')
+    if ss:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SITES=.1 oq engine --run job.ini
+        # will run a computation with 10 times less sites
+        sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
+        sitecol.make_complete()
     return sitecol
 
 
