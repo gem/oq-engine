@@ -313,7 +313,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             if job_zip:  # the input was zipped from the beginning
                 data = open(job_zip, 'rb').read()
             else:  # zip the input
-                logs.LOG.info('zipping and storing the input files')
+                logs.LOG.info('zipping the input files')
                 bio = io.BytesIO()
                 zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
                 data = bio.getvalue()
