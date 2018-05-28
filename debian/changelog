@@ -1,3 +1,6 @@
+  [Marco Pagani and Changlong Li]
+  * Added a version of the Yu et al. (2013) GMPE supporting Mw
+
   [Michele Simionato]
   * Undeprecated `hazardlib.calc.stochastic.stochastic_event_set` and
     made its signature right
