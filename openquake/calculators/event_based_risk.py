@@ -40,24 +40,28 @@ getweight = operator.attrgetter('weight')
 indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
-def build_rup_loss_table(dstore):
+def build_loss_tables(dstore):
     """
-    Save the total losses by rupture.
+    Compute the total losses by rupture and losses by rlzi.
     """
     oq = dstore['oqparam']
+    R = dstore['csm_info'].get_num_rlzs()
     loss_dt = oq.loss_dt()
     events = dstore['events']
     rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     losses_by_rup = {}
+    lbr = numpy.zeros((R, len(loss_dt.names)))  # losses by rlz
     for rec in dstore['losses_by_event'].value:  # call .value for speed
         rupid = rup_by_eid[rec['eid']]
         if rupid in losses_by_rup:
             losses_by_rup[rupid] += rec['loss']
         else:
-            losses_by_rup[rupid] = rec['loss']
+            losses_by_rup[rupid] = rec['loss'].copy()
+        lbr[rec['rlzi']] += rec['loss']
+
     assert losses_by_rup, 'Empty losses_by_event'
     serials = dstore['ruptures']['serial']
-    tbl = numpy.zeros(len(serials), oq.loss_dt())
+    tbl = numpy.zeros(len(serials), loss_dt)
     for i, serial in enumerate(serials):
         row = tbl[i]
         try:
@@ -65,7 +69,7 @@ def build_rup_loss_table(dstore):
                 row[lt] = losses_by_rup[serial][l]
         except KeyError:
             pass
-    return tbl
+    return tbl, lbr
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -547,9 +551,11 @@ class EbrCalculator(base.RiskCalculator):
             set_rlzs_stats(self.datastore, 'avg_losses')
         b = get_loss_builder(dstore)
         if 'ruptures' in dstore:
-            logging.info('Building rup_loss_table')
-            with self.monitor('building rup_loss_table', measuremem=True):
-                dstore['rup_loss_table'] = rlt = build_rup_loss_table(dstore)
+            logging.info('Building loss tables')
+            with self.monitor('building loss tables', measuremem=True):
+                rlt, lbr = build_loss_tables(dstore)
+                dstore['rup_loss_table'] = rlt
+                dstore['losses_by_rlzi'] = lbr
                 ridx = [rlt[lt].argmax() for lt in oq.loss_dt().names]
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
         logging.info('Building aggregate loss curves')
