@@ -373,7 +373,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    for kind, hcurves in PmapGetter(dstore).items(kind):
+    for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
@@ -425,7 +425,7 @@ def get_metadata(realizations, kind):
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    pgetter = PmapGetter(dstore)
+    pgetter = PmapGetter(dstore, rlzs_assoc)
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
@@ -466,7 +466,7 @@ def export_hcurves_xml_json(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
-    for kind, hcurves in PmapGetter(dstore).items(kind):
+    for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -502,7 +502,7 @@ def export_hmaps_xml_json(ekey, dstore):
     writercls = hazard_writers.HazardMapXMLWriter
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
-    for kind, hcurves in PmapGetter(dstore).items():
+    for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items():
         hmaps = calc.make_hmap(
             hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
         if kind.startswith('rlz-'):
@@ -617,7 +617,7 @@ def export_gmf_data_csv(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'])
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
-    if eid is None:  # new format
+    if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
         sids = numpy.arange(len(sitemesh), dtype=U32)
         sites = util.compose_arrays(sids, sitemesh, 'site_id')
@@ -695,7 +695,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
-        oq.maximum_distance, oq.truncation_level, correl_model, samples)
+        oq.maximum_distance, oq.truncation_level, correl_model,
+        oq.filter_distance, samples)
     getter.init()
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()

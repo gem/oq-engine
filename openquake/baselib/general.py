@@ -20,7 +20,6 @@
 """
 Utility functions of general interest.
 """
-from __future__ import division, print_function
 import os
 import sys
 import imp
@@ -44,6 +43,24 @@ from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def cached_property(method):
+    """
+    :param method: a method without arguments except self
+    :returns: a cached property
+    """
+    name = method.__name__
+
+    def newmethod(self):
+        try:
+            val = self.__dict__[name]
+        except KeyError:
+            val = method(self)
+            self.__dict__[name] = val
+        return val
+    newmethod.__name__ = method.__name__
+    return property(newmethod)
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -320,7 +337,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
     Please note: the temporary file must be deleted by the caller.
@@ -348,7 +365,7 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
 @atexit.register
 def removetmp():
     """
-    Remove the temporary files created by writetmp
+    Remove the temporary files created by gettemp
     """
     for path in _tmp_paths:
         if os.path.exists(path):  # not removed yet
@@ -904,6 +921,21 @@ def deprecated(message):
     return decorator(_deprecated)
 
 
+def random_filter(objects, reduction_factor, seed=42):
+    """
+    Given a list of objects, returns a sublist by extracting randomly
+    some elements. The reduction factor (< 1) tells how small is the extracted
+    list compared to the original list.
+    """
+    assert 0 < reduction_factor <= 1, reduction_factor
+    rnd = random.Random(seed)
+    out = []
+    for obj in objects:
+        if rnd.random() <= reduction_factor:
+            out.append(obj)
+    return out
+
+
 def safeprint(*args, **kwargs):
     """
     Convert and print characters using the proper encoding
@@ -937,6 +969,7 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
 
 port_candidates = list(range(1920, 2000))
 

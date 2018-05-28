@@ -22,16 +22,16 @@ import shutil
 import logging
 import tempfile
 import unittest
-import platform
+import sys
 
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore, general
+from openquake.baselib import datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
-REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
+NOT_DARWIN = sys.platform != 'darwin'
 
 
 class DifferentFiles(Exception):
@@ -84,8 +84,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = performance.Monitor(self.testdir)
-        return base.calculators(oq, monitor)
+        return base.calculators(oq)
 
     def run_calc(self, testfile, job_ini, **kw):
         """

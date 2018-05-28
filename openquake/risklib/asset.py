@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import operator
 import logging
 import csv
@@ -242,8 +240,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
 TWO16 = 2 ** 16
-EVENTS = -2
-NBYTES = -1
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
@@ -423,16 +419,38 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
-    def reduce(self, sids):
+    def reduce(self, sitecol):
         """
-        :returns: a reduced AssetCollection on the given site IDs
+        :returns: a reduced AssetCollection on the given sitecol
         """
-        ok_indices = numpy.sum([self.array['site_id'] == sid for sid in sids],
-                               axis=0, dtype=bool)
+        ok_indices = numpy.sum(
+            [self.array['site_id'] == sid for sid in sitecol.sids],
+            axis=0, dtype=bool)
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.array = self.array[ok_indices]
         new.asset_refs = self.asset_refs[ok_indices]
+        return new
+
+    def reduce_also(self, sitecol):
+        """
+        :returns: a reduced AssetCollection on the given sitecol
+        NB: diffently from .reduce, also the SiteCollection is reduced
+        and turned into a complete site collection.
+        """
+        array = []
+        asset_refs = []
+        for idx, sid in enumerate(sitecol.sids):
+            mask = self.array['site_id'] == sid
+            arr = self.array[mask]
+            arr['site_id'] = idx
+            array.append(arr)
+            asset_refs.append(self.asset_refs[mask])
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = numpy.concatenate(array)
+        new.asset_refs = numpy.concatenate(asset_refs)
+        sitecol.make_complete()
         return new
 
     def values(self, aids=None):
@@ -787,7 +805,8 @@ class Exposure(object):
                             costs.append(Node('cost', a))
                         occupancies = Node('occupancies')
                         for period in occupancy_periods:
-                            a = dict(occupants=dic[period], period=period)
+                            a = dict(occupants=float(dic[period]),
+                                     period=period)
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
@@ -813,6 +832,8 @@ class Exposure(object):
         insurance_limits = {}
         retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
+        # FIXME: in case of an exposure split in CSV files the line number
+        # is None because param['fname'] points to the .xml file :-(
         with context(param['fname'], asset_node):
             self.asset_refs.append(asset_id)
             taxonomy = asset_node['taxonomy']

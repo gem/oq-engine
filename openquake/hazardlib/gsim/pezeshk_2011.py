@@ -20,8 +20,6 @@
 Module exports :class:'PezeshkEtAl2011',
                :class:'PezeshkEtAl2011NEHRPBC'.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -213,9 +211,8 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
         """
         C_AMP = self.SITE_COEFFS[imt]
         # Get method from superclass
-        mean, stddevs = super(
-            PezeshkEtAl2011NEHRPBC, self).get_mean_and_stddevs(
-                sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
         return mean + np.log(C_AMP["F"]), stddevs
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""

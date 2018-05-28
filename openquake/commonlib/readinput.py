@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import os
 import csv
 import copy
@@ -29,12 +27,12 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib.general import AccumDict, DictArray, deprecated
-from openquake.baselib.python3compat import decode
+from openquake.baselib.general import (
+    AccumDict, DictArray, deprecated, random_filter)
+from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
-    calc, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source.rupture import EBRupture
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -216,6 +214,9 @@ pmap = None  # set as side effect when the user reads hazard_curves from a file
 exposure = None  # set as side effect when the user reads the site mesh
 # this hack is necessary, otherwise we would have to parse the exposure twice
 
+gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
+# this hack is necessary, otherwise we would have to parse the file twice
+
 
 def get_mesh(oqparam):
     """
@@ -225,7 +226,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure
+    global pmap, exposure, gmfs, eids
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
@@ -261,6 +262,9 @@ def get_mesh(oqparam):
         else:
             raise NotImplementedError('Reading from %s' % fname)
         return mesh
+    elif 'gmfs' in oqparam.inputs:
+        eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
+        return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region and oqparam.region_grid_spacing:
         poly = geo.Polygon.from_wkt(oqparam.region)
         try:
@@ -323,21 +327,28 @@ def get_site_collection(oqparam):
             depth = None
         if mesh is None:
             # extract the site collection directly from the site model
-            return site.SiteCollection.from_points(
+            sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm)
-        # associate the site parameters to the mesh
+        else:
+            # associate the site parameters to the mesh
+            sitecol = site.SiteCollection.from_points(
+                mesh.lons, mesh.lats, mesh.depths)
+            sc, params = geo.utils.assoc(
+                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            for sid, param in zip(sc.sids, params):
+                for name in site_model_dt.names[2:]:  # except lon, lat
+                    sitecol.array[sid][name] = param[name]
+    else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths)
-        sc, params = geo.utils.assoc(
-            sm, sitecol, oqparam.max_site_model_distance, 'warn')
-        for sid, param in zip(sc.sids, params):
-            for name in site_model_dt.names[2:]:  # all names except lon, lat
-                sitecol.array[sid][name] = param[name]
-        return sitecol
-
-    # else use the default site params
-    return site.SiteCollection.from_points(
-        mesh.lons, mesh.lats, mesh.depths, oqparam)
+            mesh.lons, mesh.lats, mesh.depths, oqparam)
+    ss = os.environ.get('OQ_SAMPLE_SITES')
+    if ss:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SITES=.1 oq engine --run job.ini
+        # will run a computation with 10 times less sites
+        sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
+        sitecol.make_complete()
+    return sitecol
 
 
 def get_gsim_lt(oqparam, trts=['*']):
@@ -383,16 +394,14 @@ def get_rlzs_by_gsim(oqparam):
     return dic
 
 
-def get_rupture_sitecol(oqparam, sitecol):
+def get_rupture(oqparam):
     """
     Read the `rupture_model` file and by filter the site collection
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
-        a pair (EBRupture, SiteCollection)
+        an hazardlib rupture
     """
     rup_model = oqparam.inputs['rupture_model']
     [rup_node] = nrml.read(rup_model)
@@ -401,18 +410,7 @@ def get_rupture_sitecol(oqparam, sitecol):
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
     rup.seed = oqparam.random_seed
-    maxdist = oqparam.maximum_distance['default']
-    sc = calc.filters.filter_sites_by_distance_to_rupture(
-        rup, maxdist, sitecol)
-    if sc is None:
-        raise RuntimeError(
-            'All sites were filtered out! maximum_distance=%s km' %
-            maxdist)
-    n = oqparam.number_of_ground_motion_fields
-    events = numpy.zeros(n, stored_event_dt)
-    events['eid'] = numpy.arange(n)
-    ebr = EBRupture(rup, sc.sids, events)
-    return ebr, sc
+    return rup
 
 
 def get_source_model_lt(oqparam):
@@ -447,7 +445,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
@@ -642,7 +640,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'warn'
+        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
         sitecol, assets_by = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         assets_by_site = [[] for _ in sitecol.complete.sids]
@@ -714,14 +712,10 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
-def get_gmfs(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        sitecol, eids, gmf array of shape (R, N, E, M)
-    """
+def _get_gmfs(oqparam):
     M = len(oqparam.imtls)
+    assert M, ('oqparam.imtls is empty, did you call '
+               'oqparam.set_risk_imtls(get_risk_models(oqparam))?')
     fname = oqparam.inputs['gmfs']
     if fname.endswith('.csv'):
         array = writers.read_composite_array(fname).array
@@ -843,7 +837,11 @@ def _extract_eids_sitecounts(gmfset):
         eids.add(gmf['ruptureId'])
         for node in gmf:
             counter[node['lon'], node['lat']] += 1
-    return numpy.array(sorted(eids), numpy.uint64), counter
+    eids = numpy.array(sorted(eids), numpy.uint64)
+    if (eids != numpy.arange(len(eids), dtype=numpy.uint64)).any():
+        raise ValueError('There are ruptureIds in the gmfs_file not in the '
+                         'range [0, %d)' % len(eids))
+    return eids, counter
 
 
 @deprecated('Use the .csv format for the GMFs instead')
@@ -854,7 +852,7 @@ def get_scenario_from_nrml(oqparam, fname):
     :param fname:
         the NRML files containing the GMFs
     :returns:
-        a triple (sitecol, eids, gmf array)
+        a pair (eids, gmf array)
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))

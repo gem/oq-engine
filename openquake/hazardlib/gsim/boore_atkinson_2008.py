@@ -19,8 +19,6 @@
 """
 Module exports :class:`BooreAtkinson2008`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -382,11 +380,8 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         Using a frequency dependent correction for the mean ground motion.
         Standard deviation is fixed.
         """
-
-        base = super(Atkinson2010Hawaii, self)
-        mean, stddevs = base.get_mean_and_stddevs(sites, rup, dists,
-                                                  imt, stddev_types)
-
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
+                                                     imt, stddev_types)
         # Defining frequency
         if imt == PGA():
             freq = 50.0

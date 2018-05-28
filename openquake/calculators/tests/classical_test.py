@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import unittest
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
@@ -24,7 +22,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -316,7 +314,7 @@ hazard_uhs-mean.csv
 
         # check exporting a single realization in XML and CSV
         [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
-        if REFERENCE_OS:  # broken on macOS
+        if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
         [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
@@ -395,7 +393,7 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 2061302359)
+        self.assertEqual(checksum, 1554747528)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
@@ -440,4 +438,5 @@ hazard_uhs-mean.csv
 
     @attr('qa', 'hazard', 'classical')
     def test_case_30(self):  # point on the international data line
-        self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)
+        if NOT_DARWIN:  # broken on macOS
+            self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)

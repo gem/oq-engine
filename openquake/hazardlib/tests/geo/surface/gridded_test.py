@@ -35,7 +35,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.232737])
+        expected = np.array([111.204])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
@@ -46,7 +46,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)
-        expected = np.array([111.19493])
+        expected = np.array([111.1935])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_rx_distance(self):
@@ -92,7 +92,7 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.232737])
+        expected = np.array([111.204])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
@@ -103,7 +103,7 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)
-        expected = np.array([111.19493])
+        expected = np.array([111.1935])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_bounding_box(self):

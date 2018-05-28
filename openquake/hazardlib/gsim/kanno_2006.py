@@ -23,18 +23,12 @@ exports
 :class:`Kanno2006Shallow`
 :class:`Kanno2006Deep`
 """
-# :class:`Kanno2006ShallowNortheastJapan`
-# :class:`Kanno2006DeepNortheastJapan`
-
-from __future__ import division
 import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-# from openquake.hazardlib.gsim.si_midorikawa_1999 \
-#    import _get_min_distance_to_sub_trench
 
 
 class Kanno2006Shallow(GMPE):
@@ -413,7 +407,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        ``log(pre_A) = log(pre) + A``
 #        """
 #        # compute mean and standard deviations as per parent class
-#        parent = super(Kanno2006ShallowNortheastJapan, self)
+#        parent = super()
 #        ln_mean, [ln_stddevs] = parent.get_mean_and_stddevs(
 #            sites, rup, dists, imt, stddev_types)
 #

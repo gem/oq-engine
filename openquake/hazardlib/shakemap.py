@@ -105,10 +105,11 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
     # associate the shakemap to the (filtered) site collection
     bbox = (array['lon'].min(), array['lat'].min(),
             array['lon'].max(), array['lat'].max())
-    sites = sitecol.within_bbox(bbox)
-    if sites is None:
+    indices = sitecol.within_bbox(bbox)
+    if len(indices) == 0:
         raise RuntimeError('There are no sites within the boundind box %s'
                            % str(bbox))
+    sites = sitecol.filtered(indices)
     logging.info('Associating %d GMVs to %d sites', len(array), len(sites))
     return geo.utils.assoc(array, sites, assoc_dist, 'warn')
 
@@ -244,22 +245,25 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed):
+def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
+            imts=None):
     """
     :returns: an array of GMFs of shape (R, N, E, M)
     """
     std = shakemap['std']
-    imts = [imt.from_string(name) for name in std.dtype.names]
+    if imts is None or len(imts) == 0:
+        imts = std.dtype.names
     val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
-           for imt in std.dtype.names}
+           for imt in imts}
+    imts_ = [imt.from_string(name) for name in imts]
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts)
-    stddev = [std[imt] for imt in std.dtype.names]
+    spatial_corr = spatial_correlation_array(dmatrix, imts_)
+    stddev = [std[str(imt)] for imt in imts_]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    cross_corr = cross_correlation_matrix(imts, crosscorr)
+    cross_corr = cross_correlation_matrix(imts_, crosscorr)
     M, N = spatial_corr.shape[:2]
-    mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
-                      for imt in std.dtype.names for j in range(N)])
+    mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
+                      for imt in imts_ for j in range(N)])
     # mu has shape (M * N, E)
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
@@ -267,5 +271,5 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed):
     # Z has shape (M * N, E)
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
-        gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
+        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
     return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)

@@ -1,4 +1,40 @@
   [Michele Simionato]
+  * Fixed a regression when reading GMFs from an XML in absence of a sites.csv
+    file
+
+  [Robin Gee]
+  * Extend `oq to_shapefile` method to also work with `YoungsCoppersmithMFD`
+    and `arbitraryMFD` MFD typologies.
+
+  [Michele Simionato]
+  * Now the hazard statistics can be computed efficiently even in a single
+    calculation, i.e. without the `--hc` option
+  * Added a check on the Python version in the `oq` command
+  * Reduced the data transfer when sending the site collection
+  * Changed the default `filter_distance`
+
+  [Daniele Viganò]
+  * Fixed a bug where the PID was not saved into the database
+    when using the command line interface
+  * Made it impossible to fire  multiple `CTRL-C` in sequence
+    to allow processes teardown and tasks revocation when Celery is used
+
+  [Michele Simionato]
+  * Used `scipy.spatial.distance.cdist` in `Mesh.get_min_distance`
+  * Prefiltered sites and assets in scenario calculations
+  * Made it possible to specify the `filter_distance` in the `job.ini`
+  * Made rtree optional again and disabled it in macOS
+  * Optimized the SiteCollection class and doubled the speed of distance
+    calculations in most continental scale calculations
+  * Fixed an ordering bug in event based risk from GMFs when using a
+    vulnerability function with PMF
+  * Replaced Rtree with KDtree except in the source filtering
+  * Parallelized the source prefiltering
+  * Removed the tiling feature from the classical calculator
+  * Undeprecated `hazardlib.calc.stochastic.stochastic_event_set` and
+    made its signature right
+  * Removed the source typology from the ruptures and reduced the rupture
+    hierarchy
   * Removed the mesh spacing from PlanarSurfaces
   * Optimized the instantiation of the rtree index
   * Replaced the old prefiltering mechanism with the new one

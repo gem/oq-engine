@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import math
 import time
 import logging
@@ -29,7 +27,6 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -83,7 +80,6 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    prefilter = True
 
     def agg_dicts(self, acc, pmap_by_grp):
         """
@@ -159,61 +155,38 @@ class PSHACalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
-        num_tiles = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tasks_per_tile = math.ceil(oq.concurrent_tasks / math.sqrt(num_tiles))
-        if num_tiles > 1:
-            tiles = self.sitecol.split_in_tiles(num_tiles)
-        else:
-            tiles = [self.sitecol.complete]
-        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls)
+        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
+                     filter_distance=oq.filter_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         totweight = 0
-        for tile_i, tile in enumerate(tiles, 1):
-            num_tasks = 0
-            num_sources = 0
-            src_filter = SourceFilter(tile, oq.maximum_distance,
-                                      oq.prefilter_sources)
-            if num_tiles > 1:
-                logging.info('Processing tile %d of %d', tile_i, len(tiles))
-            with self.monitor('prefiltering'):
-                if oq.prefilter_sources != 'no' and self.prefilter:
-                    logging.info(
-                        'Prefiltering sources with %s', oq.prefilter_sources)
-                    csm = self.csm.filter(src_filter)
-                else:
-                    csm = self.csm
+        num_tasks = 0
+        num_sources = 0
+        csm, src_filter = self.filter_csm()
+        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
+        if maxweight == minweight:
+            logging.info('Using minweight=%d', minweight)
+        else:
+            logging.info('Using maxweight=%d', maxweight)
+        totweight += csm.info.tot_weight
 
-            if tile_i == 1:  # set it only on the first tile
-                maxweight = csm.get_maxweight(
-                    weight, tasks_per_tile, minweight)
-                if maxweight == minweight:
-                    logging.info('Using minweight=%d', minweight)
-                else:
-                    logging.info('Using maxweight=%d', maxweight)
-                totweight += csm.info.tot_weight
-            else:
-                totweight += csm.get_weight(weight)
-            if csm.has_dupl_sources and not opt:
-                logging.warn('Found %d duplicated sources',
-                             csm.has_dupl_sources)
-            for sg in csm.src_groups:
-                if sg.src_interdep == 'mutex' and len(sg) > 0:
-                    gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                    yield sg, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(sg.sources)
-            # NB: csm.get_sources_by_trt discards the mutex sources
-            for trt, sources in csm.get_sources_by_trt().items():
-                gsims = self.csm.info.gsim_lt.get_gsims(trt)
-                for block in block_splitter(sources, maxweight, weight):
-                    yield block, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(block)
-            logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-            # cleanup filtering information for the next tile
-            for src in csm.get_sources():
-                if hasattr(src, 'indices'):
-                    del src.indices
+        if csm.has_dupl_sources and not opt:
+            logging.warn('Found %d duplicated sources',
+                         csm.has_dupl_sources)
+
+        for sg in csm.src_groups:
+            if sg.src_interdep == 'mutex' and len(sg) > 0:
+                gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
+                yield sg, src_filter, gsims, param, monitor
+                num_tasks += 1
+                num_sources += len(sg.sources)
+        # NB: csm.get_sources_by_trt discards the mutex sources
+        for trt, sources in csm.get_sources_by_trt().items():
+            gsims = self.csm.info.gsim_lt.get_gsims(trt)
+            for block in block_splitter(sources, maxweight, weight):
+                yield block, src_filter, gsims, param, monitor
+                num_tasks += 1
+                num_sources += len(block)
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         self.csm.info.tot_weight = totweight
 
     def post_execute(self, pmap_by_grp_id):
@@ -240,13 +213,19 @@ class PSHACalculator(base.HazardCalculator):
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
-            if 'poes' in self.datastore:
-                self.datastore.set_nbytes('poes')
-                if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
-                    # this is useful for disaggregation, which is implemented
-                    # only for the case of a single realization
-                    self.datastore['disagg_by_src/source_id'] = numpy.array(
-                        sorted(data), grp_source_dt)
+        if 'poes' in self.datastore:
+            self.datastore.set_nbytes('poes')
+            if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
+                # this is useful for disaggregation, which is implemented
+                # only for the case of a single realization
+                self.datastore['disagg_by_src/source_id'] = numpy.array(
+                    sorted(data), grp_source_dt)
+
+            # save a copy of the poes in hdf5cache
+            if hasattr(self, 'hdf5cache'):
+                with hdf5.File(self.hdf5cache) as cache:
+                    cache['oqparam'] = oq
+                    self.datastore.hdf5.copy('poes', cache)
 
 
 # used in PreClassicalCalculator
@@ -281,7 +260,6 @@ class PreCalculator(PSHACalculator):
     ruptures
     """
     core_task = count_ruptures
-    prefilter = False
 
 
 def fix_ones(pmap):
@@ -352,17 +330,19 @@ class ClassicalCalculator(PSHACalculator):
                              ' with the --hc option')
             return {}
         # initialize datasets
-        N = len(self.sitecol)
+        N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        attrs = dict(
-            __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
-            sids=numpy.arange(N, dtype=numpy.uint32))
+        pyclass = 'openquake.hazardlib.probability_map.ProbabilityMap'
+        all_sids = self.sitecol.complete.sids
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
         if num_rlzs > 1:
             for name, stat in oq.hazard_stats():
                 self.datastore.create_dset(
-                    'hcurves/' + name, F32, (N, L, 1), attrs=attrs)
+                    'hcurves/%s/array' % name, F32, (N, L, 1))
+                self.datastore['hcurves/%s/sids' % name] = all_sids
+                self.datastore.set_attrs(
+                    'hcurves/%s' % name, __pyclass__=pyclass)
                 totbytes += nbytes
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
@@ -381,11 +361,9 @@ class ClassicalCalculator(PSHACalculator):
         """
         monitor = self.monitor('build_hcurves_and_stats')
         hstats = self.oqparam.hazard_stats()
-        parent = self.can_read_parent()
-        if parent is None:
-            parent = self.datastore
+        parent = self.can_read_parent() or self.datastore
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = getters.PmapGetter(parent, t.sids, self.rlzs_assoc)
+            pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
@@ -403,7 +381,7 @@ class ClassicalCalculator(PSHACalculator):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
                 if pmap:
-                    key = 'hcurves/' + kind
+                    key = 'hcurves/%s/array' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
                         dset[sid] = pmap[sid].array

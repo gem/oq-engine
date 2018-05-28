@@ -42,7 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, writetmp
+from openquake.baselib.general import groupby, gettemp
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -243,7 +243,7 @@ def validate_nrml(request):
     if not xml_text:
         return HttpResponseBadRequest(
             'Please provide the "xml_text" parameter')
-    xml_file = writetmp(xml_text, suffix='.xml')
+    xml_file = gettemp(xml_text, suffix='.xml')
     try:
         nrml.to_python(xml_file)
     except ExpatError as exc:
@@ -504,7 +504,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None):
     job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
-    tmp_py = writetmp(code, suffix='.py')
+    tmp_py = gettemp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
     devnull = subprocess.DEVNULL
     popen = subprocess.Popen([sys.executable, tmp_py],
