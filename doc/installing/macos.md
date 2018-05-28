@@ -23,7 +23,7 @@ Before you can start you must have downloaded and installed [Python 3.5](https:/
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.0.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.0.1-2.run using any browser
 
 From the Terminal app (or using iTerm) run
 

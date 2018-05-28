@@ -27,8 +27,6 @@ Module exports
 :class:`AtkinsonBoore2003SSlabJapan`
 :class:`AtkinsonBoore2003SSlabJapanNSHMP2008`
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -359,8 +357,8 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
         new_rup = copy.deepcopy(rup)
         new_rup.hypo_depth = 20.
 
-        mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 

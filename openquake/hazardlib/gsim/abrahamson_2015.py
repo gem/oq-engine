@@ -26,9 +26,6 @@ Module exports :class:`AbrahamsonEtAl2015`
                :class:`AbrahamsonEtAl2015SSlabLow`
 
 """
-
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

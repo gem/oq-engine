@@ -21,9 +21,11 @@ Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
 import numpy
+from scipy.spatial.distance import cdist
 import shapely.geometry
 import shapely.ops
 
+from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
@@ -161,6 +163,18 @@ class Mesh(object):
         """
         return self.lons.shape
 
+    @cached_property
+    def xyz(self):
+        """
+        :returns: an array of shape (N, 3) with the cartesian coordinates
+        """
+        if self.depths is None:
+            depths = numpy.zeros(self.lons.size)
+        else:
+            depths = self.depths.flatten()
+        return geo_utils.spherical_to_cartesian(
+            self.lons.flatten(), self.lats.flatten(), depths)
+
     def __iter__(self):
         """
         Generate :class:`~openquake.hazardlib.geo.point.Point` objects the mesh
@@ -240,43 +254,31 @@ class Mesh(object):
         in another mesh.
 
         :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
+            numpy array of distances in km of shape (self.size, mesh.size)
 
         Method doesn't make any assumptions on arrangement of the points
         in either mesh and instead calculates the distance from each point of
         this mesh to each point of the target mesh and returns the lowest found
         for each.
         """
-        return self._min_idx_dst(mesh)[1]
+        return cdist(self.xyz, mesh.xyz).min(axis=0)
 
     def get_closest_points(self, mesh):
         """
-        Find closest point of this mesh for each one in ``mesh``.
+        Find closest point of this mesh for each point in the other mesh
 
         :returns:
-            :class:`Mesh` object of the same shape as ``mesh`` with closest
+            :class:`Mesh` object of the same shape as `mesh` with closest
             points from this one at respective indices.
         """
-        min_idx, min_dst = self._min_idx_dst(mesh)
+        min_idx = cdist(self.xyz, mesh.xyz).argmin(axis=0)  # lose shape
+        if hasattr(mesh, 'shape'):
+            min_idx = min_idx.reshape(mesh.shape)
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
         if self.depths is None:
-            depths = None
-        else:
-            depths = self.depths.take(min_idx)
-        return Mesh(lons, lats, depths)
-
-    def _min_idx_dst(self, mesh):
-        if self.depths is None:
-            depths1 = numpy.zeros_like(self.lons)
-        else:
-            depths1 = self.depths
-        if mesh.depths is None:
-            depths2 = numpy.zeros_like(mesh.lons)
-        else:
-            depths2 = mesh.depths
-        return geodetic.min_idx_dst(
-            self.lons, self.lats, depths1, mesh.lons, mesh.lats, depths2)
+            return Mesh(lons, lats)
+        return Mesh(lons, lats, self.depths.take(min_idx))
 
     def get_distance_matrix(self):
         """
@@ -356,7 +358,8 @@ class Mesh(object):
         # if calculated geodetic distance is over some threshold.
         # get the highest slice from the 3D mesh
         distances = geodetic.min_geodetic_distance(
-            self.lons, self.lats, mesh.lons, mesh.lats)
+            self.xyz if self.depths is None else (self.lons, self.lats),
+            mesh.xyz if mesh.depths is None else (mesh.lons, mesh.lats))
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
         # lower values increase the maximum possible error, higher

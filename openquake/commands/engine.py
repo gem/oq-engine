@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import os
 import sys
 import getpass
@@ -65,7 +64,6 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         job_ini, getpass.getuser(), hazard_calculation_id)
     calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
                         hazard_calculation_id=hazard_calculation_id, **kw)
-    calc._monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
     return job_id

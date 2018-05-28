@@ -1,4 +1,3 @@
-from __future__ import division
 # The Hazard Library
 # Copyright (C) 2012-2018 GEM Foundation
 #
@@ -38,7 +37,6 @@ def make_rupture(rupture_class, **kwargs):
         'hypocenter': Point(5, 6, 7),
         'surface': PlanarSurface(11, 12, Point(0, 0, 1), Point(1, 0, 1),
                                  Point(1, 0, 2), Point(0, 0, 2)),
-        'source_typology': object()
     }
     default_arguments.update(kwargs)
     kwargs = default_arguments
@@ -151,7 +149,6 @@ class Cdppvalue(unittest.TestCase):
             'surface': SimpleFaultSurface.from_fault_data(
                 fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
                 dip=dip, mesh_spacing=mesh_spacing),
-            'source_typology': object(),
             'rupture_slip_direction': 0.
         }
         default_arguments.update(kwargs)

@@ -22,8 +22,6 @@ Module exports
 :class:`ChiouYoungs2008SWISS06`,
 :class:`ChiouYoungs2008SWISS04`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
@@ -63,14 +61,14 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
         sites.vs30 = 620 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(ChiouYoungs2008SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         log_phi_ss = 1
         tau = self.get_tau(ChiouYoungs2008.COEFFS[imt], rup)
 
-        ln_y_ref = super(ChiouYoungs2008SWISS01, self).\
-            _get_ln_y_ref(rup, dists, ChiouYoungs2008.COEFFS[imt])
+        ln_y_ref = super()._get_ln_y_ref(
+            rup, dists, ChiouYoungs2008.COEFFS[imt])
 
         exp1 = np.exp(ChiouYoungs2008.COEFFS[imt]['phi3'] *
                       (sites.vs30.clip(-np.inf, 1130) - 360))

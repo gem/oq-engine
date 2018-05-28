@@ -18,7 +18,6 @@
 """
 Utilities to compute mean and quantile curves
 """
-from __future__ import division
 import numpy
 
 
