@@ -343,6 +343,9 @@ def get_site_collection(oqparam):
             mesh.lons, mesh.lats, mesh.depths, oqparam)
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SITES=.1 oq engine --run job.ini
+        # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
     return sitecol
