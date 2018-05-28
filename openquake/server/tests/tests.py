@@ -56,10 +56,10 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        assert resp.content
+        assert resp.content, 'No content from /v1/calc/%s' % path
         try:
             return json.loads(resp.content.decode('utf8'))
-        except:
+        except Exception:
             print('Invalid JSON, see %s' % gettemp(resp.content),
                   file=sys.stderr)
             return {}
@@ -85,7 +85,7 @@ class EngineServerTestCase(unittest.TestCase):
             resp = self.post('run', dict(archive=a))
         try:
             js = json.loads(resp.content.decode('utf8'))
-        except:
+        except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
             job_id = js['job_id']
