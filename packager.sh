@@ -39,11 +39,12 @@ if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     set -x
 fi
 set -e
+env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
 GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
-GEM_DEB_SERIE="master"
+GEM_DEB_SERIE="${GEM_MASTER_BRANCH}"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
 fi
@@ -246,8 +247,8 @@ add_local_pkg_repo () {
         dep_branch="master"
     fi
 
-    if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
-        GEM_DEB_SERIE="master"
+    if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "${GEM_MASTER_BRANCH}" ]; then
+        GEM_DEB_SERIE="${GEM_MASTER_BRANCH}"
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
     fi
