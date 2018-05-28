@@ -700,7 +700,10 @@ class CompositeSourceModel(collections.Sequence):
                         s = src.source_id
                         self.infos[s].split_time = stime[s]
                     if sample_factor:
-                        srcs = random_filter(srcs, 1 / float(sample_factor))
+                        # debugging tip to reduce the size of a calculation
+                        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+                        # will run a computation 100 times smaller
+                        srcs = random_filter(srcs, float(sample_factor))
                     src_group.sources = srcs
                     split_time += stime
         return split_time
