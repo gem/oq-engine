@@ -167,7 +167,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, virtual_memory
+from openquake.baselib.performance import Monitor, virtual_memory, memory_info
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
@@ -340,7 +340,7 @@ def safely_call(func, args):
             mon = child
         try:
             res = Result(func(*args), mon)
-        except:
+        except BaseException:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
     # FIXME: check_mem_usage is disabled here because it's causing
@@ -416,6 +416,7 @@ class IterResult(object):
         self.received = []
         if self.num_tasks == 0:
             return
+        self.mem = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
             if isinstance(result, BaseException):
@@ -426,6 +427,10 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
+            if hasattr(Starmap, 'pids'):
+                self.mem.append(
+                    sum(float(memory_info(pid).rss) for pid in Starmap.pids))
+
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_info(result.mon)
@@ -443,7 +448,8 @@ class IterResult(object):
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], self.task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
-                         argnames=self.argnames, sent=self.sent)
+                         argnames=self.argnames, sent=self.sent,
+                         memory=self.mem)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -505,7 +511,8 @@ class Starmap(object):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
-            cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
+            arglist = [(.2, m) for _ in range(cls.pool._processes)]
+            cls.pids = [os.getpid()] + list(cls(_wakeup, arglist))
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
 
@@ -516,6 +523,7 @@ class Starmap(object):
             cls.pool.terminate()
             cls.pool.join()
             delattr(cls, 'pool')
+            delattr(cls, 'pids')
 
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
