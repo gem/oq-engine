@@ -60,7 +60,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         f = gettemp(files[filename], suffix='.' + filename)
-        super(_TestableSourceModelLogicTree, self).__init__(f, validate)
+        super().__init__(f, validate)
 
     def _get_source_model(self, filename):
         return StringIO(self.files[filename].encode('utf-8'))

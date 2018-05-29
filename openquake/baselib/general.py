@@ -521,7 +521,7 @@ class CallableDict(collections.OrderedDict):
     in openquake.calculators.export
     """
     def __init__(self, keyfunc=lambda key: key, keymissing=None):
-        super(CallableDict, self).__init__()
+        super().__init__()
         self.keyfunc = keyfunc
         self.keymissing = keymissing
 
