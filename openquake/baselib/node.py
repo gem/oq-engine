@@ -334,7 +334,7 @@ class SourceLineParser(ElementTree.XMLParser):
     A custom parser managing line numbers: works for Python <= 3.3
     """
     def _start_list(self, tag, attrib_in):
-        elem = super(SourceLineParser, self)._start_list(tag, attrib_in)
+        elem = super()._start_list(tag, attrib_in)
         elem.lineno = self.parser.CurrentLineNumber
         # there is also CurrentColumnNumber available, if wanted
         return elem
