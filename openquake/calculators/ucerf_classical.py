@@ -16,12 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import time
 import logging
 from datetime import datetime
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib.general import DictArray, AccumDict, split_in_blocks
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -76,10 +77,8 @@ SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 @util.reader
-def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
+def ucerf_classical(ucerf_source, src_filter, gsims, monitor):
     """
-    :param rupset_idx:
-        indices of the rupture sets
     :param ucerf_source:
         an object taking the place of a source for UCERF
     :param src_filter:
@@ -96,12 +95,10 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     imtls = monitor.oqparam.imtls
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
     grp_id = ucerf_source.src_group_id
-    mag = ucerf_source.mags[rupset_idx].max()
+    mag = ucerf_source.mags[ucerf_source.rupset_idx].max()
     ridx = set()
-    for idx in rupset_idx:
+    for idx in ucerf_source.rupset_idx:
         ridx.update(ucerf_source.get_ridx(idx))
-    ucerf_source.rupset_idx = rupset_idx
-    ucerf_source.num_ruptures = nruptures = len(rupset_idx)
 
     # prefilter the sites close to the rupture set
     s_sites = ucerf_source.get_rupture_sites(ridx, src_filter, mag)
@@ -110,7 +107,7 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
         acc = AccumDict({grp_id: pm})
         acc.calc_times = {
             ucerf_source.source_id:
-            numpy.array([nruptures, 0, time.time() - t0, 1])}
+            numpy.array([ucerf_source.num_ruptures, 0, time.time() - t0, 1])}
         acc.eff_ruptures = {grp_id: 0}
         return acc
 
@@ -123,7 +120,8 @@ def ucerf_classical(rupset_idx, ucerf_source, src_filter, gsims, monitor):
     acc = AccumDict({grp_id: pmap})
     acc.calc_times = {
         ucerf_source.source_id:
-        numpy.array([nruptures * nsites, nsites, time.time() - t0, 1])}
+        numpy.array([ucerf_source.num_ruptures * nsites, nsites,
+                     time.time() - t0, 1])}
     acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
     return acc
 
@@ -177,12 +175,16 @@ class UcerfPSHACalculator(PSHACalculator):
             ct = self.oqparam.concurrent_tasks or 1
 
             # parallelize by rupture subsets
-            rup_sets = numpy.arange(ucerf_source.num_ruptures)
+            allargs = []
+            for rupset_idx in split_in_blocks(
+                    numpy.arange(ucerf_source.num_ruptures), ct):
+                grp = copy.copy(ucerf_source)
+                grp.rupset_idx = rupset_idx
+                grp.num_ruptures = len(rupset_idx)
+                allargs.append((grp, self.src_filter, gsims, monitor))
             taskname = 'ucerf_classical_%d' % grp_id
-            acc = parallel.Starmap.apply(
-                ucerf_classical,
-                (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
-                concurrent_tasks=ct, name=taskname
+            acc = parallel.Starmap(
+                ucerf_classical, allargs, name=taskname
             ).reduce(self.agg_dicts, acc)
 
             # parallelize on the background sources, small tasks
