@@ -141,7 +141,7 @@ class LogicTreeError(Exception):
         The error message.
     """
     def __init__(self, filename, message):
-        super(LogicTreeError, self).__init__(message)
+        super().__init__(message)
         self.filename = filename
         self.message = message
 
@@ -161,7 +161,7 @@ class ValidationError(LogicTreeError):
     <LogicTreeError>` constructor.
     """
     def __init__(self, node, *args, **kwargs):
-        super(ValidationError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.lineno = getattr(node, 'lineno', '?')
 
     def __str__(self):
@@ -1320,7 +1320,7 @@ class GsimLogicTree(object):
                             self.gmpe_tables.add(uncertainty['gmpe_table'])
                         try:
                             gsim = valid.gsim(gsim_name, **uncertainty.attrib)
-                        except:
+                        except Exception:
                             etype, exc, tb = sys.exc_info()
                             raise_(etype, "%s in file %s" % (exc, self.fname),
                                    tb)

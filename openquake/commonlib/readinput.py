@@ -31,6 +31,8 @@ from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
+from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -117,7 +119,9 @@ def get_params(job_inis, **kw):
     :returns:
         A dictionary of parameters
     """
+    job_zip = None
     if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
+        job_zip = job_inis[0]
         job_inis = extract_from_zip(
             job_inis[0], ['job_hazard.ini', 'job_haz.ini',
                           'job.ini', 'job_risk.ini'])
@@ -133,6 +137,8 @@ def get_params(job_inis, **kw):
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    if job_zip:
+        params['inputs']['job_zip'] = os.path.abspath(job_zip)
 
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
@@ -367,6 +373,12 @@ def get_gsim_lt(oqparam, trts=['*']):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    gmfcorr = oqparam.get_correl_model()
+    for trt, gsims in gsim_lt.values.items():
+        for gsim in gsims:
+            if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
+                            set([StdDev.TOTAL])):
+                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     return gsim_lt
 
 

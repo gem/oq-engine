@@ -161,7 +161,7 @@ class OqParam(valid.ParamSet):
             return self._file_type
 
     def __init__(self, **names_vals):
-        super(OqParam, self).__init__(**names_vals)
+        super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
             raise InvalidFile('Missing calculation_mode in %s' % job_ini)
