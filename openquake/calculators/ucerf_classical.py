@@ -174,20 +174,7 @@ class UcerfPSHACalculator(PSHACalculator):
             ucerf_source.nsites = len(self.sitecol)
             self.csm.infos[ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
-            logging.info('Getting the background point sources')
-            bckgnd_sources = ucerf_source.get_background_sources(
-                self.src_filter)
-
             ct = self.oqparam.concurrent_tasks or 1
-
-            # parallelize on the background sources, small tasks
-            args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
-            bg_res = parallel.Starmap.apply(
-                classical, args, name='background_sources_%d' % grp_id,
-                concurrent_tasks=ct)
-            # compose probabilities from background sources
-            for pmap in bg_res:
-                acc[grp_id] |= pmap[grp_id]
 
             # parallelize by rupture subsets
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
@@ -197,6 +184,17 @@ class UcerfPSHACalculator(PSHACalculator):
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
                 concurrent_tasks=ct, name=taskname
             ).reduce(self.agg_dicts, acc)
+
+            # parallelize on the background sources, small tasks
+            bckgnd_sources = ucerf_source.get_background_sources(
+                self.src_filter)
+            args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
+            bg_res = parallel.Starmap.apply(
+                classical, args, name='background_sources_%d' % grp_id,
+                concurrent_tasks=ct)
+            # compose probabilities from background sources
+            for pmap in bg_res:
+                acc[grp_id] |= pmap[grp_id]
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
