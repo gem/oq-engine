@@ -175,7 +175,7 @@ class CalculatorTestCase(unittest.TestCase):
             self.assertEqual(expected_content, actual.read())
 
     def run(self, result=None):
-        res = super(CalculatorTestCase, self).run(result)
+        res = super().run(result)
         if res is not None:  # for Python 3
             issues = len(res.errors) + len(res.failures)
         else:
