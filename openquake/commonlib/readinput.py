@@ -31,6 +31,8 @@ from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
+from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -371,6 +373,12 @@ def get_gsim_lt(oqparam, trts=['*']):
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    gmfcorr = oqparam.get_correl_model()
+    for trt, gsims in gsim_lt.values.items():
+        for gsim in gsims:
+            if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
+                            set([StdDev.TOTAL])):
+                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     return gsim_lt
 
 
