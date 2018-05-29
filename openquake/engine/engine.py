@@ -54,7 +54,7 @@ _PPID = os.getppid()  # the controlling terminal PID
 
 if OQ_DISTRIBUTE == 'zmq':
 
-    def set_concurrent_tasks_default():
+    def set_concurrent_tasks_default(job_id):
         """
         Set the default for concurrent_tasks based on the available
         worker pools .
@@ -74,14 +74,16 @@ if OQ_DISTRIBUTE == 'zmq':
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
 
-    def set_concurrent_tasks_default():
+    def set_concurrent_tasks_default(job_id):
         """
         Set the default for concurrent_tasks based on the number of available
         celery workers.
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
-            sys.exit("No live compute nodes, aborting calculation")
+            logs.LOG.critical("No live compute nodes, aborting calculation")
+            logs.dbcmd('finish', job_id, 'failed')
+            sys.exit(1)
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = num_cores * 3
         logs.LOG.info(
@@ -301,7 +303,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     setproctitle('oq-job-%d' % job_id)
     with logs.handle(job_id, log_level, log_file):  # run the job
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default()
+            set_concurrent_tasks_default(job_id)
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
