@@ -1320,7 +1320,7 @@ class GsimLogicTree(object):
                             self.gmpe_tables.add(uncertainty['gmpe_table'])
                         try:
                             gsim = valid.gsim(gsim_name, **uncertainty.attrib)
-                        except:
+                        except Exception:
                             etype, exc, tb = sys.exc_info()
                             raise_(etype, "%s in file %s" % (exc, self.fname),
                                    tb)
