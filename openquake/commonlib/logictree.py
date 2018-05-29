@@ -141,7 +141,7 @@ class LogicTreeError(Exception):
         The error message.
     """
     def __init__(self, filename, message):
-        super(LogicTreeError, self).__init__(message)
+        super().__init__(message)
         self.filename = filename
         self.message = message
 
@@ -161,7 +161,7 @@ class ValidationError(LogicTreeError):
     <LogicTreeError>` constructor.
     """
     def __init__(self, node, *args, **kwargs):
-        super(ValidationError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.lineno = getattr(node, 'lineno', '?')
 
     def __str__(self):
