@@ -17,25 +17,22 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import copy
-import time
 import logging
 from datetime import datetime
 import numpy
 
-from openquake.baselib.general import DictArray, AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.calc.filters import SourceFilter
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib import valid
-from openquake.commonlib import source, readinput, util
+from openquake.commonlib import source, readinput
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_event_based import (
-    UCERFSource, get_composite_source_model)
+    UCERFSource, get_composite_source_model, UcerfFilter)
 # FIXME: the counting of effective ruptures has to be revised
 
 
@@ -76,62 +73,12 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-@util.reader
-def ucerf_classical(ucerf_source, src_filter, gsims, monitor):
-    """
-    :param ucerf_source:
-        an object taking the place of a source for UCERF
-    :param src_filter:
-        a source filter returning the sites affected by the source
-    :param gsims:
-        a list of GSIMs
-    :param monitor:
-        a monitor instance
-    :returns:
-        a ProbabilityMap
-    """
-    t0 = time.time()
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
-    ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
-    grp_id = ucerf_source.src_group_id
-    mag = ucerf_source.mags[ucerf_source.rupset_idx].max()
-    ridx = set()
-    for idx in ucerf_source.rupset_idx:
-        ridx.update(ucerf_source.get_ridx(idx))
-
-    # prefilter the sites close to the rupture set
-    s_sites = ucerf_source.get_rupture_sites(ridx, src_filter, mag)
-    if s_sites is None:  # return an empty probability map
-        pm = ProbabilityMap(len(imtls.array), len(gsims))
-        acc = AccumDict({grp_id: pm})
-        acc.calc_times = {
-            ucerf_source.source_id:
-            numpy.array([ucerf_source.num_ruptures, 0, time.time() - t0, 1])}
-        acc.eff_ruptures = {grp_id: 0}
-        return acc
-
-    # compute the ProbabilityMap
-    cmaker = ContextMaker(gsims, src_filter.integration_distance,
-                          monitor=monitor)
-    imtls = DictArray(imtls)
-    pmap = cmaker.poe_map(ucerf_source, s_sites, imtls, truncation_level)
-    nsites = len(s_sites)
-    acc = AccumDict({grp_id: pmap})
-    acc.calc_times = {
-        ucerf_source.source_id:
-        numpy.array([ucerf_source.num_ruptures * nsites, nsites,
-                     time.time() - t0, 1])}
-    acc.eff_ruptures = {grp_id: ucerf_source.num_ruptures}
-    return acc
-
-
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = ucerf_classical
+    core_task = classical
     is_stochastic = False
 
     def pre_execute(self):
@@ -154,8 +101,9 @@ class UcerfPSHACalculator(PSHACalculator):
         tectonic region type.
         """
         monitor = self.monitor(self.core_task.__name__)
-        monitor.oqparam = oq = self.oqparam
-        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        oq = self.oqparam
+        self.src_filter = UcerfFilter(
+            self.sitecol, oq.maximum_distance, 'rrup')
         self.nsites = []
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
@@ -169,7 +117,6 @@ class UcerfPSHACalculator(PSHACalculator):
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
             [[ucerf_source]] = sm.src_groups
-            ucerf_source.nsites = len(self.sitecol)
             self.csm.infos[ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             ct = self.oqparam.concurrent_tasks or 1
@@ -181,10 +128,10 @@ class UcerfPSHACalculator(PSHACalculator):
                 grp = copy.copy(ucerf_source)
                 grp.rupset_idx = rupset_idx
                 grp.num_ruptures = len(rupset_idx)
-                allargs.append((grp, self.src_filter, gsims, monitor))
+                allargs.append((grp, self.src_filter, gsims, param, monitor))
             taskname = 'ucerf_classical_%d' % grp_id
             acc = parallel.Starmap(
-                ucerf_classical, allargs, name=taskname
+                classical, allargs, name=taskname
             ).reduce(self.agg_dicts, acc)
 
             # parallelize on the background sources, small tasks
