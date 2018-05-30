@@ -40,6 +40,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.commonlib import readinput, source
 
 DEFAULT_TRT = "Active Shallow Crust"
+RUPTURES_PER_BLOCK = 1000
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
@@ -373,7 +374,7 @@ class UCERFSource(BaseSeismicSource):
                     yield rup
 
     def __iter__(self):
-        return split_start_stop(self, 1000)
+        return split_start_stop(self, RUPTURES_PER_BLOCK)
 
     def __repr__(self):
         return '<%s %s:%d:%d>' % (
