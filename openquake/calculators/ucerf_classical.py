@@ -134,13 +134,12 @@ class UcerfPSHACalculator(PSHACalculator):
             ).reduce(self.agg_dicts, acc)
 
             # parallelize on the background sources, small tasks
-            bckgnd_sources = ucerf_source.get_background_sources(
-                self.src_filter)
-            args = (bckgnd_sources, self.src_filter, gsims, param, monitor)
+            bg_sources = ucerf_source.get_background_sources(self.src_filter)
+            args = (bg_sources, self.src_filter, gsims, param, monitor)
             bg_res = parallel.Starmap.apply(
                 classical, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=ct)
-            # compose probabilities from background sources
+            # compose probabilities
             for pmap in bg_res:
                 acc[grp_id] |= pmap[grp_id]
 
