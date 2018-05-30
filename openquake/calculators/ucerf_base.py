@@ -18,7 +18,6 @@
 import os
 import copy
 import math
-import logging
 import numpy
 import h5py
 from openquake.baselib.general import block_splitter, cached_property
@@ -55,6 +54,17 @@ NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.05, NodalPlane(325.0, 45.0, 90.))])
 
 
+def split_start_stop(obj, block_size):
+    start = obj.start
+    stop = obj.stop
+    while stop > start:
+        new = copy.copy(obj)
+        new.start = start
+        new.stop = stop = min(start + block_size, stop)
+        start += block_size
+        yield new
+
+
 class ImperfectPlanarSurface(PlanarSurface):
     """
     The planar surface class sets a narrow tolerance for the rectangular plane
@@ -74,33 +84,32 @@ class UcerfFilter(SourceFilter):
     Filter for UCERF sources, both background and faults.
     """
     def filter(self, srcs):
-        if not hasattr(srcs, 'rupset_idx'):  # background sources
+        if not hasattr(srcs, 'start'):  # background sources
             yield from super().filter(srcs)
             return
         for src in srcs:
             src.src_filter = self  # hack: needed for .iter_ruptures
             ridx = set()
-            for idx in src.rupset_idx:
+            for idx in range(src.start, src.stop):
                 ridx.update(src.get_ridx(idx))
-            mag = src.mags[src.rupset_idx].max()
-            self.set_indices(src, ridx, mag)
+            mag = src.mags[src.start:src.stop].max()
+            src.indices = self.get_indices(src, ridx, mag)
             if len(src.indices):
                 yield src
 
-    def set_indices(self, src, ridx, mag):
+    def get_indices(self, src, ridx, mag):
         """
         :param src: an UCERF source
         :param ridx: a set of rupture indices
         :param mag: magnitude to use to compute the integration distance
-
-        Add an array of .indice to the given source, containing the IDs of the
-        sites close to the given set of ruptures.
+        :returns: array with the IDs of the sites close to the ruptures
         """
         centroids = src.get_centroids(ridx)
         mindistance = min_geodetic_distance(
             (centroids[:, 0], centroids[:, 1]), self.sitecol.xyz)
         idist = self.integration_distance(DEFAULT_TRT, mag)
-        src.indices, = (mindistance <= idist).nonzero()
+        indices, = (mindistance <= idist).nonzero()
+        return indices
 
 
 class UCERFSource(BaseSeismicSource):
@@ -164,17 +173,17 @@ class UCERFSource(BaseSeismicSource):
     @cached_property
     def mags(self):
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["mag"]].value
+            return hdf5[self.idx_set["mag"]].value  # [self.start:self.stop]
 
     @cached_property
     def rate(self):
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rate"]].value
+            return hdf5[self.idx_set["rate"]].value  # [self.start:self.stop]
 
     @cached_property
     def rake(self):
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rake"]].value
+            return hdf5[self.idx_set["rake"]].value  # [self.start:self.stop]
 
     def count_ruptures(self):
         """
@@ -275,8 +284,8 @@ class UCERFSource(BaseSeismicSource):
         ridx = self.get_ridx(iloc)
         mag = self.mags[iloc]
         surface_set = []
-        src_filter.set_indices(self, ridx, mag)
-        if len(self.indices) == 0:
+        indices = src_filter.get_indices(self, ridx, mag)
+        if len(indices) == 0:
             return None
         for trace, plane in self.gen_trace_planes(ridx):
             # build simple fault surface
@@ -306,19 +315,16 @@ class UCERFSource(BaseSeismicSource):
 
     def iter_ruptures(self):
         """
-        Yield ruptures for the current set of indices (.rupset_idx)
+        Yield ruptures for the current set of indices
         """
-        for ridx in self.rupset_idx:
+        for ridx in range(self.start, self.stop):
             if self.rate[ridx]:  # ruptures may have have zero rate
                 rup = self.get_ucerf_rupture(ridx, self.src_filter)
                 if rup:
                     yield rup
 
     def __iter__(self):
-        for block in block_splitter(self.rupset_idx, 1000):
-            new = copy.copy(self)
-            new.rupset_idx = numpy.array(block, numpy.uint32)
-            yield new
+        return split_start_stop(self, 1000)
 
     def get_background_sources(self, src_filter):
         """

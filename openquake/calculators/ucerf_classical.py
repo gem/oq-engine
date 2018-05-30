@@ -122,11 +122,11 @@ class UcerfPSHACalculator(PSHACalculator):
             bg_sources = ucerf.get_background_sources(self.src_filter)
             # parallelize by rupture subsets
             allargs = []
-            for rupset_idx in split_in_blocks(
-                    numpy.arange(ucerf.num_ruptures), ct):
+            for slc in split_in_blocks(ucerf.num_ruptures, ct):
                 grp = copy.copy(ucerf)
-                grp.rupset_idx = rupset_idx
-                grp.num_ruptures = len(rupset_idx)
+                grp.start = slc.start
+                grp.stop = slc.stop
+                grp.num_ruptures = slc.stop - slc.start
                 allargs.append((grp, self.src_filter, gsims, param, monitor))
             for blk in split_in_blocks(bg_sources, ct):
                 allargs.append((blk, self.src_filter, gsims, param, monitor))
