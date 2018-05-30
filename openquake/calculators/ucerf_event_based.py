@@ -132,9 +132,6 @@ def sample_background_model(
         background_n_occ.extend(rate_cnt.tolist())
     return background_ruptures, background_n_occ
 
-        # read from FM0_0/MEANFS/MEANMSR/Magnitude
-        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-        # read from FM0_0/MEANFS/Rake
 # #################################################################### #
 
 

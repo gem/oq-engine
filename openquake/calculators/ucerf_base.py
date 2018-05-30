@@ -21,7 +21,6 @@ import math
 from datetime import datetime
 import numpy
 import h5py
-from openquake.baselib.general import cached_property
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -97,6 +96,7 @@ def split_start_stop(obj, block_size):
     stop = obj.stop
     while stop > start:
         new = copy.copy(obj)
+        new.orig = obj
         new.start = start
         new.stop = min(start + block_size, stop)
         start += block_size
@@ -206,6 +206,7 @@ class UCERFSource(BaseSeismicSource):
         self.tectonic_region_type = trt
         self.stop = 0
         self.start = 0
+        self.orig = None  # set by .new()
 
     @property
     def num_ruptures(self):
@@ -215,29 +216,11 @@ class UCERFSource(BaseSeismicSource):
     def num_ruptures(self, value):  # hack to make the sourceconverter happy
         pass
 
-    @cached_property
-    def mags(self):
-        # read from FM0_0/MEANFS/MEANMSR/Magnitude
-        with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["mag"]].value  # [self.start:self.stop]
-
-    @cached_property
-    def rate(self):
-        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-        with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rate"]].value  # [self.start:self.stop]
-
-    @cached_property
-    def rake(self):
-        # read from FM0_0/MEANFS/Rake
-        with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rake"]].value  # [self.start:self.stop]
-
     def count_ruptures(self):
         """
         The length of the rupture array if the branch_id is set, else 0
         """
-        return len(self.mags) if hasattr(self, 'mags') else 0
+        return self.num_ruptures
 
     def new(self, grp_id, branch_id):
         """
@@ -247,12 +230,19 @@ class UCERFSource(BaseSeismicSource):
         :returns: a new UCERFSource associated to the branch_id
         """
         new = copy.copy(self)
+        new.orig = new
         new.src_group_id = grp_id
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
             new.start = 0
             new.stop = len(hdf5[new.idx_set["mag"]])
+            # read from FM0_0/MEANFS/MEANMSR/Magnitude
+            new.mags = hdf5[new.idx_set["mag"]].value
+            # read from FM0_0/MEANFS/Rake
+            new.rake = hdf5[new.idx_set["rake"]].value
+            # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
+            new.rate = hdf5[new.idx_set["rate"]].value
         return new
 
     def get_min_max_mag(self):
@@ -331,7 +321,7 @@ class UCERFSource(BaseSeismicSource):
         """
         trt = self.tectonic_region_type
         ridx = self.get_ridx(iloc)
-        mag = self.mags[iloc]
+        mag = self.orig.mags[iloc]
         surface_set = []
         indices = src_filter.get_indices(self, ridx, mag)
         if len(indices) == 0:
@@ -356,9 +346,9 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.rake[iloc], trt,
+            mag, self.orig.rake[iloc], trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.rate[iloc], self.tom)
+            MultiSurface(surface_set), self.orig.rate[iloc], self.tom)
 
         return rupture
 
@@ -367,7 +357,7 @@ class UCERFSource(BaseSeismicSource):
         Yield ruptures for the current set of indices
         """
         for ridx in range(self.start, self.stop):
-            if self.rate[ridx]:  # ruptures may have have zero rate
+            if self.orig.rate[ridx]:  # ruptures may have have zero rate
                 rup = self.get_ucerf_rupture(ridx, self.src_filter)
                 if rup:
                     yield rup
