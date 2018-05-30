@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the data transfer in the UCERF calculators
   * Stored the zipped input files in the datastore for reproducibility
   * Fixed a regression when reading GMFs from an XML in absence of a sites.csv
     file
