@@ -20,7 +20,7 @@ import copy
 import math
 import numpy
 import h5py
-from openquake.baselib.general import block_splitter, cached_property
+from openquake.baselib.general import cached_property
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -168,12 +168,21 @@ class UCERFSource(BaseSeismicSource):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
-        self.num_ruptures = 0  # not set yet
+        self.stop = 0
+        self.start = 0
+
+    @property
+    def num_ruptures(self):
+        return self.stop - self.start
+
+    @num_ruptures.setter
+    def num_ruptures(self, value):  # hack to make the sourceconverter happy
+        pass
 
     @cached_property
     def mags(self):
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["mag"]].value  # [self.start:self.stop]
+            return hdf5[self.idx_set["mag"]][self.start:self.stop]
 
     @cached_property
     def rate(self):
@@ -203,7 +212,8 @@ class UCERFSource(BaseSeismicSource):
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
-            new.num_ruptures = len(hdf5[new.idx_set["mag"]])
+            new.start = 0
+            new.stop = len(hdf5[new.idx_set["mag"]])
         return new
 
     def get_min_max_mag(self):

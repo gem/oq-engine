@@ -19,7 +19,6 @@ import os
 import copy
 import logging
 from datetime import datetime
-import numpy
 
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.baselib import parallel
@@ -32,7 +31,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_base import (
-    UCERFSource, get_composite_source_model, UcerfFilter)
+    split_start_stop, UCERFSource, get_composite_source_model, UcerfFilter)
 # FIXME: the counting of effective ruptures has to be revised
 
 
@@ -115,6 +114,8 @@ class UcerfPSHACalculator(PSHACalculator):
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
             [[ucerf]] = sm.src_groups
+            ucerf.start = 0
+            ucerf.stop = ucerf.num_ruptures
             self.csm.infos[ucerf.source_id] = source.SourceInfo(
                 ucerf)
             ct = self.oqparam.concurrent_tasks or 1
@@ -122,11 +123,8 @@ class UcerfPSHACalculator(PSHACalculator):
             bg_sources = ucerf.get_background_sources(self.src_filter)
             # parallelize by rupture subsets
             allargs = []
-            for slc in split_in_blocks(ucerf.num_ruptures, ct):
-                grp = copy.copy(ucerf)
-                grp.start = slc.start
-                grp.stop = slc.stop
-                grp.num_ruptures = slc.stop - slc.start
+            for grp in split_start_stop(ucerf, 1000):
+                grp.num_ruptures = grp.stop - grp.start
                 allargs.append((grp, self.src_filter, gsims, param, monitor))
             for blk in split_in_blocks(bg_sources, ct):
                 allargs.append((blk, self.src_filter, gsims, param, monitor))
