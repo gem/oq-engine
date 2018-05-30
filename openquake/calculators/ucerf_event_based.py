@@ -410,16 +410,19 @@ class UCERFSource(object):
 
     @cached_property
     def mags(self):
+        # read from FM0_0/MEANFS/MEANMSR/Magnitude
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["mag"]].value
 
     @cached_property
     def rate(self):
+        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["rate"]].value
 
     @cached_property
     def rake(self):
+        # read from FM0_0/MEANFS/Rake
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["rake"]].value
 
