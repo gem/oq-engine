@@ -478,12 +478,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 else:
                     self.datastore[key] = ProbabilityMap(oq.imtls.array.size)
                     logging.info('Zero curves for %s', key)
-            # compute and save statistics; this is done in process
-            # we don't need to parallelize, since event based calculations
-            # involves a "small" number of sites (<= 65,536)
+            # compute and save statistics; this is done in process and can
+            # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
             hstats = self.oqparam.hazard_stats()
             if len(hstats) and len(rlzs) > 1:
+                logging.info('Computing statistical hazard curves')
                 for kind, stat in hstats:
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     self.datastore['hcurves/' + kind] = pmap
