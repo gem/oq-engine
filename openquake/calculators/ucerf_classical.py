@@ -102,8 +102,7 @@ class UcerfPSHACalculator(PSHACalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         oq = self.oqparam
-        self.src_filter = UcerfFilter(
-            self.sitecol, oq.maximum_distance, 'rrup')
+        self.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
         self.nsites = []
         acc = AccumDict({
             grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
