@@ -18,6 +18,7 @@
 import os
 import copy
 import math
+from datetime import datetime
 import numpy
 import h5py
 from openquake.baselib.general import cached_property
@@ -34,7 +35,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.commonlib import readinput, source
 
@@ -52,6 +53,42 @@ NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.05, NodalPlane(225.0, 45.0, 90.)),
            (0.05, NodalPlane(270.0, 45.0, 90.)),
            (0.05, NodalPlane(325.0, 45.0, 90.))])
+
+
+def convert_UCERFSource(self, node):
+    """
+    Converts the Ucerf Source node into an SES Control object
+    """
+    dirname = os.path.dirname(self.fname)  # where the source_model_file is
+    source_file = os.path.join(dirname, node["filename"])
+    if "startDate" in node.attrib and "investigationTime" in node.attrib:
+        # Is a time-dependent model - even if rates were originally
+        # poissonian
+        # Verify that the source time span is the same as the TOM time span
+        inv_time = float(node["investigationTime"])
+        if inv_time != self.tom.time_span:
+            raise ValueError("Source investigation time (%s) is not "
+                             "equal to configuration investigation time "
+                             "(%s)" % (inv_time, self.tom.time_span))
+        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
+    else:
+        start_date = None
+    return UCERFSource(
+        source_file,
+        self.tom.time_span,
+        start_date,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
+
+
+SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 def split_start_stop(obj, block_size):
