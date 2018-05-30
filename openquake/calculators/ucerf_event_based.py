@@ -95,12 +95,15 @@ class ImperfectPlanarSurface(PlanarSurface):
 
 
 class UcerfFilter(SourceFilter):
+    """
+    Filter for UCERF sources, both background and faults.
+    """
     def filter(self, srcs):
-        if not hasattr(srcs, 'rupset_idx'):  # PointSources
+        if not hasattr(srcs, 'rupset_idx'):  # background sources
             yield from super().filter(srcs)
             return
         for src in srcs:
-            src.src_filter = self
+            src.src_filter = self  # hack: needed for .iter_ruptures
             ridx = set()
             for idx in src.rupset_idx:
                 ridx.update(src.get_ridx(idx))
@@ -110,11 +113,19 @@ class UcerfFilter(SourceFilter):
                 yield src
 
     def set_indices(self, src, ridx, mag):
+        """
+        :param src: an UCERF source
+        :param ridx: a set of rupture indices
+        :param mag: magnitude to use to compute the integration distance
+
+        Add an array of .indice to the given source, containing the IDs of the
+        sites close to the given set of ruptures.
+        """
         centroids = src.get_centroids(ridx)
-        distance = min_geodetic_distance(
+        mindistance = min_geodetic_distance(
             (centroids[:, 0], centroids[:, 1]), self.sitecol.xyz)
         idist = self.integration_distance(DEFAULT_TRT, mag)
-        src.indices, = (distance <= idist).nonzero()
+        src.indices, = (mindistance <= idist).nonzero()
 
 
 def get_rupture_dimensions(mag, nodal_plane, msr, rupture_aspect_ratio,
