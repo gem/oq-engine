@@ -96,7 +96,11 @@ class PSHACalculator(base.HazardCalculator):
                 self.nsites.append(len(pmap_by_grp[grp_id]))
             for srcid, (srcweight, nsites, calc_time, split) in \
                     pmap_by_grp.calc_times.items():
-                info = self.csm.infos[srcid]
+                try:
+                    info = self.csm.infos[srcid]
+                except KeyError:
+                    # FIXME: this happens in UCERF only
+                    continue
                 info.num_sites += nsites
                 info.calc_time += calc_time
                 info.num_split += split
