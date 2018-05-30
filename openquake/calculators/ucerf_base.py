@@ -116,8 +116,6 @@ class UCERFSource(BaseSeismicSource):
     """
     :param source_file:
         Path to an existing HDF5 file containing the UCERF model
-    :param str id:
-        Valid branch of UCERF
     :param float investigation_time:
         Investigation time of event set (years)
     :param start_date:
@@ -149,13 +147,13 @@ class UCERFSource(BaseSeismicSource):
     tectonic_region_type = DEFAULT_TRT
 
     def __init__(
-            self, source_file, id, investigation_time, start_date, min_mag,
+            self, source_file, investigation_time, start_date, min_mag,
             npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
             trt="Active Shallow Crust", integration_distance=1000):
         assert os.path.exists(source_file), source_file
         self.source_file = source_file
-        self.source_id = id
+        self.source_id = None  # unset until .new is called
         self.inv_time = investigation_time
         self.start_date = start_date
         self.tom = self._get_tom()
@@ -181,16 +179,19 @@ class UCERFSource(BaseSeismicSource):
 
     @cached_property
     def mags(self):
+        # read from FM0_0/MEANFS/MEANMSR/Magnitude
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["mag"]].value  # [self.start:self.stop]
 
     @cached_property
     def rate(self):
+        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["rate"]].value  # [self.start:self.stop]
 
     @cached_property
     def rake(self):
+        # read from FM0_0/MEANFS/Rake
         with h5py.File(self.source_file, "r") as hdf5:
             return hdf5[self.idx_set["rake"]].value  # [self.start:self.stop]
 
