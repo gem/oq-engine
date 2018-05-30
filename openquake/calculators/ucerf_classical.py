@@ -109,39 +109,30 @@ class UcerfPSHACalculator(PSHACalculator):
             for grp_id, gsims in self.gsims_by_grp.items()})
         acc.calc_times = {}
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
-        acc.bb_dict = {}  # just for API compatibility
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
-            [[ucerf_source]] = sm.src_groups
-            self.csm.infos[ucerf_source.source_id] = source.SourceInfo(
-                ucerf_source)
+            [[ucerf]] = sm.src_groups
+            self.csm.infos[ucerf.source_id] = source.SourceInfo(
+                ucerf)
             ct = self.oqparam.concurrent_tasks or 1
-
+            logging.info('Getting background sources for %s', ucerf.source_id)
+            bg_sources = ucerf.get_background_sources(self.src_filter)
             # parallelize by rupture subsets
             allargs = []
             for rupset_idx in split_in_blocks(
-                    numpy.arange(ucerf_source.num_ruptures), ct):
-                grp = copy.copy(ucerf_source)
+                    numpy.arange(ucerf.num_ruptures), ct):
+                grp = copy.copy(ucerf)
                 grp.rupset_idx = rupset_idx
                 grp.num_ruptures = len(rupset_idx)
                 allargs.append((grp, self.src_filter, gsims, param, monitor))
-            taskname = 'ucerf_classical_%d' % grp_id
+            for blk in split_in_blocks(bg_sources, ct):
+                allargs.append((blk, self.src_filter, gsims, param, monitor))
             acc = parallel.Starmap(
-                classical, allargs, name=taskname
+                classical, allargs, name='classical_%d' % grp_id
             ).reduce(self.agg_dicts, acc)
-
-            # parallelize on the background sources, small tasks
-            bg_sources = ucerf_source.get_background_sources(self.src_filter)
-            args = (bg_sources, self.src_filter, gsims, param, monitor)
-            bg_res = parallel.Starmap.apply(
-                classical, args, name='background_sources_%d' % grp_id,
-                concurrent_tasks=ct)
-            # compose probabilities
-            for pmap in bg_res:
-                acc[grp_id] |= pmap[grp_id]
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
