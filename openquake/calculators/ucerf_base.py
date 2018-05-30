@@ -122,19 +122,18 @@ class UcerfFilter(SourceFilter):
     Filter for UCERF sources, both background and faults.
     """
     def filter(self, srcs):
-        if not hasattr(srcs[0], 'start'):  # background sources
-            yield from super().filter(srcs)
-            return
-        # fault sources
         for src in srcs:
-            src.src_filter = self  # hack: needed for .iter_ruptures
-            ridx = set()
-            for idx in range(src.start, src.stop):
-                ridx.update(src.get_ridx(idx))
-            mag = src.mags[src.start:src.stop].max()
-            src.indices = self.get_indices(src, ridx, mag)
-            if len(src.indices):
-                yield src
+            if hasattr(src, 'start'):  # fault sources
+                src.src_filter = self  # hack: needed for .iter_ruptures
+                ridx = set()
+                for idx in range(src.start, src.stop):
+                    ridx.update(src.get_ridx(idx))
+                mag = src.mags[src.start:src.stop].max()
+                src.indices = self.get_indices(src, ridx, mag)
+                if len(src.indices):
+                    yield src
+            else:  # background sources
+                yield from super().filter([src])
 
     def get_indices(self, src, ridx, mag):
         """
