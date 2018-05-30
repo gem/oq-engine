@@ -97,7 +97,7 @@ def split_start_stop(obj, block_size):
     while stop > start:
         new = copy.copy(obj)
         new.start = start
-        new.stop = stop = min(start + block_size, stop)
+        new.stop = min(start + block_size, stop)
         start += block_size
         yield new
 
@@ -374,6 +374,10 @@ class UCERFSource(BaseSeismicSource):
 
     def __iter__(self):
         return split_start_stop(self, 1000)
+
+    def __repr__(self):
+        return '<%s %s:%d:%d>' % (
+            self.__class__.__name__, self.source_id, self.start, self.stop)
 
     def get_background_sources(self, src_filter):
         """
