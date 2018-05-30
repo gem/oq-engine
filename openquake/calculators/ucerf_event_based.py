@@ -25,10 +25,12 @@ import collections
 import h5py
 import numpy
 
-from openquake.baselib.general import AccumDict, cached_property
+from openquake.baselib.general import (
+    AccumDict, cached_property, block_splitter)
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc import stochastic
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, util
@@ -90,6 +92,29 @@ class ImperfectPlanarSurface(PlanarSurface):
     order of < 0.15 % for Rrup (< 2 % for Rjb, < 3.0E-5 % for Rx)
     """
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
+
+
+class UcerfFilter(SourceFilter):
+    def filter(self, srcs):
+        if not hasattr(srcs, 'rupset_idx'):  # PointSources
+            yield from super().filter(srcs)
+            return
+        for src in srcs:
+            src.src_filter = self
+            ridx = set()
+            for idx in src.rupset_idx:
+                ridx.update(src.get_ridx(idx))
+            mag = src.mags[src.rupset_idx].max()
+            self.set_indices(src, ridx, mag)
+            if len(src.indices):
+                yield src
+
+    def set_indices(self, src, ridx, mag):
+        centroids = src.get_centroids(ridx)
+        distance = min_geodetic_distance(
+            (centroids[:, 0], centroids[:, 1]), self.sitecol.xyz)
+        idist = self.integration_distance(DEFAULT_TRT, mag)
+        src.indices, = (distance <= idist).nonzero()
 
 
 def get_rupture_dimensions(mag, nodal_plane, msr, rupture_aspect_ratio,
@@ -351,7 +376,7 @@ def sample_background_model(
     return background_ruptures, background_n_occ
 
 
-class UCERFSource(object):
+class UCERFSource(BaseSeismicSource):
     """
     :param source_file:
         Path to an existing HDF5 file containing the UCERF model
@@ -384,6 +409,7 @@ class UCERFSource(object):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
+    MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
 
     def __init__(
@@ -489,27 +515,6 @@ class UCERFSource(object):
         """
         return self.num_ruptures
 
-    def get_rupture_sites(self, ridx, src_filter, mag):
-        """
-        Determines if a rupture is likely to be inside the integration distance
-        by considering the set of fault plane centroids and returns the
-        affected sites if any.
-
-        :param ridx:
-            List of indices composing the rupture sections
-        :param src_filter:
-            SourceFilter instance
-        :param mag:
-            Magnitude of the rupture for consideration
-        :returns:
-            The sites affected by the rupture (or None)
-        """
-        centroids = self.get_centroids(ridx)
-        distance = min_geodetic_distance(
-            (centroids[:, 0], centroids[:, 1]), src_filter.sitecol.xyz)
-        idist = src_filter.integration_distance(DEFAULT_TRT, mag)
-        return src_filter.sitecol.filter(distance <= idist)
-
     def get_background_sids(self, src_filter):
         """
         We can apply the filtering of the background sites as a pre-processing
@@ -543,8 +548,8 @@ class UCERFSource(object):
         ridx = self.get_ridx(iloc)
         mag = self.mags[iloc]
         surface_set = []
-        r_sites = self.get_rupture_sites(ridx, src_filter, mag)
-        if r_sites is None:
+        src_filter.set_indices(self, ridx, mag)
+        if len(self.indices) == 0:
             return None
         for trace, plane in self.gen_trace_planes(ridx):
             # build simple fault surface
@@ -606,15 +611,17 @@ class UCERFSource(object):
         """
         Yield ruptures for the current set of indices (.rupset_idx)
         """
-        try:  # the source has set a subset of indices
-            rupset_idx = self.rupset_idx
-        except AttributeError:  # use all indices
-            rupset_idx = numpy.arange(self.num_ruptures)
-        for ridx in rupset_idx:
+        for ridx in self.rupset_idx:
             if self.rate[ridx]:  # ruptures may have have zero rate
                 rup = self.get_ucerf_rupture(ridx, self.src_filter)
                 if rup:
                     yield rup
+
+    def __iter__(self):
+        for block in block_splitter(self.rupset_idx, 1000):
+            new = copy.copy(self)
+            new.rupset_idx = numpy.array(block, U32)
+            yield new
 
     def get_background_sources(self, src_filter):
         """
@@ -765,7 +772,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.csm = get_composite_source_model(oq)
-        self.csm.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        self.csm.src_filter = UcerfFilter(
+            self.sitecol, oq.maximum_distance, 'rrup')
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
@@ -791,8 +799,6 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [sm] = ssm.source_models
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
-            for src in srcs:
-                src.nsites = len(self.sitecol)  # not filtered here
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
