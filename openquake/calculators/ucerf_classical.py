@@ -17,16 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib import source, readinput
+from openquake.commonlib import readinput, source
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_base import (
-    split_start_stop, get_composite_source_model, UcerfFilter)
+    get_composite_source_model, UcerfFilter)
 # FIXME: the counting of effective ruptures has to be revised
 
 
@@ -46,6 +46,7 @@ class UcerfPSHACalculator(PSHACalculator):
         sitecol = readinput.get_site_collection(self.oqparam)
         self.datastore['sitecol'] = self.sitecol = sitecol
         self.csm = get_composite_source_model(self.oqparam)
+        self.csm.split_all()
         self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
                              for sm in self.csm.source_models
                              for grp in sm.src_groups}
@@ -69,25 +70,20 @@ class UcerfPSHACalculator(PSHACalculator):
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
+            sources = []
             grp_id = sm.ordinal
             gsims = self.gsims_by_grp[grp_id]
-            [[ucerf]] = sm.src_groups
-            ucerf.start = 0
-            ucerf.stop = ucerf.num_ruptures
-            self.csm.infos[ucerf.source_id] = source.SourceInfo(
-                ucerf)
+            [grp] = sm.src_groups
+            ucerf = grp[0]
+            self.csm.infos[ucerf.source_id] = source.SourceInfo(ucerf)
             ct = self.oqparam.concurrent_tasks or 1
             logging.info('Getting background sources for %s', ucerf.source_id)
             bg_sources = ucerf.get_background_sources(self.src_filter)
-            # parallelize by rupture subsets
-            allargs = []
-            for grp in split_start_stop(ucerf, 1000):
-                grp.num_ruptures = grp.stop - grp.start
-                allargs.append((grp, self.src_filter, gsims, param, monitor))
-            for blk in split_in_blocks(bg_sources, ct):
-                allargs.append((blk, self.src_filter, gsims, param, monitor))
-            acc = parallel.Starmap(
-                classical, allargs, name='classical_%d' % grp_id
+            sources.extend(grp)
+            sources.extend(bg_sources)
+            acc = parallel.Starmap.apply(
+                classical, (sources, self.src_filter, gsims, param, monitor),
+                name='classical_%d' % grp_id, concurrent_tasks=ct * 2
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
