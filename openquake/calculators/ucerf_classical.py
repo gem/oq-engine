@@ -15,60 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
-import copy
 import logging
-from datetime import datetime
 
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput
-from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 from openquake.calculators.ucerf_base import (
-    split_start_stop, UCERFSource, get_composite_source_model, UcerfFilter)
+    split_start_stop, get_composite_source_model, UcerfFilter)
 # FIXME: the counting of effective ruptures has to be revised
-
-
-def convert_UCERFSource(self, node):
-    """
-    Converts the Ucerf Source node into an SES Control object
-    """
-    dirname = os.path.dirname(self.fname)  # where the source_model_file is
-    source_file = os.path.join(dirname, node["filename"])
-    if "startDate" in node.attrib and "investigationTime" in node.attrib:
-        # Is a time-dependent model - even if rates were originally
-        # poissonian
-        # Verify that the source time span is the same as the TOM time span
-        inv_time = float(node["investigationTime"])
-        if inv_time != self.tom.time_span:
-            raise ValueError("Source investigation time (%s) is not "
-                             "equal to configuration investigation time "
-                             "(%s)" % (inv_time, self.tom.time_span))
-        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
-    else:
-        start_date = None
-    return UCERFSource(
-        source_file,
-        self.tom.time_span,
-        start_date,
-        float(node["minMag"]),
-        npd=self.convert_npdist(node),
-        hdd=self.convert_hpdist(node),
-        aspect=~node.ruptAspectRatio,
-        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-        msr=valid.SCALEREL[~node.magScaleRel](),
-        mesh_spacing=self.rupture_mesh_spacing,
-        trt=node["tectonicRegion"])
-
-
-SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 @base.calculators.add('ucerf_psha')
