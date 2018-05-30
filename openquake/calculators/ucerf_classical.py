@@ -31,7 +31,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
-from openquake.calculators.ucerf_event_based import (
+from openquake.calculators.ucerf_base import (
     UCERFSource, get_composite_source_model, UcerfFilter)
 # FIXME: the counting of effective ruptures has to be revised
 
