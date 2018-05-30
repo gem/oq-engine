@@ -182,7 +182,7 @@ class UCERFSource(BaseSeismicSource):
     @cached_property
     def mags(self):
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["mag"]][self.start:self.stop]
+            return hdf5[self.idx_set["mag"]].value  # [self.start:self.stop]
 
     @cached_property
     def rate(self):
