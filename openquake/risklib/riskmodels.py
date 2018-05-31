@@ -42,26 +42,27 @@ def get_risk_files(inputs):
     :param inputs: a dictionary key -> path name
     :returns: a pair (file_type, {risk_type: path})
     """
-    vfs = {}
+    rfs = {}
     names = set()
     for key in inputs:
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            vfs['structural'] = inputs['structural_fragility'] = inputs[key]
+            rfs['fragility/structural'] = inputs[
+                'structural_fragility'] = inputs[key]
             names.add('fragility')
             del inputs['fragility']
             continue
         match = RISK_TYPE_REGEX.match(key)
         if match and 'retrofitted' not in key and 'consequence' not in key:
-            vfs[key] = inputs[key]
+            rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
             names.add(match.group(2))
     if not names:
         return None, {}
     elif len(names) > 1:
         raise ValueError('Found inconsistent keys %s in the .ini file'
                          % ', '.join(names))
-    return names.pop(), vfs
+    return names.pop(), rfs
 
 
 # ########################### vulnerability ############################## #

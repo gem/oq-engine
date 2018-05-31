@@ -150,6 +150,7 @@ class OqParam(valid.ParamSet):
             return self._risk_files
         except AttributeError:
             self._file_type, self._risk_files = get_risk_files(self.inputs)
+            #import pdb; pdb.set_trace()
             return self._risk_files
 
     @property
@@ -349,12 +350,12 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
-        costtypes = sorted(rtype.rsplit('_', 1)[0] for rtype in self.risk_files)
+        costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._file_type, self._risk_files = get_risk_files(parent.inputs)
-            costtypes = sorted(type.rsplit('_', 1)[0], self.risk_files)
+            costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         return costtypes
 
     def set_risk_imtls(self, risk_models):
