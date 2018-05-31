@@ -23,7 +23,9 @@ from openquake.calculators.getters import PmapGetter
 @sap.Script
 def combine_mean_curves(calc1, calc2):
     """
-    Combine the hazard curves coming from two different calculations
+    Combine the hazard curves coming from two different calculations.
+    The result will be the hazard curves of calc1, updated on the sites
+    in common with calc2 with the PoEs of calc2.
     """
     dstore1 = datastore.read(calc1)
     dstore2 = datastore.read(calc2)
@@ -37,11 +39,10 @@ def combine_mean_curves(calc1, calc2):
     if not common:
         raise RuntimeError('There are no common sites between calculation '
                            '%d and %d' % (calc1, calc2))
-    sids1 = [site_id1[lonlat] for lonlat in common]
     sids2 = [site_id2[lonlat] for lonlat in common]
     assoc1 = dstore1['csm_info'].get_rlzs_assoc()
-    assoc2 = dstore1['csm_info'].get_rlzs_assoc()
-    pmap = PmapGetter(dstore1, assoc1, sids1).get_mean()
+    assoc2 = dstore2['csm_info'].get_rlzs_assoc()
+    pmap = PmapGetter(dstore1, assoc1).get_mean()
     pmap2 = PmapGetter(dstore1, assoc2, sids2).get_mean()
     for lonlat in common:
         pmap[site_id1[lonlat]] |= pmap2[site_id2[lonlat]]
