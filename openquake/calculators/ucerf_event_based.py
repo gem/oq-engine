@@ -28,11 +28,10 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.risklib import riskinput
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
-    DEFAULT_TRT, UcerfFilter, generate_background_ruptures,
-    get_composite_source_model)
+    DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
 from openquake.calculators.event_based_risk import (
     EbrCalculator, event_based_risk)
 
@@ -201,7 +200,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
-        self.csm = get_composite_source_model(oq)
+        self.csm = readinput.get_composite_source_model(oq)
         self.csm.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
