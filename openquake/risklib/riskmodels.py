@@ -29,21 +29,18 @@ from openquake.risklib import utils, scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 registry = CallableDict()
 
-
-F64 = numpy.float64
-
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
-
-LOSS_TYPE_KEY = re.compile(
+RISK_TYPE_REGEX = re.compile(
     '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
     """
     :param inputs: a dictionary key -> path name
-    :returns: a pair (file_type, {cost_type: path})
+    :returns: a pair (file_type, {risk_type: path})
     """
     vfs = {}
     names = set()
@@ -55,9 +52,9 @@ def get_risk_files(inputs):
             names.add('fragility')
             del inputs['fragility']
             continue
-        match = LOSS_TYPE_KEY.match(key)
+        match = RISK_TYPE_REGEX.match(key)
         if match and 'retrofitted' not in key and 'consequence' not in key:
-            vfs[match.group(1)] = inputs[key]
+            vfs[key] = inputs[key]
             names.add(match.group(2))
     if not names:
         return None, {}
