@@ -25,8 +25,7 @@ from openquake.commonlib import readinput, source
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
-from openquake.calculators.ucerf_base import (
-    get_composite_source_model, UcerfFilter)
+from openquake.calculators.ucerf_base import UcerfFilter
 # FIXME: the counting of effective ruptures has to be revised
 
 
@@ -45,7 +44,7 @@ class UcerfPSHACalculator(PSHACalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         sitecol = readinput.get_site_collection(self.oqparam)
         self.datastore['sitecol'] = self.sitecol = sitecol
-        self.csm = get_composite_source_model(self.oqparam)
+        self.csm = readinput.get_composite_source_model(self.oqparam)
         self.csm.split_all()
         self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
                              for sm in self.csm.source_models
