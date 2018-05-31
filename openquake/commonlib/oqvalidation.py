@@ -349,12 +349,12 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
-        costtypes = sorted(self.risk_files)
+        costtypes = sorted(rtype.split('_')[0] for rtype in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._file_type, self._risk_files = get_risk_files(parent.inputs)
-            costtypes = sorted(self.risk_files)
+            costtypes = sorted(type.split('_')[0], self.risk_files)
         return costtypes
 
     def set_risk_imtls(self, risk_models):
@@ -368,7 +368,7 @@ class OqParam(valid.ParamSet):
         # in that case we merge the IMLs
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
-            for loss_type, rf in risk_functions.items():
+            for risk_type, rf in risk_functions.items():
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
