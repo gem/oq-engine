@@ -34,9 +34,6 @@ class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = classical
-    is_stochastic = False
-
     def pre_execute(self):
         """
         parse the logic tree and source model input
