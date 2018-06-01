@@ -34,20 +34,6 @@ class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
-    def pre_execute(self):
-        """
-        parse the logic tree and source model input
-        """
-        logging.warn('%s is still experimental', self.__class__.__name__)
-        sitecol = readinput.get_site_collection(self.oqparam)
-        self.datastore['sitecol'] = self.sitecol = sitecol
-        self.csm = readinput.get_composite_source_model(self.oqparam)
-        self.csm.split_all()
-        self.gsims_by_grp = {grp.id: self.csm.info.get_gsims(grp.id)
-                             for sm in self.csm.source_models
-                             for grp in sm.src_groups}
-        self.rup_data = {}
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -58,28 +44,21 @@ class UcerfPSHACalculator(PSHACalculator):
         oq = self.oqparam
         self.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
         self.nsites = []
-        acc = AccumDict({
-            grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
-            for grp_id, gsims in self.gsims_by_grp.items()})
-        acc.calc_times = {}
-        acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        acc = self.zerodict()
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
-            sources = []
-            grp_id = sm.ordinal
-            gsims = self.gsims_by_grp[grp_id]
+            gsims = self.csm.info.get_gsims(sm.ordinal)
             [grp] = sm.src_groups
             ucerf = grp[0]
             self.csm.infos[ucerf.source_id] = source.SourceInfo(ucerf)
-            ct = self.oqparam.concurrent_tasks or 1
+            ct = self.oqparam.concurrent_tasks
             logging.info('Getting background sources for %s', ucerf.source_id)
-            bg_sources = ucerf.get_background_sources(self.src_filter)
-            sources.extend(grp)
-            sources.extend(bg_sources)
+            sources = grp.sources + ucerf.get_background_sources(
+                self.src_filter)
             acc = parallel.Starmap.apply(
                 classical, (sources, self.src_filter, gsims, param, monitor),
-                name='classical_%d' % grp_id, concurrent_tasks=ct * 2
+                name='classical_%d' % sm.ordinal, concurrent_tasks=ct * 2,
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
