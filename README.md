@@ -22,54 +22,55 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 -## Documentation (master tree)
 -->
 
-[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 
-### Current stable
+## OpenQuake Engine version 3.1 (Lehmann)
 
-Current stable version is the **OpenQuake Engine 3.0** 'Karakhanyan'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.0#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-3.0/doc/whats-new.md)
+Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
 
-## Documentation (master tree)
+The code name for version 3.1 is **Lehmann**, in memory of [Inge Lehmann](https://en.wikipedia.org/wiki/Inge_Lehmann).
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.1/doc/whats-new.md)
+
+## Documentation
 
 <!-- GEM END -->
 
 ### General overview
 
-* [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
-* [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
+* [About](https://github.com/gem/oq-engine/blob/engine-3.1/doc/about.md)
+* [FAQ](https://github.com/gem/oq-engine/blob/engine-3.1/doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
-* [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
+* [OQ Commands](https://github.com/gem/oq-engine/blob/engine-3.1/doc/oq-commands.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
-* [Architecture](https://github.com/gem/oq-engine/blob/master/doc/sphinx/architecture.rst)
-* [Calculation Workflow](https://github.com/gem/oq-engine/blob/master/doc/calculation-workflow.md)
-* [Hardware Suggestions](https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md)
-* [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
-* [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/engine-3.1/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/blob/engine-3.1/doc/developers-notes.md)
+* [Architecture](https://github.com/gem/oq-engine/blob/engine-3.1/doc/sphinx/architecture.rst)
+* [Calculation Workflow](https://github.com/gem/oq-engine/blob/engine-3.1/doc/calculation-workflow.md)
+* [Hardware Suggestions](https://github.com/gem/oq-engine/blob/engine-3.1/doc/hardware-suggestions.md)
+* [Continuous integration and testing](https://github.com/gem/oq-engine/blob/engine-3.1/doc/testing.md)
+* [Glossary of Terms](https://github.com/gem/oq-engine/blob/engine-3.1/doc/glossary.md)
 
 ### Installation
 
-* [Technology stack and requirements](https://github.com/gem/oq-engine/blob/master/doc/requirements.md)
-* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md)
+* [Technology stack and requirements](https://github.com/gem/oq-engine/blob/engine-3.1/doc/requirements.md)
+* [Which installation method should I use?](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/overview.md)
 
 #### Linux
 
-* [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
-* [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
-* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
-* [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
+* [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/ubuntu.md)
+* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/rhel.md)
+* [Installing on other flavors](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/linux-generic.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/development.md)
+* [Installing on a cluster](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/cluster.md)
 
 #### macOS
 
-* [Installing on macOS](https://github.com/gem/oq-engine/blob/master/doc/installing/macos.md)
-* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md#macos)
+* [Installing on macOS](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/macos.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/development.md#macos)
 
 #### Windows
 
-* [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
-* [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
+* [Installing on Windows](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/windows.md)
+* [Starting the software](https://github.com/gem/oq-engine/blob/engine-3.1/doc/running/windows.md)
 
 #### VirtualBox
 
@@ -77,12 +78,12 @@ Current stable version is the **OpenQuake Engine 3.0** 'Karakhanyan'. The docume
 
 #### Docker
 
-* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
+* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/docker.md)
 
 ### Running the OpenQuake Engine
 
-* [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
-* [Using the WebUI](https://github.com/gem/oq-engine/blob/master/doc/running/server.md)
+* [Using the command line](https://github.com/gem/oq-engine/blob/engine-3.1/doc/running/unix.md)
+* [Using the WebUI](https://github.com/gem/oq-engine/blob/engine-3.1/doc/running/server.md)
 
 ### Visualizing outputs via QGIS
 
@@ -95,7 +96,7 @@ Current stable version is the **OpenQuake Engine 3.0** 'Karakhanyan'. The docume
 
 ## License
 
-The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
+The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/engine-3.1/LICENSE)**.
 
 ## Contacts
 
