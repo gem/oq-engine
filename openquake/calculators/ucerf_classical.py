@@ -58,7 +58,6 @@ class UcerfPSHACalculator(PSHACalculator):
         self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
-        self.csm.split_all()
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             gsims = self.csm.info.get_gsims(sm.ordinal)
