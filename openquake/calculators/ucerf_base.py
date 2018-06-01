@@ -402,6 +402,7 @@ class UCERFSource(BaseSeismicSource):
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
                 ps.src_group_id = self.src_group_id
+                ps.num_ruptures = ps.count_ruptures()
                 sources.append(ps)
         return sources
 
