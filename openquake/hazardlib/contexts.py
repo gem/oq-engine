@@ -17,12 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-import sys
 import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
 
@@ -184,36 +182,30 @@ class ContextMaker(object):
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        try:
-            with self.ir_mon:
-                all_ruptures = list(src.iter_ruptures())
-            weight = 1. / len(all_ruptures)
-            pmap = ProbabilityMap.build(
-                len(imtls.array), len(self.gsims), sites.sids,
-                initvalue=rup_indep)
-            eff_ruptures = 0
-            for rup in all_ruptures:
-                rup.weight = weight
-                try:
-                    with self.ctx_mon:
-                        sctx, dctx = self.make_contexts(sites, rup)
-                except FarAwayRupture:
-                    continue
-                eff_ruptures += 1
-                with self.poe_mon:
-                    pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                    for sid, pne in zip(sctx.sids, pnes):
-                        if rup_indep:
-                            pmap[sid].array *= pne
-                        else:
-                            pmap[sid].array += pne * rup.weight
-            pmap = ~pmap
-            pmap.eff_ruptures = eff_ruptures
-
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise_(etype, msg, tb)
+        weight = 1. / src.num_ruptures
+        pmap = ProbabilityMap.build(
+            len(imtls.array), len(self.gsims), sites.sids,
+            initvalue=rup_indep)
+        eff_ruptures = 0
+        with self.ir_mon:
+            rups = list(src.iter_ruptures())
+        for rup in rups:
+            rup.weight = weight
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            eff_ruptures += 1
+            with self.poe_mon:
+                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                for sid, pne in zip(sctx.sids, pnes):
+                    if rup_indep:
+                        pmap[sid].array *= pne
+                    else:
+                        pmap[sid].array += pne * rup.weight
+        pmap = ~pmap
+        pmap.eff_ruptures = eff_ruptures
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
