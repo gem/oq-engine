@@ -91,18 +91,6 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def split_start_stop(obj, block_size):
-    start = obj.start
-    stop = obj.stop
-    while stop > start:
-        new = copy.copy(obj)
-        new.orig = obj
-        new.start = start
-        new.stop = min(start + block_size, stop)
-        start += block_size
-        yield new
-
-
 class ImperfectPlanarSurface(PlanarSurface):
     """
     The planar surface class sets a narrow tolerance for the rectangular plane
@@ -356,6 +344,7 @@ class UCERFSource(BaseSeismicSource):
         """
         Yield ruptures for the current set of indices
         """
+        assert self.orig, '%s is not fully initialized' % self
         for ridx in range(self.start, self.stop):
             if self.orig.rate[ridx]:  # ruptures may have have zero rate
                 rup = self.get_ucerf_rupture(ridx, self.src_filter)
@@ -363,11 +352,19 @@ class UCERFSource(BaseSeismicSource):
                     yield rup
 
     def __iter__(self):
-        return split_start_stop(self, RUPTURES_PER_BLOCK)
+        assert self.orig, '%s is not fully initialized' % self
+        start = self.start
+        stop = self.stop
+        while stop > start:
+            new = copy.copy(self)
+            new.orig = self.orig
+            new.start = start
+            new.stop = min(start + RUPTURES_PER_BLOCK, stop)
+            start += RUPTURES_PER_BLOCK
+            yield new
 
     def __repr__(self):
-        return '<%s %s:%d:%d>' % (
-            self.__class__.__name__, self.source_id, self.start, self.stop)
+        return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
     def get_background_sources(self, src_filter):
         """
@@ -535,8 +532,7 @@ def get_rupture_surface(mag, nodal_plane, hypocenter, msr,
         hshift = abs(vshift / math.tan(rdip))
         rupture_center = rupture_center.point_at(
             horizontal_distance=hshift, vertical_increment=vshift,
-            azimuth=(azimuth_up if vshift < 0 else azimuth_down)
-        )
+            azimuth=(azimuth_up if vshift < 0 else azimuth_down))
 
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
@@ -548,31 +544,25 @@ def get_rupture_surface(mag, nodal_plane, hypocenter, msr,
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
     theta = math.degrees(
-        math.atan((rup_proj_width / 2.) / (rup_length / 2.))
-    )
+        math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
     hor_dist = math.sqrt(
-        (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2
-    )
+        (rup_length / 2.) ** 2 + (rup_proj_width / 2.) ** 2)
     left_top = rupture_center.point_at(
         horizontal_distance=hor_dist,
         vertical_increment=-rup_proj_height / 2,
-        azimuth=(nodal_plane.strike + 180 + theta) % 360
-    )
+        azimuth=(nodal_plane.strike + 180 + theta) % 360)
     right_top = rupture_center.point_at(
         horizontal_distance=hor_dist,
         vertical_increment=-rup_proj_height / 2,
-        azimuth=(nodal_plane.strike - theta) % 360
-    )
+        azimuth=(nodal_plane.strike - theta) % 360)
     left_bottom = rupture_center.point_at(
         horizontal_distance=hor_dist,
         vertical_increment=rup_proj_height / 2,
-        azimuth=(nodal_plane.strike + 180 - theta) % 360
-    )
+        azimuth=(nodal_plane.strike + 180 - theta) % 360)
     right_bottom = rupture_center.point_at(
         horizontal_distance=hor_dist,
         vertical_increment=rup_proj_height / 2,
-        azimuth=(nodal_plane.strike + theta) % 360
-    )
+        azimuth=(nodal_plane.strike + theta) % 360)
     return PlanarSurface(nodal_plane.strike, nodal_plane.dip,
                          left_top, right_top, right_bottom, left_bottom)
 
