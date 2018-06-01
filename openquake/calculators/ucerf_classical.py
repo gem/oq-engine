@@ -34,6 +34,20 @@ class UcerfPSHACalculator(PSHACalculator):
     """
     UCERF classical calculator.
     """
+    def pre_execute(self):
+        super().pre_execute()
+        self.src_filter = UcerfFilter(
+            self.sitecol, self.oqparam.maximum_distance)
+        for sm in self.csm.source_models:  # one branch at the time
+            [grp] = sm.src_groups
+            ucerf = grp.sources[0].orig
+            logging.info('Getting background sources from %s', ucerf.source_id)
+            bgsources = ucerf.get_background_sources(self.src_filter)
+            self.csm.infos[ucerf.source_id] = source.SourceInfo(ucerf)
+            grp.sources += bgsources
+            for src in grp:
+                self.csm.infos[src.source_id] = source.SourceInfo(src)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -42,23 +56,18 @@ class UcerfPSHACalculator(PSHACalculator):
         """
         monitor = self.monitor(self.core_task.__name__)
         oq = self.oqparam
-        self.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
-        self.nsites = []
         acc = self.zerodict()
+        self.nsites = []  # used in agg_dicts
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
+        self.csm.split_all()
         for sm in self.csm.source_models:  # one branch at the time
-            gsims = self.csm.info.get_gsims(sm.ordinal)
             [grp] = sm.src_groups
-            ucerf = grp[0]
-            self.csm.infos[ucerf.source_id] = source.SourceInfo(ucerf)
-            ct = self.oqparam.concurrent_tasks
-            logging.info('Getting background sources for %s', ucerf.source_id)
-            sources = grp.sources + ucerf.get_background_sources(
-                self.src_filter)
+            gsims = self.csm.info.get_gsims(sm.ordinal)
             acc = parallel.Starmap.apply(
-                classical, (sources, self.src_filter, gsims, param, monitor),
-                name='classical_%d' % sm.ordinal, concurrent_tasks=ct * 2,
+                classical, (grp, self.src_filter, gsims, param, monitor),
+                name='classical_%d' % sm.ordinal,
+                concurrent_tasks=oq.concurrent_tasks * 2,
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
