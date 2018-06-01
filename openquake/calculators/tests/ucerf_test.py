@@ -107,8 +107,10 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf_td')
     @manage_shared_dir_error
     def test_classical_time_dep(self):
+        ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
+        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
                               delta=1E-6)
@@ -119,9 +121,11 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf_td')
     @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
+        ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
                             exports='csv')
+        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
                               delta=1E-6)
