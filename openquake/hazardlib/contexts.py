@@ -182,13 +182,18 @@ class ContextMaker(object):
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        weight = 1. / src.num_ruptures
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
             rups = list(src.iter_ruptures())
+        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
+        # discards far away ruptures: len(rups) < src.num_ruptures can happen
+        if len(rups) > src.num_ruptures:
+            raise ValueError('Expected at max %d ruptures, got %d' % (
+                src.num_ruptures, len(rups)))
+        weight = 1. / len(rups)
         for rup in rups:
             rup.weight = weight
             try:
