@@ -175,31 +175,6 @@ class ContextMaker(object):
         sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
         return sctx, dctx
 
-    def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
-        """
-        :param src: a source object
-        :param ruptures: a list of "dressed" ruptures
-        :param imtls: intensity measure and levels
-        :param trunclevel: truncation level
-        :param rup_indep: True if the ruptures are independent
-        :returns: a ProbabilityMap instance
-        """
-        sids = set()
-        for rup in ruptures:
-            sids.update(rup.sctx.sids)
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
-        for rup in ruptures:
-            pnes = self._make_pnes(rup, imtls, trunclevel)
-            for sid, pne in zip(rup.sctx.sids, pnes):
-                if rup_indep:
-                    pmap[sid].array *= pne
-                else:
-                    pmap[sid].array += pne * rup.weight
-        tildemap = ~pmap
-        tildemap.eff_ruptures = len(ruptures)
-        return tildemap
-
     def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
@@ -209,24 +184,33 @@ class ContextMaker(object):
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        with self.ir_mon:
-            all_ruptures = list(src.iter_ruptures())
-        # all_ruptures can be empty only in UCERF
-        weight = 1. / (len(all_ruptures) or 1)
-        ruptures = []
-        with self.ctx_mon:
+        try:
+            with self.ir_mon:
+                all_ruptures = list(src.iter_ruptures())
+            # all_ruptures can be empty only in UCERF
+            weight = 1. / (len(all_ruptures) or 1)
+            pmap = ProbabilityMap.build(
+                len(imtls.array), len(self.gsims), sites.sids,
+                initvalue=rup_indep)
+            eff_ruptures = 0
             for rup in all_ruptures:
                 rup.weight = weight
                 try:
-                    rup.sctx, rup.dctx = self.make_contexts(sites, rup)
+                    with self.ctx_mon:
+                        sctx, dctx = self.make_contexts(sites, rup)
                 except FarAwayRupture:
                     continue
-                ruptures.append(rup)
-        if not ruptures:
-            return {}
-        try:
-            with self.poe_mon:
-                pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
+                eff_ruptures += 1
+                with self.poe_mon:
+                    pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                    for sid, pne in zip(sctx.sids, pnes):
+                        if rup_indep:
+                            pmap[sid].array *= pne
+                        else:
+                            pmap[sid].array += pne * rup.weight
+            pmap = ~pmap
+            pmap.eff_ruptures = eff_ruptures
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
@@ -234,15 +218,15 @@ class ContextMaker(object):
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, imtls, trunclevel):
+    def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
         pne_array = numpy.zeros(
-            (len(rupture.sctx.sids), len(imtls.array), len(self.gsims)))
+            (len(sctx.sids), len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
-            dctx = rupture.dctx.roundup(gsim.minimum_distance)
+            dctx_ = dctx.roundup(gsim.minimum_distance)
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
                 poes = gsim.get_poes(
-                    rupture.sctx, rupture, dctx,
+                    sctx, rupture, dctx_,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
