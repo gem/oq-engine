@@ -187,8 +187,7 @@ class ContextMaker(object):
         try:
             with self.ir_mon:
                 all_ruptures = list(src.iter_ruptures())
-            # all_ruptures can be empty only in UCERF
-            weight = 1. / (len(all_ruptures) or 1)
+            weight = 1. / len(all_ruptures)
             pmap = ProbabilityMap.build(
                 len(imtls.array), len(self.gsims), sites.sids,
                 initvalue=rup_indep)
