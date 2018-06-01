@@ -17,11 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 
-from openquake.baselib.general import AccumDict
 from openquake.baselib import parallel
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib import readinput, source
+from openquake.commonlib import source
 
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
@@ -43,10 +41,10 @@ class UcerfPSHACalculator(PSHACalculator):
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
             bgsources = ucerf.get_background_sources(self.src_filter)
-            self.csm.infos[ucerf.source_id] = source.SourceInfo(ucerf)
-            grp.sources += bgsources
+            grp.sources.extend(bgsources)
             for src in grp:
                 self.csm.infos[src.source_id] = source.SourceInfo(src)
+                grp.tot_ruptures += src.num_ruptures
 
     def execute(self):
         """
@@ -67,7 +65,7 @@ class UcerfPSHACalculator(PSHACalculator):
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
                 name='classical_%d' % sm.ordinal,
-                concurrent_tasks=oq.concurrent_tasks * 2,
+                concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
