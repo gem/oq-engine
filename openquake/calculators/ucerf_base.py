@@ -34,9 +34,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib import nrml, valid
+from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.commonlib import readinput, source
 
 DEFAULT_TRT = "Active Shallow Crust"
 RUPTURES_PER_BLOCK = 1000
@@ -171,6 +170,7 @@ class UCERFSource(BaseSeismicSource):
     """
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
+    RUPTURE_WEIGHT = 10  # very heavy
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
