@@ -16,9 +16,9 @@ statistics within the main calculation at best slow and at worse
 impossible because of data transfer issues / out-of-memory errors.  If
 you have engine 2.9 and 3.0 you can still compute the statistics -
 even for large calculations - but only in post-processing, i.e. with
-the `--hc` option.  This is not needed anymore. Actually, the
-calculation within the main calculation is as fast as in
-postprocessing and much faster and memory-efficient than it was in
+the `--hc` option.  This is not needed anymore. Actually, computing
+the statistics within the main calculation is as fast as in
+post-processing and much faster and memory-efficient than it was in
 engine 2.8 and previous versions. The price to pay for the gain was
 changing the way the PoEs are stored and the extraction routines. As a
 consequence, you cannot export with engine 3.1 the hazard curves
@@ -76,7 +76,7 @@ classical calculator the tiling mechanism, which was very complex and
 fragile, and still be faster than before. As a consequence, the data
 transfer is lower now than it ever was. Also, having removed
 the old prefiltering mechanism, a very tricky bug
-[over two year old has disappeared ](https://github.com/gem/oq-engine/issues/1965)
+[over two year old has disappeared ](https://github.com/gem/oq-engine/issues/1965).
 
 While the prefiltering involves sources and it is performed before the
 calculation starts, the filtering involves ruptures and is performed
@@ -148,7 +148,7 @@ In order to instantiate a PMF object a list of pairs (probability, object)
 is required. The change is that before the probability had to be expressed
 as a Python `Decimal` instance, while now a simple float can be used.
 Before the sum of the probabilities was checked to be exactly equal to 1,
-now it must be equal to 1 up to a tolerance of 1E-12. Since the Decimals
+now it must be equal to 1 up to a tolerance of 1E-12. Since the `Decimals`
 at the end were converted into floats anyway, it felt easier and more
 honest to work with floats from the beginning.
 
@@ -194,6 +194,25 @@ We added an XML exporter for the site model: this is useful to check
 how the site model parameters were associated to the hazard sites.
 The work on the risk outputs has been reflected on the QGIS plugin.
 
+Experimental integration with USGS shakemaps
+---------------------------------------------
+
+Engine 3.1 features a new experimental integration with USGS shakemaps.
+Essentially, when running a scenario risk or scenario damage calculation,
+you can specify in the `job.ini` the ID of an USGS shakemap. The engine
+will automatically
+
+- download the shakemap (the grid.xml and uncertainty.xml files)
+- associate the GMFs from the shakemap to the exposure sites
+- consider only the IMTs required by the risk model
+- create a distribution of GMFs with the right standard deviation, i.e.
+  the standard deviation provided by the shakemap
+- perform the desired risk calculation, considering also the
+  cross correlation effect for multiple IMTs.
+
+The feature is highly experimented and provided only for the purpose of
+beta testing by external users.
+
 WebUI
 -----------------------------------------------------
 
@@ -234,7 +253,8 @@ must equal the number of distinct GMPEs.
 
 We added a check against duplicated GMPEs in the logic tree.
 
-We added an early check on the Python version (>= 3.5).
+We added an early check on the Python version, that must be greater or
+equal than 3.5.
 
 oq commands
 -----------
@@ -252,25 +272,6 @@ We fixed the commands `oq to_shapefile` and `oq from_shapefile` by
 adding "YoungsCoppersmithMFD" and "arbitraryMFD" to the list of
 serializable magnitude-frequency distributions.
 
-Integration with USGS shakemaps
----------------------------------
-
-Engine 3.1 features a new experimental integration with USGS shakemaps.
-Essentially, when running a scenario risk or scenario damage calculation,
-you can specify in the `job.ini` the ID of an USGS shakemap. The engine
-will automatically
-
-- download the shakemap (the grid.xml and uncertainty.xml files)
-- associate the GMFs from the shakemap to the exposure sites
-- consider only the IMTs required by the risk model
-- create a distribution of GMFs with the right standard deviation, i.e.
-  the standard deviation provided by the shakemap
-- perform the desired risk calculation, considering also the
-  cross correlation effect for multiple IMTs.
-
-The feature is highly experimented and provided only for the purpose of
-beta testing by external users.
-
 Packaging
 ----------
 
@@ -278,6 +279,7 @@ For the first time we provide packages for Ubuntu 18.04 (Bionic).
 Old versions of Ubuntu (16.04 and 14.04) are still supported, and we
 keep providing packages for Red Hat distribution, as well as installers
 for Windows and macOS, docker containers, virtual machines and more.
-We also updated our Python dependencies, in particular we included
-numpy 1.14.2, scipy 1.0.1, h5py 2.8, shapely 1.6.4, rtree 0.8.3,
+
+We also updated our Python dependencies, in particular we include
+in our packages numpy 1.14.2, scipy 1.0.1, h5py 2.8, shapely 1.6.4, rtree 0.8.3,
 pyzmq-17.0.0, psutil-5.4.3 and Django 2.0.4.
