@@ -1,3 +1,5 @@
+python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
+
   [Marco Pagani and Changlong Li]
   * Added a version of the Yu et al. (2013) GMPE supporting Mw
 
@@ -95,6 +97,8 @@
   * Added an XML exporter for the site model
   * Slight change to the correlation module to fix a bug in the SMTK
   * Added a distribution mechanism `threadpool`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 01 Jun 2018 09:02:01 +0000
 
 python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
 
