@@ -604,6 +604,7 @@ def build_asset_array(assets_by_site, tagnames=()):
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
 
+
 # ########################### exposure ############################ #
 
 cost_type_dt = numpy.dtype([('name', hdf5.vstr),
