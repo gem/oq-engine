@@ -1,23 +1,59 @@
 Release notes for the OpenQuake Engine, version 3.1
 ===================================================
 
-
-Over 150 issues were closed. For the complete list of changes, please
-see the changelog:
+This release features several improvements to the engine calculators and
+a few important bug fixes. Over 150 issues were closed. For the complete list
+of changes, please see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.1/debian/changelog .
+Here is a summary.
+
+Important bug fixes
+-----------------------
+
+We discovered a performance regression in engine 2.9 and 3.0. The
+regression affects large hazard calculations and makes to compute the
+statistics within the main calculation at best slow and at worse
+impossible because of out-of-memory errors. If you have engine 2.9 and
+3.0 you can still compute the statistics even for large calculations,
+but only in post-processing, i.e. with the `--hc` option. With engine
+3.1 this is not needed and actually the calculation of the statistics
+within the main calculation is as fast as in postprocessing and much
+faster than it was in engine 2.8 and previous versions.
+
+The user [Parisa on the mailing list](https://groups.google.com/d/msg/openquake-users/oxbWg7lRgbI/xrxa9FhYCAAJ) discovered a regression in the GMF importer
+from XML: it was not working anmores, unless a sites.csv file was specified.
+This has been fixed. The XML importer is still deprecated, though, the
+recommendation is to import GMFs in .csv format an with an explicit
+sites.csv file.
+
+Our Canadian users discovered a bug in the hazard curves computed from
+nonparametric sources, causing the hazard curves to saturate at high
+intensities. It turns out the source of the bug was a numeric rounding
+issue that we fixed.
+
+We discovered a subtle bug affecting calculations with sites and/or sources
+crossing the international date line. The bug has been there for years.
+In some cases, some sources could be incorrectly discarded, thus producing
+a hazard lower than reality. The solution of this bug involved completely
+discarding our old prefiltering mechanism.
 
 Improvements to the prefiltering mechanism
 ------------------------------------------------
 
-This release continues the improvements to the source prefiltering
-mechanism that started in engine 3.0. As of now, the prefiltering
-is performed in parallel and it is so efficient that we can prefilter
-millions of sources in a matter of minutes. Moreover now the prefiltering
-is done on the controller node only and not duplicated on the workers
-nodes. Due to the new approach is was possible to remove the engine
-the tiling and still be faster than before.
-Also, as a benefic side effect of dropping the old prefiltering mechanism,
-at least a very tricky bug over [two year old has disappeared
+We began improving the source prefiltering mechanism in engine 3.0 and
+we kept working on that. Now the prefiltering is performed in
+parallel and it is so efficient that we can prefilter millions of
+sources in a matter of minutes. Moreover the prefiltering is done
+only on the controller node and not duplicated on the workers nodes.
+The change improved the performance of the calculators but also increased
+the data transfer. However, now the engine is able to read the site collection
+directly from the datastore, thus saving GB of data transfer, thus the net
+data transfer is lower than it ever was. 
+Due to the new approach is was possible to remove from the classical
+calculator the tiling mechanism, which was very complex and fragile,
+and still be faster than before.
+Also, as a side effect of dropping the old prefiltering mechanism,
+a very tricky bug over [two year old has disappeared
 ](https://github.com/gem/oq-engine/issues/1965)
 
 Improvements to the filtering mechanism
@@ -26,36 +62,71 @@ Improvements to the filtering mechanism
 While the prefiltering involves sources and it is performed before the
 calculation starts, the filtering involves ruptures and is performed
 while the calculation runs. The filtering works by computing a lots of
-distances from each rupture to each hazard site and it can be slow in
-some circumstances. In engine 3.1 we reworked completely the
+distances from each rupture to each hazard site and it can be slow.
+In engine 3.1 we reworked completely the
 filtering: now the default distance used for filtering is the
 so-called `rrup` distance which is nothing else than the Euclidean
-distance, now computated with the `scipy.spatial.distance.cdist`
-function which is extremely efficient (in some cases we measured
-speedups of over an order of magnitude than the previous approach).
+distance. Such distance can be computated with the
+`scipy.spatial.distance.cdist` function which is extremely efficient: 
+in some cases we measured speedups of over an order of magnitude with
+respect to the previous approach.
 The user can specify the distance used in the filtering by setting the
-parameter `filter_distance` in the job.ini. For instance
+parameter `filter_distance` in the `job.ini` file. For instance
 `filter_distance=rjb` would restore the Joyner-Boore distance that we
 used in previous versions of the engine (actually not exactly the same
 because now even the `rjb` distance is calling
 `scipy.spatial.distance.cdist` internally).  Due to the changes both
-to the default filtering distance and to the low level function used
+to the default filter distance and to the low level function
 to compute the distance, the numbers produced be engine 3.1 will be
-slighly different than in the past. The differences however are minor
-and actually the current approach is more accurate than the previous
-one.
-Use a shorter site collection
+slighly different from the numbers generated by previous versions.
+The differences however are minor and actually the current approach is
+more accurate than the previous one.
+Also a refactoring of the site collection object made it faster the
+computation of the distances not only for ruptures with complex
+geometries but also for ruptures coming from point sources. The
+net effect can be very significant if your computation was dominated
+by distance calculations. This in practice happens if you have a single
+GSIM. In complex calculations with dozens of GSIMs the dominating
+factor is the time spent in the GSIM calculations and so you will not
+see any significant speedup due to the improvements in the filtering
+mechanism, even if you should still see some speedup to to the
+prefiltering improvements.
 
+Hazardlib
+--------------------
 
-Improvements to the data transfer
-=================================
+A new GMPE was added, a version of the Yu et al. (2013) GMPE supporting Mw,
+contributed by M. Pagani and Changlong Li.
 
+This release involved a substantial refactoring of hazardlib and there
+were also some backward-incompatible changes. The most visibile change
+was in the [Probability Mass Function module](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#module-openquake.hazardlib.pmf).
+In order to instantiate a PMF object a list of pairs (probability, object)
+is required. The change is that before the probability had to be expressed
+as a Python `Decimal` instance, while now a simple float can be used.
+Before the sum of the probabilities was checked to be exactly equal to 1,
+now it must be equal to 1 up to a tolerance of 1E-12. Since the Decimals
+at the end were converted into floats anyway, it felt easier and more
+honest to work with floats from the beginning.
 
-In large hazard computations, with hundreds of thousands of sites,
-the data transfer was dominated by the site collection object.
-Now the engine is able to read the site collection directly
-from the datastore, thus saving GB of data transfer.
-Refactored the SiteCollection in make_context.
+There were several changes to the [Surface classes](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.geo.surface.html). In particular, now `PlanarSurfaces` do not require anymore the `rupture_mesh_spacing` to be instantiated
+(it was not used anyway). Moreover tha class hierarchy has been simplified
+and one method have been removed. The [ContextMaker.make_contexts](https://groups.google.com/forum/#!forum/openquake-users) method now returns two
+values instead of three, and ruptures now have more attributes that
+they used to have. On the other hand, the attribute `.source_typology` was
+removed from Rupture classes, since it was not used. A `.polygon` property
+was added to each source class, to make the plotting of sources easier.
+
+The signature of [stochastic_event_set](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.calc.html#module-openquake.hazardlib.calc.stochastic) was
+slightly changed, by removing the redundant `sites` parameter. The API
+of the [correlation module](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#module-openquake.hazardlib.correlation) was slightly changed.
+
+It should be noticed that in spite of the major refactoring (over
+1,000 lines of Python code were removed) the changes to client code
+are next to non-existent: the HMTK was unaffected by the change and in
+the SMTK only two lines had to big fixed. So the changes should not be
+a problems for users of hazardlib. If you run into problem, please ask
+on our [mailing list](https://groups.google.com/forum/#!forum/openquake-users).
 
 Other Hazard
 --------------
@@ -73,36 +144,25 @@ Renamed sitemesh-_xxx.csv -> sitemesh_xxx.csv
 Added an XML exporter for the site model
 Renamed 'fake' -> 'scenario' inside the realizations.csv output
 Warn the user about optimize_same_id_sources when it looks like he should do that
-
-Hazardlib/HMTK/SMTK
---------------------
-
-Remove the usage of Decimal in hazardlib PMF.
-
-If there are no fault ruptures, there is no need to specify the rupture_mesh_spacing
-
-Added a .serial attribute to the hazardlib ruptures
-
-Simplified the surface classes hierarchy enhancement internal
-
-Removed the mesh_spacing from PlanarSurfaces
-
-20180528 yu et al
-
-Add a polygon property for each source and store it
-
-Removed the .source_typology attribute from the ruptures
-
-Changed the signature of `stochastic_event_set`
-
-Small changes to hazardlib.correlation to support the SMTK
-
 Risk
 -----
 
-Performance surprise in ScenarioDamage
-Exported the tags in the risk outputs
-The risk demos has been updated: now the exposures have tags
+We fixed a long standing performance bug in scenario calculations. The
+filtering of the sites according to the integration distance was done too
+late. Now it is done *before* starting the calculation. If you have 1
+million sites with only 1 thousand within the integration distance,
+990,000 sites are discarded up front. This makes it convenient to
+run scenarios with large exposures (i.e. all of South America) because
+only the sites and assets close to the rupture will be considered, without
+requiring the user to specify a `region` in the `job.ini` file.
+
+We improved again the risk exporters. In particular if the exposure has
+tags (a concept introduced in engine 2.9) now the exported CSV files
+(like averages losses and such) will contain the tag information.
+This make it possible to aggregate the outputs by tag.
+
+The risk demos has been updated so that the exposures have tags.
+
 Removed any reference to `region_constraint`
 Unified `losses_by_event` and `agg_loss_table`
 
