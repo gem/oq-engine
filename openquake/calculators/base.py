@@ -468,7 +468,7 @@ class HazardCalculator(BaseCalculator):
         """
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
-                self.oqparam, haz_sitecol)
+                self.oqparam, haz_sitecol, self.riskmodel.loss_types)
             readinput.exposure = None  # reset the global
 
     def get_min_iml(self, oq):

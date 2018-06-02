@@ -600,14 +600,6 @@ def get_risk_model(oqparam):
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
 
-def get_cost_calculator(oqparam):
-    """
-    Read the first lines of the exposure file and infers the cost calculator
-    """
-    exposure = asset._get_exposure(oqparam.inputs['exposure'], stop='assets')
-    return exposure[0].cost_calculator
-
-
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
@@ -626,16 +618,24 @@ def get_exposure(oqparam):
     return exposure
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol):
+def get_sitecol_assetcol(oqparam, haz_sitecol, cost_types):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
+    :param cost_types: the expected cost types
     :returns: (site collection, asset collection) instances
     """
     global exposure
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
+    missing = set(cost_types) - set(exposure.cost_types['name']) - set(
+        ['occupants'])  # TODO: remove occupants and fragility special cases
+    if missing and not oqparam.calculation_mode.endswith('damage'):
+        expo = oqparam.inputs.get('exposure', '')
+        raise RuntimeError(
+            'Expected cost types %s but the exposure %r contains %s' % (
+                cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
         exposure.mesh = exposure.mesh.get_convex_hull().dilate(
