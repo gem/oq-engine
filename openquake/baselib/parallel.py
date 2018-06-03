@@ -159,7 +159,6 @@ import itertools
 import traceback
 import multiprocessing.dummy
 import numpy
-import psutil
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -429,12 +428,9 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if hasattr(Starmap, 'pids'):
-                try:
-                    mem = [memory_info(pid).rss for pid in Starmap.pids]
-                except psutil._exceptions.NoSuchProcess:
-                    continue
-                totmem = memory_info(os.getpid()).rss + sum(mem)
+            if OQ_DISTRIBUTE == 'processpool':
+                totmem = memory_info(os.getpid()).rss + sum(
+                    memory_info(pid).rss for pid in Starmap.pids)
                 self.mem.append(float(totmem) / GB)
 
             next(self.log_percent)
