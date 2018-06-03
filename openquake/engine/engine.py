@@ -69,7 +69,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 3
-        logs.LOG.info('Using %d zmq workers', num_workers)
+        print('Using %d zmq workers' % num_workers)  # the log is not set yet
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
@@ -86,8 +86,8 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             sys.exit(1)
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = num_cores * 3
-        logs.LOG.info(
-            'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
+        print('Using %s, %d cores' % (', '.join(sorted(stats)), num_cores))
+        # the log is not set yet, so I am using a print
 
     def celery_cleanup(terminate, task_ids=()):
         """
@@ -309,18 +309,18 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             logs.LOG.warn(msg)
         calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
-        job_zip = oqparam.inputs.get('job_zip')
+        input_zip = oqparam.inputs.get('input_zip')
         tb = 'None\n'
         try:
-            if job_zip:  # the input was zipped from the beginning
-                data = open(job_zip, 'rb').read()
+            if input_zip:  # the input was zipped from the beginning
+                data = open(input_zip, 'rb').read()
             else:  # zip the input
                 logs.LOG.info('zipping the input files')
                 bio = io.BytesIO()
                 zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
                 data = bio.getvalue()
-            calc.datastore['job_zip'] = numpy.array(data)
-            calc.datastore.set_attrs('job_zip', nbytes=len(data))
+            calc.datastore['input_zip'] = numpy.array(data)
+            calc.datastore.set_attrs('input_zip', nbytes=len(data))
 
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})

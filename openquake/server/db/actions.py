@@ -288,6 +288,7 @@ DISPLAY_NAME = {
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
+    'input_zip': 'Input Files'
 }
 
 # sanity check, all display name keys must be exportable
