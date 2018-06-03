@@ -39,6 +39,7 @@ if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     set -x
 fi
 set -e
+env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
 GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
@@ -244,7 +245,7 @@ add_local_pkg_repo () {
         dep_branch="master"
     fi
 
-    if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
+    if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "${GEM_MASTER_BRANCH}" ]; then
         GEM_DEB_SERIE="master"
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
@@ -340,7 +341,7 @@ _pkgbuild_innervm_run () {
     ssh "$lxc_ip" "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
     ssh "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
-    scp "$lxc_ip:"*.{tar.gz,changes,dsc} ../
+    scp "$lxc_ip:"*.{tar.?z,changes,dsc} ../
     if echo "$DPBP_FLAG" | grep -q -v -- '-S'; then
         scp "$lxc_ip:"*.deb ../
     fi
@@ -504,7 +505,7 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
     scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_"*.deb \
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.changes \
-        "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.dsc "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.tar.gz \
+        "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.dsc "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.tar.?z \
         "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
     ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\"
 
@@ -1037,7 +1038,7 @@ EOF
              "$(wc --bytes Sources | cut --delimiter=' ' --fields=1)"
       printf ' '"$(sha256sum Sources.gz | cut --delimiter=' ' --fields=1)"' %16d Sources.gz\n' \
              "$(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1)" ) >> Release
-    gpg --armor --detach-sign --output Release.gpg Release
+    gpg --armor --detach-sign --output Release.gpg --local-user "$DEBFULLNAME" Release
     cd -
 
     sudo echo
@@ -1071,7 +1072,7 @@ EOF
     if [ "$BUILD_REPOSITORY" -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
         if [ "$branch" != "" ]; then
             repo_id="$(repo_id_get)"
-            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch" != "master" ]; then
+            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch" != "${GEM_MASTER_BRANCH}" ]; then
                 CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch}"
                 if [ "$CUSTOM_SERIE" != "" ]; then
                     GEM_DEB_SERIE="$CUSTOM_SERIE"
@@ -1083,10 +1084,10 @@ EOF
 
         # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
-            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "master" ]; then
+            if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "${GEM_MASTER_BRANCH}" ]; then
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
-                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 PKG_COMMIT="$(git log --pretty='format:%h' -1)"
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
@@ -1097,7 +1098,7 @@ EOF
 
         cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
            ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
-            ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+            ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
             ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources* ${GEM_BUILD_ROOT}/Release* "${repo_tmpdir}"
         if [ "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}" ]; then
             rm -rf "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}"
@@ -1345,7 +1346,7 @@ cd -
 # if the monotone directory exists and is the "gem" repo and is the "master" branch then ...
 if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source" -a $BUILD_SOURCES_COPY -eq 1 ]; then
     cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
-        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.gz \
+        ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
         "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source"
 fi
 
