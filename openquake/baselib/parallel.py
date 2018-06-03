@@ -428,7 +428,7 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool':
+            if OQ_DISTRIBUTE == 'processpool' and hasattr(Starmap, 'pids'):
                 totmem = memory_info(os.getpid()).rss + sum(
                     memory_info(pid).rss for pid in Starmap.pids)
                 self.mem.append(float(totmem) / GB)
