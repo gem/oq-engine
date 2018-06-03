@@ -16,6 +16,14 @@ base module
     :undoc-members:
     :show-inheritance:
 
+getters module
+----------------------------------
+
+.. automodule:: openquake.calculators.getters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 classical module
 --------------------------------------
 
