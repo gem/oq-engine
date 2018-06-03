@@ -25,14 +25,14 @@ def make_figure(plots):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
-    fig = plt.figure()
-    nplots = len(plots)
-    for i, (task_name, mem) in enumerate(plots):
-        ax = fig.add_subplot(nplots, 1, i + 1)
-        ax.grid(True)
-        ax.set_title(task_name)
-        ax.set_ylabel('GB')
-        ax.plot(range(len(mem)), mem)
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    ax.set_ylabel('GB')
+    start = 0
+    for task_name, mem in plots:
+        ax.plot(range(start, start + len(mem)), mem, label=task_name)
+        start += len(mem)
+    ax.legend()
     return plt
 
 
