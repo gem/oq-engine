@@ -172,6 +172,7 @@ from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
 cpu_count = multiprocessing.cpu_count()
+GB = 1024 ** 3
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
@@ -428,8 +429,9 @@ class IterResult(object):
             else:  # this should never happen
                 raise ValueError(result)
             if hasattr(Starmap, 'pids'):
-                self.mem.append(
-                    sum(float(memory_info(pid).rss) for pid in Starmap.pids))
+                totmem = memory_info(os.getpid()).rss + sum(
+                    memory_info(pid).rss for pid in Starmap.pids)
+                self.mem.append(float(totmem) / GB)
 
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
