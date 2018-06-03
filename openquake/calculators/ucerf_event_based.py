@@ -25,7 +25,7 @@ import collections
 import h5py
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, cached_property
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
@@ -408,6 +408,24 @@ class UCERFSource(object):
         self.tectonic_region_type = trt
         self.num_ruptures = 0  # not set yet
 
+    @cached_property
+    def mags(self):
+        # read from FM0_0/MEANFS/MEANMSR/Magnitude
+        with h5py.File(self.source_file, "r") as hdf5:
+            return hdf5[self.idx_set["mag"]].value
+
+    @cached_property
+    def rate(self):
+        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
+        with h5py.File(self.source_file, "r") as hdf5:
+            return hdf5[self.idx_set["rate"]].value
+
+    @cached_property
+    def rake(self):
+        # read from FM0_0/MEANFS/Rake
+        with h5py.File(self.source_file, "r") as hdf5:
+            return hdf5[self.idx_set["rake"]].value
+
     def count_ruptures(self):
         """
         The length of the rupture array if the branch_id is set, else 0
@@ -426,14 +444,7 @@ class UCERFSource(object):
         new.source_id = branch_id
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
-            # read from datasets like
-            # FM0_0/MEANFS/MEANMSR/Magnitude
-            # FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-            # FM0_0/MEANFS/Rake
-            new.mags = hdf5[new.idx_set["mag"]].value
-            new.rate = hdf5[new.idx_set["rate"]].value
-            new.rake = hdf5[new.idx_set["rake"]].value
-            new.num_ruptures = len(new.mags)
+            new.num_ruptures = len(hdf5[new.idx_set["mag"]])
         return new
 
     def get_min_max_mag(self):
