@@ -72,16 +72,16 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
     def test_memory(self):
         # make sure the memory occupation is low
         # (to protect against bad refactoring of the XMLWriter)
-        proc = psutil.Process(os.getpid())
+        pid = os.getpid()
         try:
-            rss = memory_info(proc).rss
+            rss = memory_info(pid).rss
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
         devnull = open(os.devnull, 'wb')
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
-        allocated = memory_info(proc).rss - rss
+        allocated = memory_info(pid).rss - rss
         self.assertLess(allocated, 204800)  # < 200 KB
 
     def test_zero_node(self):
