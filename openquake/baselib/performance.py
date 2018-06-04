@@ -25,12 +25,6 @@ import numpy
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
-
-def memory_info(pid):
-    """Thin wrapper around psutil.memory_info"""
-    return psutil.Process(pid).memory_info()
-
-
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 
@@ -98,8 +92,9 @@ class Monitor(object):
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
+        proc = psutil.Process(os.getpid())
         try:
-            return memory_info(os.getpid()).rss
+            return psutil.memory_info(proc).rss
         except psutil.AccessDenied:
             # no access to information about this process
             pass
