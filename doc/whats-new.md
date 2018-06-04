@@ -146,7 +146,7 @@ We added in [hazardlib.geo.utils](https://docs.openquake.org/oq-engine/3.1/openq
 an association function `assoc(objects, sitecol, assoc_dist, mode)`
 based on `scipy.spatial.cKDTree`
 which the engine uses to associate the assets to the hazard sites, to associate
-the site parameters to the hazard sites, or to associate a shakemap to
+the site parameters to the hazard sites, or to associate a ShakeMap to
 an exposure.
 
 The signature of [stochastic_event_set](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.calc.html#module-openquake.hazardlib.calc.stochastic) was
@@ -196,19 +196,19 @@ We added an XML exporter for the site model: this is useful to check
 how the site model parameters were associated to the hazard sites.
 The work on the risk outputs has been reflected on the QGIS plugin.
 
-Experimental integration with USGS shakemaps
+Experimental integration with USGS ShakeMaps
 ---------------------------------------------
 
-Engine 3.1 features a new experimental integration with USGS shakemaps.
+Engine 3.1 features a new experimental integration with USGS ShakeMaps.
 Essentially, when running a scenario risk or scenario damage calculation,
-you can specify in the `job.ini` the ID of an USGS shakemap. The engine
+you can specify in the `job.ini` the ID of an USGS ShakeMap. The engine
 will automatically
 
-- download the shakemap (the grid.xml and uncertainty.xml files)
-- associate the GMFs from the shakemap to the exposure sites
+- download the ShakeMap (the grid.xml and uncertainty.xml files)
+- associate the GMFs from the ShakeMap to the exposure sites
 - consider only the IMTs required by the risk model
 - create a distribution of GMFs with the right standard deviation, i.e.
-  the standard deviation provided by the shakemap
+  the standard deviation provided by the ShakeMap
 - perform the desired risk calculation, considering also the
   cross correlation effect for multiple IMTs.
 
