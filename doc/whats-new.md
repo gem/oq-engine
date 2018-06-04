@@ -183,11 +183,11 @@ keep working, but you will see a deprecation warning telling to
 replace `region_constraint` with `region`. This is what the engine is
 doing internally now.
 
-We kept improving our risk exporters. In particular if the exposure
+We kept improving our risk exporters. In particular, if the exposure
 has tags (a concept introduced in engine 2.9) now the exported CSV
-files (like averages losses and such) will contain the tag
-information.  This makes it possible to aggregate the outputs by
-tag. Also, the risk demos has been updated so that the exposures have
+files (like average losses and such) will also contain the tag
+information. This makes it possible to aggregate the outputs by
+tag. Also, the risk demos have been updated so that the exposures have
 tags.
 
 We added two new scenario outputs `dmg_by_event` and `losses_by_event`
