@@ -10,7 +10,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 - RedHat Enterprise Linux 7
 - CentOS 7
 - Scientific Linux 7
-- Fedora 26/27
+- Fedora 27/28
 
 This guide may work also on other Linux releases/distributions.
 
