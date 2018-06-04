@@ -21,7 +21,6 @@ import unittest
 import tempfile
 from io import BytesIO
 import psutil
-from openquake.baselib.performance import memory_info
 from openquake.commonlib.writers import write_csv
 from openquake.baselib.node import Node, tostring, StreamingXMLWriter
 from xml.etree import ElementTree as etree
@@ -75,14 +74,14 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
         # (to protect against bad refactoring of the XMLWriter)
         proc = psutil.Process(os.getpid())
         try:
-            rss = psutil.memory_info(proc).rss
+            rss = proc.memory_info().rss
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
         devnull = open(os.devnull, 'wb')
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
-        allocated = psutil.memory_info(proc).rss - rss
+        allocated = proc.memory_info().rss - rss
         self.assertLess(allocated, 204800)  # < 200 KB
 
     def test_zero_node(self):
