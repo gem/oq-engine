@@ -1,6 +1,7 @@
 # Installing the OpenQuake Engine nightly builds on Ubuntu Linux
 
 The OpenQuake Engine **nightly builds** are available in the form of *deb* binary packages for the following Ubuntu releases:
+- **Ubuntu 18.04** LTS (Bionic)
 - **Ubuntu 16.04** LTS (Xenial)
 - **Ubuntu 14.04** LTS (Trusty) 
 
