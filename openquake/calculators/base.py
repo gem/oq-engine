@@ -397,6 +397,10 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
                 self.csm.split_all()
+            if oq.minimum_magnitude:
+                logging.info('Discarded %d sources below magnitude %s',
+                             self.csm.discard(oq.minimum_magnitude),
+                             oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
