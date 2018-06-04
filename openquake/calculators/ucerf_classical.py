@@ -40,8 +40,8 @@ class UcerfPSHACalculator(PSHACalculator):
             [grp] = sm.src_groups
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            bgsources = ucerf.get_background_sources(self.src_filter)
-            grp.sources.extend(bgsources)
+            grp.sources.extend(
+                ucerf.get_background_sources(self.src_filter))
             for src in grp:
                 self.csm.infos[src.source_id] = source.SourceInfo(src)
                 grp.tot_ruptures += src.num_ruptures
@@ -63,8 +63,7 @@ class UcerfPSHACalculator(PSHACalculator):
             gsims = self.csm.info.get_gsims(sm.ordinal)
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
-                name='classical_%d' % sm.ordinal,
-                concurrent_tasks=oq.concurrent_tasks,
+                concurrent_tasks=oq.concurrent_tasks * 2,  # for slow tasks
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):

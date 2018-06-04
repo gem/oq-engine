@@ -369,6 +369,7 @@ class UCERFSource(BaseSeismicSource):
         background_sids = self.get_background_sids(src_filter)
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
+            # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
             mags = hdf5[grid_loc + "/Magnitude"].value
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
             rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
@@ -377,14 +378,12 @@ class UCERFSource(BaseSeismicSource):
             for i, bg_idx in enumerate(background_sids):
                 src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
                 src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
-                # Get MFD
-                mag_idx = numpy.logical_and(
-                    mags >= self.min_mag, mags < mmax[i])
+                mag_idx = (self.min_mag <= mags) & (mags < mmax[i])
                 src_mags = mags[mag_idx]
-                src_rates = rates[i, :]
                 src_mfd = EvenlyDiscretizedMFD(
-                    src_mags[0], src_mags[1] - src_mags[0],
-                    src_rates[mag_idx].tolist())
+                    src_mags[0],
+                    src_mags[1] - src_mags[0],
+                    rates[i, mag_idx].tolist())
                 ps = PointSource(
                     src_id, src_name, self.tectonic_region_type, src_mfd,
                     self.mesh_spacing, self.msr, self.aspect, self.tom,
