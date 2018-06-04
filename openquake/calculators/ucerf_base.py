@@ -271,13 +271,6 @@ class UCERFSource(BaseSeismicSource):
                 plane = hdf5[trace + "/RupturePlanes"][:].astype("float64")
                 yield trace, plane
 
-    @property
-    def weight(self):
-        """
-        Weight of the source, equal to the number of ruptures contained
-        """
-        return self.num_ruptures
-
     def get_background_sids(self, src_filter):
         """
         We can apply the filtering of the background sites as a pre-processing
