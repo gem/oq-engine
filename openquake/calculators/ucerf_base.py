@@ -170,7 +170,7 @@ class UCERFSource(BaseSeismicSource):
     """
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
-    RUPTURE_WEIGHT = 10  # very heavy
+    RUPTURE_WEIGHT = 1  # not very heavy
 
     def __init__(
             self, source_file, investigation_time, start_date, min_mag,
@@ -204,6 +204,33 @@ class UCERFSource(BaseSeismicSource):
     def num_ruptures(self, value):  # hack to make the sourceconverter happy
         pass
 
+    @property
+    def mags(self):
+        # read from FM0_0/MEANFS/MEANMSR/Magnitude
+        if hasattr(self.orig, '_mags'):
+            return self.orig._mags
+        with h5py.File(self.source_file, "r") as hdf5:
+            self.orig._mags = hdf5[self.idx_set["mag"]].value
+            return self.orig._mags
+
+    @property
+    def rate(self):
+        # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
+        if hasattr(self.orig, '_rate'):
+            return self.orig._rate
+        with h5py.File(self.source_file, "r") as hdf5:
+            self.orig._rate = hdf5[self.idx_set["rate"]].value
+            return self.orig._rate
+
+    @property
+    def rake(self):
+        # read from FM0_0/MEANFS/Rake
+        if hasattr(self.orig, '_rake'):
+            return self.orig._rake
+        with h5py.File(self.source_file, "r") as hdf5:
+            self.orig._rake = hdf5[self.idx_set["rake"]].value
+            return self.orig._rake
+
     def count_ruptures(self):
         """
         The length of the rupture array if the branch_id is set, else 0
@@ -225,12 +252,6 @@ class UCERFSource(BaseSeismicSource):
         with h5py.File(self.source_file, "r") as hdf5:
             new.start = 0
             new.stop = len(hdf5[new.idx_set["mag"]])
-            # read from FM0_0/MEANFS/MEANMSR/Magnitude
-            new.mags = hdf5[new.idx_set["mag"]].value
-            # read from FM0_0/MEANFS/Rake
-            new.rake = hdf5[new.idx_set["rake"]].value
-            # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
-            new.rate = hdf5[new.idx_set["rate"]].value
         return new
 
     def get_min_max_mag(self):
@@ -357,7 +378,8 @@ class UCERFSource(BaseSeismicSource):
             yield new
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, self.source_id)
+        return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
+                                   self.start, self.stop)
 
     def get_background_sources(self, src_filter):
         """
