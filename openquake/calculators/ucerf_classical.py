@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
+import operator
 
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -63,6 +64,7 @@ class UcerfPSHACalculator(PSHACalculator):
             gsims = self.csm.info.get_gsims(sm.ordinal)
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
+                weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks * 2,  # for slow tasks
             ).reduce(self.agg_dicts, acc)
 
