@@ -212,7 +212,7 @@ will automatically
 - perform the desired risk calculation, considering also the
   cross correlation effect for multiple IMTs.
 
-The feature is highly experimented and provided only for the purpose of
+The feature is highly experimental and provided only for the purpose of
 beta testing by external users.
 
 WebUI
