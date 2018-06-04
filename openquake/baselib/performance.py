@@ -94,7 +94,7 @@ class Monitor(object):
         """A memory measurement (in bytes)"""
         proc = psutil.Process(os.getpid())
         try:
-            return psutil.memory_info(proc).rss
+            return proc.memory_info().rss
         except psutil.AccessDenied:
             # no access to information about this process
             pass
