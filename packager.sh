@@ -342,6 +342,7 @@ _pkgbuild_innervm_run () {
 
     ssh "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
     scp "$lxc_ip:"*.{tar.?z,changes,dsc} ../
+    scp "$lxc_ip:"*.buildinfo ../ || true
     if echo "$DPBP_FLAG" | grep -q -v -- '-S'; then
         scp "$lxc_ip:"*.deb ../
     fi
@@ -507,6 +508,8 @@ _pkgtest_innervm_run () {
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.changes \
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.dsc "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.tar.?z \
         "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
+    scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.buildinfo \
+        "$lxc_ip:repo/${GEM_DEB_PACKAGE}" || true
     ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\"
 
     if [ -f _jenkins_deps_info ]; then
@@ -1089,6 +1092,8 @@ EOF
                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
                     ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
+                cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
+                    "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
                 PKG_COMMIT="$(git log --pretty='format:%h' -1)"
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
@@ -1100,6 +1105,9 @@ EOF
            ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
             ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
             ${GEM_BUILD_ROOT}/Packages* ${GEM_BUILD_ROOT}/Sources* ${GEM_BUILD_ROOT}/Release* "${repo_tmpdir}"
+        cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
+            "${repo_tmpdir}" || true
+           ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
         if [ "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}" ]; then
             rm -rf "${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}"
         fi
@@ -1348,6 +1356,8 @@ if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source" -a $BUILD_SOURCES_COPY -eq 
     cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
         ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
         "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source"
+    cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
+        "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source" || true
 fi
 
 if [ $BUILD_DEVEL -ne 1 ]; then
