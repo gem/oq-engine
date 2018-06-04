@@ -71,12 +71,14 @@ controller node and not duplicated on the workers nodes.  The change
 improved the performance of the calculators but also increased the
 data transfer. So we changed the engine to make it able to read the
 site collection directly from the datastore, thus saving GBs of data
-transfer. Due to the new approach is was possible to remove from the
-classical calculator the tiling mechanism, which was very complex and
-fragile, and still be faster than before. As a consequence, the data
-transfer is lower now than it ever was. Also, having removed
-the old prefiltering mechanism, a very tricky bug
-[over two year old has disappeared ](https://github.com/gem/oq-engine/issues/1965).
+transfer. In cluster situations the new approach requires
+[setting a shared directory](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/cluster.md#shared-filesystem-optional)
+otherwise the data transfer will be substantial. Due to the new
+prefiltering, is was possible to remove from the classical calculator
+the tiling mechanism, which was very complex and fragile, and still be
+faster than before. As a consequence, the data transfer is lower now
+than it ever was. Also, having removed the old prefiltering mechanism,
+a very tricky bug [over two year old has disappeared ](https://github.com/gem/oq-engine/issues/1965).
 
 While the prefiltering involves sources and it is performed before the
 calculation starts, the filtering involves ruptures and is performed
@@ -123,7 +125,7 @@ for the improvements in the filtering and prefiltering procedures.
 
 There were several changes to the [Surface classes](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.geo.surface.html). In particular, now `PlanarSurfaces` do not require anymore the `rupture_mesh_spacing` to be instantiated
 (it was not used anyway). Moreover the class hierarchy has been simplified
-and one method have been removed. The [ContextMaker.make_contexts](https://groups.google.com/forum/#!forum/openquake-users) method now returns two
+and one method have been removed. The [ContextMaker.make_contexts](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#openquake.hazardlib.contexts.ContextMaker.make_contexts) method now returns two
 values instead of three, and ruptures now have more attributes that
 they used to have. On the other hand, the attribute `.source_typology` was
 removed from Rupture classes, since it was not used. A `.polygon` property
@@ -155,7 +157,7 @@ honest to work with floats from the beginning.
 It should be noticed that in spite of the major refactoring (over
 1,000 lines of Python code were removed) the changes to client code
 are very minor: the HMTK was unaffected and in
-the SMTK only two lines had to big fixed. So the change should not be
+the SMTK only two lines had to be fixed. So the change should not be
 a problems for users of hazardlib. If you run into problem, please ask
 on our [mailing list](https://groups.google.com/forum/#!forum/openquake-users).
 
@@ -244,11 +246,11 @@ We added a warning in the case of a logic tree with more than 10,000
 realizations, suggesting the user to sample it because otherwise the
 calculation will likely run out of memory.
 
-We earn the user when the source model contains duplicated source IDs,
+We warn the user when the source model contains duplicated source IDs,
 suggesting to set the `optimize_same_id_sources` flag if the sources
 are really duplicated (the ID could be duplicated without the sources being so).
 
-For scenario calculations, we added a che that the number of realizations
+For scenario calculations, we added a check that the number of realizations
 must equal the number of distinct GMPEs.
 
 We added a check against duplicated GMPEs in the logic tree.
@@ -275,9 +277,9 @@ serializable magnitude-frequency distributions.
 Packaging
 ----------
 
-For the first time we provide packages for Ubuntu 18.04 (Bionic).
+For the first time we provide packages for Ubuntu 18.04 (Bionic) and Fedora 28.
 Old versions of Ubuntu (16.04 and 14.04) are still supported, and we
-keep providing packages for Red Hat distribution, as well as installers
+keep providing packages for Red Hat distributions, as well as installers
 for Windows and macOS, docker containers, virtual machines and more.
 
 We also updated our Python dependencies, in particular we include
