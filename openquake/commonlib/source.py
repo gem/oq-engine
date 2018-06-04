@@ -709,22 +709,6 @@ class CompositeSourceModel(collections.Sequence):
                     split_time += stime
         return split_time
 
-    def discard(self, minimum_magnitude):
-        """
-        Discard the sources below the minimum_magnitude.
-
-        :returs: the number of discarded sources
-        """
-        discarded = 0
-        for sm in self.source_models:
-            for sg in sm.src_groups:
-                ok_sources = [
-                    src for src in sg
-                    if src.get_min_max_mag()[1] >= minimum_magnitude]
-                discarded += len(sg.sources) - len(ok_sources)
-                sg.sources = ok_sources
-        return discarded
-
     def grp_by_src(self):
         """
         :returns: a new CompositeSourceModel with one group per source
