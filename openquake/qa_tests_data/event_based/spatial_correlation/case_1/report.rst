@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ===================
 checksum32     1,643,575,754      
-date           2018-05-15T04:14:05
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:39:49
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -77,7 +77,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  1            0.02515   0.0        2         1         18,773
+1         PointSource  1            0.02376   6.676E-06  2.00000   1         18,773
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.02515   1     
+PointSource  0.02376   1     
 ============ ========= ======
 
 Duplicated sources
@@ -96,33 +96,34 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-prefilter          0.00104 NaN    0.00104 0.00104 1        
-compute_ruptures   0.02818 NaN    0.02818 0.02818 1        
+RtreeFilter        0.00136 NaN    0.00136 0.00136 1        
+compute_ruptures   0.03163 NaN    0.03163 0.03163 1        
 ================== ======= ====== ======= ======= =========
 
-Informational data
-------------------
+Data transfer
+-------------
 ================ ====================================================================== =========
 task             sent                                                                   received 
-prefilter        srcs=0 B srcfilter=0 B monitor=0 B                                     1.28 KB  
-compute_ruptures sources=1.34 KB src_filter=771 B param=552 B monitor=330 B gsims=131 B 479.09 KB
+RtreeFilter      srcs=0 B srcfilter=0 B monitor=0 B                                     1.28 KB  
+compute_ruptures sources=1.34 KB param=571 B monitor=353 B src_filter=233 B gsims=131 B 478.72 KB
 ================ ====================================================================== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.15447   0.0       1     
-saving ruptures                0.10455   0.0       1     
-setting event years            0.03941   0.0       1     
-total compute_ruptures         0.02818   3.17969   1     
-store source_info              0.00414   0.0       1     
-reading composite source model 0.00310   0.0       1     
-making contexts                0.00108   0.0       1     
-total prefilter                0.00104   0.0       1     
-unpickling compute_ruptures    6.595E-04 0.0       1     
-splitting sources              5.016E-04 0.0       1     
-reading site collection        3.164E-04 0.0       1     
-unpickling prefilter           1.092E-04 0.0       1     
-============================== ========= ========= ======
+=============================== ========= ========= ======
+operation                       time_sec  memory_mb counts
+=============================== ========= ========= ======
+EventBasedRuptureCalculator.run 0.50774   0.0       1     
+managing sources                0.34585   0.0       1     
+saving ruptures                 0.12630   0.0       1     
+setting event years             0.03608   0.0       1     
+total compute_ruptures          0.03163   7.08594   1     
+store source_info               0.00478   0.0       1     
+reading composite source model  0.00321   0.0       1     
+total prefilter                 0.00136   0.0       1     
+making contexts                 0.00106   0.0       1     
+unpickling compute_ruptures     9.923E-04 0.0       1     
+reading site collection         8.545E-04 0.0       1     
+splitting sources               3.636E-04 0.0       1     
+unpickling prefilter            2.916E-04 0.0       1     
+=============================== ========= ========= ======
