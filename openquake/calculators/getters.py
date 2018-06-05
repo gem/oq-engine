@@ -44,10 +44,10 @@ class PmapGetter(object):
     :param sids: the subset of sites to consider (if None, all sites)
     :param rlzs_assoc: a RlzsAssoc instance (if None, infers it)
     """
-    def __init__(self, dstore, rlzs_assoc, sids=None):
+    def __init__(self, dstore, rlzs_assoc=None, sids=None):
         self.dstore = dstore
         self.sids = sids
-        self.rlzs_assoc = rlzs_assoc
+        self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.eids = None
         self.nbytes = 0
         self.sids = sids

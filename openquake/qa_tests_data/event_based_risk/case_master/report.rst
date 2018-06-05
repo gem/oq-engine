@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     3,029,642,047      
-date           2018-05-15T04:12:57
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:38:37
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -68,7 +68,7 @@ grp_id gsims                                 distances   siteparams             
 1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
 3      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-4      MontalvaEtAl2016SSlab()               rhypo rjb   backarc vs30            hypo_depth mag   
+4      MontalvaEtAl2016SSlab()               rhypo rrup  backarc vs30            hypo_depth mag   
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -103,7 +103,7 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 #TRT models   5  
 #eff_ruptures 971
 #tot_ruptures 971
-#tot_weight   971
+#tot_weight   0  
 ============= ===
 
 Estimated data transfer for the avglosses
@@ -132,9 +132,9 @@ Slowest sources
 ========= ========================== ============ ========= ========== ========= ========= ======
 source_id source_class               num_ruptures calc_time split_time num_sites num_split events
 ========= ========================== ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource          2            0.50110   0.0        210       30        1     
-2         CharacteristicFaultSource  1            0.01897   0.0        14        2         9     
-buc06pt05 NonParametricSeismicSource 1            0.00355   0.0        14        2         2     
+1         SimpleFaultSource          482          0.53386   1.440E-04  7.00000   30        1     
+2         CharacteristicFaultSource  1            0.03193   2.146E-06  7.00000   2         9     
+buc06pt05 NonParametricSeismicSource 2            0.00291   1.526E-05  7.00000   2         2     
 ========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -142,9 +142,9 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-CharacteristicFaultSource  0.01897   1     
-NonParametricSeismicSource 0.00355   1     
-SimpleFaultSource          0.50110   1     
+CharacteristicFaultSource  0.03193   1     
+NonParametricSeismicSource 0.00291   1     
+SimpleFaultSource          0.53386   1     
 ========================== ========= ======
 
 Duplicated sources
@@ -155,34 +155,35 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-prefilter          0.00616 0.00299 0.00182 0.01126 34       
-compute_ruptures   0.04040 0.02050 0.00217 0.06691 15       
+RtreeFilter        0.00600 0.00325 0.00221 0.01136 34       
+compute_ruptures   0.04700 0.01973 0.00596 0.07674 15       
 ================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-================ ================================================================================= ========
-task             sent                                                                              received
-prefilter        srcs=53.47 KB monitor=10.72 KB srcfilter=7.6 KB                                   55.63 KB
-compute_ruptures sources=35.58 KB param=16.64 KB src_filter=15.29 KB monitor=4.83 KB gsims=3.13 KB 16.25 KB
-================ ================================================================================= ========
+Data transfer
+-------------
+================ ================================================================================ ========
+task             sent                                                                             received
+RtreeFilter      srcs=53.47 KB monitor=11.49 KB srcfilter=9.26 KB                                 55.63 KB
+compute_ruptures sources=42.59 KB param=16.92 KB monitor=5.17 KB src_filter=3.41 KB gsims=3.13 KB 15.7 KB 
+================ ================================================================================ ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         0.60597   2.61719   15    
-managing sources               0.24545   0.0       1     
-total prefilter                0.20931   4.63281   34    
-reading composite source model 0.02199   0.0       1     
-making contexts                0.01881   0.0       6     
-saving ruptures                0.00862   0.0       15    
-store source_info              0.00598   0.0       1     
-reading site collection        0.00513   0.0       1     
-unpickling prefilter           0.00370   0.0       34    
-reading exposure               0.00177   0.0       1     
-setting event years            0.00177   0.0       1     
-unpickling compute_ruptures    0.00104   0.0       15    
-splitting sources              7.994E-04 0.0       1     
-============================== ========= ========= ======
+=============================== ========= ========= ======
+operation                       time_sec  memory_mb counts
+=============================== ========= ========= ======
+total compute_ruptures          0.70497   8.71875   15    
+EventBasedRuptureCalculator.run 0.52510   0.0       1     
+managing sources                0.28227   0.0       1     
+total prefilter                 0.20412   4.75781   34    
+making contexts                 0.03095   0.0       6     
+reading composite source model  0.02243   0.0       1     
+saving ruptures                 0.01284   0.0       15    
+unpickling prefilter            0.00849   0.0       34    
+store source_info               0.00639   0.0       1     
+reading site collection         0.00415   0.0       1     
+unpickling compute_ruptures     0.00381   0.0       15    
+reading exposure                0.00169   0.0       1     
+setting event years             0.00140   0.0       1     
+splitting sources               6.709E-04 0.0       1     
+=============================== ========= ========= ======
