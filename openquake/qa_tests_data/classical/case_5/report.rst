@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2018-05-15T04:13:32
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:39:14
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rjb rrup  vs30       mag rake  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -77,7 +77,7 @@ Slowest sources
 ========= ================== ============ ========= ========== ========= ========= ======
 source_id source_class       num_ruptures calc_time split_time num_sites num_split events
 ========= ================== ============ ========= ========== ========= ========= ======
-1         ComplexFaultSource 49           6.628E-05 6.676E-06  1         1         0     
+1         ComplexFaultSource 49           0.00515   4.768E-06  1.00000   1         0     
 ========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 6.628E-05 1     
+ComplexFaultSource 0.00515   1     
 ================== ========= ======
 
 Duplicated sources
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-prefilter          0.00172 NaN    0.00172 0.00172 1        
-count_ruptures     0.0     NaN    0.0     0.0     1        
+RtreeFilter        0.00165 NaN    0.00165 0.00165 1        
+count_eff_ruptures 0.00693 NaN    0.00693 0.00693 1        
 ================== ======= ====== ======= ======= =========
 
 Fastest task
@@ -122,28 +122,29 @@ nsites   1.00000 NaN    1   1   1
 weight   196     NaN    196 196 1
 ======== ======= ====== === === =
 
-Informational data
-------------------
-============== ===================================================================== ========
-task           sent                                                                  received
-prefilter      srcs=0 B srcfilter=0 B monitor=0 B                                    1.24 KB 
-count_ruptures sources=1.28 KB srcfilter=717 B monitor=564 B param=412 B gsims=120 B 358 B   
-============== ===================================================================== ========
+Data transfer
+-------------
+================== ===================================================================== ========
+task               sent                                                                  received
+RtreeFilter        srcs=0 B srcfilter=0 B monitor=0 B                                    1.24 KB 
+count_eff_ruptures sources=1.28 KB param=431 B monitor=353 B srcfilter=233 B gsims=120 B 358 B   
+================== ===================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.14334   0.0       1     
-managing sources               0.00976   0.0       1     
-store source_info              0.00391   0.0       1     
-total count_ruptures           0.00242   0.61719   1     
-total prefilter                0.00172   0.0       1     
-splitting sources              4.952E-04 0.0       1     
-reading site collection        3.040E-04 0.0       1     
-unpickling prefilter           9.704E-05 0.0       1     
-unpickling count_ruptures      3.910E-05 0.0       1     
-saving probability maps        3.505E-05 0.0       1     
-aggregate curves               2.670E-05 0.0       1     
+PSHACalculator.run             0.53830   0.0       1     
+managing sources               0.19558   0.0       1     
+reading composite source model 0.14232   0.0       1     
+total count_eff_ruptures       0.00693   5.65234   1     
+store source_info              0.00642   0.0       1     
+total prefilter                0.00165   0.0       1     
+reading site collection        9.260E-04 0.0       1     
+splitting sources              3.238E-04 0.0       1     
+unpickling prefilter           2.897E-04 0.0       1     
+aggregate curves               2.723E-04 0.0       1     
+unpickling count_eff_ruptures  2.658E-04 0.0       1     
+saving probability maps        2.213E-04 0.0       1     
 ============================== ========= ========= ======
