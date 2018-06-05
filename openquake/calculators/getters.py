@@ -197,11 +197,12 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, num_events=0):
+    def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
         self.E = num_events
+        self.imtls = imtls
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
@@ -220,7 +221,6 @@ class GmfDataGetter(collections.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.imtls = self.dstore['oqparam'].imtls
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
 
     def get_hazard(self, gsim=None):
