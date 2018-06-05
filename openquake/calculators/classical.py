@@ -158,7 +158,6 @@ class PSHACalculator(base.HazardCalculator):
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
                      filter_distance=oq.filter_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
-        totweight = 0
         num_tasks = 0
         num_sources = 0
         csm, src_filter = self.filter_csm()
@@ -167,7 +166,6 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Using minweight=%d', minweight)
         else:
             logging.info('Using maxweight=%d', maxweight)
-        totweight += csm.info.tot_weight
 
         if csm.has_dupl_sources and not opt:
             logging.warn('Found %d duplicated sources',
@@ -187,7 +185,7 @@ class PSHACalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-        self.csm.info.tot_weight = totweight
+        self.csm.info.tot_weight = csm.info.tot_weight
 
     def post_execute(self, pmap_by_grp_id):
         """
