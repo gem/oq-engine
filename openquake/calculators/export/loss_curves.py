@@ -149,7 +149,7 @@ class LossCurveExporter(object):
         """
         if 'loss_curves-stats' in self.dstore:  # classical_risk
             if self.R == 1:
-                data = self.dstore['loss_curves-stats'][aids]  # shape (A, R)
+                data = self.dstore['loss_curves-stats'][aids]  # shape (A, 1)
             else:
                 data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
             if key.startswith('rlz-'):
