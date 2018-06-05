@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2018-05-15T04:13:05
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:38:45
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -100,8 +100,8 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   240          0.00137   0.00308    297       99        0     
-2         PointSource  15           7.796E-05 1.669E-06  3         1         0     
+1         AreaSource   240          0.00617   0.00312    3.00000   99        0     
+2         PointSource  15           0.00577   1.669E-06  3.00000   1         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -109,8 +109,8 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.00137   1     
-PointSource  7.796E-05 1     
+AreaSource   0.00617   1     
+PointSource  0.00577   1     
 ============ ========= ======
 
 Duplicated sources
@@ -121,8 +121,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-prefilter          0.00354 0.00194 0.00128 0.00796 34       
-count_ruptures     0.00589 0.00533 0.00212 0.00966 2        
+RtreeFilter        0.00361 0.00178 0.00101 0.00686 34       
+count_eff_ruptures 0.00927 0.00227 0.00767 0.01087 2        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
@@ -147,28 +147,29 @@ nsites   3.00000 0.0    3       3       33
 weight   5.19615 0.0    5.19615 5.19615 33
 ======== ======= ====== ======= ======= ==
 
-Informational data
-------------------
-============== ========================================================================== ========
-task           sent                                                                       received
-prefilter      srcs=41.84 KB monitor=10.82 KB srcfilter=7.6 KB                            44.81 KB
-count_ruptures sources=17.42 KB srcfilter=1.61 KB param=1.16 KB monitor=666 B gsims=430 B 737 B   
-============== ========================================================================== ========
+Data transfer
+-------------
+================== ======================================================================= ========
+task               sent                                                                    received
+RtreeFilter        srcs=41.84 KB monitor=11.49 KB srcfilter=9.26 KB                        44.81 KB
+count_eff_ruptures sources=17.42 KB param=1.2 KB monitor=706 B srcfilter=466 B gsims=430 B 737 B   
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.12463   0.0       1     
-total prefilter                0.12023   3.36719   34    
-reading composite source model 0.01589   0.0       1     
-total count_ruptures           0.01177   0.75000   2     
-splitting sources              0.00688   0.0       1     
-store source_info              0.00498   0.0       1     
-unpickling prefilter           0.00280   0.0       34    
-reading site collection        3.064E-04 0.0       1     
-unpickling count_ruptures      7.463E-05 0.0       2     
-aggregate curves               4.697E-05 0.0       2     
-saving probability maps        3.123E-05 0.0       1     
+PSHACalculator.run             0.44942   0.0       1     
+managing sources               0.25504   0.0       1     
+total prefilter                0.12275   3.46875   34    
+total count_eff_ruptures       0.01854   5.65234   2     
+reading composite source model 0.01636   0.0       1     
+unpickling prefilter           0.01181   0.0       34    
+store source_info              0.00872   0.0       1     
+splitting sources              0.00674   0.0       1     
+aggregate curves               7.701E-04 0.0       2     
+reading site collection        7.505E-04 0.0       1     
+unpickling count_eff_ruptures  6.235E-04 0.0       2     
+saving probability maps        2.396E-04 0.0       1     
 ============================== ========= ========= ======

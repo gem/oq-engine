@@ -32,6 +32,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -209,6 +210,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
+    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
