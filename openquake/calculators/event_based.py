@@ -450,6 +450,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
                      for sid in self.sitecol.complete.sids])
+        else:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
         return acc
 
     def save_gmf_bytes(self):
