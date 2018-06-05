@@ -124,7 +124,7 @@ def expose_outputs(dstore):
     if len(rlzs) > 1:
         dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
-    if oq.ground_motion_fields and calcmode == 'event_based':
+    if calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
         if nbytes < 10 * 1024 ** 2:
             dskeys.add('gmf_data')
