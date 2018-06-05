@@ -469,6 +469,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
     psr = nrml.SourceModelParser(converter)
+    if oqparam.calculation_mode.startswith('ucerf'):
+        [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
@@ -476,7 +478,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            if in_memory:
+            if oqparam.calculation_mode.startswith('ucerf'):
+                sg = copy.copy(grp)
+                sg.id = sm.ordinal
+                sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                src_groups.append(sg)
+            elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
