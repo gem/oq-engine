@@ -210,9 +210,9 @@ class EbrCalculator(base.RiskCalculator):
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
             # sorting the eids is essential to get the epsilons in the right
             # order (i.e. consistent with the one used in ebr from ruptures)
-            self.eids = sorted(parent['events']['eid'])
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+        self.eids = sorted(parent['events']['eid'])
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
