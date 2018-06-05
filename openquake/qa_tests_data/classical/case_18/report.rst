@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-05-15T04:13:31
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:39:13
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -51,11 +51,11 @@ b1        1.00000 simple(3)       3/3
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ========================================================================================================================================== ========= ========== ==========
-grp_id gsims                                                                                                                                      distances siteparams ruptparams
-====== ========================================================================================================================================== ========= ========== ==========
-0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo rjb            mag       
-====== ========================================================================================================================================== ========= ========== ==========
+====== ========================================================================================================================================== ========== ========== ==========
+grp_id gsims                                                                                                                                      distances  siteparams ruptparams
+====== ========================================================================================================================================== ========== ========== ==========
+0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo rrup            mag       
+====== ========================================================================================================================================== ========== ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -80,7 +80,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-VICM      AreaSource   2,430        6.936E-04 0.01066    90        30        0     
+VICM      AreaSource   2,430        0.05229   0.01070    3.00000   30        0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -88,7 +88,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   6.936E-04 1     
+AreaSource   0.05229   1     
 ============ ========= ======
 
 Duplicated sources
@@ -99,24 +99,13 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-prefilter          0.00391 0.00272   0.00114 0.01389 30       
-count_ruptures     0.00220 4.623E-04 0.00138 0.00264 8        
+RtreeFilter        0.00361 0.00212   0.00113 0.01096 30       
+count_eff_ruptures 0.00967 8.317E-04 0.00838 0.01051 8        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
 ------------
-taskno=8, weight=84, duration=0 s, sources="VICM"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   3.00000 0.0    3   3   2
-weight   42      0.0    42  42  2
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=3, weight=168, duration=0 s, sources="VICM"
+taskno=6, weight=168, duration=0 s, sources="VICM"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
@@ -125,28 +114,40 @@ nsites   3.00000 0.0    3   3   4
 weight   42      0.0    42  42  4
 ======== ======= ====== === === =
 
-Informational data
-------------------
-============== ============================================================================= ========
-task           sent                                                                          received
-prefilter      srcs=39.54 KB monitor=9.55 KB srcfilter=6.71 KB                               42.09 KB
-count_ruptures gsims=1.23 MB sources=23.51 KB srcfilter=6.45 KB param=6.41 KB monitor=2.6 KB 2.83 KB 
-============== ============================================================================= ========
+Slowest task
+------------
+taskno=2, weight=168, duration=0 s, sources="VICM"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   3.00000 0.0    3   3   4
+weight   42      0.0    42  42  4
+======== ======= ====== === === =
+
+Data transfer
+-------------
+================== ============================================================================== ========
+task               sent                                                                           received
+RtreeFilter        srcs=39.54 KB monitor=10.14 KB srcfilter=8.17 KB                               42.09 KB
+count_eff_ruptures gsims=1.23 MB sources=23.51 KB param=6.56 KB monitor=2.76 KB srcfilter=1.82 KB 2.83 KB 
+================== ============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.15559   0.0       1     
-total prefilter                0.11732   3.43359   30    
-reading composite source model 0.02814   0.0       1     
-total count_ruptures           0.01757   1.25000   8     
-splitting sources              0.01118   0.0       1     
-store source_info              0.00498   0.0       1     
-unpickling prefilter           0.00356   0.0       30    
-reading site collection        6.022E-04 0.0       1     
-unpickling count_ruptures      3.252E-04 0.0       8     
-aggregate curves               1.650E-04 0.0       8     
-saving probability maps        3.624E-05 0.0       1     
+PSHACalculator.run             0.47386   0.19141   1     
+managing sources               0.22836   0.0       1     
+total prefilter                0.10832   3.46875   30    
+total count_eff_ruptures       0.07738   5.65234   8     
+reading composite source model 0.02884   0.0       1     
+splitting sources              0.01107   0.0       1     
+unpickling prefilter           0.00981   0.0       30    
+store source_info              0.00608   0.0       1     
+aggregate curves               0.00233   0.0       8     
+unpickling count_eff_ruptures  0.00182   0.0       8     
+reading site collection        0.00100   0.0       1     
+saving probability maps        1.972E-04 0.0       1     
 ============================== ========= ========= ======

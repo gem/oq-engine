@@ -850,16 +850,23 @@ class CompositeSourceModel(collections.Sequence):
         if self.optimize_same_id is False:
             return acc
         # extract a single source from multiple sources with the same ID
+        n = 0
+        tot = 0
         dic = {}
         for trt in acc:
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
+                n += 1
+                tot += len(grp)
                 # src.src_group_id can be a list if get_sources_by_trt was
                 # called before
                 if len(grp) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
+        if n < tot:
+            logging.info('Reduced %d sources to %d sources with unique IDs',
+                         tot, n)
         return dic
 
     def get_num_sources(self):
