@@ -32,6 +32,7 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -183,6 +184,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam.concurrent_tasks = ct
             self.save_params(**kw)
             Starmap.init()
+            BaseSeismicSource.min_mag = self.oqparam.minimum_magnitude
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -208,6 +210,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
+                BaseSeismicSource.min_mag = 0
                 Starmap.shutdown()
         self._monitor.flush()
         return getattr(self, 'exported', {})
