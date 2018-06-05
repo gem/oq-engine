@@ -2,9 +2,9 @@ Scenario Risk Maule Mw 8.8 reduced
 ==================================
 
 ============== ===================
-checksum32     4,058,514,510      
-date           2018-05-15T04:14:24
-engine_version 3.1.0-git0acbc11   
+checksum32     3,260,969,674      
+date           2018-06-05T06:40:08
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 29, num_levels = 78
@@ -39,7 +39,6 @@ exposure                 `exposure_model.xml <exposure_model.xml>`_
 gmfs                     `GMFs_Mabe.xml <GMFs_Mabe.xml>`_                                                  
 job_ini                  `job.ini <job.ini>`_                                                              
 occupants_vulnerability  `occupants_vulnerabilityRes.xml <occupants_vulnerabilityRes.xml>`_                
-sites                    `sites.csv <sites.csv>`_                                                          
 structural_vulnerability `structural_vulnerability_model_Res.xml <structural_vulnerability_model_Res.xml>`_
 ======================== ==================================================================================
 
@@ -109,8 +108,8 @@ Slowest operations
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-building riskinputs     0.08601  0.0       1     
-reading site collection 0.02148  0.0       1     
-reading exposure        0.01411  0.0       1     
-building epsilons       0.00244  0.0       1     
+building riskinputs     0.08404  0.0       1     
+reading site collection 0.06329  0.0       1     
+reading exposure        0.00914  0.0       1     
+building epsilons       0.00251  0.0       1     
 ======================= ======== ========= ======
