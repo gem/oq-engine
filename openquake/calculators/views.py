@@ -618,7 +618,7 @@ def view_task_classical(token, dstore):
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
     else:
-        data = dstore['task_info/count_ruptures'].value
+        data = dstore['task_info/count_eff_ruptures'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']

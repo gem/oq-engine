@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 2
 
 ============== ===================
 checksum32     2,135,006,889      
-date           2018-05-15T04:12:42
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:38:22
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -56,8 +56,8 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 5.531E-05 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+reading site collection 0.00818  0.0       1     
+======================= ======== ========= ======
