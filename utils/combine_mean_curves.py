@@ -40,10 +40,8 @@ def combine_mean_curves(calc1, calc2):
         raise RuntimeError('There are no common sites between calculation '
                            '%d and %d' % (calc1, calc2))
     sids2 = [site_id2[lonlat] for lonlat in common]
-    assoc1 = dstore1['csm_info'].get_rlzs_assoc()
-    assoc2 = dstore2['csm_info'].get_rlzs_assoc()
-    pmap = PmapGetter(dstore1, assoc1).get_mean()
-    pmap2 = PmapGetter(dstore1, assoc2, sids2).get_mean()
+    pmap = PmapGetter(dstore1).get_mean()
+    pmap2 = PmapGetter(dstore1, sids=sids2).get_mean()
     for lonlat in common:
         pmap[site_id1[lonlat]] |= pmap2[site_id2[lonlat]]
     out = 'combine_%d_%d.hdf5' % (calc1, calc2)
