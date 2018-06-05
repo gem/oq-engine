@@ -759,7 +759,8 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, sids, self.R, num_events)
+                getter = GmfDataGetter(dstore, sids, self.R, num_events,
+                                       self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 logging.info('Reading hazard')
