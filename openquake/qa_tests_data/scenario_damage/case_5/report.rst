@@ -3,11 +3,11 @@ Calculation of the ground motion fields for a scenario
 
 ============== ===================
 checksum32     3,734,678,775      
-date           2018-05-15T04:12:42
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:38:22
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
-num_sites = 11, num_levels = 1
+num_sites = 7, num_levels = 1
 
 Parameters
 ----------
@@ -58,7 +58,7 @@ Realizations per (TRT, GSIM)
 Exposure model
 --------------
 =============== ========
-#assets         11      
+#assets         7       
 #taxonomies     4       
 deductibile     relative
 insurance_limit relative
@@ -66,11 +66,11 @@ insurance_limit relative
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-W        1.00000 0.0    1   1   2         2         
-A        1.00000 0.0    1   1   5         5         
-DS       1.00000 0.0    1   1   2         2         
-UFB      1.00000 0.0    1   1   2         2         
-*ALL*    1.00000 0.0    1   1   11        11        
+W        1.00000 NaN    1   1   1         1         
+A        1.00000 0.0    1   1   4         4         
+DS       1.00000 NaN    1   1   1         1         
+UFB      1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
 Slowest operations
@@ -78,6 +78,6 @@ Slowest operations
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading site collection 0.00364  0.0       1     
-reading exposure        0.00180  0.0       1     
+reading site collection 0.00435  0.0       1     
+reading exposure        0.00187  0.0       1     
 ======================= ======== ========= ======

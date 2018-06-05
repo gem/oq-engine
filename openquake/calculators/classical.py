@@ -229,7 +229,7 @@ class PSHACalculator(base.HazardCalculator):
 
 
 # used in PreClassicalCalculator
-def count_ruptures(sources, srcfilter, gsims, param, monitor):
+def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     """
     Count the number of ruptures contained in the given sources by applying a
     raw source filtering on the integration distance. Return a dictionary
@@ -259,7 +259,7 @@ class PreCalculator(PSHACalculator):
     Calculator to filter the sources and compute the number of effective
     ruptures
     """
-    core_task = count_ruptures
+    core_task = count_eff_ruptures
 
 
 def fix_ones(pmap):
