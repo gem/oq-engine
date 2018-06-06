@@ -184,7 +184,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam.concurrent_tasks = ct
             self.save_params(**kw)
             Starmap.init()
-            BaseSeismicSource.min_mag = self.oqparam.minimum_magnitude
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -210,7 +209,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
-                BaseSeismicSource.min_mag = 0
                 Starmap.shutdown()
         self._monitor.flush()
         return getattr(self, 'exported', {})
@@ -333,13 +331,14 @@ class HazardCalculator(BaseCalculator):
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter, mon)
+            csm = self.csm.filter(src_filter, oq.minimum_magnitude, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.filter(prefilter, mon)
+            csm = self.csm.filter(prefilter, oq.minimum_magnitude, mon)
         else:  # prefilter_sources='no'
-            csm = self.csm.filter(SourceFilter(None, {}), mon)
+            csm = self.csm.filter(
+                SourceFilter(None, {}), oq.minimum_magnitude, mon)
         return csm, src_filter
 
     def can_read_parent(self):
