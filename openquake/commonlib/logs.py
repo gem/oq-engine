@@ -31,9 +31,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
-LOG_FORMAT = ('[%(asctime)s #%(job_id)s %(hostname)s '
-              '%(levelname)s %(processName)s/%(process)s] %(message)s')
-
 LOG = logging.getLogger()
 
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
@@ -88,7 +85,6 @@ class LogStreamHandler(logging.StreamHandler):
     """
     def __init__(self, job_id):
         super().__init__()
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
@@ -102,7 +98,6 @@ class LogFileHandler(logging.FileHandler):
     """
     def __init__(self, job_id, log_file):
         super().__init__(log_file)
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.job_id = job_id
         self.log_file = log_file
 

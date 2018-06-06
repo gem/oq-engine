@@ -293,16 +293,13 @@ def compute_gmfs_and_curves(getters, oq, monitor):
             with monitor('building hazard', measuremem=True):
                 gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
         indices = []
-        if oq.ground_motion_fields:
-            gmfdata.sort(order=('sid', 'rlzi', 'eid'))
-            start = stop = 0
-            for sid, rows in itertools.groupby(gmfdata['sid']):
-                for row in rows:
-                    stop += 1
-                indices.append((sid, start, stop))
-                start = stop
-        else:
-            gmfdata = None
+        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        start = stop = 0
+        for sid, rows in itertools.groupby(gmfdata['sid']):
+            for row in rows:
+                stop += 1
+            indices.append((sid, start, stop))
+            start = stop
         res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
                    indices=numpy.array(indices, (U32, 3)))
         if len(getter.gmdata):
@@ -342,16 +339,15 @@ class EventBasedCalculator(base.HazardCalculator):
         for res in results:
             self.gmdata += res['gmdata']
             data = res['gmfdata']
-            if data is not None:
-                with sav_mon:
-                    hdf5.extend3(hdf5path, 'gmf_data/data', data)
-                    # it is important to save the number of bytes while the
-                    # computation is going, to see the progress
-                    update_nbytes(self.datastore, 'gmf_data/data', data)
-                    for sid, start, stop in res['indices']:
-                        self.indices[sid].append(
-                            (start + self.offset, stop + self.offset))
-                    self.offset += len(data)
+            with sav_mon:
+                hdf5.extend3(hdf5path, 'gmf_data/data', data)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
+                for sid, start, stop in res['indices']:
+                    self.indices[sid].append(
+                        (start + self.offset, stop + self.offset))
+                self.offset += len(data)
             slicedic = self.oqparam.imtls.slicedic
             with agg_mon:
                 for key, poes in res['hcurves'].items():
@@ -421,10 +417,7 @@ class EventBasedCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
-            return
-        if self.oqparam.ground_motion_fields:
-            calc.check_overflow(self)
+        calc.check_overflow(self)
 
         self.csm_info = self.datastore['csm_info']
         self.sm_id = {tuple(sm.path): sm.ordinal
@@ -450,6 +443,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
                      for sid in self.sitecol.complete.sids])
+        else:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
         return acc
 
     def save_gmf_bytes(self):
@@ -466,9 +462,7 @@ class EventBasedCalculator(base.HazardCalculator):
             dictionary if hazard_curves_from_gmfs is false
         """
         oq = self.oqparam
-        if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
-            return
-        elif oq.hazard_curves_from_gmfs:
+        if oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
             # save individual curves
             for i in sorted(result):
