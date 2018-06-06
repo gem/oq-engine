@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the event_based_risk calculator to distribute by GMFs always
   * Optimized the memory consumption in the UCERF classical calculator
   * Added a parameter `minimum_magnitude` in the job.ini
   * Added an utility `utils/combine_mean_curves.py`
