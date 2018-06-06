@@ -743,7 +743,7 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, min_mag, monitor=performance.Monitor()):
+    def filter(self, src_filter, min_mag=0, monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
