@@ -22,8 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_blocks)
+from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.baselib import parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
@@ -178,10 +177,9 @@ class EbrCalculator(base.RiskCalculator):
             super().pre_execute()
             parent = self.datastore.parent
         else:
-            ebcalc = event_based.EventBasedCalculator(self.oqparam)
-            ebcalc.run()
+            ebcalc = base.calculators[self.pre_calculator](self.oqparam)
+            ebcalc.run(close=False)
             parent = self.datastore.parent = ebcalc.datastore
-            parent.open()
             oq.hazard_calculation_id = parent.calc_id
             self.datastore['oqparam'] = oq
             self.param = ebcalc.param
