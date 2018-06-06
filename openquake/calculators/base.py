@@ -120,6 +120,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     from_engine = False  # set by engine.run_calc
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+    dynamic_parent = None
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
