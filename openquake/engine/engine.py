@@ -305,9 +305,10 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default(job_id)
         msg = check_obsolete_version(oqparam.calculation_mode)
+        calc = base.calculators(oqparam, calc_id=job_id)
+        calc.set_log_format()
         if msg:
             logs.LOG.warn(msg)
-        calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
         input_zip = oqparam.inputs.get('input_zip')
         tb = 'None\n'
