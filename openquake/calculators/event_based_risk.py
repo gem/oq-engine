@@ -191,7 +191,8 @@ class EbrCalculator(base.RiskCalculator):
             ebcalc = base.calculators[self.pre_calculator](self.oqparam)
             ebcalc.run(close=False)
             self.set_log_format()
-            parent = self.datastore.parent = ebcalc.datastore
+            parent = self.dynamic_parent = self.datastore.parent = (
+                ebcalc.datastore)
             oq.hazard_calculation_id = parent.calc_id
             self.datastore['oqparam'] = oq
             self.param = ebcalc.param
