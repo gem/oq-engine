@@ -32,13 +32,78 @@ from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
-from openquake.calculators.event_based_risk import (
-    EbrCalculator, event_based_risk)
+from openquake.calculators.event_based_risk import EbrCalculator
 
 U16 = numpy.uint16
 U64 = numpy.uint64
 F32 = numpy.float32
+F64 = numpy.float64
 TWO16 = 2 ** 16
+
+
+def event_based_risk(riskinput, riskmodel, param, monitor):
+    """
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        a dictionary of parameters
+    :param monitor:
+        :class:`openquake.baselib.performance.Monitor` instance
+    :returns:
+        a dictionary of numpy arrays of shape (L, R)
+    """
+    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
+        riskinput.hazard_getter.init()
+    eids = riskinput.hazard_getter.eids
+    A = len(riskinput.aids)
+    E = len(eids)
+    assert not param['insured_losses']
+    L = len(riskmodel.lti)
+    R = riskinput.hazard_getter.num_rlzs
+    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L))])
+    agg = numpy.zeros((E, R, L), F32)
+    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
+                    else numpy.zeros(A, F64))
+    result = dict(aids=riskinput.aids, avglosses=avg)
+
+    # update the result dictionary and the agg array with each output
+    for out in riskmodel.gen_outputs(riskinput, monitor):
+        if len(out.eids) == 0:  # this happens for sites with no events
+            continue
+        r = out.rlzi
+        idx = riskinput.hazard_getter.eid2idx
+        for l, loss_ratios in enumerate(out):
+            if loss_ratios is None:  # for GMFs below the minimum_intensity
+                continue
+            loss_type = riskmodel.loss_types[l]
+            indices = numpy.array([idx[eid] for eid in out.eids])
+            for a, asset in enumerate(out.assets):
+                ratios = loss_ratios[a]  # shape (E, I)
+                aid = asset.ordinal
+                losses = ratios * asset.value(loss_type)
+                # average losses
+                if param['avg_losses']:
+                    rat = ratios.sum(axis=0) * param['ses_ratio']
+                    lba = avg[l, r]
+                    try:
+                        lba[aid] += rat
+                    except KeyError:
+                        lba[aid] = rat
+
+                # agglosses
+                # this is the critical loop: it is import to keep it
+                # vectorized in terms of the event indices
+                agg[indices, r, l] += losses[:, 0]
+
+    it = ((eid, r, losses)
+          for eid, all_losses in zip(eids, agg)
+          for r, losses in enumerate(all_losses) if losses.sum())
+    result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
+    # store info about the GMFs, must be done at the end
+    result['gmdata'] = riskinput.gmdata
+    return result
 
 
 def generate_event_set(ucerf, background_sids, src_filter, seed):
@@ -324,7 +389,6 @@ class UCERFRiskCalculator(EbrCalculator):
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
                              elt_dt=elt_dt,
-                             asset_loss_table=False,
                              insured_losses=oq.insured_losses)
                 yield (ssm, self.csm.src_filter, param,
                        self.riskmodel, imts, oq.truncation_level,
@@ -341,3 +405,50 @@ class UCERFRiskCalculator(EbrCalculator):
         self.csm.info.update_eff_ruptures(self.eff_ruptures)
         self.datastore['csm_info'] = self.csm.info
         return num_events
+
+    def save_losses(self, dic, offset=0):
+        """
+        Save the event loss tables incrementally.
+
+        :param dic:
+            dictionary with agglosses, assratios, avglosses, lrs_idx
+        :param offset:
+            realization offset
+        """
+        agglosses = dic.pop('agglosses')
+        avglosses = dic.pop('avglosses')
+        with self.monitor('saving event loss table', autoflush=True):
+            agglosses['rlzi'] += offset
+            self.datastore.extend('losses_by_event', agglosses)
+
+        if not hasattr(self, 'vals'):
+            self.vals = self.assetcol.values()
+        with self.monitor('saving avg_losses-rlzs'):
+            for (l, r), ratios in avglosses.items():
+                lt = self.riskmodel.loss_types[l]
+                self.dset[:, r + offset, l] += ratios * self.vals[lt]
+        self.taskno += 1
+
+    def post_execute(self, result):
+        """
+        Save risk data and possibly execute the EbrPostCalculator
+        """
+        num_events = result
+        # gmv[:-1] are the events per each IMT
+        gmv = sum(gm[:-1].sum() for gm in self.gmdata.values())
+        if not gmv:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
+
+        if 'losses_by_event' not in self.datastore:
+            logging.warning(
+                'No losses were generated: most likely there is an error '
+                'in y our input files or the GMFs were below the minimum '
+                'intensity')
+        else:
+            self.datastore.set_nbytes('losses_by_event')
+            E = sum(num_events.values())
+            agglt = self.datastore['losses_by_event']
+            agglt.attrs['nonzero_fraction'] = len(agglt) / E
+
+        self.postproc()
