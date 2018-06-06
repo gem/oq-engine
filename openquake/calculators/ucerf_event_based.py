@@ -427,23 +427,16 @@ class UCERFRiskCalculator(EbrCalculator):
 
     def post_execute(self, result):
         """
-        Save risk data and possibly execute the EbrPostCalculator
+        Call the EbrPostCalculator
         """
-        num_events = result
-        # gmv[:-1] are the events per each IMT
-        gmv = sum(gm[:-1].sum() for gm in self.gmdata.values())
-        if not gmv:
-            raise RuntimeError('No GMFs were generated, perhaps they were '
-                               'all below the minimum_intensity threshold')
-
         if 'losses_by_event' not in self.datastore:
             logging.warning(
                 'No losses were generated: most likely there is an error '
-                'in y our input files or the GMFs were below the minimum '
+                'in your input files or the GMFs were below the minimum '
                 'intensity')
         else:
             self.datastore.set_nbytes('losses_by_event')
-            E = sum(num_events.values())
+            E = sum(result.values())
             agglt = self.datastore['losses_by_event']
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
