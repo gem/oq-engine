@@ -117,7 +117,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                 # agglosses, asset_loss_table
                 for i in range(I):
                     li = l + L * i
-                    # this is the critical loop: it is import to keep it
+                    # this is the critical loop: it is important to keep it
                     # vectorized in terms of the event indices
                     agg[indices, r, li] += losses[:, i]
                     if param['asset_loss_table']:
