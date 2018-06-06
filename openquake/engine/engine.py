@@ -155,8 +155,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if logs.dbcmd('get_job', dstore.calc_id) is None:
         # the calculation has not been imported in the db yet
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
-                   oq.description, owner, status, oq.hazard_calculation_id,
-                   dstore.datadir)
+                   oq.description + ' [parent]', owner, status,
+                   oq.hazard_calculation_id, dstore.datadir)
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
