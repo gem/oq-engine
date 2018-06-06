@@ -170,12 +170,23 @@ class EbrCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         if 'gmfs' in oq.inputs:
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with gmfs_file')
             self.pre_calculator = None
             super().pre_execute()
             parent = ()
         elif oq.hazard_calculation_id:
             super().pre_execute()
             parent = self.datastore.parent
+            oqp = parent['oqparam']
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         else:
             ebcalc = base.calculators[self.pre_calculator](self.oqparam)
             ebcalc.run(close=False)
@@ -192,18 +203,12 @@ class EbrCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.tagcol)
         self.A = len(self.assetcol)
         self.I = oq.insured_losses + 1
-        if 'gmf_data' in parent:
-            # read the GMFs from a previous calc
-            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
-            oqp = parent['oqparam']
-            if oqp.investigation_time != oq.investigation_time:
-                raise ValueError(
-                    'The parent calculation was using investigation_time=%s'
-                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            # sorting the eids is essential to get the epsilons in the right
-            # order (i.e. consistent with the one used in ebr from ruptures)
+        if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+
+        # sorting the eids is essential to get the epsilons in the right
+        # order (i.e. consistent with the one used in ebr from ruptures)
         self.eids = (sorted(parent['events']['eid']) if parent
                      else sorted(self.datastore['events']['eid']))
         self.E = len(self.eids)
