@@ -73,12 +73,10 @@ def importcalc(host, calc_id, username, password):
             down += len(chunk)
             general.println('Downloaded {:,} bytes'.format(down))
     print()
-    logs.dbcmd('import_job', calc_id, json['calculation_mode'],
-               json['description'], json['owner'], json['status'],
-               json['parent_id'], datadir)
     with datastore.read(calc_id) as dstore:
-        engine.expose_outputs(dstore)
+        engine.expose_outputs(dstore, json['owner'], json['status'])
     logging.info('Imported calculation %d successfully', calc_id)
+
 
 importcalc.arg('host', 'remote host (ex. https://oq1.wilson.openquake.org/)')
 importcalc.arg('calc_id', 'calculation ID', type=int)
