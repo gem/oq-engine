@@ -41,7 +41,7 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 
 
-def event_based_risk(riskinput, riskmodel, param, monitor):
+def ucerf_risk(riskinput, riskmodel, param, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
@@ -338,7 +338,7 @@ def compute_losses(ssm, src_filter, param, riskmodel,
         src_filter.integration_distance, trunc_level, correl_model,
         samples[grp_id])
     ri = riskinput.RiskInput(getter, param['assetcol'].assets_by_site())
-    res.append(event_based_risk(ri, riskmodel, param, monitor))
+    res.append(ucerf_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.hazard_getter.eids)
     start = res.sm_id * num_rlzs
@@ -427,7 +427,7 @@ class UCERFRiskCalculator(EbrCalculator):
 
     def post_execute(self, result):
         """
-        Call the EbrPostCalculator
+        Call the EbrPostCalculator to compute the aggregate loss curves
         """
         if 'losses_by_event' not in self.datastore:
             logging.warning(
