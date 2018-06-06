@@ -22,8 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_blocks)
+from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.baselib import parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
@@ -118,7 +117,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                 # agglosses, asset_loss_table
                 for i in range(I):
                     li = l + L * i
-                    # this is the critical loop: it is import to keep it
+                    # this is the critical loop: it is important to keep it
                     # vectorized in terms of the event indices
                     agg[indices, r, li] += losses[:, i]
                     if param['asset_loss_table']:
@@ -127,15 +126,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                                 ass.append((aid, r, eid, li, ratio))
 
     # collect agglosses
-    if param.get('gmf_ebrisk'):
-        idx = agg.nonzero()  # return only the nonzero values
-        result['agglosses'] = (idx, agg[idx])
-    else:  # event_based_risk
-        it = ((eid, r, losses)
-              for eid, all_losses in zip(eids, agg)
-              for r, losses in enumerate(all_losses) if losses.sum())
-        result['agglosses'] = numpy.fromiter(it, param['elt_dt'])
-
+    idx = agg.nonzero()  # return only the nonzero values
+    result['agglosses'] = (idx, agg[idx])
     # when there are asset loss ratios, group them in a composite array
     # of dtype lrs_dt, i.e. (rlzi, ratios)
     if param['asset_loss_table']:
@@ -172,27 +164,20 @@ class EbrCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the total losses by taxonomy
     """
     core_task = event_based_risk
-    pre_calculator = 'event_based_rupture'
+    pre_calculator = 'event_based'
     is_stochastic = True
 
     def pre_execute(self):
         oq = self.oqparam
         if 'gmfs' in oq.inputs:
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with gmfs_file')
             self.pre_calculator = None
-        base.RiskCalculator.pre_execute(self)
-        if not hasattr(self, 'assetcol'):
-            self.assetcol = self.datastore['assetcol']
-        self.L = len(self.riskmodel.lti)
-        self.T = len(self.assetcol.tagcol)
-        self.A = len(self.assetcol)
-        self.I = oq.insured_losses + 1
-        parent = self.datastore.parent
-        self.precomputed_gmfs = 'gmf_data' in parent or 'gmfs' in oq.inputs
-        if not self.precomputed_gmfs:
-            return
-        if 'gmf_data' in parent:
-            # read the GMFs from a previous calc
-            assert 'gmfs' not in oq.inputs, 'no gmfs_file when using --hc!'
+            super().pre_execute()
+            parent = ()
+        elif oq.hazard_calculation_id:
+            super().pre_execute()
+            parent = self.datastore.parent
             oqp = parent['oqparam']
             if oqp.investigation_time != oq.investigation_time:
                 raise ValueError(
@@ -202,21 +187,38 @@ class EbrCalculator(base.RiskCalculator):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
-            # sorting the eids is essential to get the epsilons in the right
-            # order (i.e. consistent with the one used in ebr from ruptures)
-            self.eids = sorted(parent['events']['eid'])
+        else:
+            ebcalc = base.calculators[self.pre_calculator](self.oqparam)
+            ebcalc.run(close=False)
+            self.set_log_format()
+            parent = self.dynamic_parent = self.datastore.parent = (
+                ebcalc.datastore)
+            oq.hazard_calculation_id = parent.calc_id
+            self.datastore['oqparam'] = oq
+            self.param = ebcalc.param
+            self.sitecol = ebcalc.sitecol
+            self.assetcol = ebcalc.datastore['assetcol']
+            self.riskmodel = ebcalc.riskmodel
+
+        self.L = len(self.riskmodel.lti)
+        self.T = len(self.assetcol.tagcol)
+        self.A = len(self.assetcol)
+        self.I = oq.insured_losses + 1
+        if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+
+        # sorting the eids is essential to get the epsilons in the right
+        # order (i.e. consistent with the one used in ebr from ruptures)
+        self.eids = (sorted(parent['events']['eid']) if parent
+                     else sorted(self.datastore['events']['eid']))
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
-        self.param['gmf_ebrisk'] = True
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['elt_dt'] = numpy.dtype(
-            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
         avg_losses = self.oqparam.avg_losses
@@ -230,101 +232,6 @@ class EbrCalculator(base.RiskCalculator):
             self.alr_nbytes = 0
             self.indices = collections.defaultdict(list)  # sid -> pairs
 
-    # TODO: if the number of source models is larger than concurrent_tasks
-    # a different strategy should be used; the one used here is good when
-    # there are few source models, so that we cannot parallelize on those
-    def start_tasks(self, sm_id, sitecol, assetcol, riskmodel, imtls,
-                    trunc_level, correl_model, min_iml):
-        """
-        :param sm_id: source model ordinal
-        :param sitecol: a SiteCollection instance
-        :param assetcol: an AssetCollection instance
-        :param riskmodel: a RiskModel instance
-        :param imtls: Intensity Measure Types and Levels
-        :param trunc_level: truncation level
-        :param correl_model: correlation model
-        :param min_iml: vector of minimum intensities, one per IMT
-        :returns: an IterResult instance
-        """
-        sm_info = self.csm_info.get_info(sm_id)
-        grp_ids = sorted(sm_info.get_sm_by_grp())
-        rlzs_assoc = sm_info.get_rlzs_assoc()
-        # prepare the risk inputs
-        allargs = []
-        ruptures_per_block = self.oqparam.ruptures_per_block
-        try:
-            csm_info = self.csm.info
-        except AttributeError:  # there is no .csm if --hc was given
-            csm_info = self.datastore['csm_info']
-        samples_by_grp = csm_info.get_samples_by_grp()
-        num_events = 0
-        num_ruptures = {}
-        taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        monitor = self.monitor(taskname)
-        for grp_id in grp_ids:
-            ruptures = self.ruptures_by_grp.get(grp_id, [])
-            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            samples = samples_by_grp[grp_id]
-            num_ruptures[grp_id] = len(ruptures)
-            from_parent = hasattr(ruptures, 'split')
-            if from_parent:  # read the ruptures from the parent datastore
-                logging.info('Reading ruptures group #%d', grp_id)
-                with self.monitor('reading ruptures', measuremem=True):
-                    blocks = ruptures.split(ruptures_per_block)
-            else:  # the ruptures are already in memory
-                blocks = block_splitter(ruptures, ruptures_per_block)
-            for rupts in blocks:
-                n_events = (rupts.n_events if from_parent
-                            else sum(ebr.multiplicity for ebr in rupts))
-                eps = self.get_eps(self.start, self.start + n_events)
-                num_events += n_events
-                self.start += n_events
-                getter = getters.GmfGetter(
-                    rlzs_by_gsim, rupts, sitecol, imtls, min_iml,
-                    self.oqparam.maximum_distance, trunc_level, correl_model,
-                    self.oqparam.filter_distance, samples)
-                ri = riskinput.RiskInput(getter, self.assets_by_site, eps)
-                allargs.append((ri, riskmodel, assetcol, monitor))
-
-        if self.datastore.parent:  # avoid hdf5 fork issues
-            self.datastore.parent.close()
-        ires = parallel.Starmap(
-            event_based_risk, allargs, name=taskname).submit_all()
-        ires.num_ruptures = num_ruptures
-        ires.num_events = num_events
-        ires.num_rlzs = len(rlzs_assoc.realizations)
-        ires.sm_id = sm_id
-        return ires
-
-    def gen_args(self):
-        """
-        Yield the arguments required by build_ruptures, i.e. the
-        source models, the asset collection, the riskmodel and others.
-        """
-        oq = self.oqparam
-        self.L = len(self.riskmodel.lti)
-        self.I = oq.insured_losses + 1
-        correl_model = oq.get_correl_model()
-        min_iml = self.get_min_iml(oq)
-        imtls = oq.imtls
-        elt_dt = numpy.dtype(
-            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
-        csm_info = self.datastore['csm_info']
-        for sm in csm_info.source_models:
-            param = dict(
-                ses_ratio=oq.ses_ratio,
-                loss_dt=oq.loss_dt(), elt_dt=elt_dt,
-                asset_loss_table=oq.asset_loss_table,
-                avg_losses=oq.avg_losses,
-                insured_losses=oq.insured_losses,
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                maximum_distance=oq.maximum_distance,
-                samples=sm.samples,
-                seed=self.oqparam.random_seed)
-            yield (sm.ordinal, self.sitecol.complete,
-                   param, self.riskmodel, imtls, oq.truncation_level,
-                   correl_model, min_iml)
-
     def epsilon_getter(self):
         """
         :returns: a callable (start, stop) producing a slice of epsilons
@@ -334,54 +241,6 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
-
-    def execute(self):
-        """
-        Run the calculator and aggregate the results
-        """
-        if self.precomputed_gmfs:
-            return base.RiskCalculator.execute(self)
-
-        if self.oqparam.ground_motion_fields:
-            logging.warn('To store the ground motion fields change '
-                         'calculation_mode = event_based')
-        if self.oqparam.hazard_curves_from_gmfs:
-            logging.warn('To compute the hazard curves change '
-                         'calculation_mode = event_based')
-
-        if 'all_loss_ratios' in self.datastore:
-            # event based risk calculation already done, postprocess
-            EbrPostCalculator(self).run(close=False)
-            return
-
-        self.csm_info = self.datastore['csm_info']
-        if self.precalc:
-            self.ruptures_by_grp = self.precalc.result
-            # the ordering of the ruptures is essential for repeatibility
-            for grp in self.ruptures_by_grp:
-                self.ruptures_by_grp[grp].sort(
-                    key=operator.attrgetter('serial'))
-        else:  # there is a parent calculation
-            self.ruptures_by_grp = getters.RuptureGetter.from_(
-                self.datastore.parent)
-        num_rlzs = 0
-        allres = []
-        source_models = self.csm_info.source_models
-        self.sm_by_grp = self.csm_info.get_sm_by_grp()
-        self.E = num_events = len(self.datastore['events'])
-        self.assets_by_site = self.assetcol.assets_by_site()
-        self.start = 0
-        self.get_eps = self.epsilon_getter()
-        self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
-        for i, args in enumerate(self.gen_args()):
-            ires = self.start_tasks(*args)
-            allres.append(ires)
-            ires.rlz_slice = slice(num_rlzs, num_rlzs + ires.num_rlzs)
-            num_rlzs += ires.num_rlzs
-            for sg in source_models[i].src_groups:
-                sg.eff_ruptures = ires.num_ruptures.get(sg.id, 0)
-        num_events = self.save_results(allres, num_rlzs)
-        return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
         """
@@ -446,12 +305,8 @@ class EbrCalculator(base.RiskCalculator):
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
-            if self.precomputed_gmfs:
-                idx, agg = agglosses
-                self.agglosses[idx] += agg
-            else:  # event_based_risk
-                agglosses['rlzi'] += offset
-                self.datastore.extend('losses_by_event', agglosses)
+            idx, agg = agglosses
+            self.agglosses[idx] += agg
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for (a, r), num in dic.pop('num_losses').items():
@@ -471,11 +326,8 @@ class EbrCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                if self.precomputed_gmfs:  # there is no offset
-                    self.dset[aids, r, li] += numpy.array(
-                        [ratios.get(aid, 0) * vs[aid] for aid in aids])
-                else:  # all assets
-                    self.dset[:, r + offset, li] += ratios * vs
+                self.dset[aids, r, li] += numpy.array(
+                    [ratios.get(aid, 0) * vs[aid] for aid in aids])
         self.taskno += 1
 
     def combine(self, dummy, res):
@@ -490,35 +342,16 @@ class EbrCalculator(base.RiskCalculator):
         """
         Save risk data and possibly execute the EbrPostCalculator
         """
-        if self.precomputed_gmfs:
-            logging.info('Saving event loss table')
-            with self.monitor('saving event loss table', measuremem=True):
-                # saving zeros is a lot faster than adding an `if loss.sum()`
-                agglosses = numpy.fromiter(
-                    ((e, r, loss)
-                     for e, losses in zip(self.eids, self.agglosses)
-                     for r, loss in enumerate(losses) if loss.sum()),
-                    self.param['elt_dt'])
-                self.datastore['losses_by_event'] = agglosses
-        else:
-            num_events = result
-            # gmv[:-1] are the events per each IMT
-            gmv = sum(gm[:-1].sum() for gm in self.gmdata.values())
-            if not gmv:
-                raise RuntimeError('No GMFs were generated, perhaps they were '
-                                   'all below the minimum_intensity threshold')
-
-            if 'losses_by_event' not in self.datastore:
-                logging.warning(
-                    'No losses were generated: most likely there is an error '
-                    'in y our input files or the GMFs were below the minimum '
-                    'intensity')
-            else:
-                self.datastore.set_nbytes('losses_by_event')
-                E = sum(num_events.values())
-                agglt = self.datastore['losses_by_event']
-                agglt.attrs['nonzero_fraction'] = len(agglt) / E
-
+        logging.info('Saving event loss table')
+        elt_dt = numpy.dtype(
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
+        with self.monitor('saving event loss table', measuremem=True):
+            # saving zeros is a lot faster than adding an `if loss.sum()`
+            agglosses = numpy.fromiter(
+                ((e, r, loss)
+                 for e, losses in zip(self.eids, self.agglosses)
+                 for r, loss in enumerate(losses) if loss.sum()), elt_dt)
+            self.datastore['losses_by_event'] = agglosses
         self.postproc()
 
     def postproc(self):

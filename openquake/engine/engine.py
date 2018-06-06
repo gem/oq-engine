@@ -26,6 +26,7 @@ import sys
 import json
 import time
 import signal
+import getpass
 import logging
 import traceback
 import platform
@@ -108,7 +109,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.LOG.debug('Revoked task %s', tid)
 
 
-def expose_outputs(dstore):
+def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -124,9 +125,9 @@ def expose_outputs(dstore):
     if len(rlzs) > 1:
         dskeys.add('realizations')
     # expose gmf_data only if < 10 MB
-    if oq.ground_motion_fields and calcmode == 'event_based':
+    if calcmode == 'event_based':
         nbytes = dstore['gmf_data'].attrs['nbytes']
-        if nbytes < 10 * 1024 ** 2:
+        if nbytes < 10 * 1024 ** 2:  # expose only small GMFs
             dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
@@ -151,6 +152,11 @@ def expose_outputs(dstore):
         exportable.remove('ruptures')  # do not export, as requested by Vitor
     if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
         dskeys.remove('rup_loss_table')
+    if logs.dbcmd('get_job', dstore.calc_id) is None:
+        # the calculation has not been imported in the db yet
+        logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
+                   oq.description + ' [parent]', owner, status,
+                   oq.hazard_calculation_id, dstore.datadir)
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
@@ -305,9 +311,10 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
             set_concurrent_tasks_default(job_id)
         msg = check_obsolete_version(oqparam.calculation_mode)
+        calc = base.calculators(oqparam, calc_id=job_id)
+        calc.set_log_format()
         if msg:
             logs.LOG.warn(msg)
-        calc = base.calculators(oqparam, calc_id=job_id)
         calc.from_engine = True
         input_zip = oqparam.inputs.get('input_zip')
         tb = 'None\n'
@@ -328,8 +335,11 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             calc.run(exports=exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
-            duration = time.time() - t0
+            logs.LOG.info('Exposing the outputs to the database')
+            if calc.dynamic_parent:
+                expose_outputs(calc.dynamic_parent)
             expose_outputs(calc.datastore)
+            duration = time.time() - t0
             calc._monitor.flush()
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)

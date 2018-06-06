@@ -134,7 +134,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
+        parent = self.calc.datastore.parent
+        crm = sorted(parent.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -289,8 +290,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
-                            calculation_mode='event_based',
-                            ground_motion_fields='false', exports='csv')
+                            calculation_mode='event_based', exports='csv')
         [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
