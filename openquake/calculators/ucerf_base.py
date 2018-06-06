@@ -193,7 +193,7 @@ class UCERFSource(BaseSeismicSource):
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
         self.stop = 0
-        self.start = 0
+        self.start = -1
         self.orig = None  # set by .new()
 
     @property
