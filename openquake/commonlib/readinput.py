@@ -210,6 +210,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
+    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
