@@ -179,6 +179,7 @@ class EbrCalculator(base.RiskCalculator):
         else:
             ebcalc = base.calculators[self.pre_calculator](self.oqparam)
             ebcalc.run(close=False)
+            self.set_log_format()
             parent = self.datastore.parent = ebcalc.datastore
             oq.hazard_calculation_id = parent.calc_id
             self.datastore['oqparam'] = oq
@@ -236,12 +237,6 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
-
-    def execute(self):
-        """
-        Run the calculator and aggregate the results
-        """
-        return base.RiskCalculator.execute(self)
 
     def save_results(self, allres, num_rlzs):
         """
