@@ -743,12 +743,13 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, monitor=performance.Monitor()):
+    def filter(self, src_filter, min_mag, monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
+        :param min_mag: minimum magnitude
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
@@ -759,6 +760,8 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
                 sg.sources = sources_by_grp.get(sg.id, [])
+                for src in sg:
+                    src.min_mag = min_mag
                 src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
