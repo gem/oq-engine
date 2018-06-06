@@ -415,15 +415,12 @@ class UCERFRiskCalculator(EbrCalculator):
         :param offset:
             realization offset
         """
-        agglosses = dic.pop('agglosses')
-        avglosses = dic.pop('avglosses')
         with self.monitor('saving event loss table', autoflush=True):
+            agglosses = dic.pop('agglosses')
             agglosses['rlzi'] += offset
             self.datastore.extend('losses_by_event', agglosses)
-
-        if not hasattr(self, 'vals'):
-            self.vals = self.assetcol.values()
         with self.monitor('saving avg_losses-rlzs'):
+            avglosses = dic.pop('avglosses')
             for (l, r), ratios in avglosses.items():
                 lt = self.riskmodel.loss_types[l]
                 self.dset[:, r + offset, l] += ratios * self.vals[lt]

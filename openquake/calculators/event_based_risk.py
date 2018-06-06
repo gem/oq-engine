@@ -213,8 +213,6 @@ class EbrCalculator(base.RiskCalculator):
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['asset_loss_table'] = oq.asset_loss_table
-        self.param['elt_dt'] = numpy.dtype(
-            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         self.taskno = 0
         self.start = 0
         avg_losses = self.oqparam.avg_losses
@@ -339,13 +337,14 @@ class EbrCalculator(base.RiskCalculator):
         Save risk data and possibly execute the EbrPostCalculator
         """
         logging.info('Saving event loss table')
+        elt_dt = numpy.dtype(
+            [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         with self.monitor('saving event loss table', measuremem=True):
             # saving zeros is a lot faster than adding an `if loss.sum()`
             agglosses = numpy.fromiter(
                 ((e, r, loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses) if loss.sum()),
-                self.param['elt_dt'])
+                 for r, loss in enumerate(losses) if loss.sum()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
         self.postproc()
 
