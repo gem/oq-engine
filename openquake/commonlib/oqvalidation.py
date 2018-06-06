@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats
+from openquake.hazardlib import correlation, stats, source
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
@@ -706,3 +706,7 @@ class OqParam(valid.ParamSet):
         elif self.hazard_calculation_id:
             parent = list(datastore.read(self.hazard_calculation_id))
             return 'gmf_data' in parent or 'poes' in parent
+
+    def __getstate__(self):
+        source.base.BaseSeismicSource.min_mag = self.minimum_magnitude
+        return vars(self)
