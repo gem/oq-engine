@@ -407,6 +407,5 @@ class EngineRunJobTestCase(unittest.TestCase):
         # to a wrong refactoring of the safely_call function)
         with read(job_id) as dstore:
             perf = view('performance', dstore)
-            self.assertIn('total compute_ruptures', perf)
             self.assertIn('total event_based_risk', perf)
             self.assertIn('total build_curves_maps', perf)
