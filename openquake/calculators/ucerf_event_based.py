@@ -92,10 +92,9 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                     except KeyError:
                         lba[aid] = rat
 
-                # agglosses
-                # this is the critical loop: it is import to keep it
+                # this is the critical loop: it is important to keep it
                 # vectorized in terms of the event indices
-                agg[indices, r, l] += losses[:, 0]
+                agg[indices, r, l] += losses[:, 0]  # 0 == no insured
 
     it = ((eid, r, losses)
           for eid, all_losses in zip(eids, agg)
