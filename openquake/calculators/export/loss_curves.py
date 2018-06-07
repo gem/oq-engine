@@ -18,11 +18,10 @@
 import numpy
 from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
-from openquake.calculators import getters
 from openquake.risklib import scientific
 
 
-def get_loss_builder(dstore, loss_dt=None):
+def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     :param dstore: datastore for an event based risk calculation
     :returns: a LossesByPeriodBuilder instance
@@ -31,7 +30,7 @@ def get_loss_builder(dstore, loss_dt=None):
     weights = dstore['csm_info'].rlzs['weight']
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
     num_events = dstore['gmdata']['events']
-    periods = oq.return_periods or scientific.return_periods(
+    periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
     return scientific.LossesByPeriodBuilder(
         numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
