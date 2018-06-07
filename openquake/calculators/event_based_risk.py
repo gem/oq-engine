@@ -282,6 +282,31 @@ class EbrCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, num_rlzs, self.L * self.I))
 
+        if oq.conditional_loss_poes:
+            P = len(oq.conditional_loss_poes)
+            self.loss_maps_dt = self.oqparam.loss_dt((F32, (P,)))
+            assetcol = self.datastore['assetcol']
+            stats = oq.risk_stats()
+            builder = self.param['builder']
+            A = len(assetcol)
+            S = len(stats)
+            P = len(builder.return_periods)
+            # create loss_maps datasets
+            #self.datastore.create_dset(
+            #    'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
+            if self.R > 1:
+                self.datastore.create_dset(
+                    'loss_maps-stats', self.loss_maps_dt, (A, S),
+                    fillvalue=None)
+                self.datastore.set_attrs(
+                    'loss_maps-stats',
+                    stats=[encode(name) for (name, func) in stats])
+                self.datastore.create_dset(
+                    'curves-stats', oq.loss_dt(), (A, S, P), fillvalue=None)
+                self.datastore.set_attrs(
+                    'curves-stats', return_periods=builder.return_periods,
+                    stats=[encode(name) for (name, func) in stats])
+
         num_events = collections.Counter()
         self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 1, F32))
         self.taskno = 0
@@ -330,6 +355,7 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('saving event loss table', autoflush=True):
             idx, agg = agglosses
             self.agglosses[idx] += agg
+        '''
         if self.oqparam.asset_loss_table:
             with self.monitor('saving loss ratios', autoflush=True):
                 for (a, r), num in dic.pop('num_losses').items():
@@ -342,6 +368,7 @@ class EbrCalculator(base.RiskCalculator):
                 assratios['rlzi'] += offset
                 self.datastore.extend('all_loss_ratios/data', assratios)
                 self.alr_nbytes += assratios.nbytes
+        '''
 
         if not hasattr(self, 'vals'):
             self.vals = self.assetcol.values()
@@ -351,6 +378,17 @@ class EbrCalculator(base.RiskCalculator):
                 vs = self.vals[self.riskmodel.loss_types[l]]
                 self.dset[aids, r, li] += numpy.array(
                     [ratios.get(aid, 0) * vs[aid] for aid in aids])
+
+        if 'curves-stats' in dic:
+            array = dic['curves-stats']  # shape (A, S, P)
+            self.datastore['curves-stats'][aids] = array
+        if 'loss_maps-stats' in dic:
+            array = dic['loss_maps-stats']  # shape (A, R, P, LI)
+            loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
+            for lti, lt in enumerate(self.loss_maps_dt.names):
+                loss_maps[lt] = array[:, :, :, lti]
+            self.datastore['loss_maps-stats'][aids] = loss_maps
+
         self.taskno += 1
 
     def combine(self, dummy, res):
@@ -365,6 +403,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         Save risk data and possibly execute the EbrPostCalculator
         """
+        oq = self.oqparam
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
