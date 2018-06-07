@@ -108,7 +108,7 @@ optional arguments:
 
 The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info --exports`
-command; at the moment (engine 2.6) there are 52 exporters defined, but
+command; at the moment (engine 3.2) there are 48 exporters defined, but
 this number changes at each version:
 
 ```bash
@@ -119,7 +119,6 @@ agg_loss_table ['csv']
 agg_losses-rlzs ['csv']
 agglosses-rlzs ['csv']
 all_losses-rlzs ['npz']
-asset_loss_table ['hdf5']
 avg_losses-rlzs ['csv']
 avg_losses-stats ['csv']
 bcr-rlzs ['csv']

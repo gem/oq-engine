@@ -20,10 +20,8 @@ import collections
 import logging
 import numpy
 
-from openquake.baselib import hdf5, parallel, performance
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import (
-    group_array, split_in_blocks, deprecated as depr)
+from openquake.baselib.general import group_array,  deprecated as depr
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
@@ -478,55 +476,3 @@ def get_loss_ratios(lrgetter, monitor):
     with lrgetter.dstore:
         loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
     return list(zip(lrgetter.aids, loss_ratios))
-
-
-@export.add(('asset_loss_table', 'hdf5'))
-@depr('This exporter will be removed soon')
-def export_asset_loss_table(ekey, dstore):
-    """
-    Export in parallel the asset loss table from the datastore.
-
-    NB1: for large calculation this may run out of memory
-    NB2: due to an heisenbug in the parallel reading of .hdf5 files this works
-    reliably only if the datastore has been created by a different process
-
-    The recommendation is: *do not use this exporter*: rather, study its source
-    code and write what you need. Every postprocessing is different.
-    """
-    key, fmt = ekey
-    oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
-    arefs = assetcol.asset_refs
-    avals = assetcol.values()
-    loss_types = dstore.get_attr('all_loss_ratios', 'loss_types').split()
-    dtlist = [(lt, F32) for lt in loss_types]
-    if oq.insured_losses:
-        for lt in loss_types:
-            dtlist.append((lt + '_ins', F32))
-    lrs_dt = numpy.dtype([('rlzi', U16), ('losses', dtlist)])
-    fname = dstore.export_path('%s.%s' % ekey)
-    monitor = performance.Monitor(key, fname)
-    aids = range(len(assetcol))
-    allargs = [(getters.LossRatiosGetter(dstore, block), monitor)
-               for block in split_in_blocks(aids, oq.concurrent_tasks)]
-    dstore.close()  # avoid OSError: Can't read data (Wrong b-tree signature)
-    L = len(loss_types)
-    with hdf5.File(fname, 'w') as f:
-        nbytes = 0
-        total = numpy.zeros(len(dtlist), F32)
-        for pairs in parallel.Starmap(get_loss_ratios, allargs):
-            for aid, data in pairs:
-                asset = assetcol[aid]
-                avalue = avals[aid]
-                for l, lt in enumerate(loss_types):
-                    aval = avalue[lt]
-                    for i in range(oq.insured_losses + 1):
-                        data['ratios'][:, l + L * i] *= aval
-                aref = arefs[asset.ordinal]
-                f[b'asset_loss_table/' + aref] = data.view(lrs_dt)
-                total += data['ratios'].sum(axis=0)
-                nbytes += data.nbytes
-        f['asset_loss_table'].attrs['loss_types'] = ' '.join(loss_types)
-        f['asset_loss_table'].attrs['total'] = total
-        f['asset_loss_table'].attrs['nbytes'] = nbytes
-    return [fname]
