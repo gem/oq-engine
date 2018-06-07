@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import operator
-import itertools
-import collections
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
@@ -136,10 +134,10 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     result['agglosses'] = (idx, agg[idx])
     if 'builder' in param:
         clp = param['conditional_loss_poes']
-        result['curves-rlzs'], result['curves_stats'] = builder.pair(
+        result['curves-rlzs'], result['curves-stats'] = builder.pair(
             all_curves, param['stats'])
         if clp:
-            result['loss_maps-rlzs'], result['loss_maps_stats'] = (
+            result['loss_maps-rlzs'], result['loss_maps-stats'] = (
                 builder.build_maps(all_curves, clp, param['stats']))
 
     # store info about the GMFs, must be done at the end
@@ -219,10 +217,37 @@ class EbrCalculator(base.RiskCalculator):
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
         self.num_losses = numpy.zeros((self.A, self.R), U32)
-        if oq.asset_loss_table:
-            # save all_loss_ratios
-            self.alr_nbytes = 0
-            self.indices = collections.defaultdict(list)  # sid -> pairs
+        if 'builder' in self.param:
+            self.build_datasets(self.param['builder'])
+
+    def build_datasets(self, builder):
+        oq = self.oqparam
+        R = len(builder.weights)
+        assetcol = self.datastore['assetcol']
+        stats = oq.risk_stats()
+        A = len(assetcol)
+        S = len(stats)
+        P = len(builder.return_periods)
+        C = len(self.oqparam.conditional_loss_poes)
+        self.loss_maps_dt = oq.loss_dt((F32, (C,)))
+        self.datastore.create_dset(
+            'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+        if oq.conditional_loss_poes:
+            self.datastore.create_dset(
+                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
+        if R > 1:
+            self.datastore.create_dset(
+                'curves-stats', builder.loss_dt, (A, S, P), fillvalue=None)
+            self.datastore.set_attrs(
+                'curves-stats', return_periods=builder.return_periods,
+                stats=[encode(name) for (name, func) in stats])
+            if oq.conditional_loss_poes:
+                self.datastore.create_dset(
+                    'loss_maps-stats', self.loss_maps_dt, (A, S),
+                    fillvalue=None)
+                self.datastore.set_attrs(
+                    'loss_maps-stats',
+                    stats=[encode(name) for (name, func) in stats])
 
     def epsilon_getter(self):
         """
@@ -258,21 +283,27 @@ class EbrCalculator(base.RiskCalculator):
                 vs = self.vals[self.riskmodel.loss_types[l]]
                 self.dset[aids, r, li] += numpy.array(
                     [ratios.get(aid, 0) * vs[aid] for aid in aids])
-
-        if 'curves-rlzs' in dic:
-            array = dic['curves-rlzs']  # shape (A, R, P)
-            self.datastore['curves-rlzs'][aids] = array
-        if 'curves-stats' in dic:
-            array = dic['curves-stats']  # shape (A, S, P)
-            self.datastore['curves-stats'][aids] = array
-        if 'loss_maps-stats' in dic:
-            array = dic['loss_maps-stats']  # shape (A, R, P, LI)
-            loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
-            for lti, lt in enumerate(self.loss_maps_dt.names):
-                loss_maps[lt] = array[:, :, :, lti]
-            self.datastore['loss_maps-stats'][aids] = loss_maps
+        self._save_curves(dic, aids)
+        self._save_maps(dic, aids)
 
         self.taskno += 1
+
+    def _save_curves(self, dic, aids):
+        for key in ('curves-rlzs', 'curves-stats'):
+            array = dic.get(key)  # shape (A, S, P)
+            if array is not None:
+                for aid, arr in zip(aids, array):
+                    self.datastore[key][aid] = arr
+
+    def _save_maps(self, dic, aids):
+        for key in ('loss_maps-rlzs', 'loss_maps-stats'):
+            array = dic.get(key)  # shape (A, S)
+            if array is not None:
+                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
+                for lti, lt in enumerate(self.loss_maps_dt.names):
+                    loss_maps[lt] = array[:, :, :, lti]
+                for aid, arr in zip(aids, loss_maps):
+                    self.datastore[key][aid] = arr
 
     def combine(self, dummy, res):
         """
@@ -284,7 +315,7 @@ class EbrCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Save risk data and possibly execute the EbrPostCalculator
+        Save risk data and build the aggregate loss curves
         """
         logging.info('Saving event loss table')
         elt_dt = numpy.dtype(
@@ -300,7 +331,7 @@ class EbrCalculator(base.RiskCalculator):
 
     def postproc(self):
         """
-        Build aggregate loss curves and run EbrPostCalculator
+        Build aggregate loss curves
         """
         dstore = self.datastore
         self.before_export()  # set 'realizations'
@@ -335,29 +366,3 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
                 stats=[encode(name) for (name, func) in stats], units=units)
-
-    def build_datasets(self):
-        oq = self.oqparam
-        R = len(self.loss_builder.weights)
-        if oq.conditional_loss_poes:
-            assetcol = self.datastore['assetcol']
-            stats = oq.risk_stats()
-            builder = self.loss_builder
-            A = len(assetcol)
-            S = len(stats)
-            P = len(builder.return_periods)
-            # create loss_maps datasets
-            self.datastore.create_dset(
-                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
-            if R > 1:
-                self.datastore.create_dset(
-                    'loss_maps-stats', self.loss_maps_dt, (A, S),
-                    fillvalue=None)
-                self.datastore.set_attrs(
-                    'loss_maps-stats',
-                    stats=[encode(name) for (name, func) in stats])
-                self.datastore.create_dset(
-                    'curves-stats', oq.loss_dt(), (A, S, P), fillvalue=None)
-                self.datastore.set_attrs(
-                    'curves-stats', return_periods=builder.return_periods,
-                    stats=[encode(name) for (name, func) in stats])
