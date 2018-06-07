@@ -194,7 +194,10 @@ class EbrCalculator(base.RiskCalculator):
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
-            self.param['builder'] = get_loss_builder(parent, oq.loss_dt())
+            if oq.return_periods != [0]:
+                # setting return_periods = 0 disable loss curves and maps
+                self.param['builder'] = get_loss_builder(
+                    parent, oq.return_periods, oq.loss_dt())
             self.eids = sorted(parent['events']['eid'])
         else:
             self.eids = sorted(self.datastore['events']['eid'])
@@ -346,7 +349,7 @@ class EbrCalculator(base.RiskCalculator):
         # store avg_losses-stats
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        b = get_loss_builder(dstore)
+        b = get_loss_builder(self.datastore)
         if 'ruptures' in dstore:
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
