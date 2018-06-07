@@ -1342,56 +1342,7 @@ class LossesByPeriodBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in the EbrPostCalculator
-    def build_all(self, asset_values, loss_ratios, stats=()):
-        """
-        :param asset_values: a list of asset values
-        :param loss_ratios: an array of dtype lrs_dt
-        :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: two composite arrays of shape (A, R, P) and (A, S, P)
-        """
-        # loss_ratios from lrgetter.get_all
-        A = len(asset_values)
-        R = len(self.weights)
-        P = len(self.return_periods)
-        array = numpy.zeros((A, R, P), self.loss_dt)
-        for a, asset_value in enumerate(asset_values):
-            r_recs = group_array(loss_ratios[a], 'rlzi').items()
-            for li, lt in enumerate(self.loss_dt.names):
-                aval = asset_value[lt.replace('_ins', '')]
-                for r, recs in r_recs:
-                    array[a, r][lt] = aval * losses_by_period(
-                        recs['ratios'][:, li], self.return_periods,
-                        self.num_events[r], self.eff_time)
-        return self.pair(array, stats)
-
-    def build_curve(self, asset_value, loss_ratios, rlzi):
-        return asset_value * losses_by_period(
-            loss_ratios, self.return_periods,
-            self.num_events[rlzi], self.eff_time)
-
-    # used in the LossCurvesExporter
-    def build_rlz(self, asset_values, loss_ratios, rlzi):
-        """
-        :param asset_values: a list of asset values
-        :param loss_ratios: a dictionary aid -> array of shape (E, LI)
-        :returns: a composite array of shape (A, P)
-        """
-        # loss_ratios from lrgetter.get, aid -> list of ratios
-        A, P = len(asset_values), len(self.return_periods)
-        array = numpy.zeros((A, P), self.loss_dt)
-        for a, asset_value in enumerate(asset_values):
-            try:
-                ratios = loss_ratios[a]  # shape (E, LI)
-            except KeyError:  # no loss ratios > 0 for the given asset
-                continue
-            for li, lt in enumerate(self.loss_dt.names):
-                aval = asset_value[lt.replace('_ins', '')]
-                array[a][lt] = aval * losses_by_period(
-                    ratios[:, li], self.return_periods,
-                    self.num_events[rlzi], self.eff_time)
-        return array
-
+    # used in postproc
     def build(self, losses_by_event, stats=()):
         """
         :param losses_by_event:
@@ -1415,6 +1366,13 @@ class LossesByPeriodBuilder(object):
                 array[:, r][lt] = lbp
         return self.pair(array, stats)
 
+    # used in event_based_risk
+    def build_curve(self, asset_value, loss_ratios, rlzi):
+        return asset_value * losses_by_period(
+            loss_ratios, self.return_periods,
+            self.num_events[rlzi], self.eff_time)
+
+    # used in event_based_risk
     def build_maps(self, losses, clp, stats=()):
         """
         :param losses: an array of shape (A, R, P)
