@@ -206,7 +206,6 @@ class EbrCalculator(base.RiskCalculator):
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
-        self.param['asset_loss_table'] = oq.asset_loss_table
         self.param['stats'] = oq.risk_stats()
         self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
