@@ -408,4 +408,3 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
-            self.assertIn('total build_curves_maps', perf)
