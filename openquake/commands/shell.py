@@ -30,7 +30,10 @@ class OpenQuake(object):
         from openquake.commonlib import readinput, calc
         from openquake.calculators.extract import extract
         self.plt = pyplot
-        self.fig, self.ax = pyplot.subplots()
+        try:
+            self.fig, self.ax = pyplot.subplots()
+        except Exception:  # for instance, no Tkinter
+            pass
         self.extract = extract
         self.read = read
         self.get__exposure = readinput.get_exposure
