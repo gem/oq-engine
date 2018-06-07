@@ -195,11 +195,11 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.param['builder'] = get_loss_builder(parent, oq.loss_dt())
-
+            self.eids = sorted(parent['events']['eid'])
+        else:
+            self.eids = sorted(self.datastore['events']['eid'])
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        self.eids = (sorted(parent['events']['eid']) if parent
-                     else sorted(self.datastore['events']['eid']))
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
@@ -219,6 +219,8 @@ class EbrCalculator(base.RiskCalculator):
         self.num_losses = numpy.zeros((self.A, self.R), U32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
+        if parent:
+            parent.close()  # avoid fork issues
 
     def build_datasets(self, builder):
         oq = self.oqparam
