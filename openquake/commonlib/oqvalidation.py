@@ -259,11 +259,6 @@ class OqParam(valid.ParamSet):
                 self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
-        elif (self.calculation_mode == 'event_based_risk' and
-              self.conditional_loss_poes and not self.asset_loss_table):
-            raise InvalidFile(
-                '%s: asset_loss_table is not set, probably you want to remove'
-                ' conditional_loss_poes' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
