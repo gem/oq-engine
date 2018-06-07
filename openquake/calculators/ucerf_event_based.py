@@ -35,10 +35,14 @@ from openquake.calculators.ucerf_base import (
 from openquake.calculators.event_based_risk import EbrCalculator
 
 U16 = numpy.uint16
+U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+
+save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
+    'save_ruptures']
 
 
 def ucerf_risk(riskinput, riskmodel, param, monitor):
@@ -403,6 +407,43 @@ class UCERFRiskCalculator(EbrCalculator):
         num_events = self.save_results(res, num_rlzs)
         self.csm.info.update_eff_ruptures(self.eff_ruptures)
         self.datastore['csm_info'] = self.csm.info
+        return num_events
+
+    def save_results(self, allres, num_rlzs):
+        """
+        :param allres: an iterable of result iterators
+        :param num_rlzs: the total number of realizations
+        :returns: the total number of events
+        """
+        oq = self.oqparam
+        self.A = len(self.assetcol)
+        if oq.avg_losses:
+            self.dset = self.datastore.create_dset(
+                'avg_losses-rlzs', F32, (self.A, num_rlzs, self.L * self.I))
+
+        num_events = collections.Counter()
+        self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 1, F32))
+        self.taskno = 0
+        self.start = 0
+        for res in allres:
+            start, stop = res.rlz_slice.start, res.rlz_slice.stop
+            for dic in res:
+                for r, arr in dic.pop('gmdata').items():
+                    self.gmdata[start + r] += arr
+                self.save_losses(dic, start)
+            logging.debug(
+                'Saving results for source model #%d, realizations %d:%d',
+                res.sm_id + 1, start, stop)
+            if hasattr(res, 'eff_ruptures'):  # for UCERF
+                self.eff_ruptures += res.eff_ruptures
+            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
+                save_ruptures(self, res.ruptures_by_grp)
+            elif hasattr(res, 'events_by_grp'):  # for UCERF
+                for grp_id in res.events_by_grp:
+                    events = res.events_by_grp[grp_id]
+                    self.datastore.extend('events', events)
+            num_events[res.sm_id] += res.num_events
+        base.save_gmdata(self, num_rlzs)
         return num_events
 
     def save_losses(self, dic, offset=0):

@@ -154,10 +154,6 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
-save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
-    'save_ruptures']
-
-
 @base.calculators.add('event_based_risk')
 class EbrCalculator(base.RiskCalculator):
     """
@@ -241,54 +237,6 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.asset_correlation,
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
-
-    def save_results(self, allres, num_rlzs):
-        """
-        :param allres: an iterable of result iterators
-        :param num_rlzs: the total number of realizations
-        :returns: the total number of events
-        """
-        oq = self.oqparam
-        self.A = len(self.assetcol)
-        if oq.asset_loss_table:
-            # save all_loss_ratios
-            self.alr_nbytes = 0
-            self.indices = collections.defaultdict(list)  # sid -> pairs
-
-        if oq.avg_losses:
-            self.dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, num_rlzs, self.L * self.I))
-
-        num_events = collections.Counter()
-        self.gmdata = AccumDict(accum=numpy.zeros(len(oq.imtls) + 1, F32))
-        self.taskno = 0
-        self.start = 0
-        self.num_losses = numpy.zeros((self.A, num_rlzs), U32)
-        for res in allres:
-            start, stop = res.rlz_slice.start, res.rlz_slice.stop
-            for dic in res:
-                for r, arr in dic.pop('gmdata').items():
-                    self.gmdata[start + r] += arr
-                self.save_losses(dic, start)
-            logging.debug(
-                'Saving results for source model #%d, realizations %d:%d',
-                res.sm_id + 1, start, stop)
-            if hasattr(res, 'eff_ruptures'):  # for UCERF
-                self.eff_ruptures += res.eff_ruptures
-            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
-                save_ruptures(self, res.ruptures_by_grp)
-            elif hasattr(res, 'events_by_grp'):  # for UCERF
-                for grp_id in res.events_by_grp:
-                    events = res.events_by_grp[grp_id]
-                    self.datastore.extend('events', events)
-            num_events[res.sm_id] += res.num_events
-        if 'all_loss_ratios' in self.datastore:
-            self.datastore['all_loss_ratios/num_losses'] = self.num_losses
-            self.datastore.set_attrs(
-                'all_loss_ratios/num_losses', nbytes=self.num_losses.nbytes)
-        del self.num_losses
-        base.save_gmdata(self, num_rlzs)
-        return num_events
 
     def save_losses(self, dic, offset=0):
         """
