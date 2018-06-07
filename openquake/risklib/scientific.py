@@ -1365,6 +1365,11 @@ class LossesByPeriodBuilder(object):
                         self.num_events[r], self.eff_time)
         return self.pair(array, stats)
 
+    def build_curve(self, asset_value, loss_ratios, rlzi):
+        return asset_value * losses_by_period(
+            loss_ratios, self.return_periods,
+            self.num_events[rlzi], self.eff_time)
+
     # used in the LossCurvesExporter
     def build_rlz(self, asset_values, loss_ratios, rlzi):
         """
