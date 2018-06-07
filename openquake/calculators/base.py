@@ -332,14 +332,13 @@ class HazardCalculator(BaseCalculator):
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
-            csm = self.csm.filter(src_filter, oq.minimum_magnitude, mon)
+            csm = self.csm.filter(src_filter, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.filter(prefilter, oq.minimum_magnitude, mon)
+            csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
-            csm = self.csm.filter(
-                SourceFilter(None, {}), oq.minimum_magnitude, mon)
+            csm = self.csm.filter(SourceFilter(None, {}), mon)
         return csm, src_filter
 
     def can_read_parent(self):
@@ -399,7 +398,7 @@ class HazardCalculator(BaseCalculator):
                     self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
-                self.csm.split_all()
+                self.csm.split_all(oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
