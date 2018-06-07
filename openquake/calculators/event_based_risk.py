@@ -88,7 +88,13 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
                     else numpy.zeros(A, F64))
     result = dict(assratios=ass, lrs_idx=lrs_idx,
                   aids=riskinput.aids, avglosses=avg)
-
+    if 'builder' in param:
+        builder = param['builder']
+        A = len(riskinput.aids)
+        R = len(builder.weights)
+        P = len(builder.return_periods)
+        all_curves = numpy.zeros((A, R, P), builder.loss_dt)
+        aid2idx = {aid: idx for idx, aid in enumerate(riskinput.aids)}
     # update the result dictionary and the agg array with each output
     for out in riskmodel.gen_outputs(riskinput, monitor):
         if len(out.eids) == 0:  # this happens for sites with no events
@@ -103,7 +109,15 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, I)
                 aid = asset.ordinal
-                losses = ratios * asset.value(loss_type)
+                aval = asset.value(loss_type)
+                losses = aval * ratios
+                if 'builder' in param:
+                    idx = aid2idx[aid]
+                    for i in range(I):
+                        lt = loss_type + '_ins' * i
+                        all_curves[idx, r][lt] = builder.build_curve(
+                            aval, ratios[:, i], r)
+
                 # average losses
                 if param['avg_losses']:
                     rat = ratios.sum(axis=0) * param['ses_ratio']
@@ -148,6 +162,12 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
             lrs_idx[aid].append((n, n1))
             n = n1
         result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
+        if 'builder' in param:
+            result['curves_stats'] = builder.pair(
+                all_curves, param['stats'])[1]
+            if param['conditional_loss_poes']:
+                loss_maps, result['loss_maps_stats'] = builder.build_maps(
+                    all_curves, param['conditional_loss_poes'], param['stats'])
 
     # store info about the GMFs, must be done at the end
     result['gmdata'] = riskinput.gmdata
@@ -207,6 +227,7 @@ class EbrCalculator(base.RiskCalculator):
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
+            self.param['builder'] = get_loss_builder(parent, oq.loss_dt())
 
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
@@ -219,6 +240,8 @@ class EbrCalculator(base.RiskCalculator):
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['asset_loss_table'] = oq.asset_loss_table
+        self.param['stats'] = oq.risk_stats()
+        self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
         avg_losses = self.oqparam.avg_losses
