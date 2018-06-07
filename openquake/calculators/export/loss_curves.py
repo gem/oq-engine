@@ -61,7 +61,7 @@ class LossCurveExporter(object):
         self.dstore = dstore
         try:
             self.builder = get_loss_builder(dstore)
-        except KeyError:  # no 'agg_loss_table' for non event_based_risk
+        except KeyError:  # no 'gmdata' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
@@ -159,19 +159,15 @@ class LossCurveExporter(object):
             return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
 
         # otherwise event_based
-        avalues = self.assetcol.values(aids)
-        lrgetter = getters.LossRatiosGetter(self.dstore, aids)
-        build = self.builder.build_rlz
+        curves = self.dstore['curves-rlzs'][aids]  # shape (A, R, P)
         if key.startswith('rlz-'):
             rlzi = int(key[4:])
-            ratios = lrgetter.get(rlzi)
-            return {'rlz-%03d' % rlzi: build(avalues, ratios, rlzi)}
+            return {'rlz-%03d' % rlzi: curves[:, rlzi]}
         else:  # key is 'rlzs', return a dictionary will all realizations
             # this may be disabled in the future unless an asset is specified
             dic = {}
             for rlzi in range(self.R):
-                ratios = lrgetter.get(rlzi)
-                dic['rlz-%03d' % rlzi] = build(avalues, ratios, rlzi)
+                dic['rlz-%03d' % rlzi] = curves[:, rlzi]
             return dic
 
     def export_curves_stats(self, aids, key):
