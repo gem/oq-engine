@@ -615,10 +615,12 @@ def view_task_classical(token, dstore):
      $ oq show task_classical:-1  # the slowest task
     """
     tasks = set(dstore['task_info'])
+    if 'task_info/source_data' not in dstore:
+        return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
     else:
-        data = dstore['task_info/count_ruptures'].value
+        data = dstore['task_info/count_eff_ruptures'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
