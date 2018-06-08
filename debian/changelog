@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a LargeExposureGrid error to protect the user by tricky exposures
+    (i.e. France with assets in the Antilles)
   * Changed the event_based_risk calculator to computed the loss curves and
     maps directly; removed the asset_loss_table
   * Changed the event_based_risk calculator to distribute by GMFs always
