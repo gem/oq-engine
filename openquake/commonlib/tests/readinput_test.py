@@ -520,9 +520,8 @@ description = Exposure with missing cost_types
 calculation_mode = scenario
 exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
-        sitecol = readinput.get_site_collection(oqparam)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_sitecol_assetcol(oqparam, sitecol, ['structural'])
+            readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
         self.assertIn("Expected cost types ['structural']", str(ctx.exception))
 
 
