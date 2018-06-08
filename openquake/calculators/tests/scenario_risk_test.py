@@ -232,14 +232,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_shakemap.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         sitecol = self.calc.datastore['sitecol']
-        self.assertEqual(len(sitecol), 8)
+        self.assertEqual(len(sitecol), 9)
         gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
         gmfa = gmfdict['rlz-000']
-        self.assertEqual(gmfa.shape, (8,))
+        self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
         agglosses = extract(self.calc.datastore, 'agglosses-rlzs')
-        aac(agglosses['mean'], numpy.array([[1981390.9]], numpy.float32),
+        aac(agglosses['mean'], numpy.array([[795843.7]], numpy.float32),
             atol=.1)
-        aac(agglosses['stddev'], numpy.array([[3204116.5]], numpy.float32),
+        aac(agglosses['stddev'], numpy.array([[951769.25]], numpy.float32),
             atol=.1)
