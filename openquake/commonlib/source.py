@@ -46,7 +46,7 @@ rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
-def split_sources(srcs):
+def split_sources(srcs, min_mag):
     """
     :param srcs: sources
     :returns: a pair (split sources, split time)
@@ -55,7 +55,19 @@ def split_sources(srcs):
     split_time = {}  # src_id -> dt
     for src in srcs:
         t0 = time.time()
-        splits = list(src)
+        if min_mag and src.get_min_max_mag()[0] < min_mag:
+            splits = []
+            for s in src:
+                if min_mag and s.get_min_max_mag()[0] < min_mag:
+                    # discard some ruptures
+                    s.min_mag = min_mag
+                    s.num_ruptures = s.count_ruptures()
+                    if s.num_ruptures:
+                        splits.append(s)
+                else:
+                    splits.append(s)
+        else:
+            splits = list(src)
         split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
         if len(splits) > 1:
@@ -678,7 +690,7 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
-    def split_all(self):
+    def split_all(self, min_mag=0):
         """
         Split all sources in the composite source model.
 
@@ -696,7 +708,7 @@ class CompositeSourceModel(collections.Sequence):
                     src.ngsims = ngsims[src.tectonic_region_type]
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
-                    srcs, stime = split_sources(src_group)
+                    srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
                         s = src.source_id
                         self.infos[s].split_time = stime[s]
@@ -743,13 +755,12 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, min_mag=0, monitor=performance.Monitor()):
+    def filter(self, src_filter, monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
-        :param min_mag: minimum magnitude
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
@@ -760,8 +771,6 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
                 sg.sources = sources_by_grp.get(sg.id, [])
-                for src in sg:
-                    src.min_mag = min_mag
                 src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
@@ -838,6 +847,8 @@ class CompositeSourceModel(collections.Sequence):
         for src_group in self.src_groups:
             if kind in ('all', src_group.src_interdep):
                 sources.extend(src_group)
+        if kind == 'all' and not sources:
+            raise RuntimeError('All sources were filtered away!')
         return sources
 
     def get_sources_by_trt(self):
