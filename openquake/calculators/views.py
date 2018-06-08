@@ -615,10 +615,12 @@ def view_task_classical(token, dstore):
      $ oq show task_classical:-1  # the slowest task
     """
     tasks = set(dstore['task_info'])
+    if 'task_info/source_data' not in dstore:
+        return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
     else:
-        data = dstore['task_info/count_ruptures'].value
+        data = dstore['task_info/count_eff_ruptures'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -727,14 +729,13 @@ def view_dupl_sources(token, dstore):
         if len(records) > 1:  # dupl
             calc_time = records['calc_time'].sum()
             tot_calc_time += calc_time
-            grp_ids = sorted(rec['grp_id'] for rec in records)
-            tbl.append((source_id, calc_time, grp_ids))
+            tbl.append((source_id, calc_time, len(records)))
     if tbl and info.attrs['has_dupl_sources']:
         tot = info['calc_time'].sum()
         percent = tot_calc_time / tot * 100
         m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
             tot_calc_time, tot, percent)
-        return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
+        return rst_table(tbl, ['source_id', 'calc_time', 'num_dupl']) + m
     else:
         return 'There are no duplicated sources'
 
