@@ -38,7 +38,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
-RUPTURES_PER_BLOCK = 1000
+RUPTURES_PER_BLOCK = 200  # decided by MS
 HDD = PMF([(0.2, 3.0), (0.6, 6.0), (0.2, 9.0)])
 NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.15, NodalPlane(45.0, 90.0, 0.0)),
