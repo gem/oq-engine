@@ -32,6 +32,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -59,6 +60,22 @@ class DuplicatedPoint(Exception):
     """
     Raised when reading a CSV file with duplicated (lon, lat) pairs
     """
+
+
+class LargeExposureGrid(Exception):
+    msg = '''
+    The point of automatic gridding of the exposure is to reduce the hazard
+    mesh, however you are increasing it from %d points to %d points. Or your
+    region_grid_spacing (%d km) is too small or the bounding box of your
+    exposure is too large. Currently you have longitudes in the range [%d, %d]
+    and latitudes in the range [%d, %d], please plot your assets and check.'''
+
+    def __init__(self, exposure_mesh, hazard_mesh, spacing):
+        l1 = len(exposure_mesh)
+        l2 = len(hazard_mesh)
+        lon1, lon2 = exposure_mesh.lons.min(), exposure_mesh.lons.max()
+        lat1, lat2 = exposure_mesh.lats.min(), exposure_mesh.lats.max()
+        self.args = [self.msg % (l2, l1, spacing, lon1, lon2, lat1, lat2)]
 
 
 def collect_files(dirpath, cond=lambda fullname: True):
@@ -119,9 +136,9 @@ def get_params(job_inis, **kw):
     :returns:
         A dictionary of parameters
     """
-    job_zip = None
+    input_zip = None
     if len(job_inis) == 1 and job_inis[0].endswith('.zip'):
-        job_zip = job_inis[0]
+        input_zip = job_inis[0]
         job_inis = extract_from_zip(
             job_inis[0], ['job_hazard.ini', 'job_haz.ini',
                           'job.ini', 'job_risk.ini'])
@@ -137,8 +154,8 @@ def get_params(job_inis, **kw):
     job_ini = os.path.abspath(job_inis[0])
     base_path = decode(os.path.dirname(job_ini))
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    if job_zip:
-        params['inputs']['job_zip'] = os.path.abspath(job_zip)
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
 
     for sect in cp.sections():
         _update(params, cp.items(sect), base_path)
@@ -209,6 +226,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
+    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
@@ -467,6 +485,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
     psr = nrml.SourceModelParser(converter)
+    if oqparam.calculation_mode.startswith('ucerf'):
+        [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
@@ -474,7 +494,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
-            if in_memory:
+            if oqparam.calculation_mode.startswith('ucerf'):
+                sg = copy.copy(grp)
+                sg.id = sm.ordinal
+                sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                src_groups.append(sg)
+            elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
@@ -638,10 +663,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol):
         exposure = get_exposure(oqparam)
     if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
-        exposure.mesh = exposure.mesh.get_convex_hull().dilate(
-            oqparam.region_grid_spacing).discretize(
-                oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam)
+        poly = exposure.mesh.get_convex_hull()
+        exposure.mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+            oqparam.region_grid_spacing)
+        if len(exposure.mesh) > len(haz_sitecol):
+            raise LargeExposureGrid(exposure.mesh, haz_sitecol.mesh,
+                                    oqparam.region_grid_spacing)
+        haz_sitecol = get_site_collection(oqparam)  # reload on new mesh
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
