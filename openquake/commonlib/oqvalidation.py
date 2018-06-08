@@ -73,7 +73,6 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
-    ground_motion_fields = valid.Param(valid.boolean, False)
     gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
@@ -100,6 +99,7 @@ class OqParam(valid.ParamSet):
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
+    minimum_magnitude = valid.Param(valid.positivefloat, 0)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -259,11 +259,6 @@ class OqParam(valid.ParamSet):
                 self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
-        elif (self.calculation_mode == 'event_based_risk' and
-              self.conditional_loss_poes and not self.asset_loss_table):
-            raise InvalidFile(
-                '%s: asset_loss_table is not set, probably you want to remove'
-                ' conditional_loss_poes' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
