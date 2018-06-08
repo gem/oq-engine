@@ -643,7 +643,7 @@ def get_exposure(oqparam):
     return exposure
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol, cost_types):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
@@ -654,6 +654,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol, cost_types):
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
+    if haz_sitecol is None:
+        haz_sitecol = get_site_collection(oqparam)
     missing = set(cost_types) - set(exposure.cost_types['name']) - set(
         ['occupants'])  # TODO: remove occupants and fragility special cases
     if missing and not oqparam.calculation_mode.endswith('damage'):
