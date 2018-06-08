@@ -63,17 +63,12 @@ class DuplicatedPoint(Exception):
 
 
 class LargeExposureGrid(Exception):
-    """
-    Human error (i.e. exposure for France with points in Polinesia)
-    """
     msg = '''
-    The point of using automatic gridding of the exposure is to reduce
-    the hazard mesh, however you are increasing it from %d points to
-    %d points. Or your region_grid_spacing (%d km) is too small or the
-    bounding box of your exposure is too large. Currently you have
-    longitudes in the range [%d, %d] and latitudes in the range
-    [%d, %d], please plot your assets and check.
-    '''
+    The point of automatic gridding of the exposure is to reduce the hazard
+    mesh, however you are increasing it from %d points to %d points. Or your
+    region_grid_spacing (%d km) is too small or the bounding box of your
+    exposure is too large. Currently you have longitudes in the range [%d, %d]
+    and latitudes in the range [%d, %d], please plot your assets and check.'''
 
     def __init__(self, exposure_mesh, hazard_mesh, spacing):
         l1 = len(exposure_mesh)
