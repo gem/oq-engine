@@ -88,7 +88,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agglosses/occupants')
-        aac(tot.array, 0.01355099)
+        aac(tot.array, [0.0282811])
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agglosses/occupants?taxonomy=*')
