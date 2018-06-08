@@ -345,6 +345,7 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
