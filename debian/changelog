@@ -1,3 +1,15 @@
+  [Michele Simionato]
+  * Added a LargeExposureGrid error to protect the user by tricky exposures
+    (i.e. France with assets in the Antilles)
+  * Changed the event_based_risk calculator to computed the loss curves and
+    maps directly; removed the asset_loss_table
+  * Changed the event_based_risk calculator to distribute by GMFs always
+  * Optimized the memory consumption in the UCERF classical calculator
+  * Added a parameter `minimum_magnitude` in the job.ini
+  * Added an utility `utils/combine_mean_curves.py`
+
+python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
+
   [Marco Pagani and Changlong Li]
   * Added a version of the Yu et al. (2013) GMPE supporting Mw
 
@@ -95,6 +107,8 @@
   * Added an XML exporter for the site model
   * Slight change to the correlation module to fix a bug in the SMTK
   * Added a distribution mechanism `threadpool`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 01 Jun 2018 09:02:01 +0000
 
 python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
 

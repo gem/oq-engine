@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import zipfile
-import io
 from openquake.baselib.general import import_all, CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -68,15 +66,15 @@ export.from_db = False  # overridden when exporting from db
 import_all('openquake.calculators.export')
 
 
-@export.add(('job_zip', 'zip'))
-def export_job_zip(ekey, dstore):
+@export.add(('input_zip', 'zip'))
+def export_input_zip(ekey, dstore):
     """
-    Export the bytes in the job_zip dataset in a job.zip file
+    Export the data in the `input_zip` dataset as a .zip file
     """
-    dest = dstore.export_path('job.zip')
-    nbytes = dstore.get_attr('job_zip', 'nbytes')
-    zbytes = dstore['job_zip'].value
-    # when reading job_zip some terminating null bytes are truncated (for
+    dest = dstore.export_path('input.zip')
+    nbytes = dstore.get_attr('input_zip', 'nbytes')
+    zbytes = dstore['input_zip'].value
+    # when reading input_zip some terminating null bytes are truncated (for
     # unknown reasons) therefore they must be restored
     zbytes += b'\x00' * (nbytes - len(zbytes))
     open(dest, 'wb').write(zbytes)

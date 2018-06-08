@@ -3,8 +3,8 @@ Scenario Risk Test
 
 ============== ===================
 checksum32     4,057,024,737      
-date           2018-05-15T04:14:25
-engine_version 3.1.0-git0acbc11   
+date           2018-06-05T06:40:09
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 27, num_levels = 8
@@ -80,8 +80,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-building riskinputs     0.08538   0.0       1     
-reading site collection 0.00519   0.0       1     
-reading exposure        0.00300   0.0       1     
-building epsilons       8.323E-04 0.0       1     
+building riskinputs     0.06564   0.0       1     
+reading site collection 0.00439   0.0       1     
+reading exposure        0.00243   0.0       1     
+building epsilons       7.548E-04 0.0       1     
 ======================= ========= ========= ======
