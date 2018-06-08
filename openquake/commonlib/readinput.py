@@ -658,7 +658,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol, cost_types):
         ['occupants'])  # TODO: remove occupants and fragility special cases
     if missing and not oqparam.calculation_mode.endswith('damage'):
         expo = oqparam.inputs.get('exposure', '')
-        raise RuntimeError(
+        raise InvalidFile(
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing and not oqparam.region:
