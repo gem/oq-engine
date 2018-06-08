@@ -28,6 +28,7 @@ class FakeParams(hdf5.LiteralAttrs):
     hazard_calculation_id = None
     inputs = {'job_ini': gettemp('fake_job.ini')}
     concurrent_tasks = 0
+    minimum_magnitude = 0
 
     def to_params(self):
         return {}

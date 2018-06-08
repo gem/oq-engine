@@ -67,6 +67,11 @@ class ClassicalTestCase(CalculatorTestCase):
         sitecol = extract(self.calc.datastore, 'sitecol')
         self.assertEqual(repr(sitecol), '<SiteCollection with 1/1 sites>')
 
+        # check minimum_magnitude discards the source
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
+        self.assertEqual(str(ctx.exception), 'All sources were filtered away!')
+
     @attr('qa', 'hazard', 'classical')
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):

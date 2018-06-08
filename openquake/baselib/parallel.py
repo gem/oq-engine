@@ -340,7 +340,7 @@ def safely_call(func, args):
             mon = child
         try:
             res = Result(func(*args), mon)
-        except:
+        except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
     # FIXME: check_mem_usage is disabled here because it's causing
