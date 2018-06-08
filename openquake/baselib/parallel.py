@@ -233,7 +233,7 @@ class Pickled(object):
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %s %s>' % (
+        return '<Pickled %s #%s %s>' % (
             self.clsname, self.calc_id, humansize(len(self)))
 
     def __len__(self):
