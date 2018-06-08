@@ -150,7 +150,6 @@ class OqParam(valid.ParamSet):
             return self._risk_files
         except AttributeError:
             self._file_type, self._risk_files = get_risk_files(self.inputs)
-            #import pdb; pdb.set_trace()
             return self._risk_files
 
     @property
