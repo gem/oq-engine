@@ -39,10 +39,6 @@ class UcerfPSHACalculator(PSHACalculator):
             self.sitecol, self.oqparam.maximum_distance)
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
-            ucerf = grp.sources[0].orig
-            logging.info('Getting background sources from %s', ucerf.source_id)
-            grp.sources.extend(
-                ucerf.get_background_sources(self.src_filter))
             for src in grp:
                 self.csm.infos[src.source_id] = source.SourceInfo(src)
                 grp.tot_ruptures += src.num_ruptures
@@ -65,7 +61,17 @@ class UcerfPSHACalculator(PSHACalculator):
             acc = parallel.Starmap.apply(
                 classical, (grp, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
-                concurrent_tasks=oq.concurrent_tasks * 2,  # for slow tasks
+                concurrent_tasks=oq.concurrent_tasks,
+            ).reduce(self.agg_dicts, acc)
+            ucerf = grp.sources[0].orig
+            logging.info('Getting background sources from %s', ucerf.source_id)
+            srcs = ucerf.get_background_sources(self.src_filter)
+            for src in srcs:
+                self.csm.infos[src.source_id] = source.SourceInfo(src)
+            acc = parallel.Starmap.apply(
+                classical, (srcs, self.src_filter, gsims, param, monitor),
+                weight=operator.attrgetter('weight'),
+                concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
