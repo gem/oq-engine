@@ -197,12 +197,6 @@ class DataStore(collections.MutableMapping):
         """
         self._export_dir = value
 
-    def hdf5cache(self):
-        """
-        :returns: the path to the .hdf5 cache file associated to the calc_id
-        """
-        return os.path.join(self.datadir, 'cache_%d.hdf5' % self.calc_id)
-
     def getitem(self, name):
         """
         Return a dataset by using h5py.File.__getitem__

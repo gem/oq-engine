@@ -328,14 +328,13 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         mon = self.monitor('prefilter')
-        self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  self.hdf5cache)
+                                  self.datastore.hdf5path)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
             csm = self.csm.filter(src_filter, mon)
         elif oq.prefilter_sources == 'rtree':
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    self.hdf5cache)
+                                    self.datastore.hdf5path)
             csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
             csm = self.csm.filter(SourceFilter(None, {}), mon)
@@ -350,10 +349,7 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        hdf5cache = getattr(self.precalc, 'hdf5cache', None)
-        if hdf5cache and read_access:
-            return hdf5cache
-        elif (self.oqparam.hazard_calculation_id and read_access and
+        if (self.oqparam.hazard_calculation_id and read_access and
               'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
