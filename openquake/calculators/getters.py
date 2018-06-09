@@ -63,7 +63,7 @@ class PmapGetter(object):
         if hasattr(self, 'data'):  # already initialized
             return
         if isinstance(self.dstore, str):
-            self.dstore = hdf5.File(self.dstore, 'r')
+            self.dstore = hdf5.File(self.dstore, 'r', swmr=True)
         else:
             self.dstore.open()  # if not
         if self.sids is None:

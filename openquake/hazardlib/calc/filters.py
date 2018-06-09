@@ -211,9 +211,8 @@ class SourceFilter(object):
         self.hdf5path = hdf5path
         if hdf5path and (
                 config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
-                h5['sitecol'] = sitecol
+                config.directory.shared_dir):  # sitecol already stored
+            pass
         else:  # keep the sitecol in memory
             self.__dict__['sitecol'] = sitecol
         self.integration_distance = (
@@ -229,7 +228,7 @@ class SourceFilter(object):
         """
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with hdf5.File(self.hdf5path, 'r', swmr=True) as h5:
             self.__dict__['sitecol'] = sc = h5['sitecol']
         return sc
 
