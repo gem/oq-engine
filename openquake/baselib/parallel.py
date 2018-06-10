@@ -176,7 +176,8 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
+                         'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 
@@ -363,6 +364,8 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
+elif OQ_DISTRIBUTE == 'dask':
+    from dask.distributed import Client, as_completed
 
 
 class IterResult(object):
@@ -612,6 +615,8 @@ class Starmap(object):
             it = self._iter_celery()
         elif self.distribute == 'zmq':
             it = self._iter_zmq()
+        elif self.distribute == 'dask':
+            it = self._iter_dask()
         num_tasks = next(it)
         return IterResult(it, self.name, self.argnames, num_tasks,
                           self.sent, self.progress)
@@ -688,6 +693,14 @@ class Starmap(object):
                     continue
                 num_results -= 1
                 yield res
+
+    def _iter_dask(self):
+        c = Client()
+        safefunc = functools.partial(safely_call, self.task_func)
+        allargs = list(self._genargs())
+        yield len(allargs)
+        for fut in as_completed(c.map(safefunc, allargs)):
+            yield fut.result()
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
