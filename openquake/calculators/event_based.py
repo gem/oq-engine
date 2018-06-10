@@ -427,6 +427,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
+        self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+        # NB: I tried compression='lzf', the speed is slightly worse
+        # but the disk space required can become 3 times less
         ires = parallel.Starmap(
             self.core_task.__func__, self.gen_args()).submit_all()
         if self.precalc and self.precalc.result:
