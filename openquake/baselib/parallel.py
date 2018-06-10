@@ -511,6 +511,8 @@ class Starmap(object):
             cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
+        elif distribute == 'dask':
+            cls.dask_client = Client()
 
     @classmethod
     def shutdown(cls, poolsize=None):
@@ -518,7 +520,9 @@ class Starmap(object):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
-            delattr(cls, 'pool')
+            del cls.pool
+        if hasattr(cls, 'dask_client'):
+            del cls.dask_client
 
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
@@ -695,11 +699,11 @@ class Starmap(object):
                 yield res
 
     def _iter_dask(self):
-        c = Client()
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
-        for fut in as_completed(c.map(safefunc, c.scatter(allargs))):
+        cl = self.dask_client
+        for fut in as_completed(cl.map(safefunc, cl.scatter(allargs))):
             yield fut.result()
 
 
