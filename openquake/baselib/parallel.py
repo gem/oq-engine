@@ -699,7 +699,7 @@ class Starmap(object):
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
-        for fut in as_completed(c.map(safefunc, allargs)):
+        for fut in as_completed(c.map(safefunc, c.scatter(allargs))):
             yield fut.result()
 
 
