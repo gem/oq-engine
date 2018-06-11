@@ -158,6 +158,7 @@ import functools
 import itertools
 import traceback
 import multiprocessing.dummy
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -167,7 +168,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, virtual_memory
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
@@ -202,7 +203,7 @@ def check_mem_usage(monitor=Monitor(),
     """
     soft_percent = soft_percent or config.memory.soft_mem_limit
     hard_percent = hard_percent or config.memory.hard_mem_limit
-    used_mem_percent = virtual_memory().percent
+    used_mem_percent = psutil.virtual_memory().percent
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %

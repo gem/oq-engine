@@ -17,7 +17,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py35/pyzmq-17.0.0-cp35-cp35m-manyl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py35/psutil-5.4.3-cp35-cp35m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py35/Shapely-1.6.4.post1-cp35-cp35m-manylinux1_x86_64.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/docutils-0.14-py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.2.1-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/decorator-4.3.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/pbr-4.0.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/six-1.11.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/Django-2.0.4-py3-none-any.whl
