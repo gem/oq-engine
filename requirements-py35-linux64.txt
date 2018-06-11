@@ -52,6 +52,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py35/Rtree-0.8.3-cp35-cp35m-manyli
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/vine-1.1.4-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/amqp-2.2.2-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/kombu-4.1.0-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/billiard-3.5.0.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/celery-4.1.0-py2.py3-none-any.whl
 
 ### Plotting ###
