@@ -246,20 +246,19 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_csv(key, dest, sitemesh, pmap,
-                      imtls, comment):
+def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
     """
-    Export the curves of the given realization into CSV.
+    Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
     :param pmap: a ProbabilityMap
-    :param dict imtls: intensity measure types and levels
+    :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
     curves = util.compose_arrays(
-        sitemesh, calc.convert_to_array(pmap, len(sitemesh), imtls))
+        sitemesh, calc.convert_to_array(pmap, len(sitemesh), pdic))
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
