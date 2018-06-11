@@ -273,25 +273,6 @@ class GmfGetter(object):
             [('rlzi', U16), ('sid', U32),
              ('eid', U64), ('gmv', (F32, (len(imtls),)))])
 
-    def max_gmf_size(self):
-        """
-        Estimate the maximum size of the GMFs in bytes.
-        """
-        n = 0
-        sample = 0
-        for gsim in self.rlzs_by_gsim:  # OrderedDict
-            rlzs = self.rlzs_by_gsim[gsim]
-            for ebr in self.ebruptures:
-                if self.samples > 1:
-                    len_eids = [len(get_array(ebr.events, sample=s)['eid'])
-                                for s in range(sample, sample + len(rlzs))]
-                else:
-                    len_eids = [len(ebr.events['eid'])] * len(rlzs)
-                for r, rlzi in enumerate(rlzs):
-                    n += len(ebr.rupture.sctx.sids) * len_eids[r]
-            sample += len(rlzs)
-        return n * numpy.zeros(1, self.gmf_data_dt).nbytes
-
     def init(self):
         """
         Initialize the computers. Should be called on the workers
