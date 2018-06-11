@@ -225,7 +225,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             result, self.rlzs_assoc.get_rlzs_by_gsim,
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
-        self.datastore.set_attrs('events', max_gmf_size=gmf_size)
+        self.datastore.set_attrs('events', estimated_gmf_size=gmf_size)
         logging.info('Generating %s of GMFs with no minimum_intensity',
                      humansize(gmf_size))
 
