@@ -37,7 +37,7 @@ def reset(yes):
 
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
 
-    # user must be able to access and write the databse file to remove it
+    # user must be able to access and write the database file to remove it
     if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
         if dbserver.get_status() == 'running':
             if config.dbserver.multi_user:
@@ -56,7 +56,7 @@ def reset(yes):
             print(exc, file=sys.stderr)
 
     # fast way of removing everything
-    purge_all(fast=True)  # datastore of the current user
+    purge_all()  # datastore of the current user
 
 
 reset.flg('yes', 'confirmation')
