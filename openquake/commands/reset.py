@@ -35,11 +35,15 @@ def reset(yes):
     if not ok:
         return
 
+    status = dbserver.get_status()
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
+
+    if status == 'running':
+        purge_all()  # datastore of the current user
 
     # user must be able to access and write the database file to remove it
     if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
-        if dbserver.get_status() == 'running':
+        if status == 'running':
             if config.dbserver.multi_user:
                 sys.exit('The oq dbserver must be stopped '
                          'before proceeding')
@@ -54,9 +58,8 @@ def reset(yes):
             print('Removed %s' % dbpath)
         except OSError as exc:
             print(exc, file=sys.stderr)
-
-    # fast way of removing everything
-    purge_all()  # datastore of the current user
+    else:
+        sys.exit('%s does not exist or you cannot write on it' % dbpath)
 
 
 reset.flg('yes', 'confirmation')
