@@ -18,7 +18,6 @@
 import os
 import re
 import getpass
-import shutil
 from openquake.baselib import sap, datastore
 from openquake.commonlib.logs import dbcmd
 

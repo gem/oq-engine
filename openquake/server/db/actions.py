@@ -697,6 +697,13 @@ SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
     return running
 
 
+def get_calc_ids(db, user):
+    """
+    :returns: calculation IDs of the given user
+    """
+    return [r.id for r in db('SELECT id FROM job WHERE user_name=?x', user)]
+
+
 def get_longest_jobs(db):
     """
     :param db:
