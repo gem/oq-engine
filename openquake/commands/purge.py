@@ -30,30 +30,24 @@ def purge_one(calc_id, user):
     Remove one calculation ID from the database and remove its datastore
     """
     hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-    err = dbcmd('del_calc', calc_id, user)
-    if err:
-        print(err)
+    dbcmd('del_calc', calc_id, user)
     if os.path.exists(hdf5path):  # not removed yet
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
 
 
 # used in the reset command
-def purge_all(user=None, fast=False):
+def purge_all(user=None):
     """
     Remove all calculations of the given user
     """
     user = user or getpass.getuser()
     if os.path.exists(datadir):
-        if fast:
-            shutil.rmtree(datadir)
-            print('Removed %s' % datadir)
-        else:
-            for fname in os.listdir(datadir):
-                mo = re.match('calc_(\d+)\.hdf5', fname)
-                if mo is not None:
-                    calc_id = int(mo.group(1))
-                    purge_one(calc_id, user)
+        for fname in os.listdir(datadir):
+            mo = re.match('calc_(\d+)\.hdf5', fname)
+            if mo is not None:
+                calc_id = int(mo.group(1))
+                purge_one(calc_id, user)
 
 
 @sap.Script
@@ -69,5 +63,6 @@ def purge(calc_id):
             print('Calculation %d not found' % calc_id)
             return
     purge_one(calc_id, getpass.getuser())
+
 
 purge.arg('calc_id', 'calculation ID', type=int)
