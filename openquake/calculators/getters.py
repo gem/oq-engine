@@ -306,15 +306,14 @@ class GmfGetter(object):
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
-    def gen_gmv(self, gsim=None):
+    def gen_gmv(self):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
         sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
-        gsims = self.rlzs_by_gsim if gsim is None else [gsim]
-        for gs in gsims:  # OrderedDict
+        for gs in self.rlzs_by_gsim:  # OrderedDict
             rlzs = self.rlzs_by_gsim[gs]
             for computer in self.computers:
                 rup = computer.rupture
@@ -352,13 +351,13 @@ class GmfGetter(object):
                     n += e
             sample += len(rlzs)
 
-    def get_hazard(self, gsim=None, data=None):
+    def get_hazard(self, data=None):
         """
         :param data: if given, an iterator of records of dtype gmf_data_dt
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
-            data = self.gen_gmv(gsim)
+            data = self.gen_gmv()
         hazard = numpy.array([collections.defaultdict(list)
                               for _ in range(self.N)])
         for rlzi, sid, eid, gmv in data:
