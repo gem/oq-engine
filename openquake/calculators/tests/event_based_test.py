@@ -170,8 +170,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
 
-        size = self.calc.datastore.get_attr('events', 'estimated_gmf_size')
-        self.assertEqual(size, 144)
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        got = self.calc.datastore['gmf_data/data'].value.nbytes
+        self.assertEqual(exp, got)
 
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
