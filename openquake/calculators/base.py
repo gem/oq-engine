@@ -167,6 +167,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         global logversion
         with self._monitor:
+            self._monitor.username = kw.get('username', '')
             self.close = close
             self.set_log_format()
             if logversion:  # make sure this is logged only once
@@ -615,9 +616,9 @@ class HazardCalculator(BaseCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
-
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
+        logging.info('There are %d realizations', R)
         if self.is_stochastic and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
