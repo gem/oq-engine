@@ -326,19 +326,20 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user):
+def del_calc(db, job_id, user, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
+    :param force: delete even if there are dependent calculations
     :returns: None if everything went fine or an error message
     """
     job_id = int(job_id)
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
-    if dependent:
+    if not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}
