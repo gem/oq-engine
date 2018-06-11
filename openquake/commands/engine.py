@@ -43,7 +43,7 @@ def get_job_id(job_id, username=None):
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
-            hazard_calculation_id=None, **kw):
+            hazard_calculation_id=None,  username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
 
@@ -57,11 +57,14 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         A comma-separated string of export types requested by the user.
     :param hazard_calculation_id:
         ID of the previous calculation or None
+    :param username:
+        Name of the user running the job
     """
     # if the master dies, automatically kill the workers
     job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = eng.job_from_file(
-        job_ini, getpass.getuser(), hazard_calculation_id)
+        job_ini, username, hazard_calculation_id)
+    kw['username'] = username
     eng.run_calc(job_id, oqparam, log_level, log_file, exports,
                  hazard_calculation_id=hazard_calculation_id, **kw)
     for line in logs.dbcmd('list_outputs', job_id, False):

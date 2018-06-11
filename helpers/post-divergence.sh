@@ -18,7 +18,7 @@
 usage () {
     cat <<EOF
 
-$0 <new-engine-stable-branch_(engine-2.x))>
+$0 <new-engine-stable-branch_(engine-3.x))>
     update documentation files and README.md with links related to the new stable engine branch name
 
 $0 <-h|--help>
