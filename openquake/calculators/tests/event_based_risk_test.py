@@ -222,6 +222,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
+        # check estimated_gmf_size
+        size = self.calc.datastore.get_attr('events', 'estimated_gmf_size')
+        self.assertEqual(size, 8610)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association

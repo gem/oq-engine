@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Stored an attributed `events.estimated_gmf_size`
   * Added a check on exposures with missing loss types
   * Added a LargeExposureGrid error to protect the user by tricky exposures
     (i.e. France with assets in the Antilles)
