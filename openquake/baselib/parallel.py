@@ -158,6 +158,7 @@ import functools
 import itertools
 import traceback
 import multiprocessing.dummy
+import psutil
 import numpy
 try:
     from setproctitle import setproctitle
@@ -167,7 +168,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, virtual_memory
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
@@ -202,7 +203,7 @@ def check_mem_usage(monitor=Monitor(),
     """
     soft_percent = soft_percent or config.memory.soft_mem_limit
     hard_percent = hard_percent or config.memory.hard_mem_limit
-    used_mem_percent = virtual_memory().percent
+    used_mem_percent = psutil.virtual_memory().percent
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
@@ -226,6 +227,8 @@ class Pickled(object):
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
+        self.username = ('[%s]' % obj.username if hasattr(obj, 'username')
+                         else '')
         try:
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
@@ -233,8 +236,8 @@ class Pickled(object):
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %s %s>' % (
-            self.clsname, self.calc_id, humansize(len(self)))
+        return '<Pickled %s%s #%s %s>' % (
+            self.clsname, self.username, self.calc_id, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
@@ -340,7 +343,7 @@ def safely_call(func, args):
             mon = child
         try:
             res = Result(func(*args), mon)
-        except:
+        except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
     # FIXME: check_mem_usage is disabled here because it's causing

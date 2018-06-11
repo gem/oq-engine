@@ -256,8 +256,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         if self.num_ruptures <= MINWEIGHT:
             yield self  # not splittable
             return
-        mag_rates = [(mag, rate) for (mag, rate) in
-                     self.mfd.get_annual_occurrence_rates() if rate]
+        mag_rates = self.get_annual_occurrence_rates()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
             del src._nr

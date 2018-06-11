@@ -32,6 +32,7 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
+from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -119,6 +120,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     from_engine = False  # set by engine.run_calc
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+    dynamic_parent = None
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
@@ -165,6 +167,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         global logversion
         with self._monitor:
+            self._monitor.username = kw.get('username', '')
             self.close = close
             self.set_log_format()
             if logversion:  # make sure this is logged only once
@@ -396,7 +399,7 @@ class HazardCalculator(BaseCalculator):
                     self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
-                self.csm.split_all()
+                self.csm.split_all(oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
@@ -468,7 +471,7 @@ class HazardCalculator(BaseCalculator):
         """
         with self.monitor('reading exposure', autoflush=True):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
-                self.oqparam, haz_sitecol)
+                self.oqparam, haz_sitecol, self.riskmodel.loss_types)
             readinput.exposure = None  # reset the global
 
     def get_min_iml(self, oq):
@@ -617,9 +620,9 @@ class HazardCalculator(BaseCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
-
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
+        logging.info('There are %d realizations', R)
         if self.is_stochastic and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
@@ -756,7 +759,8 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, sids, self.R, num_events)
+                getter = GmfDataGetter(dstore, sids, self.R, num_events,
+                                       self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 logging.info('Reading hazard')

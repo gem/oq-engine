@@ -33,29 +33,6 @@ from openquake.qa_tests_data.event_based_risk import (
     occupants, case_1g, case_7a)
 
 
-# used for a sanity check
-def check_total_losses(calc):
-    dstore = calc.datastore
-    loss_dt = calc.oqparam.loss_dt()
-    LI = len(loss_dt.names)
-    data1 = numpy.zeros(LI, numpy.float32)
-    alt = dstore['losses_by_event'].value
-    for li, lt in enumerate(loss_dt.names):
-        data1[li] += alt['loss'][:, li].sum()
-
-    # test the asset_loss_table exporter; notice that I need to disable
-    # the parallelism to avoid reading bogus data: this is the usual
-    # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-        [fname] = export(('asset_loss_table', 'hdf5'), dstore)
-    print('Generating %s' % fname)
-    with h5py.File(fname) as f:
-        total = f['asset_loss_table'].attrs['total']
-
-    # check the sums are consistent with the ones coming from asset_loss_table
-    numpy.testing.assert_allclose(data1, total, 1E-6)
-
-
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_attr(self, name, value):
@@ -134,7 +111,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
+        parent = self.calc.datastore.parent
+        crm = sorted(parent.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -156,8 +134,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
-
-        check_total_losses(self.calc)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
@@ -246,12 +222,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
-        check_total_losses(self.calc)
+        # check max_gmf_size
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        got = self.calc.datastore['gmf_data/data'].value.nbytes
+        self.assertGreater(exp, got)  # there is minimum_intensity
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+
+        # check minimum_magnitude >= 5.2
+        minmag = self.calc.datastore['ruptures']['mag'].min()
+        self.assertGreaterEqual(minmag, 5.2)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
@@ -285,8 +268,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
-                            calculation_mode='event_based',
-                            ground_motion_fields='false', exports='csv')
+                            calculation_mode='event_based', exports='csv')
         [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
