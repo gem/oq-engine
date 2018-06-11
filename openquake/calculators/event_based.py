@@ -221,7 +221,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             numpy.random.seed(self.oqparam.ses_seed)
             set_random_years(self.datastore, 'events',
                              int(self.oqparam.investigation_time))
-        gmf_size = max_gmf_size(
+        gmf_size = estimated_gmf_size(
             result, self.rlzs_assoc.get_rlzs_by_gsim,
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
@@ -230,7 +230,8 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                      humansize(gmf_size))
 
 
-def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim, samples_by_grp, num_imts):
+def estimated_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
+                       samples_by_grp, num_imts):
     """
     :param ruptures_by_grp: dictionary grp_id -> EBRuptures
     :param rlzs_by_gsim: method grp_id -> {gsim: rlzs}
