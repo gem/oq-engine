@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_slices)
+    AccumDict, block_splitter, split_in_slices, humansize)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
@@ -367,6 +367,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
+        self.max_gmf_size = 0
         sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
@@ -391,6 +392,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         imts, min_iml, oq.maximum_distance,
                         oq.truncation_level, correl_model,
                         oq.filter_distance, samples_by_grp[grp_id])
+                    self.max_gmf_size += getter.max_gmf_size()
                     yield [getter], oq, monitor
             return
         U = len(self.datastore['ruptures'])
@@ -404,10 +406,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     ruptures = list(ruptures)
                     if not ruptures:
                         continue
-                getters.append(GmfGetter(
+                getter = GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
                     imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, oq.filter_distance, samples_by_grp[grp_id]))
+                    correl_model, oq.filter_distance, samples_by_grp[grp_id])
+                self.max_gmf_size += getter.max_gmf_size()
+                getters.append(getter)
             yield getters, oq, monitor
 
     def execute(self):
@@ -429,6 +433,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.indices = collections.defaultdict(list)  # sid -> indices
         ires = parallel.Starmap(
             self.core_task.__func__, self.gen_args()).submit_all()
+        logging.info('Generating at max %s of GMFs',
+                     humansize(self.max_gmf_size))
         if self.precalc and self.precalc.result:
             # remove the ruptures in memory to save memory
             self.precalc.result.clear()
