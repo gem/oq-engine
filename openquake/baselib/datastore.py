@@ -99,6 +99,7 @@ def extract_calc_id_datadir(hdf5path, datadir=None):
     try:
         calc_id = int(hdf5path)
     except ValueError:
+        hdf5path = os.path.abspath(hdf5path)
         datadir = os.path.dirname(hdf5path)
         mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
         if mo is None:
