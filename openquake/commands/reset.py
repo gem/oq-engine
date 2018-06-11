@@ -19,11 +19,12 @@ import os
 import sys
 import time
 import signal
+import getpass
 from openquake.baselib import sap, config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
-from openquake.commands.purge import purge_all
+from openquake.commands.purge import purge_one, purge_all
 
 
 @sap.Script
@@ -37,11 +38,13 @@ def reset(yes):
 
     status = dbserver.get_status()
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
-
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
     elif status == 'running':
-        purge_all()  # datastore of the current user
+        user = getpass.getuser()
+        for calc_id in logs.dbcmd('get_calc_ids', user):
+            purge_one(calc_id, user, force=True)
+        purge_all(user)  # calculations not in the db
     if os.access(dbpath, os.W_OK):
         # stop the dbserver
         pid = logs.dbcmd('getpid')
@@ -49,6 +52,7 @@ def reset(yes):
         time.sleep(.5)  # give time to stop
         assert dbserver.get_status() == 'not-running'
         print('dbserver stopped')
+        # remove the database
         os.remove(dbpath)
         print('Removed %s' % dbpath)
     else:
