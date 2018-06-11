@@ -428,6 +428,7 @@ class EventBasedCalculator(base.HazardCalculator):
                       for sm in self.csm_info.source_models}
         L = len(oq.imtls.array)
         R = self.datastore['csm_info'].get_num_rlzs()
+        logging.info('There are %d realizations', R)
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
