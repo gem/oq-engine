@@ -47,6 +47,7 @@ def combine_mean_curves(calc1, calc2):
     out = 'combine_%d_%d.hdf5' % (calc1, calc2)
     with hdf5.File(out, 'w') as h5:
         h5['hcurves/mean'] = pmap
+        h5['oqparam'] = dstore1['oqparam']
     print('Generated %s' % out)
 
 
