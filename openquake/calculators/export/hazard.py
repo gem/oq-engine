@@ -240,6 +240,7 @@ class GmfCollection(object):
         for ses_idx in sorted(gmfset):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
+
 # ####################### export hazard curves ############################ #
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
