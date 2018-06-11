@@ -227,7 +227,8 @@ class Pickled(object):
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
-        self.username = '[%s]' % obj.username if hasattr(obj, 'user') else ''
+        self.username = ('[%s]' % obj.username if hasattr(obj, 'username')
+                         else '')
         try:
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
