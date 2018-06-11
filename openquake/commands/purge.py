@@ -25,12 +25,12 @@ from openquake.commonlib.logs import dbcmd
 datadir = datastore.get_datadir()
 
 
-def purge_one(calc_id, user):
+def purge_one(calc_id, user, force):
     """
     Remove one calculation ID from the database and remove its datastore
     """
     hdf5path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-    dbcmd('del_calc', calc_id, user)
+    dbcmd('del_calc', calc_id, user, force)
     if os.path.exists(hdf5path):  # not removed yet
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
@@ -47,11 +47,11 @@ def purge_all(user=None):
             mo = re.match('calc_(\d+)\.hdf5', fname)
             if mo is not None:
                 calc_id = int(mo.group(1))
-                purge_one(calc_id, user)
+                purge_one(calc_id, user, force=True)
 
 
 @sap.Script
-def purge(calc_id):
+def purge(calc_id, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.
@@ -62,7 +62,8 @@ def purge(calc_id):
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return
-    purge_one(calc_id, getpass.getuser())
+    purge_one(calc_id, getpass.getuser(), force)
 
 
 purge.arg('calc_id', 'calculation ID', type=int)
+purge.flg('force', 'ignore dependent calculations')
