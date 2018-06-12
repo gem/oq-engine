@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Added the hostname in the WebUI page. It can be customize by the user
+    via the `local_settings.py` file
+
   [Michele Simionato]
   * Stored an attributed `events.max_gmf_size`
   * Added a check on exposures with missing loss types
