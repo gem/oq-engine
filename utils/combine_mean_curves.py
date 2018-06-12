@@ -25,7 +25,8 @@ def combine_mean_curves(calc1, calc2):
     """
     Combine the hazard curves coming from two different calculations.
     The result will be the hazard curves of calc1, updated on the sites
-    in common with calc2 with the PoEs of calc2.
+    in common with calc2 with the PoEs of calc2. For instance:
+    calc1 = USA, calc2 = California
     """
     dstore1 = datastore.read(calc1)
     dstore2 = datastore.read(calc2)
@@ -40,10 +41,13 @@ def combine_mean_curves(calc1, calc2):
         raise RuntimeError('There are no common sites between calculation '
                            '%d and %d' % (calc1, calc2))
     sids2 = [site_id2[lonlat] for lonlat in common]
-    pmap = PmapGetter(dstore1).get_mean()
-    pmap2 = PmapGetter(dstore1, sids=sids2).get_mean()
+    pmap = PmapGetter(dstore1).get_mean()  # USA
+    pmap2 = PmapGetter(dstore1, sids=sids2).get_mean()  # California
     for lonlat in common:
         pmap[site_id1[lonlat]] |= pmap2.get(site_id2[lonlat], 0)
+    extra = set(site_id2) - set(site_id1)  # California - USA
+    for lonlat in extra:
+        pmap[site_id1[lonlat]] = pmap2[site_id2[lonlat]]
     out = 'combine_%d_%d.hdf5' % (calc1, calc2)
     with hdf5.File(out, 'w') as h5:
         h5['hcurves/mean'] = pmap
