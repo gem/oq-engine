@@ -46,9 +46,6 @@ def combine_mean_curves(calc_big, calc_small):
     for lonlat in common:
         pmap_big[site_id_big[lonlat]] |= pmap_small.get(
             site_id_small[lonlat], 0)
-    extra = set(site_id_small) - set(site_id_big)  # California - USA
-    for lonlat in extra:
-        pmap_big[site_id_big[lonlat]] = pmap_small[site_id_small[lonlat]]
     out = 'combine_%d_%d.hdf5' % (calc_big, calc_small)
     with hdf5.File(out, 'w') as h5:
         h5['hcurves/mean'] = pmap_big
