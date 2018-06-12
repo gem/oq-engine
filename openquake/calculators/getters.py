@@ -183,6 +183,7 @@ class PmapGetter(object):
             if not None must be a string of the form "grp-XX"; in that case
             returns the mean considering only the contribution for group XX
         """
+        self.init()
         if self.sids is None:
             self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
