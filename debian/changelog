@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Added the hostname in the WebUI page. It can be customize by the user
+    via the `local_settings.py` file
+
   [Michele Simionato]
   * Added a Content-Length to the outputs downloadable from the WebUI
   * Fixed a bug when extracting gmf_data from a hazard calculation with a
