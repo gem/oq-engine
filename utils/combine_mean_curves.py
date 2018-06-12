@@ -43,7 +43,7 @@ def combine_mean_curves(calc1, calc2):
     pmap = PmapGetter(dstore1).get_mean()
     pmap2 = PmapGetter(dstore1, sids=sids2).get_mean()
     for lonlat in common:
-        pmap[site_id1[lonlat]] |= pmap2[site_id2[lonlat]]
+        pmap[site_id1[lonlat]] |= pmap2.get(site_id2[lonlat], 0)
     out = 'combine_%d_%d.hdf5' % (calc1, calc2)
     with hdf5.File(out, 'w') as h5:
         h5['hcurves/mean'] = pmap
