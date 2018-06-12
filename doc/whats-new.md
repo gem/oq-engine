@@ -91,8 +91,8 @@ for central and eastern United States.
 
 There is a small fix for the Derras 2014 GMPR, for distances below 0.1 km.
 
-We added the [Yu et al. (2013) GMPEs]
-(https://github.com/gem/oq-engine/pull/3428) for China
+We added the [Yu et al. (2013) GMPEs](
+https://github.com/gem/oq-engine/pull/3428) for China
 together with Changlong Li.
 
 The visualization capabilities of the Hazard Modeller Toolkit (HMTK) have
