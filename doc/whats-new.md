@@ -215,7 +215,7 @@ scenario_damage outputs: this happened due to rounding errors. Now
 the correct result (i.e. zeros) is stored.
 
 We added a check in calculations reading the GMFs in CSV format: now
-the must be a single one realization in the input file.
+there must be a single realization in the input file.
 
 When running a scenario calculation using precomputed GMFs, a clear
 error message appears when the IMTs in the GMFs are not
