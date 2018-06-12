@@ -32,7 +32,6 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
-from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -351,11 +350,8 @@ class HazardCalculator(BaseCalculator):
         read_access = (
             config.distribution.oq_distribute in ('no', 'processpool') or
             config.directory.shared_dir)
-        hdf5cache = getattr(self.precalc, 'hdf5cache', None)
-        if hdf5cache and read_access:
-            return hdf5cache
-        elif (self.oqparam.hazard_calculation_id and read_access and
-              'gmf_data' not in self.datastore.hdf5):
+        if (self.oqparam.hazard_calculation_id and read_access and
+                'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
