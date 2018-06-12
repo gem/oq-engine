@@ -696,6 +696,7 @@ def extract(request, calc_id, what):
     response = FileResponse(stream, content_type='application/octet-stream')
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 
@@ -724,6 +725,7 @@ def get_datastore(request, job_id):
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 
