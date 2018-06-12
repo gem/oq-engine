@@ -219,12 +219,6 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
                     sorted(data), grp_source_dt)
 
-            # save a copy of the poes in hdf5cache
-            if hasattr(self, 'hdf5cache'):
-                with hdf5.File(self.hdf5cache) as cache:
-                    cache['oqparam'] = oq
-                    self.datastore.hdf5.copy('poes', cache)
-
 
 # used in PreClassicalCalculator
 def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
@@ -345,7 +339,7 @@ class ClassicalCalculator(PSHACalculator):
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
-
+        self.datastore.hdf5.swmr = True  # start reading
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
