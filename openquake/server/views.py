@@ -642,6 +642,7 @@ def get_result(request, result_id):
     response = FileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(exported))
     return response
 
 
