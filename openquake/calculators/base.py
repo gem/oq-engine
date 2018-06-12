@@ -167,6 +167,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         global logversion
         with self._monitor:
+            self._monitor.username = kw.get('username', '')
             self.close = close
             self.set_log_format()
             if logversion:  # make sure this is logged only once
