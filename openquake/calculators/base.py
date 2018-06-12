@@ -431,10 +431,7 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_inputs()
         if hasattr(self, 'sitecol'):
-            if 'scenario' in self.oqparam.calculation_mode:
-                self.datastore['sitecol'] = self.sitecol
-            else:
-                self.datastore['sitecol'] = self.sitecol.complete
+            self.datastore['sitecol'] = self.sitecol.complete
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
