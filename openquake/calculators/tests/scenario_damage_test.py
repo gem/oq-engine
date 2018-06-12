@@ -77,6 +77,10 @@ RM       4,000
         aae([[0.4799988, 0.3537988, 0.0655346, 0.018449, 0.0822188]],
             total)  # shape (R, D) = (1, 5)
 
+        # check extract gmf_data works with a filtered site collection
+        gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
+        self.assertEqual(gmf_data['rlz-000'].shape, (7,))
+
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1h(self):
         # test for consequences with a single asset
