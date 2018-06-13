@@ -691,12 +691,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-    correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
-        oq.maximum_distance, oq.truncation_level, correl_model,
-        oq.filter_distance, samples)
+    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, samples)
     getter.init()
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()

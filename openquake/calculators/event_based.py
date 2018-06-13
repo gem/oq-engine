@@ -406,9 +406,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
-        imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
-        correl_model = oq.get_correl_model()
         try:
             csm_info = self.csm.info
         except AttributeError:  # no csm
@@ -425,9 +423,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, sitecol,
-                        imts, min_iml, oq.maximum_distance,
-                        oq.truncation_level, correl_model,
-                        oq.filter_distance, samples_by_grp[grp_id])
+                        oq, min_iml, samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
         U = len(self.datastore['ruptures'])
@@ -443,8 +439,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         continue
                 getter = GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
-                    imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, oq.filter_distance, samples_by_grp[grp_id])
+                    oq, min_iml, samples_by_grp[grp_id])
                 getters.append(getter)
             yield getters, oq, monitor
 
