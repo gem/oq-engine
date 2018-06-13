@@ -449,12 +449,7 @@ def import_all(module_or_package):
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
-                try:
-                    importlib.import_module(modname)
-                except Exception as exc:
-                    print('Could not import %s: %s: %s' % (
-                        modname, exc.__class__.__name__, exc),
-                          file=sys.stderr)
+                importlib.import_module(modname)
     return set(sys.modules) - already_imported
 
 
@@ -893,9 +888,10 @@ class DeprecationWarning(UserWarning):
     """
 
 
-def deprecated(message):
+@decorator
+def deprecated(func, message='', *args, **kw):
     """
-    Return a decorator to make deprecated functions.
+    A family of decorators to mark deprecated functions.
 
     :param message:
         the message to print the first time the
@@ -910,15 +906,13 @@ def deprecated(message):
     Notice that if the function is called several time, the deprecation
     warning will be displayed only the first time.
     """
-    def _deprecated(func, *args, **kw):
-        msg = '%s.%s has been deprecated. %s' % (
-            func.__module__, func.__name__, message)
-        if not hasattr(func, 'called'):
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-            func.called = 0
-        func.called += 1
-        return func(*args, **kw)
-    return decorator(_deprecated)
+    msg = '%s.%s has been deprecated. %s' % (
+        func.__module__, func.__name__, message)
+    if not hasattr(func, 'called'):
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        func.called = 0
+    func.called += 1
+    return func(*args, **kw)
 
 
 def random_filter(objects, reduction_factor, seed=42):

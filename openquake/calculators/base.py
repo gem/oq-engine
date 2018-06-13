@@ -32,7 +32,6 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
-from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -167,6 +166,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         global logversion
         with self._monitor:
+            self._monitor.username = kw.get('username', '')
             self.close = close
             self.set_log_format()
             if logversion:  # make sure this is logged only once
@@ -354,7 +354,7 @@ class HazardCalculator(BaseCalculator):
         if hdf5cache and read_access:
             return hdf5cache
         elif (self.oqparam.hazard_calculation_id and read_access and
-              'gmf_data' not in self.datastore.hdf5):
+                'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
 
@@ -434,10 +434,7 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_inputs()
         if hasattr(self, 'sitecol'):
-            if 'scenario' in self.oqparam.calculation_mode:
-                self.datastore['sitecol'] = self.sitecol
-            else:
-                self.datastore['sitecol'] = self.sitecol.complete
+            self.datastore['sitecol'] = self.sitecol.complete
         self.param = {}  # used in the risk calculators
         if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
@@ -619,9 +616,9 @@ class HazardCalculator(BaseCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
-
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
+        logging.info('There are %d realizations', R)
         if self.is_stochastic and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
