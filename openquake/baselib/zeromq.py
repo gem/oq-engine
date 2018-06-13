@@ -98,10 +98,8 @@ class Socket(object):
             port = self.zsocket.bind_to_random_port(end_point, p1, p2)
             # NB: will raise a ZMQBindError if no port is available
             self.port = port
-            self.backurl = '%s:%d' % (end_point, port)
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
-            self.backurl = self.end_point
         else:  # connect
             self.zsocket = connect(self.end_point, self.socket_type)
         port = re.search(r':(\d+)$', self.end_point)
@@ -153,6 +151,6 @@ class Socket(object):
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
-        end_point = getattr(self, 'backurl', self.end_point)
+        end_point = getattr(self, self.end_point)
         return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
                                   SOCKTYPE[self.socket_type], self.mode)
