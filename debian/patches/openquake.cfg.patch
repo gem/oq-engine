@@ -23,6 +23,6 @@ Index: oq-engine/openquake/engine/openquake.cfg
 +# https://isc.sans.edu/port.html?port=1907
 +port = 1907
  
- [zworkers]
+ [zmq]
  master_host = localhost
 
