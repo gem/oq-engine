@@ -375,7 +375,7 @@ class UCERFRiskCalculator(EbrCalculator):
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
         self.I = oq.insured_losses + 1
-        correl_model = oq.get_correl_model()
+        correl_model = oq.correl_model
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
