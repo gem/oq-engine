@@ -310,20 +310,16 @@ class List(list):
 
 
 @util.reader
-def compute_losses(ssm, src_filter, param, riskmodel,
-                   imts, trunc_level, correl_model, min_iml, monitor):
+def compute_losses(ssm, src_filter, oqparam, param, riskmodel, monitor):
     """
     Compute the losses for a single source model. Returns the ruptures
     as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
     :param sitecol: a SiteCollection instance
-    :param param: a dictionary of parameters
+    :param oqparam: the openquake parameters
+    :param param: a dictionary of extra parameters
     :param riskmodel: a RiskModel instance
-    :param imts: a list of Intensity Measure Types
-    :param trunc_level: truncation level
-    :param correl_model: correlation model
-    :param min_iml: vector of minimum intensities, one per IMT
     :param monitor: a Monitor instance
     :returns: a List containing the losses by taxonomy and some attributes
     """
@@ -338,9 +334,8 @@ def compute_losses(ssm, src_filter, param, riskmodel,
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
     getter = getters.GmfGetter(
-        rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
-        src_filter.integration_distance, trunc_level, correl_model,
-        samples[grp_id])
+        rlzs_by_gsim, ebruptures, src_filter.sitecol,
+        oqparam, param['min_iml'], samples[grp_id])
     ri = riskinput.RiskInput(getter, param['assetcol'].assets_by_site())
     res.append(ucerf_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
@@ -375,9 +370,7 @@ class UCERFRiskCalculator(EbrCalculator):
         oq = self.oqparam
         self.L = len(self.riskmodel.lti)
         self.I = oq.insured_losses + 1
-        correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
-        imts = list(oq.imtls)
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
@@ -392,10 +385,10 @@ class UCERFRiskCalculator(EbrCalculator):
                              ses_ratio=oq.ses_ratio,
                              avg_losses=oq.avg_losses,
                              elt_dt=elt_dt,
+                             min_iml=min_iml,
                              insured_losses=oq.insured_losses)
-                yield (ssm, self.csm.src_filter, param,
-                       self.riskmodel, imts, oq.truncation_level,
-                       correl_model, min_iml, monitor)
+                yield (ssm, self.csm.src_filter, oq, param,
+                       self.riskmodel, monitor)
 
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
