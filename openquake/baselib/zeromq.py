@@ -76,9 +76,10 @@ class Socket(object):
     :param timeout: default 5000 ms, used when polling the underlying socket
     """
     def __init__(self, end_point, socket_type, mode, timeout=5000):
-        assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
+        if mode == 'bind':
+            assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
         self.end_point = end_point
         self.socket_type = socket_type
         self.mode = mode
