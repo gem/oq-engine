@@ -40,22 +40,21 @@ def reset(yes):
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
-    if os.access(dbpath, os.W_OK):   # single user mode
-        if status == 'running':
+    elif status == 'running':
+        user = getpass.getuser()
+        for calc_id in logs.dbcmd('get_calc_ids', user):
+            purge_one(calc_id, user, force=True)
+        purge_all(user)  # calculations in oqdata not in the db
+        if os.access(dbpath, os.W_OK):   # single user mode
             # stop the dbserver first
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGTERM)
             time.sleep(.5)  # give time to stop
             assert dbserver.get_status() == 'not-running'
             print('dbserver stopped')
-        # remove the database
-        os.remove(dbpath)
-        print('Removed %s' % dbpath)
-    elif status == 'running':
-        user = getpass.getuser()
-        for calc_id in logs.dbcmd('get_calc_ids', user):
-            purge_one(calc_id, user, force=True)
-        purge_all(user)  # calculations not in the db
+            # remove the database
+            os.remove(dbpath)
+            print('Removed %s' % dbpath)
     else:
         sys.exit('The dbserver is not running')
 
