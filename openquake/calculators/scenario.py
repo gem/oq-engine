@@ -62,7 +62,7 @@ class ScenarioCalculator(base.HazardCalculator):
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
-            oq.get_correl_model())
+            oq.correl_model)
 
     def init(self):
         pass
