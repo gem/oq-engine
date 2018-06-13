@@ -345,7 +345,7 @@ class ClassicalCalculator(PSHACalculator):
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
-
+        # self.datastore.hdf5.swmr = True  # start reading
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
             ires = parallel.Starmap(
                 self.core_task.__func__, self.gen_args()
