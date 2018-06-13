@@ -251,28 +251,28 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imtls,
-                 min_iml, maximum_distance, truncation_level,
-                 correlation_model, filter_distance, samples=1):
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam,
+                 min_iml, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
-        self.imtls = imtls
+        self.imtls = oqparam.imtls
         self.min_iml = min_iml
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
-            calc.filters.IntegrationDistance(maximum_distance)
-            if isinstance(maximum_distance, dict) else maximum_distance,
-            filter_distance)
-        self.truncation_level = truncation_level
-        self.correlation_model = correlation_model
-        self.filter_distance = filter_distance
+            calc.filters.IntegrationDistance(oqparam.maximum_distance)
+            if isinstance(oqparam.maximum_distance, dict)
+            else oqparam.maximum_distance,
+            oqparam.filter_distance)
+        self.truncation_level = oqparam.truncation_level
+        self.correlation_model = oqparam.correl_model
+        self.filter_distance = oqparam.filter_distance
         self.samples = samples
         self.gmf_data_dt = numpy.dtype(
             [('rlzi', U16), ('sid', U32),
-             ('eid', U64), ('gmv', (F32, (len(imtls),)))])
+             ('eid', U64), ('gmv', (F32, (len(oqparam.imtls),)))])
 
     def init(self):
         """
