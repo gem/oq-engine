@@ -57,7 +57,8 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        self.master = w.WorkerMaster(**config.zworkers)
+        self.master = w.WorkerMaster(config.zmq.master_host,
+                                     **config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
