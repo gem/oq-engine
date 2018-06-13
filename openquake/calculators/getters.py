@@ -261,7 +261,11 @@ class GmfGetter(object):
         self.imtls = oqparam.imtls
         self.min_iml = min_iml
         self.cmaker = ContextMaker(
-            rlzs_by_gsim, oqparam.maximum_distance, oqparam.filter_distance)
+            rlzs_by_gsim,
+            calc.filters.IntegrationDistance(oqparam.maximum_distance)
+            if isinstance(oqparam.maximum_distance, dict)
+            else oqparam.maximum_distance,
+            oqparam.filter_distance)
         self.truncation_level = oqparam.truncation_level
         self.correlation_model = oqparam.correl_model
         self.filter_distance = oqparam.filter_distance
