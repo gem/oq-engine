@@ -691,7 +691,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-    correl_model = oq.get_correl_model()
+    correl_model = oq.correl_model
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol, imts, min_iml,

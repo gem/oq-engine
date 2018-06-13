@@ -408,7 +408,7 @@ class EventBasedCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_task.__name__)
         imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
-        correl_model = oq.get_correl_model()
+        correl_model = oq.correl_model
         try:
             csm_info = self.csm.info
         except AttributeError:  # no csm
