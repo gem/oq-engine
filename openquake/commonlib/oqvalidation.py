@@ -423,7 +423,8 @@ class OqParam(valid.ParamSet):
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
 
-    def get_correl_model(self):
+    @property
+    def correl_model(self):
         """
         Return a correlation object. See :mod:`openquake.hazardlib.correlation`
         for more info.
