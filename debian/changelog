@@ -1,6 +1,3 @@
-  [Michele Simionato]
-  * Computed the hazard curves and maps by using the SWMR mode of h5py 2.8
-
   [Daniele Viganò]
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file
