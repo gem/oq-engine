@@ -51,7 +51,8 @@ def dbserver(cmd, dbhostport=None,
         if status == 'running':
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGINT)
-        dbs.run_server(dbpath, dbhostport)
+        dbs.func.run_server(dbpath, dbhostport)
+
 
 dbserver.arg('cmd', 'dbserver command',
              choices='start stop status restart'.split())
