@@ -270,9 +270,6 @@ class GmfGetter(object):
         self.correlation_model = oqparam.correl_model
         self.filter_distance = oqparam.filter_distance
         self.samples = samples
-        self.gmf_data_dt = numpy.dtype(
-            [('rlzi', U16), ('sid', U32),
-             ('eid', U64), ('gmv', (F32, (len(oqparam.imtls),)))])
 
     def init(self):
         """

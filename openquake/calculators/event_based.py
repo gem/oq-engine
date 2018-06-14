@@ -99,7 +99,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.min_iml = self.get_min_iml(oq)
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
@@ -226,7 +225,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
         self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-        msg = 'less than ' if self.min_iml.sum() else ''
+        msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
         logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
 
@@ -305,6 +304,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         a list of dictionaries with keys gmfcoll and hcurves
     """
     results = []
+    dt = oq.gmf_data_dt()
     for getter in getters:
         with monitor('GmfGetter.init', measuremem=True):
             getter.init()
@@ -313,7 +313,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
             hc_mon = monitor('building hazard curves', measuremem=False)
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
                 hazard = getter.get_hazard(data=gmfdata)
             for sid, hazardr in zip(getter.sids, hazard):
                 for rlzi, array in hazardr.items():
@@ -328,7 +328,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         else:  # fast lane
             with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
         indices = []
         gmfdata.sort(order=('sid', 'rlzi', 'eid'))
         start = stop = 0

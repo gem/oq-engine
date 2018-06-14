@@ -70,7 +70,7 @@ def show(what='contents', calc_id=-1, extra=()):
                 ds = read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
-            except:
+            except Exception:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
                 f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
@@ -113,6 +113,7 @@ def show(what='contents', calc_id=-1, extra=()):
         print('%s not found' % what)
 
     ds.close()
+
 
 show.arg('what', 'key or view of the datastore')
 show.arg('calc_id', 'calculation ID', type=int)
