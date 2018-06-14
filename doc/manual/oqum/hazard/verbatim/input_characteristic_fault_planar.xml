@@ -5,7 +5,7 @@
     <rake>90.0</rake> 
     <surface> 
         <!-- Characteristic source with a collection of planar surfaces -->
-        <planarSurface strike="0.0" dip="90.0"> 
+        <planarSurface> 
             <topLeft lon="-1.0" lat="1.0" depth="21.0" /> 
             <topRight lon="1.0" lat="1.0" depth="21.0" /> 
             <bottomLeft lon="-1.0" lat="-1.0" depth="59.0" /> 
