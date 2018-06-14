@@ -226,12 +226,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
         self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-        logging.info('Generating %s of GMFs with no minimum_intensity',
-                     humansize(gmf_size))
+        msg = 'less than ' if self.min_iml.sum() else ''
+        logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
 
 def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
-                       samples_by_grp, num_imts):
+                 samples_by_grp, num_imts):
     """
     :param ruptures_by_grp: dictionary grp_id -> EBRuptures
     :param rlzs_by_gsim: method grp_id -> {gsim: rlzs}
