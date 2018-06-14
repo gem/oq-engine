@@ -35,26 +35,28 @@ oq_distribute = celery
 ## OpenQuake Engine 'worker' node configuration File
 On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the *DbServer* and *RabbitMQ* daemons IP address:
 
-```
+```ini
 [amqp]
+# RabbitMQ server address
 host = w.x.y.z
 port = 5672
 user = openquake
 password = openquake
 vhost = openquake
-# This is where tasks will be enqueued.
 celery_queue = celery
 
 [dbserver]
-# enable multi_user if you have a multiple user installation
 multi_user = true
 file = /var/lib/openquake/db.sqlite3
 log = /var/lib/openquake/dbserver.log
+# daemon bind address; must be a valid IP address
+listen = 0.0.0.0
+# address of the dbserver; can be an hostname too
 host = w.x.y.z
 port = 1907
-authkey = changeme
+receiver_ports = 1912-1920
+authkey = somethingstronger
 ```
-
 
 ### Configuring daemons
 
