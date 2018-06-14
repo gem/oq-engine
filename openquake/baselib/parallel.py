@@ -567,7 +567,7 @@ class Starmap(object):
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
-            config.dbserver.host, config.zmq.receiver_ports)
+            config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
 
     @property
@@ -649,7 +649,7 @@ class Starmap(object):
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            backurl = 'tcp://%s:%s' % (config.zmq.master_host, socket.port)
+            backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
             logging.info('Using receiver %s', backurl)
             results = []
             for piks in self._genargs(backurl):
@@ -675,10 +675,10 @@ class Starmap(object):
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            task_in_url = 'tcp://%s:%s' % (config.zmq.master_host,
+            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                backurl = 'tcp://%s:%s' % (config.zmq.master_host, socket.port)
+                backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
                 num_results = 0
                 for args in self._genargs(backurl):
                     sender.send((self.task_func, args))
