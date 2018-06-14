@@ -62,7 +62,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     return dset
 
 
-def extend(dset, array):
+def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
 
@@ -74,6 +74,8 @@ def extend(dset, array):
     newlength = length + len(array)
     dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
+    for key, val in attrs.items():
+        dset.attrs[key] = val
     return newlength
 
 
@@ -271,6 +273,10 @@ class File(h5py.File):
             return obj
         else:
             return h5obj
+
+    def __getstate__(self):
+        # make the file pickleable
+        return {'_id': 0}
 
     def set_nbytes(self, key, nbytes=None):
         """
