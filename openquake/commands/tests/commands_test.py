@@ -78,7 +78,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, path)
+            info.func(None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -86,33 +86,33 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_calculators(self):
         with Print.patch() as p:
-            info(True, None, None, None, None, None, '')
+            info.func(True, None, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info(None, True, None, None, None, None, '')
+            info.func(None, True, None, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_views(self):
         with Print.patch() as p:
-            info(None, None, True, None, None, None, '')
+            info.func(None, None, True, None, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info(None, None, None, True, None, None, '')
+            info.func(None, None, None, True, None, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info(None, None, None, None, True, None, '')
+            info.func(None, None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, path)
+            info.func(None, None, None, None, None, None, path)
         # this is a test with multiple same ID sources
         self.assertIn('multiplicity', str(p))
 
@@ -120,7 +120,7 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(None, None, None, None, None, True, path)
+            info.func(None, None, None, None, None, True, path)
         self.assertIn('report.rst', str(p))
 
 
@@ -140,7 +140,7 @@ class TidyTestCase(unittest.TestCase):
 </gmfCollection>
 </nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy([fname])
+            tidy.func([fname])
         self.assertIn('Reformatted', str(p))
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
@@ -182,7 +182,7 @@ xmlns:gml="http://www.opengis.net/gml"
 </gmfCollection>
 </nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy([fname])
+            tidy.func([fname])
         self.assertIn('Could not convert gmv->positivefloat: '
                       'float -0.012492 < 0, line 8', str(p))
 
@@ -207,21 +207,21 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_calc(self):
         with Print.patch() as p:
-            show('contents', self.calc_id)
+            show.func('contents', self.calc_id)
         self.assertIn('sitecol', str(p))
 
         with Print.patch() as p:
-            show('sitecol', self.calc_id)
+            show.func('sitecol', self.calc_id)
         self.assertEqual(str(p), '<SiteCollection with 1/1 sites>')
 
         with Print.patch() as p:
-            show('slow_sources', self.calc_id)
+            show.func('slow_sources', self.calc_id)
         self.assertIn('source_id source_class num_ruptures calc_time '
                       'split_time num_sites num_split', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('sitecol', self.calc_id)
+            show_attrs.func('sitecol', self.calc_id)
         self.assertEqual(
             '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 54',
             str(p))
@@ -229,7 +229,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', self.calc_id, 'csv', tempdir)
+            export.func('hcurves', self.calc_id, 'csv', tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -243,7 +243,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'exposure_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            reduce.func(dest, 0.5)
         self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
@@ -252,7 +252,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'source_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            reduce.func(dest, 0.5)
         self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
@@ -262,7 +262,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'site_model.xml')
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            reduce.func(dest, 0.5)
         self.assertIn('Extracted 2 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
@@ -272,7 +272,7 @@ class ReduceTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'sites.csv')
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
-            reduce(dest, 0.5)
+            reduce.func(dest, 0.5)
         self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
@@ -295,7 +295,7 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-        upgrade_nrml(tmpdir, False, False)
+        upgrade_nrml.func(tmpdir, False, False)
         shutil.rmtree(tmpdir)
 
 
@@ -307,7 +307,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip)
+        zip_cmd.func(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['Wcrust_high_rhypo.hdf5',
                           'Wcrust_low_rhypo.hdf5',
@@ -324,7 +324,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip)
+        zip_cmd.func(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
                           'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
@@ -344,14 +344,14 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for an invalid file
         smc = os.path.join(os.path.dirname(__file__),
                            "data", "source_model_complete.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
+        to_shapefile.func(os.path.join(self.OUTDIR, 'smc'), smc, False)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+        from_shapefile.func(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
 
         # test invalid file
         with self.assertRaises(Exception) as ctx:
-            to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
+            to_shapefile.func(os.path.join(self.OUTDIR, 'smc'), smc, True)
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
@@ -359,19 +359,19 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for a valid file NRML 0.4
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        to_shapefile.func(os.path.join(self.OUTDIR, 'smc'), ssm, True)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+        from_shapefile.func(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
 
     def test_roundtrip_valid_05(self):
         # test the conversion to shapefile and back for a valid file NRML 0.5
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model_05.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        to_shapefile.func(os.path.join(self.OUTDIR, 'smc'), ssm, True)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+        from_shapefile.func(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
 
     def tearDown(self):
         # comment out the line below if you need to debug the test
@@ -383,9 +383,9 @@ class DbTestCase(unittest.TestCase):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
                 'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
-            db('db_version')
+            db.func('db_version')
             try:
-                db('calc_info', (1,))
+                db.func('calc_info', (1,))
             except dbapi.NotFound:  # happens on an empty db
                 pass
 
