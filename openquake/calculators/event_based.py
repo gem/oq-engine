@@ -99,7 +99,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.min_iml = self.get_min_iml(oq)
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
@@ -226,7 +225,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
         self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-        msg = 'less than ' if self.min_iml.sum() else ''
+        msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
         logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
 
