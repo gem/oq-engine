@@ -185,7 +185,7 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sites.sids,
             initvalue=rup_indep)
-        eff_ruptures = 0
+        eff_ruptures = AccumDict(accum=0)
         with self.ir_mon:
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
@@ -201,7 +201,7 @@ class ContextMaker(object):
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
-            eff_ruptures += 1
+            eff_ruptures[rup.mag] += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
                 for sid, pne in zip(sctx.sids, pnes):

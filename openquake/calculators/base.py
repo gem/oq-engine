@@ -590,7 +590,7 @@ class HazardCalculator(BaseCalculator):
         :param result_dict: a dictionary with keys (grp_id, gsim)
         :param src_group_id: the source group ID
         """
-        return result_dict.eff_ruptures.get(src_group_id, 0)
+        return sum(result_dict.eff_ruptures.get(src_group_id, {}).values())
 
     def store_source_info(self, infos, acc):
         # save the calculation times per each source
