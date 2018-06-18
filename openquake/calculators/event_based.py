@@ -99,7 +99,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.min_iml = self.get_min_iml(oq)
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
@@ -226,12 +225,12 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.csm.info.get_samples_by_grp(),
             len(self.oqparam.imtls))
         self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-        logging.info('Generating %s of GMFs with no minimum_intensity',
-                     humansize(gmf_size))
+        msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
+        logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
 
 def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
-                       samples_by_grp, num_imts):
+                 samples_by_grp, num_imts):
     """
     :param ruptures_by_grp: dictionary grp_id -> EBRuptures
     :param rlzs_by_gsim: method grp_id -> {gsim: rlzs}
@@ -305,6 +304,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
         a list of dictionaries with keys gmfcoll and hcurves
     """
     results = []
+    dt = oq.gmf_data_dt()
     for getter in getters:
         with monitor('GmfGetter.init', measuremem=True):
             getter.init()
@@ -313,7 +313,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
             hc_mon = monitor('building hazard curves', measuremem=False)
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
                 hazard = getter.get_hazard(data=gmfdata)
             for sid, hazardr in zip(getter.sids, hazard):
                 for rlzi, array in hazardr.items():
@@ -328,7 +328,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
         else:  # fast lane
             with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), getter.gmf_data_dt)
+                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
         indices = []
         gmfdata.sort(order=('sid', 'rlzi', 'eid'))
         start = stop = 0
@@ -406,9 +406,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         sitecol = self.sitecol.complete
         monitor = self.monitor(self.core_task.__name__)
-        imts = list(oq.imtls)
         min_iml = self.get_min_iml(oq)
-        correl_model = oq.get_correl_model()
         try:
             csm_info = self.csm.info
         except AttributeError:  # no csm
@@ -425,9 +423,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(ruptures, block_size):
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, sitecol,
-                        imts, min_iml, oq.maximum_distance,
-                        oq.truncation_level, correl_model,
-                        oq.filter_distance, samples_by_grp[grp_id])
+                        oq, min_iml, samples_by_grp[grp_id])
                     yield [getter], oq, monitor
             return
         U = len(self.datastore['ruptures'])
@@ -443,8 +439,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         continue
                 getter = GmfGetter(
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
-                    imts, min_iml, oq.maximum_distance, oq.truncation_level,
-                    correl_model, oq.filter_distance, samples_by_grp[grp_id])
+                    oq, min_iml, samples_by_grp[grp_id])
                 getters.append(getter)
             yield getters, oq, monitor
 
