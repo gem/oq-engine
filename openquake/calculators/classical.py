@@ -41,8 +41,7 @@ grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
-mag_freq_dt = numpy.dtype(
-    [('grp_id', U16), ('mag', F64), ('num_ruptures', U32)])
+mag_freq_dt = numpy.dtype([('grp_id', U16), ('mag', F64), ('freq', F64)])
 
 
 def get_src_ids(sources):
