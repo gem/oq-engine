@@ -111,9 +111,6 @@ class Script(object):
         if registry:
             self.registry['%s.%s' % (func.__module__, func.__name__)] = self
 
-    def __call__(self, *args):
-        return self.func(*args)
-
     def group(self, descr):
         """Added a new group of arguments with the given description"""
         self._group = self.parentparser.add_argument_group(descr)
