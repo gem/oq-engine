@@ -41,6 +41,9 @@ grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
 source_data_dt = numpy.dtype(
     [('taskno', U16), ('nsites', U32), ('nruptures', U32), ('weight', F32)])
 
+mag_freq_dt = numpy.dtype(
+    [('grp_id', U16), ('mag', F64), ('num_ruptures', U32)])
+
 
 def get_src_ids(sources):
     """
@@ -144,6 +147,14 @@ class PSHACalculator(base.HazardCalculator):
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
+        # store eff_ruptures by grp
+        data = [(grp_id, mag, freq)
+                for grp_id, mfd in sorted(acc.eff_ruptures.items())
+                for mag, freq in sorted(mfd.items())]
+        self.datastore['mag_freq'] = arr = numpy.array(data, mag_freq_dt)
+        num_ruptures = arr['num_ruptures'].sum()
+        if num_ruptures > 1E7:
+            logging.warn('There are %.1f millions of ruptures', num_ruptures)
         return acc
 
     def gen_args(self, monitor):
