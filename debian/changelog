@@ -1,4 +1,5 @@
   [Daniele Viganò]
+  * Changed the openquake.cfg file and added a dbserver.listen parameter
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file
 
