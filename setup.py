@@ -124,7 +124,9 @@ setup(
     namespace_packages=['openquake'],
     install_requires=install_requires,
     extras_require=extras_require,
-    scripts=['bin/oq'],
+    entry_points={
+        'console_scripts': ['oq = openquake.commands.__main__:oq'],
+    },
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,

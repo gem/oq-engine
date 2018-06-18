@@ -38,19 +38,18 @@ how you can solve the problem sequentially:
 >>> from itertools import starmap  # map a function with multiple arguments
 >>> from functools import reduce  # reduce an iterable with a binary operator
 >>> from operator import add  # addition function
->>> from collections import Counter  # callable doing the counting
-
->>> arglist = [('hello',), ('world',)]  # list of arguments
->>> results = starmap(Counter, arglist)  # iterator over the results
->>> res = reduce(add, results, Counter())  # aggregated counts
-
+>>> from openquake.baselib.performance import Monitor
+>>> mon = Monitor('count')
+>>> arglist = [('hello', mon), ('world', mon)]  # list of arguments
+>>> results = starmap(count, arglist)  # iterator over the results
+>>> res = reduce(add, results, collections.Counter())  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
 Here is how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> res2 = Starmap(Counter, arglist).reduce()
+>>> res2 = Starmap(count, arglist).reduce()
 >>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
@@ -66,7 +65,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(Counter, arglist).reduce(acc=Counter())
+>>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -114,7 +113,7 @@ letter counting example discussed before, `Starmap.apply` could
 be used as follows:
 
 >>> text = 'helloworld'  # sequence of characters
->>> res3 = Starmap.apply(Counter, (text,)).reduce()
+>>> res3 = Starmap.apply(count, (text, mon)).reduce()
 >>> assert res3 == res
 
 The API of `Starmap.apply` is designed to extend the one of `apply`,
@@ -157,6 +156,7 @@ import operator
 import functools
 import itertools
 import traceback
+import collections
 import multiprocessing.dummy
 import psutil
 import numpy
@@ -339,7 +339,7 @@ def safely_call(func, args):
             mon.operation = func.__name__
             mon.children.append(child)  # child is a child of mon
             child.hdf5path = mon.hdf5path
-        else:
+        else:  # in the DbServer
             mon = child
         try:
             res = Result(func(*args), mon)
@@ -589,12 +589,12 @@ class Starmap(object):
         """
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
-            if isinstance(mon, Monitor):
-                # add incremental task number and task weight
-                mon.task_no = task_no
-                mon.weight = getattr(args[0], 'weight', 1.)
-                mon.backurl = backurl
-                self.calc_id = getattr(mon, 'calc_id', None)
+            assert isinstance(mon, Monitor), mon
+            # add incremental task number and task weight
+            mon.task_no = task_no
+            mon.weight = getattr(args[0], 'weight', 1.)
+            mon.backurl = backurl
+            self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += numpy.array([len(p) for p in args])
@@ -703,3 +703,10 @@ def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
     chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
     task_args = [(ch,) + args[1:] for ch in chunks]
     return itertools.starmap(task, task_args)
+
+
+def count(word, mon):
+    """
+    Used as example in the documentation
+    """
+    return collections.Counter(word)
