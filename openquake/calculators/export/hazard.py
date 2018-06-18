@@ -24,8 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import (
-    humansize, groupby, group_array, DictArray)
+from openquake.baselib.general import humansize, group_array, DictArray
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
@@ -908,7 +907,7 @@ def export_fullreport(ekey, dstore):
 def export_mag_freq(ekey, dstore):
     dic = collections.defaultdict(int)
     for row in dstore['mag_freq']:
-        dic[row['mag']] += row['num_ruptures']
+        dic[row['mag']] += row['freq']
     data = sorted(dic.items())
     path = dstore.export_path('mag_freq.csv')
     writers.write_csv(path, data, header=['mag', 'freq'])

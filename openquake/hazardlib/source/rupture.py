@@ -170,6 +170,8 @@ class NonParametricProbabilisticRupture(BaseRupture):
         If number of ruptures in ``pmf`` do not start from 0, are not defined
         in increasing order, and if they are not defined with unit step
     """
+    occurrence_rate = 1
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  pmf, rupture_slip_direction=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])

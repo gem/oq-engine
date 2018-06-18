@@ -146,13 +146,14 @@ class PSHACalculator(base.HazardCalculator):
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
+        num_ruptures = sum(acc.eff_ruptures[grp_id].pop('counts', 0)
+                           for grp_id in acc.eff_ruptures)
+        logging.warn('There are %s effective ruptures', num_ruptures)
         # store eff_ruptures by grp
         data = [(grp_id, mag, freq)
                 for grp_id, mfd in sorted(acc.eff_ruptures.items())
                 for mag, freq in sorted(mfd.items())]
-        self.datastore['mag_freq'] = arr = numpy.array(data, mag_freq_dt)
-        num_ruptures = '{:,d}'.format(arr['num_ruptures'].sum())
-        logging.warn('There are %s effective ruptures', num_ruptures)
+        self.datastore['mag_freq'] = numpy.array(data, mag_freq_dt)
         return acc
 
     def gen_args(self, monitor):
