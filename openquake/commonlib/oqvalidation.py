@@ -32,6 +32,9 @@ from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -416,6 +419,14 @@ class OqParam(valid.ParamSet):
         ltypes = self.loss_dt(dtype).names
         lst = [('poe-%s' % poe, dtype) for poe in self.conditional_loss_poes]
         return numpy.dtype([(lt, lst) for lt in ltypes])
+
+    def gmf_data_dt(self):
+        """
+        Return a composite data type for the GMFs
+        """
+        return numpy.dtype(
+            [('rlzi', U16), ('sid', U32),
+             ('eid', U64), ('gmv', (F32, (len(self.imtls),)))])
 
     def no_imls(self):
         """
