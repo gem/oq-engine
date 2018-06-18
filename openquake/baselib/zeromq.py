@@ -151,6 +151,5 @@ class Socket(object):
             return self.zsocket.recv_pyobj()
 
     def __repr__(self):
-        end_point = getattr(self, self.end_point)
-        return '<%s %s %s %s>' % (self.__class__.__name__, end_point,
-                                  SOCKTYPE[self.socket_type], self.mode)
+        return '<%s %s %s>' % (self.__class__.__name__,
+                               SOCKTYPE[self.socket_type], self.mode)
