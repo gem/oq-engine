@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added to the classical calculator a Magnitude Frequency Distribution output
+
   [Daniele Viganò]
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file

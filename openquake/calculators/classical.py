@@ -152,9 +152,8 @@ class PSHACalculator(base.HazardCalculator):
                 for grp_id, mfd in sorted(acc.eff_ruptures.items())
                 for mag, freq in sorted(mfd.items())]
         self.datastore['mag_freq'] = arr = numpy.array(data, mag_freq_dt)
-        num_ruptures = arr['num_ruptures'].sum()
-        if num_ruptures > 1E7:
-            logging.warn('There are %.1f millions of ruptures', num_ruptures)
+        num_ruptures = '{:,d}'.format(arr['num_ruptures'].sum())
+        logging.warn('There are %s effective ruptures', num_ruptures)
         return acc
 
     def gen_args(self, monitor):
