@@ -141,8 +141,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if 'avg_losses-stats' in dstore or (
             'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
+    if 'curves-rlzs' in dstore:
+        dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore:
-        logs.LOG.warn('loss curves are exportable with oq export')
+        dskeys.add('loss_curves-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
