@@ -591,8 +591,8 @@ class HazardCalculator(BaseCalculator):
         :param src_group_id: the source group ID
         """
         er = result_dict.eff_ruptures.get(src_group_id, 0)
-        if hasattr(er, 'values'):  # is a dict
-            return er['counts']
+        if hasattr(er, 'values'):  # is a dict, possibly empty
+            return er.get('counts', 0)
         return er  # else assume an int
 
     def store_source_info(self, infos, acc):
