@@ -911,5 +911,5 @@ def export_mag_freq(ekey, dstore):
         dic[row['mag']] += row['num_ruptures']
     data = sorted(dic.items())
     path = dstore.export_path('mag_freq.csv')
-    writers.write_csv(path, data, fmt='%s', header=['mag', 'freq'])
+    writers.write_csv(path, data, header=['mag', 'freq'])
     return [path]
