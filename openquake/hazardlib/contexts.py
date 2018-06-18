@@ -201,7 +201,8 @@ class ContextMaker(object):
                     sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
-            eff_ruptures[rup.mag] += 1
+            eff_ruptures[rup.mag] += rup.occurrence_rate
+            eff_ruptures['counts'] += 1
             with self.poe_mon:
                 pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
                 for sid, pne in zip(sctx.sids, pnes):

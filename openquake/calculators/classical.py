@@ -255,7 +255,8 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 for rup in src.iter_ruptures():
-                    acc.eff_ruptures[grp_id] += {rup.mag: 1}
+                    acc.eff_ruptures[grp_id] += {rup.mag: rup.occurrence_rate,
+                                                 'counts': 1}
                 dt = time.time() - t0
                 acc.calc_times[src_id] += numpy.array(
                     [src.weight, len(sites), dt, 1])

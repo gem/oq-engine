@@ -592,7 +592,7 @@ class HazardCalculator(BaseCalculator):
         """
         er = result_dict.eff_ruptures.get(src_group_id, {})
         if hasattr(er, 'values'):  # is a dict
-            return sum(er.values())
+            return er.pop('counts', 0)
         return er  # else assume an int
 
     def store_source_info(self, infos, acc):
