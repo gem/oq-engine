@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made the loss curves and maps outputs from an event based risk calculation
+    visible to the engine and the WebUI (only the stats)
   * Added a check on duplicated branchIDs in GMPE logic trees
 
   [Daniele Viganò]
