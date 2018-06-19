@@ -65,7 +65,7 @@ class PmapGetter(object):
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
-            self.dstore.open()  # if not
+            self.dstore.open('r')  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
         self.imtls = self.dstore['oqparam'].imtls
@@ -208,7 +208,7 @@ class GmfDataGetter(collections.Mapping):
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
-        self.dstore.open()  # if not already open
+        self.dstore.open('r')  # if not already open
         self.eids = self.dstore['events']['eid']
         self.eids.sort()
         self.data = collections.OrderedDict()
@@ -447,7 +447,7 @@ class RuptureGetter(object):
         return getters
 
     def __iter__(self):
-        self.dstore.open()  # if needed
+        self.dstore.open('r')  # if needed
         attrs = self.dstore.get_attrs('ruptures')
         code2cls = {}  # code -> rupture_cls, surface_cls
         for key, val in attrs.items():
