@@ -98,7 +98,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Set the random seed passed to the SourceManager and the
         minimum_intensity dictionary.
         """
-        oq = self.oqparam
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
