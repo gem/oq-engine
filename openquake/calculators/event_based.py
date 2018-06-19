@@ -515,7 +515,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     self.datastore['hcurves/' + kind] = pmap
         if self.datastore.parent:
-            self.datastore.parent.open()
+            self.datastore.parent.open('r')
         if 'gmf_data' in self.datastore:
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
