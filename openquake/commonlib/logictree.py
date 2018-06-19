@@ -108,6 +108,7 @@ class LtSourceModel(object):
             self.__class__.__name__, self.ordinal, self.names,
             '_'.join(self.path), self.weight, samples)
 
+
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
 Realization.__str__ = lambda self: (
@@ -1306,10 +1307,12 @@ class GsimLogicTree(object):
                 effective = (self.tectonic_region_types == ['*'] or
                              trt in self.tectonic_region_types)
                 weights = []
+                branch_ids = []
                 for branch in branchset:
                     weight = Decimal(branch.uncertaintyWeight.text)
                     weights.append(weight)
                     branch_id = branch['branchID']
+                    branch_ids.append(branch_id)
                     uncertainty = branch.uncertaintyModel
                     if hasattr(uncertainty.text, 'strip'):  # a string
                         gsim_name = uncertainty.text.strip()
@@ -1335,6 +1338,9 @@ class GsimLogicTree(object):
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
                 assert sum(weights) == 1, weights
+                if len(branch_ids) > len(set(branch_ids)):
+                    raise InvalidLogicTree(
+                        'There where duplicated branchIDs in %s' % self.fname)
         if len(trts) > len(set(trts)):
             raise InvalidLogicTree(
                 '%s: Found duplicated applyToTectonicRegionType=%s' %
