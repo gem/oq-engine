@@ -387,7 +387,7 @@ class HazardCalculator(BaseCalculator):
         self.save_params(**params)
         return parent
 
-    def read_inputs(self):
+    def read_inputs(self, split_sources=True):
         """
         Read risk data and sources if any
         """
@@ -399,8 +399,9 @@ class HazardCalculator(BaseCalculator):
                 if oq.disagg_by_src:
                     self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
+                if split_sources:
+                    logging.info('Splitting sources')
+                    self.csm.split_all(oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
