@@ -22,10 +22,10 @@ from openquake.calculators import base
 
 
 @sap.Script
-def check(job_ini_or_zip):
+def check_input(job_ini_or_zip):
     logging.basicConfig(level=logging.INFO)
     calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
     calc.read_inputs(split_sources=False)
 
 
-check.arg('job_ini_or_zip', 'Check the input files')
+check_input.arg('job_ini_or_zip', 'Check the input files')
