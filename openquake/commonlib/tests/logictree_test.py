@@ -2135,6 +2135,37 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             xml, logictree.InvalidLogicTree,
             "<StringIO>: Duplicated branchSetID bs1")
 
+    def test_branch_id_not_unique(self):
+        xml = _make_nrml("""
+<logicTree logicTreeID="lt1">
+    <logicTreeBranchingLevel branchingLevelID="bl4">
+        <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="GrpD"
+                            applyToTectonicRegionType="Subduction Interface">
+
+            <logicTreeBranch branchID="GrpD_Gmpe1">
+                <uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
+                <uncertaintyWeight>0.334</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="GrpD_Gmpe2">
+                <uncertaintyModel>McVerry2006SInter</uncertaintyModel>
+                <uncertaintyWeight>0.333</uncertaintyWeight>
+            </logicTreeBranch>
+
+            <logicTreeBranch branchID="GrpD_Gmpe2">
+                <uncertaintyModel>ZhaoEtAl2016SInter</uncertaintyModel>
+                <uncertaintyWeight>0.333</uncertaintyWeight>
+            </logicTreeBranch>
+
+        </logicTreeBranchSet>
+    </logicTreeBranchingLevel>
+</logicTree>
+        """)
+        self.parse_invalid(
+            xml, logictree.InvalidLogicTree,
+            "There where duplicated branchIDs in <StringIO>")
+
     def test_invalid_gsim(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
