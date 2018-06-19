@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added a check on duplicated branchIDs in GMPE logic trees
+
   [Daniele Viganò]
   * Changed the openquake.cfg file and added a dbserver.listen parameter
   * Added the hostname in the WebUI page. It can be customize by the user
