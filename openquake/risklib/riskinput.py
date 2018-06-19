@@ -228,8 +228,8 @@ class CompositeRiskModel(collections.Mapping):
         for sid, assets in zip(sids, riskinput.assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter
-                dic[taxonomy].append((sid, group[taxonomy], epsgetter))
+                dic[taxonomy].append(
+                    (sid, group[taxonomy], riskinput.epsilon_getter))
         yield from self._gen_outputs(hazard_getter, dic)
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk

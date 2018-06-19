@@ -165,22 +165,21 @@ class DataStore(collections.MutableMapping):
         else:  # use the given datastore
             self.calc_id = calc_id
         self.params = params
-        self.mode = mode
         self.parent = ()  # can be set later
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.hdf5path = self.calc_dir + '.hdf5'
-        if mode == 'r' and not os.path.exists(self.hdf5path):
+        self.mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
+        if self.mode == 'r' and not os.path.exists(self.hdf5path):
             raise IOError('File not found: %s' % self.hdf5path)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
-        self.open()
+        self.open(self.mode)
 
-    def open(self):
+    def open(self, mode):
         """
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
             self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
 
     @property
@@ -402,7 +401,7 @@ class DataStore(collections.MutableMapping):
             val = self.hdf5[key]
         except KeyError:
             if self.parent != ():
-                self.parent.open()
+                self.parent.open('r')
                 try:
                     val = self.parent[key]
                 except KeyError:
@@ -430,7 +429,7 @@ class DataStore(collections.MutableMapping):
     def __enter__(self):
         self.was_close = self.hdf5 == ()
         if self.was_close:
-            self.open()
+            self.open(self.mode)
         return self
 
     def __exit__(self, etype, exc, tb):
