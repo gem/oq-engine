@@ -184,7 +184,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['oqparam'] = oq
             self.param = ebcalc.param
             self.sitecol = ebcalc.sitecol
-            self.assetcol = ebcalc.datastore['assetcol']
+            self.assetcol = ebcalc.precalc.assetcol
             self.riskmodel = ebcalc.riskmodel
 
         self.L = len(self.riskmodel.lti)
@@ -194,13 +194,19 @@ class EbrCalculator(base.RiskCalculator):
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
             self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
-            if oq.return_periods != [0]:
-                # setting return_periods = 0 disable loss curves and maps
-                self.param['builder'] = get_loss_builder(
-                    parent, oq.return_periods, oq.loss_dt())
             self.eids = sorted(parent['events']['eid'])
         else:
             self.eids = sorted(self.datastore['events']['eid'])
+        if oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves and maps
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warn('eff_time=%s is too small to compute loss curves',
+                             eff_time)
+            else:
+                self.param['builder'] = get_loss_builder(
+                    parent if parent else self.datastore,
+                    oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
@@ -227,9 +233,8 @@ class EbrCalculator(base.RiskCalculator):
     def build_datasets(self, builder):
         oq = self.oqparam
         R = len(builder.weights)
-        assetcol = self.datastore['assetcol']
         stats = oq.risk_stats()
-        A = len(assetcol)
+        A = self.A
         S = len(stats)
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
@@ -335,21 +340,21 @@ class EbrCalculator(base.RiskCalculator):
 
     def postproc(self):
         """
-        Build aggregate loss curves
+        Build aggregate loss curves in process
         """
         dstore = self.datastore
         self.before_export()  # set 'realizations'
         oq = self.oqparam
-        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-        if eff_time < 2:
-            logging.warn('eff_time=%s is too small to compute agg_curves',
-                         eff_time)
-            return
         stats = oq. risk_stats()
         # store avg_losses-stats
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        b = get_loss_builder(self.datastore)
+        try:
+            b = self.param['builder']
+        except KeyError:  # don't build auxiliary tables
+            return
+        if dstore.parent:
+            dstore.parent.open('r')  # to read the ruptures
         if 'ruptures' in dstore:
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
