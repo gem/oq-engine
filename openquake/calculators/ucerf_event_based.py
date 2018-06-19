@@ -33,6 +33,7 @@ from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
 from openquake.calculators.event_based_risk import EbrCalculator
+from openquake.calculators.export.loss_curves import get_loss_builder
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -474,4 +475,5 @@ class UCERFRiskCalculator(EbrCalculator):
             agglt = self.datastore['losses_by_event']
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
+        self.param = dict(builder=get_loss_builder(self.datastore))
         self.postproc()
