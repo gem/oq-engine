@@ -262,22 +262,14 @@ def export_agg_losses_ebr(ekey, dstore):
 
 
 # this is used by classical_risk and event_based_risk
-@export.add(('loss_curves', 'csv'))
+@export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
+            ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
-    if '/' not in ekey[0]:  # full loss curves are not exportable
-        logging.error('Use the command oq export loss_curves/rlz-0 to export '
-                      'the first realization')
-        return []
-    what = ekey[0].split('/', 1)[1]
-    return loss_curves.LossCurveExporter(dstore).export('csv', what)
-
-
-# this is used by classical_risk and event_based_risk
-@export.add(('loss_curves-stats', 'csv'))
-def export_loss_curves_stats(ekey, dstore):
-    num_rlzs = dstore['csm_info'].get_num_rlzs()
-    kind = 'stats' if num_rlzs > 1 else 'rlzs'
-    return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
+    if '/' in ekey[0]:
+        kind = ekey[0].split('/', 1)[1]
+    else:
+        kind = ekey[0].split('-', 1)[1]  # rlzs or stats
+    return loss_curves.LossCurveExporter(dstore).export('csv', kind)
 
 
 # used by classical_risk and event_based_risk
