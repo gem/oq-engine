@@ -57,7 +57,7 @@ The code name for version 3.1 is **Lehmann**, in memory of [Inge Lehmann](https:
 #### Linux
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/rhel.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/rhel.md)
 * [Installing on other flavors](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/cluster.md)
