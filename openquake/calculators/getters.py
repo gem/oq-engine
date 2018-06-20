@@ -258,18 +258,31 @@ class GmfGetter(object):
         self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
-        self.imtls = oqparam.imtls
+        self.oqparam = oqparam
         self.min_iml = min_iml
+        self.N = len(self.sitecol.complete)
+        self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
+        self.I = len(oqparam.imtls)
+        self.gmv_dt = numpy.dtype(
+            [('sid', U32), ('eid', U64), ('gmv', (F32, (self.I,)))])
+        self.gmv_eid_dt = numpy.dtype(
+            [('gmv', (F32, (self.I,))), ('eid', U64)])
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
             oqparam.filter_distance)
-        self.truncation_level = oqparam.truncation_level
-        self.correlation_model = oqparam.correl_model
-        self.filter_distance = oqparam.filter_distance
+        self.correl_model = oqparam.correl_model
         self.samples = samples
+
+    @property
+    def sids(self):
+        return self.sitecol.sids
+
+    @property
+    def imtls(self):
+        return self.oqparam.imtls
 
     def init(self):
         """
@@ -277,20 +290,13 @@ class GmfGetter(object):
         """
         if hasattr(self, 'eids'):  # init already called
             return
-        self.N = len(self.sitecol.complete)
-        self.I = I = len(self.imtls)
-        self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
-        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
-        self.sids = self.sitecol.sids
         self.computers = []
         eids = []
         for ebr in self.ebruptures:
             try:
                 computer = calc.gmf.GmfComputer(
-                    ebr, self.sitecol, self.imtls, self.cmaker,
-                    self.truncation_level, self.correlation_model)
+                    ebr, self.sitecol, self.oqparam.imtls, self.cmaker,
+                    self.oqparam.truncation_level, self.correl_model)
             except FarAwayRupture:
                 # due to numeric errors ruptures within the maximum_distance
                 # when written can be outside when read; I found a case with
@@ -300,7 +306,7 @@ class GmfGetter(object):
             eids.append(ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
