@@ -159,7 +159,14 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
                    oq.description + ' [parent]', owner, status,
                    oq.hazard_calculation_id, dstore.datadir)
-    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
+    keysize = []
+    for key in sorted(dskeys & exportable):
+        try:
+            size_mb = dstore.get_attr(key, 'nbytes') / 1024 ** 2
+        except KeyError:
+            size_mb = None
+        keysize.append((key, size_mb))
+    logs.dbcmd('create_outputs', dstore.calc_id, keysize)
 
 
 class MasterKilled(KeyboardInterrupt):
