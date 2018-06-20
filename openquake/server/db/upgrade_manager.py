@@ -96,7 +96,7 @@ def check_script(upgrade, conn, dry_run=True, debug=True):
     conn = WrappedConnection(conn, debug=debug)
     try:
         upgrade(conn)
-    except:
+    except Exception:
         conn.rollback()
         raise
     else:
@@ -118,7 +118,7 @@ def apply_sql_script(conn, fname):
         # we cannot use conn.executescript which is non transactional
         for query in sql.split('\n\n'):
             conn.execute(query)
-    except:
+    except Exception:
         logging.error('Error executing %s' % fname)
         raise
 
