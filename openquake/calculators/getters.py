@@ -201,7 +201,7 @@ class GmfDataGetter(collections.Mapping):
     def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
         self.dstore = dstore
         self.sids = sids
-        self.num_rlzs = num_rlzs
+        self.R = num_rlzs
         self.E = num_events
         self.imtls = imtls
 
@@ -215,7 +215,7 @@ class GmfDataGetter(collections.Mapping):
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
-                self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
+                self.data[sid] = {rlzi: 0 for rlzi in range(self.R)}
         # dictionary eid -> index
         if self.eids is not None:
             self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
@@ -255,7 +255,6 @@ class GmfGetter(object):
                  min_iml, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
         self.oqparam = oqparam
