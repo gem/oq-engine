@@ -775,7 +775,7 @@ class Exposure(object):
         expected_header = self._csv_header()
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
         for fname in fnames:
-            with open(fname) as f:
+            with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
                 if len(header) < len(fields):
@@ -788,7 +788,7 @@ class Exposure(object):
                         (fname, sorted(expected_header), sorted(header)))
         occupancy_periods = self.occupancy_periods.split()
         for fname in fnames:
-            with open(fname) as f:
+            with open(fname, encoding='utf-8') as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):

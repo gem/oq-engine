@@ -180,6 +180,11 @@ if OQ_DISTRIBUTE == 'futures':  # legacy name
 if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
+# data type for storing the performance information
+task_data_dt = numpy.dtype(
+    [('taskno', numpy.uint32), ('weight', numpy.float32),
+     ('duration', numpy.float32), ('received', numpy.int64)])
+
 
 def oq_distribute(task=None):
     """
@@ -376,10 +381,10 @@ class IterResult(object):
         the name of the task
     :param num_tasks:
         the total number of expected tasks
-    :param progress:
-        a logging function for the progress report
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
+    :param progress:
+        a logging function for the progress report
     """
     def __init__(self, iresults, taskname, argnames, num_tasks, sent,
                  progress=logging.info):
@@ -395,9 +400,6 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        self.task_data_dt = numpy.dtype(
-            [('taskno', numpy.uint32), ('weight', numpy.float32),
-             ('duration', numpy.float32), ('received', numpy.int64)])
         self.progress('Sent %s of data in %s task(s)',
                       humansize(sent.sum()), num_tasks)
 
@@ -444,7 +446,7 @@ class IterResult(object):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
-            data = numpy.array([tup], self.task_data_dt)
+            data = numpy.array([tup], task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
                          argnames=self.argnames, sent=self.sent)
         mon.flush()
@@ -511,6 +513,8 @@ class Starmap(object):
             cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
+        elif distribute == 'no' and hasattr(cls, 'pool'):
+            cls.shutdown()
 
     @classmethod
     def shutdown(cls, poolsize=None):
@@ -518,7 +522,7 @@ class Starmap(object):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
-            delattr(cls, 'pool')
+            del cls.pool
 
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,

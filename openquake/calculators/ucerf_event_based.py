@@ -33,6 +33,7 @@ from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
 from openquake.calculators.event_based_risk import EbrCalculator
+from openquake.calculators.export.loss_curves import get_loss_builder
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -283,15 +284,15 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
 
-    def gen_args(self, csm, monitor):
+    def gen_args(self, monitor):
         """
         Generate a task for each branch
         """
         oq = self.oqparam
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
-        for sm_id in range(len(csm.source_models)):
-            ssm = csm.get_model(sm_id)
+        for sm_id in range(len(self.csm.source_models)):
+            ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
@@ -474,4 +475,5 @@ class UCERFRiskCalculator(EbrCalculator):
             agglt = self.datastore['losses_by_event']
             agglt.attrs['nonzero_fraction'] = len(agglt) / E
 
+        self.param = dict(builder=get_loss_builder(self.datastore))
         self.postproc()
