@@ -778,6 +778,7 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
+        new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
         return new
 
     def get_weight(self, weight):
@@ -883,11 +884,12 @@ class CompositeSourceModel(collections.Sequence):
                          tot, n)
         return dic
 
-    def get_num_sources(self):
+    def get_num_ruptures(self):
         """
-        :returns: the total number of sources in the model
+        :returns: the number of ruptures per source group ID
         """
-        return sum(len(src_group) for src_group in self.src_groups)
+        return {grp.id: sum(src.num_ruptures for src in grp)
+                for grp in self.src_groups}
 
     def init_serials(self):
         """
