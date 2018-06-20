@@ -66,7 +66,7 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     E = len(eids)
     assert not param['insured_losses']
     L = len(riskmodel.lti)
-    R = riskinput.hazard_getter.R
+    R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L))])
     agg = numpy.zeros((E, R, L), F32)
     avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
