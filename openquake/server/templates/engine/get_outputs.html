@@ -40,7 +40,7 @@
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
               <tr>
-                <td><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
+                <td><a href="/v1/calc/{{ calc_id }}/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm" <% if (output.get('size_mb')) { %>title="Size: <%= (Math.round(output.get('size_mb') * 100) / 100).toFixed(2) %>MB"<% } %>>Download <%= outtype %></a></td>
               </tr>
             <% }); %>
             </table>
