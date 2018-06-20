@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -18,7 +19,9 @@
 import os
 import time
 import logging
-from openquake.baselib import sap, general, parallel, datastore
+import functools
+from multiprocessing.dummy import Pool
+from openquake.baselib import sap, general, datastore
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, logs
 from openquake.commands import engine
@@ -30,17 +33,12 @@ def run_tiles(num_tiles, job_ini, poolsize=0):
     Run a hazard calculation by splitting the sites into tiles.
     WARNING: this is experimental and meant only for internal users
     """
+    logging.basicConfig(level=logging.INFO)
     t0 = time.time()
     oq = readinput.get_oqparam(job_ini)
     num_sites = len(readinput.get_mesh(oq))
     task_args = [(job_ini, slc)
                  for slc in general.split_in_slices(num_sites, num_tiles)]
-    if poolsize == 0:  # no pool
-        Starmap = parallel.Sequential
-    elif os.environ.get('OQ_DISTRIBUTE') == 'celery':
-        Starmap = parallel.Processmap  # celery plays only with processes
-    else:  # multiprocessing plays only with threads
-        Starmap = parallel.Threadmap
     parent_child = [None, None]
 
     def agg(calc_ids, calc_id):
@@ -51,11 +49,14 @@ def run_tiles(num_tiles, job_ini, poolsize=0):
         logging.warn('Finished calculation %d of %d',
                      len(calc_ids) + 1, num_tiles)
         return calc_ids + [calc_id]
-    calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
+    pool = Pool(poolsize)
+    calc_ids = functools.reduce(
+        agg, pool.starmap(engine.run_tile, task_args), [])
     datadir = datastore.get_datadir()
     for calc_id in calc_ids:
         print(os.path.join(datadir, 'calc_%d.hdf5' % calc_id))
     print('Total calculation time: %.1f h' % ((time.time() - t0) / 3600.))
+
 
 run_tiles.arg('num_tiles', 'number of tiles to generate',
               type=valid.positiveint)
@@ -63,3 +64,7 @@ run_tiles.arg('job_ini', 'calculation configuration file '
               '(or files, comma-separated)')
 run_tiles.opt('poolsize', 'size of the pool (default 0, no pool)',
               type=valid.positiveint)
+
+
+if __name__ == '__main__':
+    run_tiles.callfunc()
