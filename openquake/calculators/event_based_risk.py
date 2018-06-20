@@ -76,7 +76,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
-    R = riskinput.hazard_getter.num_rlzs
+    R = riskinput.hazard_getter.R
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     ass = []
     agg = numpy.zeros((E, R, L * I), F32)
