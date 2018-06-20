@@ -152,12 +152,37 @@ Parameters: None
 
 Response:
 
-    [{"url": "http://localhost:8800/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
-
-
+  [{'id': 27,
+    'name': 'Full Report',
+    'outtypes': ['rst'],
+    'size_mb': None,
+    'type': 'fullreport',
+    'url': 'http://127.0.0.1:8800/v1/calc/result/27'},
+   {'id': 28,
+    'name': 'Ground Motion Fields',
+    'outtypes': ['xml', 'csv', 'npz'],
+    'size_mb': 0.00884246826171875,
+    'type': 'gmf_data',
+    'url': 'http://127.0.0.1:8800/v1/calc/result/28'},
+   {'id': 29,
+    'name': 'Hazard Curves',
+    'outtypes': ['csv', 'xml', 'npz'],
+    'size_mb': 0.027740478515625,
+    'type': 'hcurves',
+    'url': 'http://127.0.0.1:8800/v1/calc/result/29'},
+   {'id': 30,
+    'name': 'Earthquake Ruptures',
+    'outtypes': ['xml', 'csv'],
+    'size_mb': 0.008056640625,
+    'type': 'ruptures',
+    'url': 'http://127.0.0.1:8800/v1/calc/result/30'},
+   {'id': 31,
+    'name': 'Seismic Source Groups',
+    'outtypes': ['csv'],
+    'size_mb': None,
+    'type': 'sourcegroups',
+    'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
+  
 #### GET /v1/calc/result/:result_id
 
 Get the full content of a calculation result for the given `result_id`.
