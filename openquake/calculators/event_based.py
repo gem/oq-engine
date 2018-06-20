@@ -410,8 +410,7 @@ class EventBasedCalculator(base.HazardCalculator):
         except AttributeError:  # no csm
             csm_info = self.datastore['csm_info']
         samples_by_grp = csm_info.get_samples_by_grp()
-        rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                        for grp_id in samples_by_grp}
+        rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
         if self.precalc:
             num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
             block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
