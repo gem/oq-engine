@@ -290,18 +290,17 @@ def set_random_years(dstore, name, investigation_time):
 # ######################## GMF calculator ############################ #
 
 
-def compute_gmfs_and_curves(getters, oq, monitor):
+def compute_gmfs_and_curves(getters, monitor):
     """
     :param getters:
         a list of GmfGetter instances
-    :param oq:
-        an OqParam instance
     :param monitor:
         a Monitor instance
     :returns:
         a list of dictionaries with keys gmfcoll and hcurves
     """
     results = []
+    oq = getters[0].oqparam
     dt = oq.gmf_data_dt()
     for getter in getters:
         with monitor('GmfGetter.init', measuremem=True):
@@ -319,7 +318,7 @@ def compute_gmfs_and_curves(getters, oq, monitor):
                         continue
                     with hc_mon:
                         gmvs = array['gmv']
-                        for imti, imt in enumerate(getter.imtls):
+                        for imti, imt in enumerate(oq.imtls):
                             poes = calc._gmvs_to_haz_curve(
                                 gmvs[:, imti], oq.imtls[imt],
                                 oq.investigation_time, duration)
@@ -421,7 +420,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, sitecol,
                         oq, min_iml, samples_by_grp[grp_id])
-                    yield [getter], oq, monitor
+                    yield [getter], monitor
             return
         U = len(self.datastore['ruptures'])
         logging.info('Found %d ruptures', U)
@@ -438,7 +437,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
                     oq, min_iml, samples_by_grp[grp_id])
                 getters.append(getter)
-            yield getters, oq, monitor
+            yield getters, monitor
 
     def execute(self):
         """
