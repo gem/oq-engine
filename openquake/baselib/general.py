@@ -369,7 +369,10 @@ def removetmp():
     """
     for path in _tmp_paths:
         if os.path.exists(path):  # not removed yet
-            os.remove(path)
+            try:
+                os.remove(path)
+            except PermissionError:
+                pass
 
 
 def git_suffix(fname):

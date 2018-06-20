@@ -112,8 +112,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             super().pre_execute()
             if 'poes' not in self.datastore:  # when building short report
                 return
-        rlzs = self.datastore['csm_info'].rlzs
-        self.param = dict(stats=oq.risk_stats(), weights=rlzs['weight'])
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        self.param = dict(stats=oq.risk_stats(), weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)

@@ -1,4 +1,12 @@
+  [Michele Simionato]
+  * Added a command `oq check_input job.ini` to check the input files
+  * Made the loss curves and maps outputs from an event based risk calculation
+    visible to the engine and the WebUI (only the stats)
+  * Added a check on duplicated branchIDs in GMPE logic trees
+
   [Daniele Viganò]
+  * Fixed a bug when reading exposure with utf8 names on systems with non-utf8
+    terminals (Windows)
   * Changed the openquake.cfg file and added a dbserver.listen parameter
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file
