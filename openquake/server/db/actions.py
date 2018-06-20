@@ -297,7 +297,7 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, dskeys):
+def create_outputs(db, job_id, keysize):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -306,8 +306,9 @@ def create_outputs(db, job_id, dskeys):
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    rows = [(job_id, DISPLAY_NAME.get(key, key), key) for key in dskeys]
-    db.insert('output', 'oq_job_id display_name ds_key'.split(), rows)
+    rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
+            for key, size in keysize]
+    db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
 def finish(db, job_id, status):
