@@ -461,8 +461,8 @@ class CompositionInfo(object):
         """
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
-        rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        return {grp.id: rlzs_assoc.get_rlzs_by_gsim(grp.id)
+        self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
+        return {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
                 for sm in self.source_models for grp in sm.src_groups}
 
     def __getnewargs__(self):
