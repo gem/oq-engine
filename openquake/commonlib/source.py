@@ -454,8 +454,16 @@ class CompositionInfo(object):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {sg.id: sm.samples for sm in self.source_models
-                for sg in sm.src_groups}
+        return {grp.id: sm.samples for sm in self.source_models
+                for grp in sm.src_groups}
+
+    def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
+        """
+        :returns: a dictionary src_group_id -> gsim -> rlzs
+        """
+        rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
+        return {grp.id: rlzs_assoc.get_rlzs_by_gsim(grp.id)
+                for sm in self.source_models for grp in sm.src_groups}
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -969,7 +977,7 @@ def collect_source_model_paths(smlt):
     n = nrml.read(smlt)
     try:
         blevels = n.logicTree
-    except:
+    except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
     for blevel in blevels:
