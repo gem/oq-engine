@@ -25,9 +25,10 @@ import operator
 import numpy
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib import nrml, sourceconverter, pmf
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
+EPS = pmf.EPS
 
 
 def build_area_source_geometry(area_source):
@@ -435,7 +436,7 @@ def build_rupture_node(rupt, probs_occur):
     :param probs_occur: a list of floats with sum 1
     """
     s = sum(probs_occur)
-    if abs(s - 1) > 1E-12:
+    if abs(s - 1) > EPS:
         raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
