@@ -28,7 +28,6 @@ from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
-PRECISION = pmf.PRECISION
 
 
 def build_area_source_geometry(area_source):
@@ -423,8 +422,8 @@ def build_characteristic_fault_source_node(source):
 @obj_to_node.add('NonParametricSeismicSource')
 def build_nonparametric_source_node(source):
     rup_nodes = []
-    for rup, pmf in source.data:
-        probs = [prob for (prob, no) in pmf.data]
+    for rup, p in source.data:
+        probs = [prob for (prob, no) in p.data]
         rup_nodes.append(build_rupture_node(rup, probs))
     return Node('nonParametricSeismicSource',
                 get_source_attributes(source), nodes=rup_nodes)
@@ -436,7 +435,7 @@ def build_rupture_node(rupt, probs_occur):
     :param probs_occur: a list of floats with sum 1
     """
     s = sum(probs_occur)
-    if abs(s - 1) > PRECISION:
+    if abs(s - 1) > pmf.PRECISION:
         raise ValueError('The sum of %s is not 1: %s' % (probs_occur, s))
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
