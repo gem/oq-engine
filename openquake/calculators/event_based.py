@@ -552,17 +552,25 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_hazard(sources, src_filter, gsims, param, monitor):
-    grp_id = sources[0].src_group_id
-    dic = sample_ruptures(sources, src_filter, gsims, param, monitor)
+def compute_hazard(sources_or_ruptures, src_filter, gsims, param, monitor):
+    """
+    Compute events, ruptures, gmfs and hazard curves
+    """
     res = AccumDict()
-    res.num_events = dic['num_events']
-    res.calc_times = dic['calc_times']
-    res.eff_ruptures = {grp_id: dic['num_ruptures']}
-    res.ruptures = {grp_id: dic['eb_ruptures']}
+    if isinstance(sources_or_ruptures, RuptureGetter):
+        grp_id = sources_or_ruptures.src_group_id
+        res.ruptures = {grp_id: sources_or_ruptures}
+    else:
+        grp_id = sources_or_ruptures[0].src_group_id
+        dic = sample_ruptures(
+            sources_or_ruptures, src_filter, gsims, param, monitor)
+        res.num_events = dic['num_events']
+        res.calc_times = dic['calc_times']
+        res.eff_ruptures = {grp_id: dic['num_ruptures']}
+        res.ruptures = {grp_id: dic['eb_ruptures']}
     getter = GmfGetter(
-        param['rlzs_by_gsim'], dic['eb_ruptures'], src_filter.sitecol,
-        param['oqparam'], param['min_iml'], sources.samples)
+        param['rlzs_by_gsim'], res.ruptures[grp_id], src_filter.sitecol,
+        param['oqparam'], param['min_iml'], sources_or_ruptures.samples)
     res.gmfs_curves = compute_gmfs_and_curves([getter], monitor)
     return res
 
