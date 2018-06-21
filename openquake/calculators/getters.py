@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
+import itertools
 import operator
 import logging
 import numpy
@@ -26,6 +27,8 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.risklib.riskinput import rsi2str
+from openquake.commonlib.calc import _gmvs_to_haz_curve
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -369,6 +372,47 @@ class GmfGetter(object):
             for rlzi in haz:
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
+
+    def compute_gmfs_curves(self, monitor):
+        """
+        :returns: a dict with keys gmdata, gmfdata, indices, hcurves
+        """
+        oq = self.oqparam
+        dt = oq.gmf_data_dt()
+        with monitor('GmfGetter.init', measuremem=True):
+            self.init()
+        hcurves = {}  # key -> poes
+        if oq.hazard_curves_from_gmfs:
+            hc_mon = monitor('building hazard curves', measuremem=False)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(self.gen_gmv(), dt)
+                hazard = self.get_hazard(data=gmfdata)
+            for sid, hazardr in zip(self.sids, hazard):
+                for rlzi, array in hazardr.items():
+                    if len(array) == 0:  # no data
+                        continue
+                    with hc_mon:
+                        gmvs = array['gmv']
+                        for imti, imt in enumerate(oq.imtls):
+                            poes = _gmvs_to_haz_curve(
+                                gmvs[:, imti], oq.imtls[imt],
+                                oq.investigation_time, duration)
+                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+        else:  # fast lane
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(self.gen_gmv(), dt)
+        indices = []
+        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        start = stop = 0
+        for sid, rows in itertools.groupby(gmfdata['sid']):
+            for row in rows:
+                stop += 1
+            indices.append((sid, start, stop))
+            start = stop
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=self.gmdata,
+                   indices=numpy.array(indices, (U32, 3)))
+        return res
 
 
 def get_ruptures_by_grp(dstore, slice_=slice(None)):
