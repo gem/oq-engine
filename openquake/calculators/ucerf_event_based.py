@@ -203,11 +203,11 @@ def sample_background_model(
 
 
 @util.reader
-def compute_ruptures(sources, src_filter, gsims, param, monitor):
+def compute_ruptures(sources, src_filter, rlzs_by_gsim, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param src_filter: a SourceFilter instance
-    :param gsims: a list of GSIMs
+    :param rlzs_by_gsim: a dictionary gsim -> rlzs
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
@@ -222,7 +222,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
@@ -246,11 +246,15 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         ebruptures.append(EBRupture(rup, indices, evs))
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
-    res[src.src_group_id] = ebruptures
+    res.ruptures = {src.src_group_id: ebruptures}
     if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
+    getter = getters.GmfGetter(
+        rlzs_by_gsim, ebruptures, sitecol,
+        param['oqparam'], param['min_iml'], param['samples'])
+    res.gmfs_curves = getter.compute_gmfs_curves(monitor)
     return res
 
 
@@ -295,15 +299,17 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         # branch then `parallel.Starmap` will run the task in core
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
+            rlzs_by_gsim = ssm.info.get_rlzs_by_gsim_grp()[sm_id]
             [sm] = ssm.source_models
-            gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             save_ruptures=oq.save_ruptures,
-                             filter_distance=oq.filter_distance)
-                allargs.append((srcs, self.src_filter, gsims, param, monitor))
+                             oqparam=oq, save_ruptures=oq.save_ruptures,
+                             filter_distance=oq.filter_distance,
+                             min_iml=self.get_min_iml(oq))
+                allargs.append((srcs, self.src_filter, rlzs_by_gsim,
+                                param, monitor))
         return allargs
 
 
@@ -354,7 +360,7 @@ class UCERFRiskCalculator(EbrCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
-    pre_execute = UCERFHazardCalculator.__dict__['pre_execute']
+    pre_execute = UCERFHazardCalculator.pre_execute
 
     def gen_args(self):
         """
@@ -381,7 +387,7 @@ class UCERFRiskCalculator(EbrCalculator):
                              elt_dt=elt_dt,
                              min_iml=min_iml,
                              insured_losses=oq.insured_losses)
-                yield (ssm, self.csm.src_filter, oq, param,
+                yield (ssm, self.src_filter, oq, param,
                        self.riskmodel, monitor)
 
     def execute(self):
