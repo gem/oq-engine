@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
+from openquake.risklib.riskinput import str2rsi, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
@@ -300,42 +300,8 @@ def compute_gmfs_and_curves(getters, monitor):
         a list of dictionaries with keys gmfcoll and hcurves
     """
     results = []
-    oq = getters[0].oqparam
-    dt = oq.gmf_data_dt()
     for getter in getters:
-        with monitor('GmfGetter.init', measuremem=True):
-            getter.init()
-        hcurves = {}  # key -> poes
-        if oq.hazard_curves_from_gmfs:
-            hc_mon = monitor('building hazard curves', measuremem=False)
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
-                hazard = getter.get_hazard(data=gmfdata)
-            for sid, hazardr in zip(getter.sids, hazard):
-                for rlzi, array in hazardr.items():
-                    if len(array) == 0:  # no data
-                        continue
-                    with hc_mon:
-                        gmvs = array['gmv']
-                        for imti, imt in enumerate(oq.imtls):
-                            poes = calc._gmvs_to_haz_curve(
-                                gmvs[:, imti], oq.imtls[imt],
-                                oq.investigation_time, duration)
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes
-        else:  # fast lane
-            with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
-        indices = []
-        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
-        start = stop = 0
-        for sid, rows in itertools.groupby(gmfdata['sid']):
-            for row in rows:
-                stop += 1
-            indices.append((sid, start, stop))
-            start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   indices=numpy.array(indices, (U32, 3)))
+        res = getter.compute_gmfs_curves(monitor)
         if len(getter.gmdata):
             results.append(res)
     return results
