@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import unittest
 from decorator import decorator
 from nose.plugins.attrib import attr
 from openquake.baselib import config
@@ -61,7 +60,6 @@ class UcerfTestCase(CalculatorTestCase):
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
-        raise unittest.SkipTest
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
                       concurrent_tasks='0',  # avoid usual fork bug
