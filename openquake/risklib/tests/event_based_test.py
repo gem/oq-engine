@@ -22,7 +22,7 @@ import unittest
 from openquake.risklib import scientific
 
 
-PRECISIONILONS = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+EPSILONS = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
             -0.4336, 0.3426, 3.5784, 2.7694]
 
 
@@ -160,7 +160,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        ratios = vf(gmf, PRECISIONILONS)
+        ratios = vf(gmf, EPSILONS)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -179,7 +179,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([0., 0.4105595, 0.18002423, 0.17102685, 0.25077079,
                          0.03945861, 0.11454372, 0.28828653, 0., 0.48847448]),
-            vuln_function(gmfs, PRECISIONILONS), atol=0.0, rtol=0.01)
+            vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         # Sampling loss ratios (covs greater than zero), Ground Motion Fields
@@ -197,7 +197,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                          0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-            vuln_function(gmfs, PRECISIONILONS), atol=0.0, rtol=0.01)
+            vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         # Loss ratios generation given a GMFs and a vulnerability function
@@ -217,12 +217,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([0.0, 0.0, 0.0]),
             self.vulnerability_function1(
-                [0.0001, 0.0002, 0.0003], PRECISIONILONS[:3]))
+                [0.0001, 0.0002, 0.0003], EPSILONS[:3]))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([0.700, 0.700]),
-            self.vulnerability_function1([0.525, 0.530], PRECISIONILONS[:2]))
+            self.vulnerability_function1([0.525, 0.530], EPSILONS[:2]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         # Loss ratios generation given a GMFs and a vulnerability function
@@ -242,4 +242,4 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1(GMF[:10], PRECISIONILONS))
+            self.vulnerability_function1(GMF[:10], EPSILONS))

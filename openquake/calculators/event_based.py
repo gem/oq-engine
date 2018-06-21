@@ -35,7 +35,7 @@ from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
 from openquake.calculators.classical import (
-    ClassicalCalculator, saving_sources_by_task, weight)
+    ClassicalCalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -356,7 +356,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs_and_curves
     is_stochastic = True
 
-    def combine_pmaps_and_save_gmfs(self, acc, result):
+    def combine_pmaps_and_save_gmfs(self, acc, results):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; notice that the gmfs may come from
@@ -369,7 +369,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         hdf5path = self.datastore.hdf5path
-        for res in result:
+        for res in results:
             self.gmdata += res['gmdata']
             data = res['gmfdata']
             with sav_mon:
