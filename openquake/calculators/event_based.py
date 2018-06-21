@@ -537,7 +537,7 @@ def compute_hazard(sources_or_ruptures, src_filter, gsims, param, monitor):
     getter = GmfGetter(
         param['rlzs_by_gsim'], res.ruptures[grp_id], src_filter.sitecol,
         param['oqparam'], param['min_iml'], sources_or_ruptures.samples)
-    res.gmfs_curves = compute_gmfs_and_curves([getter], monitor)
+    res.gmfs_curves = getter.compute_gmfs_curves(monitor)
     return res
 
 
@@ -619,7 +619,8 @@ class EventBasedNewCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         hdf5path = self.datastore.hdf5path
-        for res in result.gmfs_curves:
+        res = result.gmfs_curves
+        if res:
             self.gmdata += res['gmdata']
             data = res['gmfdata']
             with sav_mon:
