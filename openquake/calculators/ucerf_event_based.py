@@ -42,8 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 
-save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
-    'save_ruptures']
+save_ruptures = event_based.EventBasedCalculator.save_ruptures
 
 
 def ucerf_risk(riskinput, riskmodel, param, monitor):
@@ -255,8 +254,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     return res
 
 
-@base.calculators.add('ucerf_rupture')
-class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
+@base.calculators.add('ucerf_hazard')
+class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -270,7 +269,6 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.csm = readinput.get_composite_source_model(oq)
-        self.csm.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
@@ -283,6 +281,10 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
+
+    def filter_csm(self):
+        return self.csm, UcerfFilter(
+            self.sitecol, self.oqparam.maximum_distance)
 
     def gen_args(self, monitor):
         """
@@ -301,8 +303,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
                              save_ruptures=oq.save_ruptures,
                              filter_distance=oq.filter_distance)
-                allargs.append(
-                    (srcs, self.csm.src_filter, gsims, param, monitor))
+                allargs.append((srcs, self.src_filter, gsims, param, monitor))
         return allargs
 
 
@@ -348,20 +349,12 @@ def compute_losses(ssm, src_filter, oqparam, param, riskmodel, monitor):
     return res
 
 
-@base.calculators.add('ucerf_hazard')
-class UCERFHazardCalculator(event_based.EventBasedCalculator):
-    """
-    Runs a standard event based calculation starting from UCERF ruptures
-    """
-    pre_calculator = 'ucerf_rupture'
-
-
 @base.calculators.add('ucerf_risk')
 class UCERFRiskCalculator(EbrCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
-    pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
+    pre_execute = UCERFHazardCalculator.__dict__['pre_execute']
 
     def gen_args(self):
         """
