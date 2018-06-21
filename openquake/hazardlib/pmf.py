@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 import numpy as np
 from openquake.baselib.slots import with_slots
 
-EPS = 1E-12  # precision used when comparing sum(probs) to 1
+PRECISION = 1E-12  # precision used when comparing sum(probs) to 1
 
 
 @with_slots
@@ -45,10 +45,10 @@ class PMF(object):
     :raises ValueError:
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
-    """ % EPS
+    """ % PRECISION
     _slots_ = ['data']
 
-    def __init__(self, data, epsilon=EPS):
+    def __init__(self, data, epsilon=PRECISION):
         probs, values = list(zip(*data))
         if any(prob < 0 for prob in probs):
             raise ValueError('a probability in %s is not positive'
