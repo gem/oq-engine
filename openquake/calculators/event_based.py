@@ -745,7 +745,8 @@ class EventBasedNewCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
                 'small or the maximum_distance is too small')
-        num_ruptures = sum(len(ruptures) for ruptures in result.values())
+        num_ruptures = sum(
+            len(ruptures) for ruptures in result.ruptures.values())
         logging.info('Setting %d event years on %d ruptures',
                      num_events, num_ruptures)
         with self.monitor('setting event years', measuremem=True,
