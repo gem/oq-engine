@@ -70,7 +70,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 3
-        print('Using %d zmq workers' % num_workers)  # the log is not set yet
+        logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
@@ -85,10 +85,9 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.LOG.critical("No live compute nodes, aborting calculation")
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
-        num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 3
-        print('Using %s, %d cores' % (', '.join(sorted(stats)), num_cores))
-        # the log is not set yet, so I am using a print
+        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = ncores * 3
+        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats), ncores))
 
     def celery_cleanup(terminate, task_ids=()):
         """
@@ -317,13 +316,13 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     setproctitle('oq-job-%d' % job_id)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
-        msg = check_obsolete_version(oqparam.calculation_mode)
         calc = base.calculators(oqparam, calc_id=job_id)
-        calc.set_log_format()
+        calc.set_log_format()  # set the log format first of all
+        msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         calc.from_engine = True
         input_zip = oqparam.inputs.get('input_zip')
         tb = 'None\n'
