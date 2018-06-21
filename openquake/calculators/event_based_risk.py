@@ -184,7 +184,7 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['oqparam'] = oq
             self.param = ebcalc.param
             self.sitecol = ebcalc.sitecol
-            self.assetcol = ebcalc.precalc.assetcol
+            self.assetcol = ebcalc.assetcol
             self.riskmodel = ebcalc.riskmodel
 
         self.L = len(self.riskmodel.lti)
