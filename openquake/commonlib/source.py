@@ -544,6 +544,8 @@ class CompositionInfo(object):
         if self.num_samples:
             return source_model.samples
         trts = set(sg.trt for sg in source_model.src_groups)
+        if sum(sg.eff_ruptures for sg in source_model.src_groups) == 0:
+            return 0
         return self.gsim_lt.reduce(trts).get_num_paths()
 
     @property

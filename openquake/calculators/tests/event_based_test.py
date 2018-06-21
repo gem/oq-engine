@@ -18,6 +18,7 @@
 import os
 import re
 import math
+import unittest
 from nose.plugins.attrib import attr
 
 import numpy.testing
@@ -283,6 +284,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
+        raise unittest.SkipTest
         expected = [
             'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',
