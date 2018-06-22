@@ -87,7 +87,7 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             sys.exit(1)
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = ncores * 3
-        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats), ncores))
+        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate, task_ids=()):
         """
