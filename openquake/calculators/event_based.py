@@ -289,7 +289,6 @@ def set_random_years(dstore, name, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-
 def compute_gmfs_and_curves(getters, monitor):
     """
     :param getters:
