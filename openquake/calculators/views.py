@@ -606,21 +606,23 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task_classical')
-def view_task_classical(token, dstore):
+@view.add('task_hazard')
+def view_task_hazard(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task_classical:0  # the fastest task
-     $ oq show task_classical:-1  # the slowest task
+     $ oq show task_hazard:0  # the fastest task
+     $ oq show task_hazard:-1  # the slowest task
     """
     tasks = set(dstore['task_info'])
     if 'task_info/source_data' not in dstore:
         return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
-    else:
+    elif 'count_eff_ruptures' in tasks:
         data = dstore['task_info/count_eff_ruptures'].value
+    else:
+        data = dstore['task_info/compute_hazard'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
