@@ -263,7 +263,8 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        if not self.oqparam.ground_motion_fields:
+        oq = self.oqparam
+        if oq.save_ruptures and not oq.ground_motion_fields:
             self.gmf_size += max_gmf_size(
                 result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
                 self.csm_info.get_samples_by_grp(), len(self.oqparam.imtls))
