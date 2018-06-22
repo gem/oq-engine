@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import math
 import os.path
 import logging
 import collections
@@ -150,7 +149,7 @@ def compute_hazard(sources_or_ruptures, src_filter,
     res = AccumDict()
     if isinstance(sources_or_ruptures, RuptureGetter):
         grp_id = sources_or_ruptures.grp_id
-        res.ruptures = {}
+        res['ruptures'] = {}
         ruptures = sources_or_ruptures
         sitecol = src_filter
     else:
@@ -161,12 +160,12 @@ def compute_hazard(sources_or_ruptures, src_filter,
         res.calc_times = dic['calc_times']
         res.eff_ruptures = {grp_id: dic['num_ruptures']}
         ruptures = dic['eb_ruptures']
-        res.ruptures = {grp_id: ruptures}
+        res['ruptures'] = {grp_id: ruptures}
         sitecol = src_filter.sitecol
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'], sources_or_ruptures.samples)
-    res.gmfs_curves = getter.compute_gmfs_curves(monitor)
+    res.update(getter.compute_gmfs_curves(monitor))
     return res
 
 
@@ -252,7 +251,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        acc.ruptures += result.ruptures
+        acc.ruptures += result['ruptures']
         if hasattr(result, 'calc_times'):
             for srcid, nsites, eids, dt in result.calc_times:
                 info = self.csm.infos[srcid]
@@ -262,33 +261,31 @@ class EventBasedCalculator(base.HazardCalculator):
                 info.events += len(eids)
         if hasattr(result, 'eff_ruptures'):
             acc.eff_ruptures += result.eff_ruptures
-        self.save_ruptures(result.ruptures)
+        self.save_ruptures(result['ruptures'])
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         hdf5path = self.datastore.hdf5path
-        res = result.gmfs_curves
-        self.gmdata += res['gmdata']
-        data = res['gmfdata']
-        with sav_mon:
-            hdf5.extend3(hdf5path, 'gmf_data/data', data)
-            # it is important to save the number of bytes while the
-            # computation is going, to see the progress
-            update_nbytes(self.datastore, 'gmf_data/data', data)
-            for sid, start, stop in res['indices']:
-                self.indices[sid].append(
-                    (start + self.offset, stop + self.offset))
-            self.offset += len(data)
+        if 'gmdata' in result:
+            self.gmdata += result['gmdata']
+            data = result['gmfdata']
+            with sav_mon:
+                hdf5.extend3(hdf5path, 'gmf_data/data', data)
+                # it is important to save the number of bytes while the
+                # computation is going, to see the progress
+                update_nbytes(self.datastore, 'gmf_data/data', data)
+                for sid, start, stop in result['indices']:
+                    self.indices[sid].append(
+                        (start + self.offset, stop + self.offset))
+                self.offset += len(data)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
-            for key, poes in res['hcurves'].items():
+            for key, poes in result.get('hcurves', {}).items():
                 r, sid, imt = str2rsi(key)
                 array = acc[r].setdefault(sid, 0).array[slicedic[imt], 0]
                 array[:] = 1. - (1. - array) * (1. - poes)
         sav_mon.flush()
         agg_mon.flush()
         self.datastore.flush()
-        if 'ruptures' in res:
-            self.save_ruptures(res['ruptures'])
         return acc
 
     def save_ruptures(self, ruptures_by_grp_id):
@@ -340,7 +337,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
                      for sid in self.sitecol.complete.sids])
-        else:
+        elif (self.oqparam.ground_motion_fields and
+              'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         return acc
