@@ -337,6 +337,7 @@ class HazardCalculator(BaseCalculator):
             csm = self.csm.filter(prefilter, mon)
         else:  # prefilter_sources='no'
             csm = self.csm.filter(SourceFilter(None, {}), mon)
+        logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return csm, src_filter
 
     def can_read_parent(self):
@@ -619,7 +620,6 @@ class HazardCalculator(BaseCalculator):
             raise RuntimeError('Empty logic tree: too much filtering?')
         self.datastore['csm_info'] = self.csm.info
         R = len(self.rlzs_assoc.realizations)
-        logging.info('There are %d realizations', R)
         if self.is_stochastic and R >= TWO16:
             # rlzi is 16 bit integer in the GMFs, so there is hard limit or R
             raise ValueError(
