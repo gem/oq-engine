@@ -250,7 +250,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.R = self.csm_info.get_num_rlzs()
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
-        zd.ruptures = AccumDict()
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
@@ -259,7 +258,10 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        acc.ruptures += result['ruptures']
+        if not self.oqparam.ground_motion_fields:
+            self.gmf_size += max_gmf_size(
+                result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
+                self.csm_info.get_samples_by_grp(), self.I)
         if hasattr(result, 'calc_times'):
             for srcid, nsites, eids, dt in result.calc_times:
                 info = self.csm.infos[srcid]
@@ -319,6 +321,7 @@ class EventBasedCalculator(base.HazardCalculator):
             from openquake.calculators.classical import saving_sources_by_task
         self.gmdata = {}
         self.offset = 0
+        self.gmf_size = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
         acc = self.zerodict()
         with self.monitor('managing sources', autoflush=True):
@@ -370,15 +373,14 @@ class EventBasedCalculator(base.HazardCalculator):
         Save the SES collection
         """
         oq = self.oqparam
-        if result.ruptures:
+        num_ruptures = sum(nr for nr in result.eff_ruptures.values())
+        if num_ruptures:
             self.rupser.close()
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            num_ruptures = sum(
-                len(ruptures) for ruptures in result.ruptures.values())
             logging.info('Setting %d event years on %d ruptures',
                          num_events, num_ruptures)
             with self.monitor('setting event years', measuremem=True,
@@ -387,12 +389,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 set_random_years(self.datastore, 'events',
                                  int(self.oqparam.investigation_time))
 
-        if not oq.ground_motion_fields:
-            gmf_size = max_gmf_size(
-                result.ruptures, self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
-                self.csm_info.get_samples_by_grp(),
-                len(self.oqparam.imtls))
-            self.datastore.set_attrs('events', max_gmf_size=gmf_size)
+        if self.gmf_size:
+            self.datastore.set_attrs('events', max_gmf_size=self.gmf_size)
             msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
             logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
