@@ -79,8 +79,6 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
-        import unittest
-        raise unittest.SkipTest
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value

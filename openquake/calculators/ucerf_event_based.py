@@ -299,9 +299,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
+        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
-            rlzs_by_gsim = ssm.info.get_rlzs_by_gsim_grp()[sm_id]
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
@@ -311,7 +311,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
                              filter_distance=oq.filter_distance,
                              gmf=oq.ground_motion_fields,
                              min_iml=self.get_min_iml(oq))
-                allargs.append((srcs, self.src_filter, rlzs_by_gsim,
+                allargs.append((srcs, self.src_filter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
 
