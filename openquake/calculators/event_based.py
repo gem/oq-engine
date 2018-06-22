@@ -46,8 +46,8 @@ def weight(src):
     """
     :returns: source weight multiplied by the total occurrence rate
     """
-    # tot_rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
-    return src.weight
+    tot_rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
+    return tot_rate
 
 
 def get_events(ebruptures):
@@ -226,9 +226,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(sg.sources)
                     continue
-                for src in sg:
-                    # or block_splitter(sg.sources, maxweight, weight)
-                    yield [src], self.src_filter, rlzs_by_gsim, param, monitor
+                for block in block_splitter(sg.sources, maxweight, weight):
+                    yield block, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
                     num_sources += 1
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
