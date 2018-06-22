@@ -226,10 +226,11 @@ class EventBasedCalculator(base.HazardCalculator):
                     num_tasks += 1
                     num_sources += len(sg.sources)
                     continue
-                for block in block_splitter(sg.sources, maxweight, weight):
-                    yield block, self.src_filter, rlzs_by_gsim, param, monitor
+                for src in sg:
+                    # or block_splitter(sg.sources, maxweight, weight)
+                    yield [src], self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
-                    num_sources += len(block)
+                    num_sources += 1
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
