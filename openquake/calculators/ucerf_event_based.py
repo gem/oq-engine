@@ -272,7 +272,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
-        assert oq.hazard_calculation_id is None, 'Cannot use --hc option'
+        #assert oq.hazard_calculation_id is None, 'Cannot use --hc option'
         self.read_risk_data()  # read the site collection
         self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
@@ -376,7 +376,7 @@ class UCERFRiskCalculator(EbrCalculator):
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
-        src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
+        src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
         for sm in self.csm.source_models:
             if sm.samples > 1:
