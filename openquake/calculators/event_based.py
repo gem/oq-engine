@@ -175,6 +175,9 @@ def compute_hazard(sources_or_ruptures, src_filter,
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'], param['samples'])
     res.update(getter.compute_gmfs_curves(monitor))
+    if param['oqparam'].save_ruptures is False:
+        res.events = get_events(ruptures)
+        res['ruptures'] = {}
     return res
 
 
@@ -261,7 +264,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if not self.oqparam.ground_motion_fields:
             self.gmf_size += max_gmf_size(
                 result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
-                self.csm_info.get_samples_by_grp(), self.I)
+                self.csm_info.get_samples_by_grp(), len(self.oqparam.imtls))
         if hasattr(result, 'calc_times'):
             for srcid, nsites, eids, dt in result.calc_times:
                 info = self.csm.infos[srcid]
@@ -271,6 +274,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 info.events += len(eids)
         if hasattr(result, 'eff_ruptures'):
             acc.eff_ruptures += result.eff_ruptures
+        if hasattr(result, 'events'):
+            self.datastore.extend('events', result.events)
         self.save_ruptures(result['ruptures'])
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
@@ -392,7 +397,8 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=self.gmf_size)
             msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
-            logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
+            logging.info('Generating %s%s of GMFs',
+                         msg, humansize(self.gmf_size))
 
         if oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.rlzs_assoc.realizations
