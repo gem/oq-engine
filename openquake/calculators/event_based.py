@@ -156,21 +156,22 @@ def compute_hazard(sources_or_ruptures, src_filter,
     Compute events, ruptures, gmfs and hazard curves
     """
     res = AccumDict()
-    if isinstance(sources_or_ruptures, RuptureGetter):
-        grp_id = sources_or_ruptures.grp_id
-        res['ruptures'] = {}
-        ruptures = sources_or_ruptures
-        sitecol = src_filter
-    else:
-        grp_id = sources_or_ruptures[0].src_group_id
-        dic = sample_ruptures(
-            sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
-        res.num_events = dic['num_events']
-        res.calc_times = dic['calc_times']
-        res.eff_ruptures = {grp_id: dic['num_ruptures']}
-        ruptures = dic['eb_ruptures']
-        res['ruptures'] = {grp_id: ruptures}
-        sitecol = src_filter.sitecol
+    with monitor('building ruptures', measuremem=True):
+        if isinstance(sources_or_ruptures, RuptureGetter):
+            grp_id = sources_or_ruptures.grp_id
+            res['ruptures'] = {}
+            ruptures = list(sources_or_ruptures)
+            sitecol = src_filter
+        else:
+            grp_id = sources_or_ruptures[0].src_group_id
+            dic = sample_ruptures(
+                sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
+            res.num_events = dic['num_events']
+            res.calc_times = dic['calc_times']
+            res.eff_ruptures = {grp_id: dic['num_ruptures']}
+            ruptures = dic['eb_ruptures']
+            res['ruptures'] = {grp_id: ruptures}
+            sitecol = src_filter.sitecol
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'], param['samples'])
