@@ -165,13 +165,13 @@ shared_dir = /home/openquake
 
 When `shared_dir` is set, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
 
-You may need to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
+You need then to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
 
 ```bash
 $ mkdir /home/openquake
 $ chown openquake.openquake /home/openquake
 # Enable setgid on the tree
-$ chmod 2750 /home/openquake
+$ chmod 2770 /home/openquake
 ```
 
 On the workers the _shared_dir_ should be mounted as the `openquake` user too, or access must be given to the user running `celeryd` (which is `openquake` by default in the official packages).
