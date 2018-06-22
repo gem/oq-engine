@@ -35,7 +35,7 @@ oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
 
 # test deleting a calculation
 
-oq engine --dc 26
+oq engine --dc 26 -y
 
 # display the calculations
 oq db find %
