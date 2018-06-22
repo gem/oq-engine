@@ -29,8 +29,8 @@ From the Terminal app (or using iTerm) run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-3.0.0-1.run
-./openquake-setup-macos-3.0.0-1.run
+chmod +x openquake-setup-macos-3.1.0-1.run
+./openquake-setup-macos-3.1.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 
