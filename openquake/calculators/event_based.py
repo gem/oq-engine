@@ -40,6 +40,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 
 
 def weight(src):
@@ -293,6 +294,9 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.indices[sid].append(
                         (start + self.offset, stop + self.offset))
                 self.offset += len(data)
+                if self.offset >= TWO32:
+                    raise RuntimeError(
+                        'The gmf_data table has more than %d rows' % TWO32)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
