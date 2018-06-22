@@ -44,12 +44,8 @@ TWO32 = 2 ** 32
 
 
 def weight(src):
-    """
-    :returns: source weight multiplied by the total occurrence rate
-    """
+    # a poor man weight
     return src.num_ruptures
-    # tot_rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
-    # return src.weight * tot_rate
 
 
 def get_events(ebruptures):
