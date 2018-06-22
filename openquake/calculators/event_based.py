@@ -32,7 +32,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import ClassicalCalculator, weight
+from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -40,6 +40,14 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def weight(src):
+    """
+    :returns: source weight multiplied by the total occurrence rate
+    """
+    # tot_rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
+    return src.weight
 
 
 def get_events(ebruptures):
@@ -164,7 +172,7 @@ def compute_hazard(sources_or_ruptures, src_filter,
         sitecol = src_filter.sitecol
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
-        param['oqparam'], param['min_iml'], sources_or_ruptures.samples)
+        param['oqparam'], param['min_iml'], param['samples'])
     res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -200,7 +208,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     ruptures = RuptureGetter(parent, slc, grp_id)
-                    ruptures.samples = samples_by_grp[grp_id]
+                    param['samples'] = samples_by_grp[grp_id]
                     yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
             return
 
@@ -209,17 +217,16 @@ class EventBasedCalculator(base.HazardCalculator):
         num_tasks = 0
         num_sources = 0
         for sm in self.csm.source_models:
+            param['samples'] = sm.samples
             for sg in sm.src_groups:
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
                 self.csm.add_infos(sg.sources)
                 if sg.src_interdep == 'mutex':  # do not split
-                    sg.samples = sm.samples
                     yield sg, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
                     continue
                 for block in block_splitter(sg.sources, maxweight, weight):
-                    block.samples = sm.samples
                     yield block, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
                     num_sources += len(block)
