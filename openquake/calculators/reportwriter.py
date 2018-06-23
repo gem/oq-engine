@@ -139,10 +139,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(PSHACalculator, 'core_task', count_eff_ruptures):
-        calc.prefilter = False
-        if calc.pre_calculator == 'event_based_risk':
-            # compute the ruptures only, not the risk
-            calc.pre_calculator = 'event_based_rupture'
+        calc.oqparam.ground_motion_fields = False
         calc.pre_execute()
     if hasattr(calc, 'csm'):
         calc.datastore['csm_info'] = calc.csm.info
