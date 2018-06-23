@@ -45,7 +45,7 @@ TWO32 = 2 ** 32
 
 def weight(src):
     # a poor man weight
-    return src.num_ruptures
+    return src.num_ruptures * src.ngsims
 
 
 def get_events(ebruptures):
@@ -166,9 +166,11 @@ def compute_hazard(sources_or_ruptures, src_filter,
             ruptures = dic['eb_ruptures']
             res.num_events = dic['num_events']
             res.calc_times = dic['calc_times']
-            res.eff_ruptures = {grp_id: len(ruptures)}
+            res.eff_ruptures = {grp_id: dic['num_ruptures']}
             res['ruptures'] = {grp_id: ruptures}
+            res.num_ruptures = len(ruptures)
             sitecol = src_filter.sitecol
+    res['num_ruptures'] = len(ruptures)
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'], param['samples'])
@@ -251,6 +253,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.R = self.csm_info.get_num_rlzs()
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
+        zd.num_ruptures = 0
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
@@ -273,6 +276,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 info.events += len(eids)
         if hasattr(result, 'eff_ruptures'):
             acc.eff_ruptures += result.eff_ruptures
+            acc.num_ruptures += result.num_ruptures
         if hasattr(result, 'events'):
             self.datastore.extend('events', result.events)
         self.save_ruptures(result['ruptures'])
@@ -380,8 +384,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Save the SES collection
         """
         oq = self.oqparam
-        num_ruptures = sum(nr for nr in result.eff_ruptures.values())
-        if num_ruptures:
+        if getattr(result, 'num_ruptures', 0):
             self.rupser.close()
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
@@ -389,7 +392,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
             logging.info('Setting %d event years on %d ruptures',
-                         num_events, num_ruptures)
+                         num_events, result.num_ruptures)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 numpy.random.seed(self.oqparam.ses_seed)
