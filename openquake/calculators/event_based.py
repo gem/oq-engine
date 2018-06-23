@@ -124,7 +124,6 @@ def set_random_years(dstore, name, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-
 def update_nbytes(dstore, key, array):
     nbytes = dstore.get_attr(key, 'nbytes', 0)
     dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
