@@ -252,7 +252,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.R = self.csm_info.get_num_rlzs()
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
-        zd.num_ruptures = 0
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
@@ -275,7 +274,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 info.events += len(eids)
         if hasattr(result, 'eff_ruptures'):
             acc.eff_ruptures += result.eff_ruptures
-            acc.num_ruptures += result.num_ruptures
         if hasattr(result, 'events'):
             self.datastore.extend('events', result.events)
         self.save_ruptures(result['ruptures'])
@@ -383,15 +381,14 @@ class EventBasedCalculator(base.HazardCalculator):
         Save the SES collection
         """
         oq = self.oqparam
-        if getattr(result, 'num_ruptures', 0):
+        if oq.hazard_calculation_id is None:
             self.rupser.close()
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            logging.info('Setting %d event years on %d ruptures',
-                         num_events, result.num_ruptures)
+            logging.info('Setting %d event years', num_events)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 numpy.random.seed(self.oqparam.ses_seed)
