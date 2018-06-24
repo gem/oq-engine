@@ -435,6 +435,8 @@ class HazardCalculator(BaseCalculator):
                 self.read_risk_data()
             self.init()
         else:  # we are in a basic calculator
+            if precalc_id:
+                self.read_previous(precalc_id)
             self.read_inputs()
         if hasattr(self, 'sitecol'):
             self.datastore['sitecol'] = self.sitecol.complete
