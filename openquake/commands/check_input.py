@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2018 GEM Foundation
+# Copyright (C) 2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -14,23 +14,18 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
-import getpass
-from openquake.baselib import sap, config, workerpool
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import logging
+from openquake.baselib import sap
+from openquake.commonlib import readinput
+from openquake.calculators import base
 
 
 @sap.Script
-def workers(cmd):
-    """
-    start/stop/restart the workers, or return their status
-    """
-    if config.dbserver.multi_user and getpass.getuser() != 'openquake':
-        sys.exit('oq workers only works in single user mode')
-
-    master = workerpool.WorkerMaster(config.dbserver.host,
-                                     **config.zworkers)
-    print(getattr(master, cmd)())
+def check_input(job_ini_or_zip):
+    logging.basicConfig(level=logging.INFO)
+    calc = base.calculators(readinput.get_oqparam(job_ini_or_zip))
+    calc.read_inputs(split_sources=False)
 
 
-workers.arg('cmd', 'command', choices='start stop status restart'.split())
+check_input.arg('job_ini_or_zip', 'Check the input files')
