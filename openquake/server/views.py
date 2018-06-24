@@ -557,7 +557,7 @@ def calc_results(request, calc_id):
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
-            outtypes=outtypes, url=url)
+            outtypes=outtypes, url=url, size_mb=result.size_mb)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))

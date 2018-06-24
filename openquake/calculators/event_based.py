@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, rsi2str, indices_dt
+from openquake.risklib.riskinput import str2rsi, indices_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
@@ -98,7 +98,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         Set the random seed passed to the SourceManager and the
         minimum_intensity dictionary.
         """
-        oq = self.oqparam
         self.rupser = calc.RuptureSerializer(self.datastore)
 
     def zerodict(self):
@@ -146,12 +145,11 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
-    def gen_args(self, csm, monitor):
+    def gen_args(self, monitor):
         """
         Used in the case of large source model logic trees.
 
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
-        :param csm: a reduced CompositeSourceModel
         :yields: (sources, sites, gsims, monitor) tuples
         """
         oq = self.oqparam
@@ -188,7 +186,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
 
     def execute(self):
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.csm, self.monitor('classical'))
+            allargs = self.gen_args(self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -291,54 +289,18 @@ def set_random_years(dstore, name, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-
-def compute_gmfs_and_curves(getters, oq, monitor):
+def compute_gmfs_and_curves(getters, monitor):
     """
     :param getters:
         a list of GmfGetter instances
-    :param oq:
-        an OqParam instance
     :param monitor:
         a Monitor instance
     :returns:
         a list of dictionaries with keys gmfcoll and hcurves
     """
     results = []
-    dt = oq.gmf_data_dt()
     for getter in getters:
-        with monitor('GmfGetter.init', measuremem=True):
-            getter.init()
-        hcurves = {}  # key -> poes
-        if oq.hazard_curves_from_gmfs:
-            hc_mon = monitor('building hazard curves', measuremem=False)
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
-                hazard = getter.get_hazard(data=gmfdata)
-            for sid, hazardr in zip(getter.sids, hazard):
-                for rlzi, array in hazardr.items():
-                    if len(array) == 0:  # no data
-                        continue
-                    with hc_mon:
-                        gmvs = array['gmv']
-                        for imti, imt in enumerate(getter.imtls):
-                            poes = calc._gmvs_to_haz_curve(
-                                gmvs[:, imti], oq.imtls[imt],
-                                oq.investigation_time, duration)
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes
-        else:  # fast lane
-            with monitor('building hazard', measuremem=True):
-                gmfdata = numpy.fromiter(getter.gen_gmv(), dt)
-        indices = []
-        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
-        start = stop = 0
-        for sid, rows in itertools.groupby(gmfdata['sid']):
-            for row in rows:
-                stop += 1
-            indices.append((sid, start, stop))
-            start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=getter.gmdata,
-                   indices=numpy.array(indices, (U32, 3)))
+        res = getter.compute_gmfs_curves(monitor)
         if len(getter.gmdata):
             results.append(res)
     return results
@@ -412,8 +374,7 @@ class EventBasedCalculator(base.HazardCalculator):
         except AttributeError:  # no csm
             csm_info = self.datastore['csm_info']
         samples_by_grp = csm_info.get_samples_by_grp()
-        rlzs_by_gsim = {grp_id: self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                        for grp_id in samples_by_grp}
+        rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
         if self.precalc:
             num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
             block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
@@ -424,7 +385,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     getter = GmfGetter(
                         rlzs_by_gsim[grp_id], block, sitecol,
                         oq, min_iml, samples_by_grp[grp_id])
-                    yield [getter], oq, monitor
+                    yield [getter], monitor
             return
         U = len(self.datastore['ruptures'])
         logging.info('Found %d ruptures', U)
@@ -441,7 +402,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     rlzs_by_gsim[grp_id], ruptures, sitecol,
                     oq, min_iml, samples_by_grp[grp_id])
                 getters.append(getter)
-            yield getters, oq, monitor
+            yield getters, monitor
 
     def execute(self):
         """
@@ -515,7 +476,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     self.datastore['hcurves/' + kind] = pmap
         if self.datastore.parent:
-            self.datastore.parent.open()
+            self.datastore.parent.open('r')
         if 'gmf_data' in self.datastore:
             self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves

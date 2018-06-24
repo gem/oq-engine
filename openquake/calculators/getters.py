@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
+import itertools
 import operator
 import logging
 import numpy
@@ -26,6 +27,8 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.risklib.riskinput import rsi2str
+from openquake.commonlib.calc import _gmvs_to_haz_curve
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -65,7 +68,7 @@ class PmapGetter(object):
         if isinstance(self.dstore, str):
             self.dstore = hdf5.File(self.dstore, 'r')
         else:
-            self.dstore.open()  # if not
+            self.dstore.open('r')  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
         self.imtls = self.dstore['oqparam'].imtls
@@ -208,7 +211,7 @@ class GmfDataGetter(collections.Mapping):
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
-        self.dstore.open()  # if not already open
+        self.dstore.open('r')  # if not already open
         self.eids = self.dstore['events']['eid']
         self.eids.sort()
         self.data = collections.OrderedDict()
@@ -255,21 +258,33 @@ class GmfGetter(object):
                  min_iml, samples=1):
         assert sitecol is sitecol.complete, sitecol
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.num_rlzs = sum(len(rlzs) for gsim, rlzs in rlzs_by_gsim.items())
         self.ebruptures = ebruptures
         self.sitecol = sitecol
-        self.imtls = oqparam.imtls
+        self.oqparam = oqparam
         self.min_iml = min_iml
+        self.N = len(self.sitecol.complete)
+        self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
+        self.I = len(oqparam.imtls)
+        self.gmv_dt = numpy.dtype(
+            [('sid', U32), ('eid', U64), ('gmv', (F32, (self.I,)))])
+        self.gmv_eid_dt = numpy.dtype(
+            [('gmv', (F32, (self.I,))), ('eid', U64)])
         self.cmaker = ContextMaker(
             rlzs_by_gsim,
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
             oqparam.filter_distance)
-        self.truncation_level = oqparam.truncation_level
-        self.correlation_model = oqparam.correl_model
-        self.filter_distance = oqparam.filter_distance
+        self.correl_model = oqparam.correl_model
         self.samples = samples
+
+    @property
+    def sids(self):
+        return self.sitecol.sids
+
+    @property
+    def imtls(self):
+        return self.oqparam.imtls
 
     def init(self):
         """
@@ -277,20 +292,13 @@ class GmfGetter(object):
         """
         if hasattr(self, 'eids'):  # init already called
             return
-        self.N = len(self.sitecol.complete)
-        self.I = I = len(self.imtls)
-        self.R = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
-        self.gmv_dt = numpy.dtype(
-            [('sid', U32), ('eid', U64), ('gmv', (F32, (I,)))])
-        self.gmv_eid_dt = numpy.dtype([('gmv', (F32, (I,))), ('eid', U64)])
-        self.sids = self.sitecol.sids
         self.computers = []
         eids = []
         for ebr in self.ebruptures:
             try:
                 computer = calc.gmf.GmfComputer(
-                    ebr, self.sitecol, self.imtls, self.cmaker,
-                    self.truncation_level, self.correlation_model)
+                    ebr, self.sitecol, self.oqparam.imtls, self.cmaker,
+                    self.oqparam.truncation_level, self.correl_model)
             except FarAwayRupture:
                 # due to numeric errors ruptures within the maximum_distance
                 # when written can be outside when read; I found a case with
@@ -300,7 +308,7 @@ class GmfGetter(object):
             eids.append(ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
         # dictionary eid -> index
         self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
@@ -364,6 +372,47 @@ class GmfGetter(object):
             for rlzi in haz:
                 haz[rlzi] = numpy.array(haz[rlzi], self.gmv_eid_dt)
         return hazard
+
+    def compute_gmfs_curves(self, monitor):
+        """
+        :returns: a dict with keys gmdata, gmfdata, indices, hcurves
+        """
+        oq = self.oqparam
+        dt = oq.gmf_data_dt()
+        with monitor('GmfGetter.init', measuremem=True):
+            self.init()
+        hcurves = {}  # key -> poes
+        if oq.hazard_curves_from_gmfs:
+            hc_mon = monitor('building hazard curves', measuremem=False)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(self.gen_gmv(), dt)
+                hazard = self.get_hazard(data=gmfdata)
+            for sid, hazardr in zip(self.sids, hazard):
+                for rlzi, array in hazardr.items():
+                    if len(array) == 0:  # no data
+                        continue
+                    with hc_mon:
+                        gmvs = array['gmv']
+                        for imti, imt in enumerate(oq.imtls):
+                            poes = _gmvs_to_haz_curve(
+                                gmvs[:, imti], oq.imtls[imt],
+                                oq.investigation_time, duration)
+                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+        else:  # fast lane
+            with monitor('building hazard', measuremem=True):
+                gmfdata = numpy.fromiter(self.gen_gmv(), dt)
+        indices = []
+        gmfdata.sort(order=('sid', 'rlzi', 'eid'))
+        start = stop = 0
+        for sid, rows in itertools.groupby(gmfdata['sid']):
+            for row in rows:
+                stop += 1
+            indices.append((sid, start, stop))
+            start = stop
+        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=self.gmdata,
+                   indices=numpy.array(indices, (U32, 3)))
+        return res
 
 
 def get_ruptures_by_grp(dstore, slice_=slice(None)):
@@ -447,7 +496,7 @@ class RuptureGetter(object):
         return getters
 
     def __iter__(self):
-        self.dstore.open()  # if needed
+        self.dstore.open('r')  # if needed
         attrs = self.dstore.get_attrs('ruptures')
         code2cls = {}  # code -> rupture_cls, surface_cls
         for key, val in attrs.items():

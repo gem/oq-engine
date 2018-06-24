@@ -454,8 +454,16 @@ class CompositionInfo(object):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {sg.id: sm.samples for sm in self.source_models
-                for sg in sm.src_groups}
+        return {grp.id: sm.samples for sm in self.source_models
+                for grp in sm.src_groups}
+
+    def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
+        """
+        :returns: a dictionary src_group_id -> gsim -> rlzs
+        """
+        self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
+        return {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
+                for sm in self.source_models for grp in sm.src_groups}
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -778,6 +786,7 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
+        new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
         return new
 
     def get_weight(self, weight):
@@ -883,11 +892,12 @@ class CompositeSourceModel(collections.Sequence):
                          tot, n)
         return dic
 
-    def get_num_sources(self):
+    def get_num_ruptures(self):
         """
-        :returns: the total number of sources in the model
+        :returns: the number of ruptures per source group ID
         """
-        return sum(len(src_group) for src_group in self.src_groups)
+        return {grp.id: sum(src.num_ruptures for src in grp)
+                for grp in self.src_groups}
 
     def init_serials(self):
         """
@@ -967,7 +977,7 @@ def collect_source_model_paths(smlt):
     n = nrml.read(smlt)
     try:
         blevels = n.logicTree
-    except:
+    except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
     for blevel in blevels:
