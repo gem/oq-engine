@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added Thingbaijam et al. (2017) magnitude-scaling relationship
+
   [Daniele Viganò]
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file
@@ -10,7 +13,7 @@
   * Added a check on exposures with missing loss types
   * Added a LargeExposureGrid error to protect the user by tricky exposures
     (i.e. France with assets in the Antilles)
-  * Changed the event_based_risk calculator to computed the loss curves and
+  * Changed the event_based_risk calculator to compute the loss curves and
     maps directly; removed the asset_loss_table
   * Changed the event_based_risk calculator to distribute by GMFs always
   * Optimized the memory consumption in the UCERF classical calculator
