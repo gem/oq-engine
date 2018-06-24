@@ -71,10 +71,10 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='dummy', hdf5path=None,
+    def __init__(self, operation='dummy', hdf5=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
-        self.hdf5path = hdf5path
+        self.hdf5 = hdf5
         self.autoflush = autoflush
         self.measuremem = measuremem
         self.mem = 0
@@ -151,12 +151,13 @@ class Monitor(object):
                 'Monitor(%r).flush() must not be called in a worker' %
                 self.operation)
         for child in self.children:
+            child.hdf5 = self.hdf5
             child.flush()
         data = self.get_data()
         if len(data) == 0:  # no information
             return []
-        elif self.hdf5path:
-            hdf5.extend3(self.hdf5path, 'performance_data', data)
+        elif self.hdf5:
+            hdf5.extend(self.hdf5['performance_data'], data)
 
         # reset monitor
         self.duration = 0
