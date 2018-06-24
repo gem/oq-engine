@@ -56,7 +56,7 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 #### Linux
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
 * [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
