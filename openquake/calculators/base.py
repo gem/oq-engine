@@ -353,7 +353,7 @@ class HazardCalculator(BaseCalculator):
         hdf5cache = getattr(self, 'hdf5cache', None)
         if hdf5cache and read_access:
             return hdf5cache
-        if (self.oqparam.hazard_calculation_id and read_access and
+        elif (self.oqparam.hazard_calculation_id and read_access and
                 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
