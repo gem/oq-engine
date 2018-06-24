@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -50,6 +49,7 @@ Utility functions for seismicity calculations
 '''
 import numpy as np
 from shapely import geometry
+from openquake.hazardlib.pmf import PRECISION
 try:
     from scipy.stats._continuous_distns import (truncnorm_gen,
                                                 _norm_cdf, _norm_sf,
@@ -87,7 +87,7 @@ try:
             return output
 
     hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
-except:
+except Exception:
     print("Continuous distributions not available on Scipy version < 0.15\n")
     print("Bootstrap sampling of the depth distribution will raise an error")
     hmtk_truncnorm = None
@@ -330,13 +330,13 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     '''
     nvals = len(data)
     if bounds:
-        # if bounds[0] or (fabs(bounds[0]) < 1E-12):
+        # if bounds[0] or (fabs(bounds[0]) < PRECISION):
         if bounds[0] is not None:
             lower_bound = (bounds[0] - data) / uncertainties
         else:
             lower_bound = -np.inf * np.ones_like(data)
 
-        # if bounds[1] or (fabs(bounds[1]) < 1E-12):
+        # if bounds[1] or (fabs(bounds[1]) < PRECISION):
         if bounds[1] is not None:
             upper_bound = (bounds[1] - data) / uncertainties
         else:
@@ -440,7 +440,7 @@ def bootstrap_histogram_1D(
         1-D histogram of data
 
     '''
-    if not number_bootstraps or np.all(np.fabs(uncertainties < 1E-12)):
+    if not number_bootstraps or np.all(np.fabs(uncertainties < PRECISION)):
         # No bootstraps or all uncertaintes are zero - return ordinary
         # histogram
         #output = np.histogram(values, intervals)[0]

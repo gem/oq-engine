@@ -167,7 +167,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         global logversion
         with self._monitor:
             self._monitor.username = kw.get('username', '')
-            self.close = close
             self.set_log_format()
             if logversion:  # make sure this is logged only once
                 logging.info('Running %s', self.oqparam.inputs['job_ini'])
@@ -184,7 +183,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
             self.save_params(**kw)
-            Starmap.init()
+            Starmap.init(distribute=os.environ['OQ_DISTRIBUTE'])
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -211,7 +210,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.pmap = None
                 readinput.exposure = None
                 Starmap.shutdown()
-        self._monitor.flush()
+                self._monitor.flush()
+
+                if close:  # in the engine we close later
+                    self.result = None
+                    try:
+                        self.datastore.close()
+                    except (RuntimeError, ValueError):
+                        # sometimes produces errors but they are difficult to
+                        # reproduce
+                        logging.warn('', exc_info=True)
+
         return getattr(self, 'exported', {})
 
     def core_task(*args):
@@ -270,15 +279,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self._export(('hmaps', fmt))
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
                 self._export(('uhs', fmt))
-
-        if self.close:  # in the engine we close later
-            self.result = None
-            try:
-                self.datastore.close()
-            except (RuntimeError, ValueError):
-                # sometimes produces errors but they are difficult to
-                # reproduce
-                logging.warn('', exc_info=True)
 
     def _export(self, ekey):
         if ekey not in exp or self.exported.get(ekey):  # already exported
@@ -357,6 +357,8 @@ class HazardCalculator(BaseCalculator):
                 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
+        logging.warn('With a parent calculation reading the hazard '
+                     'would be much faster')
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
@@ -385,7 +387,7 @@ class HazardCalculator(BaseCalculator):
         self.save_params(**params)
         return parent
 
-    def read_inputs(self):
+    def read_inputs(self, split_sources=True):
         """
         Read risk data and sources if any
         """
@@ -397,8 +399,9 @@ class HazardCalculator(BaseCalculator):
                 if oq.disagg_by_src:
                     self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
+                if split_sources:
+                    logging.info('Splitting sources')
+                    self.csm.split_all(oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
@@ -706,7 +709,7 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        logging.info('Found %d realization(s)', self.R)
+        logging.info('Building risk inputs from %d realization(s)', self.R)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -759,7 +762,6 @@ class RiskCalculator(HazardCalculator):
                                        self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
-                logging.info('Reading hazard')
                 getter.init()
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug

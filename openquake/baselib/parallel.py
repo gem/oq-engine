@@ -38,19 +38,18 @@ how you can solve the problem sequentially:
 >>> from itertools import starmap  # map a function with multiple arguments
 >>> from functools import reduce  # reduce an iterable with a binary operator
 >>> from operator import add  # addition function
->>> from collections import Counter  # callable doing the counting
-
->>> arglist = [('hello',), ('world',)]  # list of arguments
->>> results = starmap(Counter, arglist)  # iterator over the results
->>> res = reduce(add, results, Counter())  # aggregated counts
-
+>>> from openquake.baselib.performance import Monitor
+>>> mon = Monitor('count')
+>>> arglist = [('hello', mon), ('world', mon)]  # list of arguments
+>>> results = starmap(count, arglist)  # iterator over the results
+>>> res = reduce(add, results, collections.Counter())  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
 
 Here is how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> res2 = Starmap(Counter, arglist).reduce()
+>>> res2 = Starmap(count, arglist).reduce()
 >>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
@@ -66,7 +65,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(Counter, arglist).reduce(acc=Counter())
+>>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -114,7 +113,7 @@ letter counting example discussed before, `Starmap.apply` could
 be used as follows:
 
 >>> text = 'helloworld'  # sequence of characters
->>> res3 = Starmap.apply(Counter, (text,)).reduce()
+>>> res3 = Starmap.apply(count, (text, mon)).reduce()
 >>> assert res3 == res
 
 The API of `Starmap.apply` is designed to extend the one of `apply`,
@@ -157,6 +156,7 @@ import operator
 import functools
 import itertools
 import traceback
+import collections
 import multiprocessing.dummy
 import psutil
 import numpy
@@ -179,6 +179,11 @@ if OQ_DISTRIBUTE == 'futures':  # legacy name
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
 if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
+
+# data type for storing the performance information
+task_data_dt = numpy.dtype(
+    [('taskno', numpy.uint32), ('weight', numpy.float32),
+     ('duration', numpy.float32), ('received', numpy.int64)])
 
 
 def oq_distribute(task=None):
@@ -339,7 +344,7 @@ def safely_call(func, args):
             mon.operation = func.__name__
             mon.children.append(child)  # child is a child of mon
             child.hdf5path = mon.hdf5path
-        else:
+        else:  # in the DbServer
             mon = child
         try:
             res = Result(func(*args), mon)
@@ -376,10 +381,10 @@ class IterResult(object):
         the name of the task
     :param num_tasks:
         the total number of expected tasks
-    :param progress:
-        a logging function for the progress report
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
+    :param progress:
+        a logging function for the progress report
     """
     def __init__(self, iresults, taskname, argnames, num_tasks, sent,
                  progress=logging.info):
@@ -395,9 +400,6 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        self.task_data_dt = numpy.dtype(
-            [('taskno', numpy.uint32), ('weight', numpy.float32),
-             ('duration', numpy.float32), ('received', numpy.int64)])
         self.progress('Sent %s of data in %s task(s)',
                       humansize(sent.sum()), num_tasks)
 
@@ -444,7 +446,7 @@ class IterResult(object):
         if mon.hdf5path:
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
-            data = numpy.array([tup], self.task_data_dt)
+            data = numpy.array([tup], task_data_dt)
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
                          argnames=self.argnames, sent=self.sent)
         mon.flush()
@@ -511,6 +513,8 @@ class Starmap(object):
             cls(_wakeup, [(.2, m) for _ in range(cls.pool._processes)])
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
+        elif distribute == 'no' and hasattr(cls, 'pool'):
+            cls.shutdown()
 
     @classmethod
     def shutdown(cls, poolsize=None):
@@ -518,7 +522,7 @@ class Starmap(object):
             cls.pool.close()
             cls.pool.terminate()
             cls.pool.join()
-            delattr(cls, 'pool')
+            del cls.pool
 
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
@@ -567,7 +571,7 @@ class Starmap(object):
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
-            config.dbserver.host, config.zworkers.receiver_ports)
+            config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
 
     @property
@@ -589,12 +593,12 @@ class Starmap(object):
         """
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
-            if isinstance(mon, Monitor):
-                # add incremental task number and task weight
-                mon.task_no = task_no
-                mon.weight = getattr(args[0], 'weight', 1.)
-                mon.backurl = backurl
-                self.calc_id = getattr(mon, 'calc_id', None)
+            assert isinstance(mon, Monitor), mon
+            # add incremental task number and task weight
+            mon.task_no = task_no
+            mon.weight = getattr(args[0], 'weight', 1.)
+            mon.backurl = backurl
+            self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += numpy.array([len(p) for p in args])
@@ -649,9 +653,10 @@ class Starmap(object):
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            logging.info('Using receiver %s', socket.backurl)
+            backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
+            logging.info('Using receiver %s', backurl)
             results = []
-            for piks in self._genargs(socket.backurl):
+            for piks in self._genargs(backurl):
                 res = safetask.delay(self.task_func, piks)
                 # populating Starmap.task_ids, used in celery_cleanup
                 self.task_ids.append(res.task_id)
@@ -674,11 +679,12 @@ class Starmap(object):
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            task_in_url = ('tcp://%(master_host)s:%(task_in_port)s' %
-                           config.zworkers)
+            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+                                           config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
+                backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
                 num_results = 0
-                for args in self._genargs(socket.backurl):
+                for args in self._genargs(backurl):
                     sender.send((self.task_func, args))
                     num_results += 1
             yield num_results
@@ -701,3 +707,10 @@ def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
     chunks = split_in_blocks(args[0], concurrent_tasks or 1, weight, key)
     task_args = [(ch,) + args[1:] for ch in chunks]
     return itertools.starmap(task, task_args)
+
+
+def count(word, mon):
+    """
+    Used as example in the documentation
+    """
+    return collections.Counter(word)
