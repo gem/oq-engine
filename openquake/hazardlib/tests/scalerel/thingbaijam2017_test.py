@@ -20,7 +20,7 @@ import numpy
 from openquake.hazardlib.scalerel.thingbaijam2017 import ThingbaijamInterface
 from openquake.hazardlib.tests.scalerel.msr_test import BaseMSRTestCase
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data/thingbaijam2017')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'thingbaijam2017')
 
 
 class ThingbaijamInterfaceTestCase(BaseMSRTestCase):
