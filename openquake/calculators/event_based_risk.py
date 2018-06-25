@@ -151,7 +151,6 @@ class EbrCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the total losses by taxonomy
     """
     core_task = event_based_risk
-    pre_calculator = 'event_based'
     is_stochastic = True
 
     def pre_execute(self):
@@ -159,7 +158,6 @@ class EbrCalculator(base.RiskCalculator):
         if 'gmfs' in oq.inputs:
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
-            self.pre_calculator = None
             super().pre_execute()
             parent = ()
         elif oq.hazard_calculation_id:
@@ -175,7 +173,7 @@ class EbrCalculator(base.RiskCalculator):
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         else:
-            ebcalc = base.calculators[self.pre_calculator](self.oqparam)
+            ebcalc = base.calculators['event_based'](self.oqparam)
             ebcalc.run(close=False)
             self.set_log_format()
             parent = self.dynamic_parent = self.datastore.parent = (
