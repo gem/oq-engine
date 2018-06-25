@@ -15,14 +15,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import math
 import os.path
-import itertools
 import logging
 import collections
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_slices, humansize, get_array)
@@ -34,8 +32,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import (
-    ClassicalCalculator, saving_sources_by_task)
+from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -43,32 +40,12 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO32 = 2 ** 32
 
 
-def compute_ruptures(sources, src_filter, gsims, param, monitor):
-    """
-    :param sources:
-        a sequence of sources of the same group
-    :param src_filter:
-        a source site filter
-    :param gsims:
-        a list of GSIMs for the current tectonic region model
-    :param param:
-        a dictionary of additional parameters
-    :param monitor:
-        monitor instance
-    :returns:
-        a dictionary src_group_id -> [Rupture instances]
-    """
-    # NB: by construction each block is a non-empty list with
-    # sources of the same src_group_id
-    grp_id = sources[0].src_group_id
-    dic = sample_ruptures(sources, src_filter, gsims, param, monitor)
-    res = AccumDict({grp_id: dic['eb_ruptures']})
-    res.num_events = dic['num_events']
-    res.calc_times = dic['calc_times']
-    res.eff_ruptures = {grp_id: dic['num_ruptures']}
-    return res
+def weight(src):
+    # a poor man weight
+    return src.num_ruptures * src.ngsims
 
 
 def get_events(ebruptures):
@@ -83,148 +60,6 @@ def get_events(ebruptures):
                    event['sample'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
-
-
-@base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(base.HazardCalculator):
-    """
-    Event based PSHA calculator generating the ruptures only
-    """
-    core_task = compute_ruptures
-    is_stochastic = True
-
-    def init(self):
-        """
-        Set the random seed passed to the SourceManager and the
-        minimum_intensity dictionary.
-        """
-        self.rupser = calc.RuptureSerializer(self.datastore)
-
-    def zerodict(self):
-        """
-        Initial accumulator, a dictionary (grp_id, gsim) -> curves
-        """
-        zd = AccumDict()
-        zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm.info.grp_by("trt")
-        return zd
-
-    def agg_dicts(self, acc, ruptures_by_grp_id):
-        """
-        Accumulate dictionaries of ruptures and populate the `events`
-        dataset in the datastore.
-
-        :param acc: accumulator dictionary
-        :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
-        """
-        if hasattr(ruptures_by_grp_id, 'calc_times'):
-            for srcid, nsites, eids, dt in ruptures_by_grp_id.calc_times:
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += dt
-                info.num_split += 1
-                info.events += len(eids)
-        if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
-            acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
-        acc += ruptures_by_grp_id
-        self.save_ruptures(ruptures_by_grp_id)
-        return acc
-
-    def save_ruptures(self, ruptures_by_grp_id):
-        """
-        Extend the 'events' dataset with the events from the given ruptures;
-        also, save the ruptures if the flag `save_ruptures` is on.
-
-        :param ruptures_by_grp_id: a dictionary grp_id -> list of EBRuptures
-        """
-        with self.monitor('saving ruptures', autoflush=True):
-            for grp_id, ebrs in ruptures_by_grp_id.items():
-                if len(ebrs):
-                    events = get_events(ebrs)
-                    dset = self.datastore.extend('events', events)
-                    if self.oqparam.save_ruptures:
-                        self.rupser.save(ebrs, eidx=len(dset)-len(events))
-
-    def gen_args(self, monitor):
-        """
-        Used in the case of large source model logic trees.
-
-        :param monitor: a :class:`openquake.baselib.performance.Monitor`
-        :yields: (sources, sites, gsims, monitor) tuples
-        """
-        oq = self.oqparam
-
-        def weight(src):
-            return src.num_ruptures * src.RUPTURE_WEIGHT
-        csm, src_filter = self.filter_csm()
-        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks or 1)
-        logging.info('Using maxweight=%d', maxweight)
-        param = dict(
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
-            seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-
-        num_tasks = 0
-        num_sources = 0
-        for sm in csm.source_models:
-            for sg in sm.src_groups:
-                gsims = csm.info.gsim_lt.get_gsims(sg.trt)
-                csm.add_infos(sg.sources)
-                if sg.src_interdep == 'mutex':  # do not split
-                    sg.samples = sm.samples
-                    yield sg, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(sg.sources)
-                    continue
-                for block in block_splitter(sg.sources, maxweight, weight):
-                    block.samples = sm.samples
-                    yield block, src_filter, gsims, param, monitor
-                    num_tasks += 1
-                    num_sources += len(block)
-        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-
-    def execute(self):
-        with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('classical'))
-            iterargs = saving_sources_by_task(allargs, self.datastore)
-            if isinstance(allargs, list):
-                # there is a trick here: if the arguments are known
-                # (a list, not an iterator), keep them as a list
-                # then the Starmap will understand the case of a single
-                # argument tuple and it will run in core the task
-                iterargs = list(iterargs)
-            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
-                self.agg_dicts, self.zerodict())
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
-        return acc
-
-    def post_execute(self, result):
-        """
-        Save the SES collection
-        """
-        self.rupser.close()
-        num_events = sum(set_counts(self.datastore, 'events').values())
-        if num_events == 0:
-            raise RuntimeError(
-                'No seismic events! Perhaps the investigation time is too '
-                'small or the maximum_distance is too small')
-        num_ruptures = sum(len(ruptures) for ruptures in result.values())
-        logging.info('Setting %d event years on %d ruptures',
-                     num_events, num_ruptures)
-        with self.monitor('setting event years', measuremem=True,
-                          autoflush=True):
-            numpy.random.seed(self.oqparam.ses_seed)
-            set_random_years(self.datastore, 'events',
-                             int(self.oqparam.investigation_time))
-        gmf_size = max_gmf_size(
-            result, self.rlzs_assoc.get_rlzs_by_gsim,
-            self.csm.info.get_samples_by_grp(),
-            len(self.oqparam.imtls))
-        self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-        msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
-        logging.info('Generating %s%s of GMFs', msg, humansize(gmf_size))
 
 
 def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
@@ -289,26 +124,60 @@ def set_random_years(dstore, name, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(getters, monitor):
-    """
-    :param getters:
-        a list of GmfGetter instances
-    :param monitor:
-        a Monitor instance
-    :returns:
-        a list of dictionaries with keys gmfcoll and hcurves
-    """
-    results = []
-    for getter in getters:
-        res = getter.compute_gmfs_curves(monitor)
-        if len(getter.gmdata):
-            results.append(res)
-    return results
-
-
 def update_nbytes(dstore, key, array):
     nbytes = dstore.get_attr(key, 'nbytes', 0)
     dstore.set_attrs(key, nbytes=nbytes + array.nbytes)
+
+
+def get_mean_curves(dstore):
+    """
+    Extract the mean hazard curves from the datastore, as a composite
+    array of length nsites.
+    """
+    imtls = dstore['oqparam'].imtls
+    nsites = len(dstore['sitecol'])
+    hcurves = dstore['hcurves']
+    if 'mean' in hcurves:
+        mean = dstore['hcurves/mean']
+    elif len(hcurves) == 1:  # there is a single realization
+        mean = dstore['hcurves/rlz-0000']
+    return mean.convert(imtls, nsites)
+
+# ########################################################################## #
+
+
+def compute_hazard(sources_or_ruptures, src_filter,
+                   rlzs_by_gsim, param, monitor):
+    """
+    Compute events, ruptures, gmfs and hazard curves
+    """
+    res = AccumDict()
+    with monitor('building ruptures', measuremem=True):
+        if isinstance(sources_or_ruptures, RuptureGetter):
+            grp_id = sources_or_ruptures.grp_id
+            res['ruptures'] = {}
+            ruptures = list(sources_or_ruptures)
+            sitecol = src_filter
+        else:
+            grp_id = sources_or_ruptures[0].src_group_id
+            dic = sample_ruptures(
+                sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
+            ruptures = dic['eb_ruptures']
+            res.num_events = dic['num_events']
+            res.calc_times = dic['calc_times']
+            res.eff_ruptures = {grp_id: dic['num_ruptures']}
+            res['ruptures'] = {grp_id: ruptures}
+            res.num_ruptures = len(ruptures)
+            sitecol = src_filter.sitecol
+    res['num_ruptures'] = len(ruptures)
+    getter = GmfGetter(
+        rlzs_by_gsim, ruptures, sitecol,
+        param['oqparam'], param['min_iml'], param['samples'])
+    res.update(getter.compute_gmfs_curves(monitor))
+    if param['oqparam'].save_ruptures is False:
+        res.events = get_events(ruptures)
+        res['ruptures'] = {}
+    return res
 
 
 @base.calculators.add('event_based')
@@ -318,117 +187,167 @@ class EventBasedCalculator(base.HazardCalculator):
     the hazard curves from the ruptures, depending on the configuration
     parameters.
     """
-    pre_calculator = 'event_based_rupture'
-    core_task = compute_gmfs_and_curves
+    pre_calculator = None
+    core_task = compute_hazard
     is_stochastic = True
 
-    def combine_pmaps_and_save_gmfs(self, acc, results):
+    def gen_args(self, monitor):
         """
-        Combine the hazard curves (if any) and save the gmfs (if any)
-        sequentially; notice that the gmfs may come from
-        different tasks in any order.
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        oq = self.oqparam
+        param = dict(
+            oqparam=oq, min_iml=self.get_min_iml(oq),
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+        if oq.hazard_calculation_id:
+            U = len(self.datastore.parent['ruptures'])
+            logging.info('Found %d ruptures', U)
+            parent = self.can_read_parent() or self.datastore
+            samples_by_grp = self.csm_info.get_samples_by_grp()
+            for slc in split_in_slices(U, oq.concurrent_tasks or 1):
+                for grp_id in self.rlzs_by_gsim_grp:
+                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+                    ruptures = RuptureGetter(parent, slc, grp_id)
+                    param['samples'] = samples_by_grp[grp_id]
+                    yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
+            return
 
-        :param acc: an accumulator for the hazard curves
-        :param results: dictionaries rlzi, imt -> [gmf_array, curves_by_imt]
-        :returns: a new accumulator
+        maxweight = self.csm.get_maxweight(weight, oq.concurrent_tasks or 1)
+        logging.info('Using maxweight=%d', maxweight)
+        num_tasks = 0
+        num_sources = 0
+        for sm in self.csm.source_models:
+            param['samples'] = sm.samples
+            for sg in sm.src_groups:
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
+                self.csm.add_infos(sg.sources)
+                if sg.src_interdep == 'mutex':  # do not split
+                    yield sg, self.src_filter, rlzs_by_gsim, param, monitor
+                    num_tasks += 1
+                    num_sources += len(sg.sources)
+                    continue
+                for block in block_splitter(sg.sources, maxweight, weight):
+                    yield block, self.src_filter, rlzs_by_gsim, param, monitor
+                    num_tasks += 1
+                    num_sources += 1
+        logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
+
+    def zerodict(self):
         """
+        Initial accumulator, a dictionary (grp_id, gsim) -> curves
+        """
+        if self.oqparam.hazard_calculation_id is None:
+            # filter_csm must be called first
+            self.csm, self.src_filter = self.filter_csm()
+            self.csm_info = self.csm.info
+        else:
+            self.datastore.parent = datastore.read(
+                self.oqparam.hazard_calculation_id)
+            self.csm_info = self.datastore.parent['csm_info']
+        self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
+        self.L = len(self.oqparam.imtls.array)
+        self.R = self.csm_info.get_num_rlzs()
+        zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
+        zd.eff_ruptures = AccumDict()
+        self.grp_trt = self.csm_info.grp_by("trt")
+        return zd
+
+    def agg_dicts(self, acc, result):
+        """
+        :param acc: accumulator dictionary
+        :param result: an AccumDict with events, ruptures, gmfs and hcurves
+        """
+        oq = self.oqparam
+        if oq.save_ruptures and not oq.ground_motion_fields:
+            self.gmf_size += max_gmf_size(
+                result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
+                self.csm_info.get_samples_by_grp(), len(self.oqparam.imtls))
+        if hasattr(result, 'calc_times'):
+            for srcid, nsites, eids, dt in result.calc_times:
+                info = self.csm.infos[srcid]
+                info.num_sites += nsites
+                info.calc_time += dt
+                info.num_split += 1
+                info.events += len(eids)
+        if hasattr(result, 'eff_ruptures'):
+            acc.eff_ruptures += result.eff_ruptures
+        if hasattr(result, 'events'):
+            self.datastore.extend('events', result.events)
+        self.save_ruptures(result['ruptures'])
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         hdf5path = self.datastore.hdf5path
-        for res in results:
-            self.gmdata += res['gmdata']
-            data = res['gmfdata']
+        if 'gmdata' in result:
+            self.gmdata += result['gmdata']
+            data = result['gmfdata']
             with sav_mon:
                 hdf5.extend3(hdf5path, 'gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
                 update_nbytes(self.datastore, 'gmf_data/data', data)
-                for sid, start, stop in res['indices']:
+                for sid, start, stop in result['indices']:
                     self.indices[sid].append(
                         (start + self.offset, stop + self.offset))
                 self.offset += len(data)
-            slicedic = self.oqparam.imtls.slicedic
-            with agg_mon:
-                for key, poes in res['hcurves'].items():
-                    r, sid, imt = str2rsi(key)
-                    array = acc[r].setdefault(sid, 0).array[slicedic[imt], 0]
-                    array[:] = 1. - (1. - array) * (1. - poes)
-            sav_mon.flush()
-            agg_mon.flush()
-            self.datastore.flush()
-            if 'ruptures' in res:
-                vars(EventBasedRuptureCalculator)['save_ruptures'](
-                    self, res['ruptures'])
+                if self.offset >= TWO32:
+                    raise RuntimeError(
+                        'The gmf_data table has more than %d rows' % TWO32)
+        slicedic = self.oqparam.imtls.slicedic
+        with agg_mon:
+            for key, poes in result.get('hcurves', {}).items():
+                r, sid, imt = str2rsi(key)
+                array = acc[r].setdefault(sid, 0).array[slicedic[imt], 0]
+                array[:] = 1. - (1. - array) * (1. - poes)
+        sav_mon.flush()
+        agg_mon.flush()
+        self.datastore.flush()
         return acc
 
-    def gen_args(self):
+    def save_ruptures(self, ruptures_by_grp_id):
         """
-        :yields: the arguments for compute_gmfs_and_curves
+        Extend the 'events' dataset with the events from the given ruptures;
+        also, save the ruptures if the flag `save_ruptures` is on.
+
+        :param ruptures_by_grp_id: a dictionary grp_id -> list of EBRuptures
         """
-        oq = self.oqparam
-        sitecol = self.sitecol.complete
-        monitor = self.monitor(self.core_task.__name__)
-        min_iml = self.get_min_iml(oq)
-        try:
-            csm_info = self.csm.info
-        except AttributeError:  # no csm
-            csm_info = self.datastore['csm_info']
-        samples_by_grp = csm_info.get_samples_by_grp()
-        rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
-        if self.precalc:
-            num_ruptures = sum(len(rs) for rs in self.precalc.result.values())
-            block_size = math.ceil(num_ruptures / (oq.concurrent_tasks or 1))
-            for grp_id, ruptures in self.precalc.result.items():
-                if not ruptures:
-                    continue
-                for block in block_splitter(ruptures, block_size):
-                    getter = GmfGetter(
-                        rlzs_by_gsim[grp_id], block, sitecol,
-                        oq, min_iml, samples_by_grp[grp_id])
-                    yield [getter], monitor
-            return
-        U = len(self.datastore['ruptures'])
-        logging.info('Found %d ruptures', U)
-        parent = self.can_read_parent() or self.datastore
-        for slc in split_in_slices(U, oq.concurrent_tasks or 1):
-            getters = []
-            for grp_id in rlzs_by_gsim:
-                ruptures = RuptureGetter(parent, slc, grp_id)
-                if parent is self.datastore:  # not accessible parent
-                    ruptures = list(ruptures)
-                    if not ruptures:
-                        continue
-                getter = GmfGetter(
-                    rlzs_by_gsim[grp_id], ruptures, sitecol,
-                    oq, min_iml, samples_by_grp[grp_id])
-                getters.append(getter)
-            yield getters, monitor
+        with self.monitor('saving ruptures', autoflush=True):
+            for grp_id, ebrs in ruptures_by_grp_id.items():
+                if len(ebrs):
+                    events = get_events(ebrs)
+                    dset = self.datastore.extend('events', events)
+                    if self.oqparam.save_ruptures:
+                        self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
     def execute(self):
-        """
-        Run in parallel `core_task(sources, sitecol, monitor)`, by
-        parallelizing on the ruptures according to their weight and
-        tectonic region type.
-        """
-        oq = self.oqparam
-        calc.check_overflow(self)
-
-        self.csm_info = self.datastore['csm_info']
-        self.sm_id = {tuple(sm.path): sm.ordinal
-                      for sm in self.csm_info.source_models}
-        L = len(oq.imtls.array)
-        R = self.datastore['csm_info'].get_num_rlzs()
+        if self.oqparam.hazard_calculation_id:
+            def saving_sources_by_task(allargs, dstore):
+                return allargs
+        else:
+            from openquake.calculators.classical import saving_sources_by_task
         self.gmdata = {}
         self.offset = 0
+        self.gmf_size = 0
         self.indices = collections.defaultdict(list)  # sid -> indices
-        ires = parallel.Starmap(
-            self.core_task.__func__, self.gen_args()).submit_all()
-        if self.precalc and self.precalc.result:
-            # remove the ruptures in memory to save memory
-            self.precalc.result.clear()
-        acc = ires.reduce(self.combine_pmaps_and_save_gmfs, {
-            r: ProbabilityMap(L) for r in range(R)})
-        base.save_gmdata(self, R)
+        acc = self.zerodict()
+        with self.monitor('managing sources', autoflush=True):
+            allargs = self.gen_args(self.monitor('classical'))
+            iterargs = saving_sources_by_task(allargs, self.datastore)
+            if isinstance(allargs, list):
+                # there is a trick here: if the arguments are known
+                # (a list, not an iterator), keep them as a list
+                # then the Starmap will understand the case of a single
+                # argument tuple and it will run in core the task
+                iterargs = list(iterargs)
+            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
+                self.agg_dicts, acc)
+        if self.oqparam.hazard_calculation_id is None:
+            with self.monitor('store source_info', autoflush=True):
+                self.store_source_info(self.csm.infos, acc)
+        calc.check_overflow(self)
+        base.save_gmdata(self, self.R)
         if self.indices:
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
@@ -437,7 +356,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
                      for sid in self.sitecol.complete.sids])
-        else:
+        elif (self.oqparam.ground_motion_fields and
+              'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         return acc
@@ -449,15 +369,40 @@ class EventBasedCalculator(base.HazardCalculator):
             ds.set_nbytes('gmf_data/' + sm_id)
         ds.set_nbytes('gmf_data')
 
+    def init(self):
+        """
+        Set the random seed passed to the SourceManager and the
+        minimum_intensity dictionary.
+        """
+        self.rupser = calc.RuptureSerializer(self.datastore)
+
     def post_execute(self, result):
         """
-        :param result:
-            a dictionary (src_group_id, gsim) -> haz_curves or an empty
-            dictionary if hazard_curves_from_gmfs is false
+        Save the SES collection
         """
         oq = self.oqparam
+        if oq.hazard_calculation_id is None:
+            self.rupser.close()
+            num_events = sum(set_counts(self.datastore, 'events').values())
+            if num_events == 0:
+                raise RuntimeError(
+                    'No seismic events! Perhaps the investigation time is too '
+                    'small or the maximum_distance is too small')
+            logging.info('Setting %d event years', num_events)
+            with self.monitor('setting event years', measuremem=True,
+                              autoflush=True):
+                numpy.random.seed(self.oqparam.ses_seed)
+                set_random_years(self.datastore, 'events',
+                                 int(self.oqparam.investigation_time))
+
+        if self.gmf_size:
+            self.datastore.set_attrs('events', max_gmf_size=self.gmf_size)
+            msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
+            logging.info('Generating %s%s of GMFs',
+                         msg, humansize(self.gmf_size))
+
         if oq.hazard_curves_from_gmfs:
-            rlzs = self.rlzs_assoc.realizations
+            rlzs = self.csm_info.rlzs_assoc.realizations
             # save individual curves
             for i in sorted(result):
                 key = 'hcurves/rlz-%03d' % i
@@ -498,18 +443,3 @@ class EventBasedCalculator(base.HazardCalculator):
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
-
-
-def get_mean_curves(dstore):
-    """
-    Extract the mean hazard curves from the datastore, as a composite
-    array of length nsites.
-    """
-    imtls = dstore['oqparam'].imtls
-    nsites = len(dstore['sitecol'])
-    hcurves = dstore['hcurves']
-    if 'mean' in hcurves:
-        mean = dstore['hcurves/mean']
-    elif len(hcurves) == 1:  # there is a single realization
-        mean = dstore['hcurves/rlz-0000']
-    return mean.convert(imtls, nsites)

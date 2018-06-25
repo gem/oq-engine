@@ -43,12 +43,11 @@ class StochasticEventSetTestCase(unittest.TestCase):
             nr = src.num_ruptures
             src.serial = rup_serial[start:start + nr]
             start += nr
-        group.samples = 1
         lonlat = 135.68, 35.68
         site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         param = dict(ses_per_logic_tree_path=10, seed=42,
-                     filter_distance='rjb')
+                     filter_distance='rjb', samples=1)
         gsims = [SiMidorikawa1999SInter()]
         dic = sample_ruptures(group, s_filter, gsims, param)
         self.assertEqual(dic['num_ruptures'], 19)  # total ruptures
