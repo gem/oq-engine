@@ -42,8 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 
-save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
-    'save_ruptures']
+save_ruptures = event_based.EventBasedCalculator.save_ruptures
 
 
 def ucerf_risk(riskinput, riskmodel, param, monitor):
@@ -204,11 +203,11 @@ def sample_background_model(
 
 
 @util.reader
-def compute_ruptures(sources, src_filter, gsims, param, monitor):
+def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param src_filter: a SourceFilter instance
-    :param gsims: a list of GSIMs
+    :param rlzs_by_gsim: a dictionary gsim -> rlzs
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
@@ -223,7 +222,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
@@ -247,20 +246,25 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         ebruptures.append(EBRupture(rup, indices, evs))
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
-    res[src.src_group_id] = ebruptures
+    res['ruptures'] = {src.src_group_id: ebruptures}
     if not param['save_ruptures']:
-        res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
+        res.events_by_grp = {grp_id: event_based.get_events(ebruptures)
                              for grp_id in res}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
+    if param.get('gmf'):
+        getter = getters.GmfGetter(
+            rlzs_by_gsim, ebruptures, sitecol,
+            param['oqparam'], param['min_iml'], param['samples'])
+        res.update(getter.compute_gmfs_curves(monitor))
     return res
 
 
-@base.calculators.add('ucerf_rupture')
-class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
+@base.calculators.add('ucerf_hazard')
+class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_task = compute_ruptures
+    core_task = compute_hazard
 
     def pre_execute(self):
         """
@@ -270,7 +274,6 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.csm = readinput.get_composite_source_model(oq)
-        self.csm.src_filter = UcerfFilter(self.sitecol, oq.maximum_distance)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
@@ -284,6 +287,10 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
 
+    def filter_csm(self):
+        return self.csm, UcerfFilter(
+            self.sitecol, self.oqparam.maximum_distance)
+
     def gen_args(self, monitor):
         """
         Generate a task for each branch
@@ -291,18 +298,20 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
+        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
-            gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
                 param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             save_ruptures=oq.save_ruptures,
-                             filter_distance=oq.filter_distance)
-                allargs.append(
-                    (srcs, self.csm.src_filter, gsims, param, monitor))
+                             oqparam=oq, save_ruptures=oq.save_ruptures,
+                             filter_distance=oq.filter_distance,
+                             gmf=oq.ground_motion_fields,
+                             min_iml=self.get_min_iml(oq))
+                allargs.append((srcs, self.src_filter, rlzs_by_gsim[sm_id],
+                                param, monitor))
         return allargs
 
 
@@ -311,14 +320,13 @@ class List(list):
 
 
 @util.reader
-def compute_losses(ssm, src_filter, oqparam, param, riskmodel, monitor):
+def compute_losses(ssm, src_filter, param, riskmodel, monitor):
     """
     Compute the losses for a single source model. Returns the ruptures
     as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
     :param sitecol: a SiteCollection instance
-    :param oqparam: the openquake parameters
     :param param: a dictionary of extra parameters
     :param riskmodel: a RiskModel instance
     :param monitor: a Monitor instance
@@ -326,34 +334,26 @@ def compute_losses(ssm, src_filter, oqparam, param, riskmodel, monitor):
     """
     [grp] = ssm.src_groups
     res = List()
-    gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-    ruptures_by_grp = compute_ruptures(
-        grp, src_filter, gsims, param, monitor)
-    [(grp_id, ebruptures)] = ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
+    hazard = compute_hazard(grp, src_filter, rlzs_by_gsim, param, monitor)
+    [(grp_id, ebruptures)] = hazard['ruptures'].items()
+
     samples = ssm.info.get_samples_by_grp()
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
     getter = getters.GmfGetter(
         rlzs_by_gsim, ebruptures, src_filter.sitecol,
-        oqparam, param['min_iml'], samples[grp_id])
+        param['oqparam'], param['min_iml'], samples[grp_id])
     ri = riskinput.RiskInput(getter, param['assetcol'].assets_by_site())
     res.append(ucerf_risk(ri, riskmodel, param, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.hazard_getter.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
-    res.events_by_grp = ruptures_by_grp.events_by_grp
-    res.eff_ruptures = ruptures_by_grp.eff_ruptures
+    res.events_by_grp = hazard.events_by_grp
+    res.eff_ruptures = hazard.eff_ruptures
     return res
-
-
-@base.calculators.add('ucerf_hazard')
-class UCERFHazardCalculator(event_based.EventBasedCalculator):
-    """
-    Runs a standard event based calculation starting from UCERF ruptures
-    """
-    pre_calculator = 'ucerf_rupture'
 
 
 @base.calculators.add('ucerf_risk')
@@ -361,7 +361,7 @@ class UCERFRiskCalculator(EbrCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
-    pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
+    pre_execute = UCERFHazardCalculator.pre_execute
 
     def gen_args(self):
         """
@@ -375,6 +375,8 @@ class UCERFRiskCalculator(EbrCalculator):
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
                               ('loss', (F32, (self.L, self.I)))])
         monitor = self.monitor('compute_losses')
+        src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
+
         for sm in self.csm.source_models:
             if sm.samples > 1:
                 logging.warn('Sampling in ucerf_risk is untested')
@@ -387,9 +389,9 @@ class UCERFRiskCalculator(EbrCalculator):
                              avg_losses=oq.avg_losses,
                              elt_dt=elt_dt,
                              min_iml=min_iml,
+                             oqparam=oq,
                              insured_losses=oq.insured_losses)
-                yield (ssm, self.csm.src_filter, oq, param,
-                       self.riskmodel, monitor)
+                yield ssm, src_filter, param, self.riskmodel, monitor
 
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy

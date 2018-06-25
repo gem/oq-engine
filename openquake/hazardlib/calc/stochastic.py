@@ -133,7 +133,7 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
         t0 = time.time()
         num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], group.samples,
+            src, prob[src], param['ses_per_logic_tree_path'], param['samples'],
             param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.

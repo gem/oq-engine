@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the event_based_rupture calculator and three others
   * Added a field `size_mb` to the `output` table in the database and made
     it visible in the WebUI as a tooltip
   * Added a command `oq check_input job.ini` to check the input files

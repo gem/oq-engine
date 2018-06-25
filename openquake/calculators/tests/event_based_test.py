@@ -169,11 +169,6 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
-
-        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
-        got = self.calc.datastore['gmf_data/data'].value.nbytes
-        self.assertEqual(exp, got)
-
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
@@ -240,6 +235,9 @@ class EventBasedTestCase(CalculatorTestCase):
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
+
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        self.assertEqual(exp, 375496)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
