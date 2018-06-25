@@ -177,6 +177,8 @@ class EbrCalculator(base.RiskCalculator):
         else:
             ebcalc = base.calculators[self.pre_calculator](self.oqparam)
             ebcalc.run(close=False)
+            if not self.oqparam.ground_motion_fields:
+                return  # this happens in the reportwriter
             self.set_log_format()
             parent = self.dynamic_parent = self.datastore.parent = (
                 ebcalc.datastore)
