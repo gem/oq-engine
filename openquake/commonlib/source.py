@@ -333,6 +333,7 @@ source_model_dt = numpy.dtype([
 
 src_group_dt = numpy.dtype(
     [('grp_id', U32),
+     ('name', hdf5.vstr),
      ('trti', U16),
      ('effrup', I32),
      ('totrup', I32),
@@ -488,9 +489,9 @@ class CompositionInfo(object):
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
                             num_gsim_paths, sm.samples))
             for src_group in sm.src_groups:
-                sg_data.append((src_group.id, trti[src_group.trt],
-                                src_group.eff_ruptures, src_group.tot_ruptures,
-                                sm.ordinal))
+                sg_data.append((src_group.id, src_group.name,
+                                trti[src_group.trt], src_group.eff_ruptures,
+                                src_group.tot_ruptures, sm.ordinal))
         return (dict(
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
@@ -520,7 +521,8 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[data['trti']], id=data['grp_id'],
-                    eff_ruptures=data['effrup'], tot_ruptures=get_totrup(data))
+                    name=data['name'], eff_ruptures=data['effrup'],
+                    tot_ruptures=get_totrup(data))
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
