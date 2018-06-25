@@ -186,8 +186,8 @@ class EbrCalculator(base.RiskCalculator):
             self.sitecol = ebcalc.sitecol
             self.assetcol = ebcalc.assetcol
             self.riskmodel = ebcalc.riskmodel
-            if not self.oqparam.ground_motion_fields:
-                return  # this happens in the reportwrite
+        if not self.oqparam.ground_motion_fields:
+            return  # this happens in the reportwrite
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
