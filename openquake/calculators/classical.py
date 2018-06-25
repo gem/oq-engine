@@ -261,8 +261,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 with hdf5.File(self.hdf5cache) as cache:
                     cache['oqparam'] = oq
                     self.datastore.hdf5.copy('poes', cache)
-
                 self.calc_stats(self.hdf5cache)
+            else:
+                self.calc_stats(self.datastore)
 
     def calc_stats(self, parent):
         oq = self.oqparam
