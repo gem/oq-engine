@@ -126,7 +126,8 @@ class TestSeismicityUtilities(unittest.TestCase):
         '''Tests the function utils.decimal_time'''
         self.year = np.array([1990])
         self.assertTrue(np.allclose(
-            utils.decimal_time(self.year, [], [], [], [], []),
+            utils.decimal_time(self.year, np.array([]), np.array([]),
+                               np.array([]), np.array([]), np.array([])),
             np.array([1990.])))
 
     def test_haversine(self):
