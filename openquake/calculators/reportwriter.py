@@ -54,8 +54,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'short_source_info': 'Slowest sources',
-        'task_classical:0': 'Fastest task',
-        'task_classical:-1': 'Slowest task',
+        'task_hazard:0': 'Fastest task',
+        'task_hazard:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -107,8 +107,8 @@ class ReportWriter(object):
             self.add('task_info')
             tasks = set(ds['task_info'])
             if 'classical' in tasks or 'count_eff_ruptures' in tasks:
-                self.add('task_classical:0')
-                self.add('task_classical:-1')
+                self.add('task_hazard:0')
+                self.add('task_hazard:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
@@ -140,9 +140,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     p = mock.patch.object
     with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
-        if calc.pre_calculator == 'event_based_risk':
-            # compute the ruptures only, not the risk
-            calc.pre_calculator = 'event_based_rupture'
+        calc.oqparam.ground_motion_fields = False
         calc.pre_execute()
     if hasattr(calc, 'csm'):
         calc.datastore['csm_info'] = calc.csm.info

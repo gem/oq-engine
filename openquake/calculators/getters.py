@@ -399,9 +399,11 @@ class GmfGetter(object):
                                 gmvs[:, imti], oq.imtls[imt],
                                 oq.investigation_time, duration)
                             hcurves[rsi2str(rlzi, sid, imt)] = poes
-        else:  # fast lane
+        elif oq.ground_motion_fields:  # fast lane
             with monitor('building hazard', measuremem=True):
                 gmfdata = numpy.fromiter(self.gen_gmv(), dt)
+        else:
+            return {}
         indices = []
         gmfdata.sort(order=('sid', 'rlzi', 'eid'))
         start = stop = 0
