@@ -173,17 +173,7 @@ class EbrCalculator(base.RiskCalculator):
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         else:
-            ebcalc = base.calculators['event_based'](self.oqparam)
-            ebcalc.run(close=False)
-            self.set_log_format()
-            parent = self.dynamic_parent = self.datastore.parent = (
-                ebcalc.datastore)
-            oq.hazard_calculation_id = parent.calc_id
-            self.datastore['oqparam'] = oq
-            self.param = ebcalc.param
-            self.sitecol = ebcalc.sitecol
-            self.assetcol = ebcalc.assetcol
-            self.riskmodel = ebcalc.riskmodel
+            parent = self.precompute('event_based')
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwrite
 
@@ -193,7 +183,6 @@ class EbrCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.eids = sorted(parent['events']['eid'])
         else:
             self.eids = sorted(self.datastore['events']['eid'])
