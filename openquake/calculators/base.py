@@ -454,11 +454,6 @@ class HazardCalculator(BaseCalculator):
             if precalc_id:
                 self.read_previous(precalc_id)
             self.read_inputs()
-        if hasattr(self, 'sitecol'):
-            self.datastore['sitecol'] = self.sitecol.complete
-        self.param = {}  # used in the risk calculators
-        if 'gmfs' in self.oqparam.inputs:
-            save_gmfs(self)
 
     def init(self):
         """
@@ -602,6 +597,10 @@ class HazardCalculator(BaseCalculator):
                     raise ValueError(
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
+
+        if hasattr(self, 'sitecol'):
+            self.datastore['sitecol'] = self.sitecol.complete
+        self.param = {}  # used in the risk calculators
 
     def count_eff_ruptures(self, result_dict, src_group_id):
         """
