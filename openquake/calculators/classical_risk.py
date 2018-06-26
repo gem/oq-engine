@@ -86,7 +86,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical Risk calculator
     """
-    pre_calculator = 'classical'
     core_task = classical_risk
 
     def pre_execute(self):
@@ -97,21 +96,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if oq.insured_losses:
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
-        if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol = readinput.get_site_collection(oq)
-            self.datastore['poes/grp-00'] = readinput.pmap
-            self.save_params()
-            self.load_riskmodel()
-            self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore['sitecol'] = self.sitecol
-            self.datastore['assetcol'] = self.assetcol
-            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.before_export()  # save 'realizations' dataset
-        else:  # compute hazard or read it from the datastore
-            super().pre_execute()
-            if 'poes' not in self.datastore:  # when building short report
-                return
+        super().pre_execute('classical')
+        if 'poes' not in self.datastore:  # when building short report
+            return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.param = dict(stats=oq.risk_stats(), weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
