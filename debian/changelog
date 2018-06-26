@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a bug in the classical_damage calculators: multiple loss types
+    were not treated correctly
+
   [Marco Pagani]
   * Adding tests to the method computing decimal time
 

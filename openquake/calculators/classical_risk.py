@@ -20,7 +20,6 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
