@@ -155,27 +155,8 @@ class EbrCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:
-            assert not oq.hazard_calculation_id, (
-                'You cannot use --hc together with gmfs_file')
-            super().pre_execute()
-            base.save_gmfs(self)
-            parent = ()
-        elif oq.hazard_calculation_id:
-            super().pre_execute()
-            parent = self.datastore.parent
-            oqp = parent['oqparam']
-            if oqp.investigation_time != oq.investigation_time:
-                raise ValueError(
-                    'The parent calculation was using investigation_time=%s'
-                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if oqp.minimum_intensity != oq.minimum_intensity:
-                raise ValueError(
-                    'The parent calculation was using minimum_intensity=%s'
-                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
-        else:
-            self.pre_compute('event_based')
-            parent = self.dynamic_parent
+        super().pre_execute('event_based')
+        parent = self.dynamic_parent
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwrite
 
