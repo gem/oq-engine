@@ -216,6 +216,9 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get(url)
         self.assertEqual(resp.status_code, 200)
 
+        # check deleting job without the webAPI
+        engine.del_calculation(job_id, True)
+
     def test_abort(self):
         resp = self.c.post('/v1/calc/0/abort')  # 0 is a non-existing job
         print(resp.content.decode('utf8'))
@@ -237,10 +240,6 @@ class EngineServerTestCase(unittest.TestCase):
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
-        # NB: the job is invisible but still there
-
-        # check deleting job
-        engine.del_calculation(job_id, True)
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
