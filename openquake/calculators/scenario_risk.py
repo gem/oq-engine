@@ -94,8 +94,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         if 'gmfs' in self.oqparam.inputs:
-            self.pre_calculator = None
-        super().pre_execute()
+            self.read_inputs()
+            base.save_gmfs(self)
+        else:
+            super().pre_execute()
+            self.param = {}
         self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
