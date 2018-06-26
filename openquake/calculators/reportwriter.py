@@ -142,8 +142,7 @@ def build_report(job_ini, output_dir=None):
     with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
         calc.oqparam.ground_motion_fields = False
         calc.pre_execute()
-    if hasattr(calc, 'csm'):
-        calc.datastore['csm_info'] = calc.csm.info
+        calc.execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
