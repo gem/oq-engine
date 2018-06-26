@@ -18,8 +18,8 @@ for ini in $(find $1 -name job.ini | sort); do
 done
 
 # test generation of statistical hazard curves from previous calculation;
-# -6 is LogicTreeCase3ClassicalPSHA
-oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -6
+# -7 is LogicTreeCase3ClassicalPSHA
+oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -7
 
 # do something with the generated data
 oq extract hazard/rlzs
