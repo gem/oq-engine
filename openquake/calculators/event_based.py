@@ -387,7 +387,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            logging.info('Setting %d event years', num_events)
+            logging.info('Setting %d event years on %d ruptures',
+                         num_events, self.rupser.nruptures)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 numpy.random.seed(self.oqparam.ses_seed)
