@@ -416,23 +416,22 @@ class HazardCalculator(BaseCalculator):
             self.rup_data = {}
         self.init()
 
-    def precompute(self, calculation_mode):
+    def pre_compute(self, calculation_mode):
         """
-        Run a calculation of kind `calculation_mode`, sets it as parent
-        calculation and returns its datastore.
+        Run a calculation of kind `calculation_mode` and sets it as parent
+        calculation.
         """
         calc = calculators[calculation_mode](self.oqparam)
         calc.run(close=False)
         self.set_log_format()
-        parent = self.dynamic_parent = self.datastore.parent = calc.datastore
-        self.oqparam.hazard_calculation_id = parent.calc_id
+        self.dynamic_parent = self.datastore.parent = calc.datastore
+        self.oqparam.hazard_calculation_id = self.dynamic_parent.calc_id
         self.datastore['oqparam'] = self.oqparam
         self.param = calc.param
         self.sitecol = calc.sitecol
         self.assetcol = calc.assetcol
         self.riskmodel = calc.riskmodel
         self.rlzs_assoc = calc.rlzs_assoc
-        return parent
 
     def pre_execute(self):
         """

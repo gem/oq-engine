@@ -110,7 +110,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         elif oq.hazard_calculation_id:
             super().pre_execute()
         else:  # compute hazard
-            self.precompute('classical')
+            self.pre_compute('classical')
             if 'poes' not in self.datastore:  # when building short report
                 return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
