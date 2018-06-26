@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Adding tests to the method computing decimal time
+
   [Michele Simionato]
   * Removed the event_based_rupture calculator and three others
   * Added a field `size_mb` to the `output` table in the database and made
