@@ -405,35 +405,30 @@ class HazardCalculator(BaseCalculator):
             self.rup_data = {}
         self.init()
 
-    def pre_compute(self, calculation_mode):
-        """
-        Run a calculation of kind `calculation_mode` and sets it as parent
-        calculation.
-        """
-        calc = calculators[calculation_mode](self.oqparam)
-        calc.run(close=False)
-        self.set_log_format()
-        self.dynamic_parent = self.datastore.parent = calc.datastore
-        self.oqparam.hazard_calculation_id = self.dynamic_parent.calc_id
-        self.datastore['oqparam'] = self.oqparam
-        self.param = calc.param
-        self.sitecol = calc.sitecol
-        self.assetcol = calc.assetcol
-        self.riskmodel = calc.riskmodel
-        self.rlzs_assoc = calc.rlzs_assoc
-
     def pre_execute(self, pre_calculator=None):
         """
-        Check if there is a pre_calculator or a previous calculation ID.
-        If yes, read the inputs by invoking the precalculator or by retrieving
-        the previous calculation; if not, read the inputs directly.
+        Check if there is a previous calculation ID.
+        If yes, read the inputs by retrieving the previous calculation;
+        if not, read the inputs directly.
         """
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:
+        if 'gmfs' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
             save_gmfs(self)
+        elif 'hazard_curves' in oq.inputs:  # read hazard from file
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with hazard_curves')
+            haz_sitecol = readinput.get_site_collection(oq)
+            self.datastore['poes/grp-00'] = readinput.pmap
+            self.save_params()
+            self.load_riskmodel()
+            self.read_exposure(haz_sitecol)  # define .assets_by_site
+            self.datastore['sitecol'] = self.sitecol
+            self.datastore['assetcol'] = self.assetcol
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
         elif oq.hazard_calculation_id:
             parent = self.read_previous(oq.hazard_calculation_id)
             self.read_inputs()
