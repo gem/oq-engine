@@ -115,7 +115,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     :param calc_id: numeric calculation ID
     """
     from_engine = False  # set by engine.run_calc
-    pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
     dynamic_parent = None
 
@@ -359,39 +358,12 @@ class HazardCalculator(BaseCalculator):
         logging.warn('With a parent calculation reading the hazard '
                      'would be much faster')
 
-    def compute_previous(self):
-        precalc = calculators[self.pre_calculator](
-            self.oqparam, self.datastore.calc_id)
-        precalc.run(close=False)
-        if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = precalc.csm
-        pre_attrs = vars(precalc)
-        if 'riskmodel' in pre_attrs:
-            self.riskmodel = precalc.riskmodel
-        return precalc
-
-    def read_previous(self, precalc_id):
-        """
-        Read the previous calculation datastore by checking the consistency
-        of the calculation_mode, then read the risk data.
-        """
-        parent = datastore.read(precalc_id)
-        check_precalc_consistency(
-            self.oqparam.calculation_mode, parent['oqparam'].calculation_mode)
-        self.datastore.parent = parent
-        # copy missing parameters from the parent
-        params = {name: value for name, value in
-                  vars(parent['oqparam']).items()
-                  if name not in vars(self.oqparam)}
-        self.save_params(**params)
-        return parent
-
     def read_inputs(self, split_sources=True):
         """
         Read risk data and sources if any
         """
         oq = self.oqparam
-        self.read_risk_data()
+        self._read_risk_data()
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
@@ -416,32 +388,66 @@ class HazardCalculator(BaseCalculator):
             self.rup_data = {}
         self.init()
 
-    def pre_execute(self):
+    def pre_execute(self, pre_calculator=None):
         """
-        Check if there is a pre_calculator or a previous calculation ID.
-        If yes, read the inputs by invoking the precalculator or by retrieving
-        the previous calculation; if not, read the inputs directly.
+        Check if there is a previous calculation ID.
+        If yes, read the inputs by retrieving the previous calculation;
+        if not, read the inputs directly.
         """
-        precalc_id = self.oqparam.hazard_calculation_id
-        if self.pre_calculator is not None:
-            # the parameter hazard_calculation_id is only meaningful if
-            # there is a precalculator
-            if precalc_id is None:
-                self.precalc = self.compute_previous()
-                self.sitecol = self.precalc.sitecol
-            else:
-                self.read_previous(precalc_id)
-                self.read_risk_data()
-            self.init()
-        else:  # we are in a basic calculator
-            if precalc_id:
-                self.read_previous(precalc_id)
+        oq = self.oqparam
+        if 'gmfs' in oq.inputs:  # read hazard from file
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with gmfs_file')
             self.read_inputs()
-        if hasattr(self, 'sitecol'):
-            self.datastore['sitecol'] = self.sitecol.complete
-        self.param = {}  # used in the risk calculators
-        if 'gmfs' in self.oqparam.inputs:
             save_gmfs(self)
+        elif 'hazard_curves' in oq.inputs:  # read hazard from file
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with hazard_curves')
+            haz_sitecol = readinput.get_site_collection(oq)
+            # NB: horrible: get_site_collection calls get_pmap_from_nrml
+            # that sets oq.investigation_time, so it must be called first
+            self.load_riskmodel()  # must be after get_site_collection
+            self.read_exposure(haz_sitecol)  # define .assets_by_site
+            self.datastore['poes/grp-00'] = readinput.pmap
+            self.datastore['sitecol'] = self.sitecol
+            self.datastore['assetcol'] = self.assetcol
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
+        elif oq.hazard_calculation_id:
+            parent = datastore.read(oq.hazard_calculation_id)
+            check_precalc_consistency(
+                oq.calculation_mode,
+                parent['oqparam'].calculation_mode)
+            self.datastore.parent = parent
+            # copy missing parameters from the parent
+            params = {name: value for name, value in
+                      vars(parent['oqparam']).items()
+                      if name not in vars(self.oqparam)}
+            self.save_params(**params)
+            self.read_inputs()
+            oqp = parent['oqparam']
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+        elif pre_calculator:
+            calc = calculators[pre_calculator](self.oqparam)
+            calc.run(close=False)
+            self.set_log_format()
+            self.dynamic_parent = self.datastore.parent = calc.datastore
+            self.oqparam.hazard_calculation_id = self.dynamic_parent.calc_id
+            self.datastore['oqparam'] = self.oqparam
+            self.param = calc.param
+            self.sitecol = calc.sitecol
+            self.assetcol = calc.assetcol
+            self.riskmodel = calc.riskmodel
+            self.rlzs_assoc = calc.rlzs_assoc
+        else:
+            self.read_inputs()
 
     def init(self):
         """
@@ -509,11 +515,9 @@ class HazardCalculator(BaseCalculator):
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.hdf5.flush()
 
-    def read_risk_data(self):
-        """
-        Read the exposure (if any), the risk model (if any) and then the
-        site collection, possibly extracted from the exposure.
-        """
+    def _read_risk_data(self):
+        # read the exposure (if any), the risk model (if any) and then the
+        # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_riskmodel()  # must be called first
         with self.monitor('reading site collection', autoflush=True):
@@ -585,6 +589,10 @@ class HazardCalculator(BaseCalculator):
                     raise ValueError(
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
+
+        if hasattr(self, 'sitecol'):
+            self.datastore['sitecol'] = self.sitecol.complete
+        self.param = {}  # used in the risk calculators
 
     def count_eff_ruptures(self, result_dict, src_group_id):
         """

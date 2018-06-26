@@ -151,41 +151,12 @@ class EbrCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the total losses by taxonomy
     """
     core_task = event_based_risk
-    pre_calculator = 'event_based'
     is_stochastic = True
 
     def pre_execute(self):
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:
-            assert not oq.hazard_calculation_id, (
-                'You cannot use --hc together with gmfs_file')
-            self.pre_calculator = None
-            super().pre_execute()
-            parent = ()
-        elif oq.hazard_calculation_id:
-            super().pre_execute()
-            parent = self.datastore.parent
-            oqp = parent['oqparam']
-            if oqp.investigation_time != oq.investigation_time:
-                raise ValueError(
-                    'The parent calculation was using investigation_time=%s'
-                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if oqp.minimum_intensity != oq.minimum_intensity:
-                raise ValueError(
-                    'The parent calculation was using minimum_intensity=%s'
-                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
-        else:
-            ebcalc = base.calculators[self.pre_calculator](self.oqparam)
-            ebcalc.run(close=False)
-            self.set_log_format()
-            parent = self.dynamic_parent = self.datastore.parent = (
-                ebcalc.datastore)
-            oq.hazard_calculation_id = parent.calc_id
-            self.datastore['oqparam'] = oq
-            self.param = ebcalc.param
-            self.sitecol = ebcalc.sitecol
-            self.assetcol = ebcalc.assetcol
-            self.riskmodel = ebcalc.riskmodel
+        super().pre_execute('event_based')
+        parent = self.dynamic_parent
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwrite
 
@@ -195,7 +166,6 @@ class EbrCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
             self.eids = sorted(parent['events']['eid'])
         else:
             self.eids = sorted(self.datastore['events']['eid'])
