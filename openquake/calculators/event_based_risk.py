@@ -173,7 +173,8 @@ class EbrCalculator(base.RiskCalculator):
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         else:
-            parent = self.precompute('event_based')
+            self.pre_compute('event_based')
+            parent = self.dynamic_parent
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwrite
 
