@@ -393,6 +393,7 @@ class RuptureSerializer(object):
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
+        self.nruptures = 0
 
     def save(self, ebruptures, eidx=0):
         """
@@ -402,6 +403,7 @@ class RuptureSerializer(object):
         :param eidx: the last event index saved
         """
         pmfbytes = 0
+        self.nruptures += len(ebruptures)
         for ebr in ebruptures:
             mul = ebr.multiplicity
             ebr.eidx1 = eidx
