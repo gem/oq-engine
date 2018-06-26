@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 18
 ===================================
 
 ============== ===================
-checksum32     2,389,156,703      
-date           2018-06-05T06:39:52
-engine_version 3.2.0-git65c4735   
+checksum32     98,343,102         
+date           2018-06-26T14:58:21
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -78,7 +78,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  3,000        6.85291   6.676E-06  1.00000   1         6     
+1         PointSource  3,000        7.01782   0.0        1.00000   1         6     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -86,7 +86,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  6.85291   1     
+PointSource  7.01782   1     
 ============ ========= ======
 
 Duplicated sources
@@ -97,34 +97,35 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-RtreeFilter        0.00554 NaN    0.00554 0.00554 1        
-compute_ruptures   6.86043 NaN    6.86043 6.86043 1        
+RtreeFilter        0.00517 NaN    0.00517 0.00517 1        
+compute_hazard     7.02718 NaN    7.02718 7.02718 1        
 ================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-================ ======================================================================= ========
-task             sent                                                                    received
-RtreeFilter      srcs=0 B srcfilter=0 B monitor=0 B                                      13.02 KB
-compute_ruptures sources=13.07 KB param=604 B monitor=353 B gsims=310 B src_filter=233 B 7.77 KB 
-================ ======================================================================= ========
+============== ============================================================================================ ========
+task           sent                                                                                         received
+RtreeFilter    srcs=0 B srcfilter=0 B monitor=0 B                                                           13.02 KB
+compute_hazard sources_or_ruptures=13.05 KB param=2.51 KB rlzs_by_gsim=420 B monitor=323 B src_filter=246 B 7.57 KB 
+============== ============================================================================================ ========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-EventBasedRuptureCalculator.run 7.18744   0.0       1     
-managing sources                7.05450   0.0       1     
-total compute_ruptures          6.86043   7.02344   1     
-reading composite source model  0.00891   0.0       1     
-saving ruptures                 0.00800   0.0       1     
-store source_info               0.00779   0.0       1     
-total prefilter                 0.00554   0.0       1     
-making contexts                 0.00378   0.0       6     
-setting event years             0.00202   0.0       1     
-unpickling compute_ruptures     0.00178   0.0       1     
-reading site collection         7.367E-04 0.0       1     
-splitting sources               3.116E-04 0.0       1     
-unpickling prefilter            2.940E-04 0.0       1     
-=============================== ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               7.06223   0.0       1     
+total compute_hazard           7.02718   7.68359   1     
+building ruptures              7.02411   6.95703   1     
+reading composite source model 0.00879   0.0       1     
+store source_info              0.00836   0.0       1     
+saving ruptures                0.00818   0.0       1     
+total prefilter                0.00517   0.0       1     
+making contexts                0.00347   0.0       6     
+unpickling compute_hazard      0.00153   0.0       1     
+GmfGetter.init                 3.860E-04 0.0       1     
+reading site collection        3.402E-04 0.0       1     
+aggregating hcurves            3.169E-04 0.0       1     
+splitting sources              2.842E-04 0.0       1     
+unpickling prefilter           2.830E-04 0.0       1     
+============================== ========= ========= ======

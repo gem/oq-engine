@@ -2,12 +2,12 @@ scenario hazard
 ===============
 
 ============== ===================
-checksum32     2,641,770,167      
-date           2018-06-05T06:40:09
-engine_version 3.2.0-git65c4735   
+checksum32     777,810,385        
+date           2018-06-26T14:58:40
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
-num_sites = 1, num_levels = 1
+num_sites = 3, num_levels = 1
 
 Parameters
 ----------
@@ -58,7 +58,7 @@ Realizations per (TRT, GSIM)
 Exposure model
 --------------
 =============== ========
-#assets         1       
+#assets         3       
 #taxonomies     1       
 deductibile     absolute
 insurance_limit absolute
@@ -66,7 +66,7 @@ insurance_limit absolute
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-tax1     1.00000 NaN    1   1   1         1         
+tax1     3.00000 NaN    3   3   1         3         
 ======== ======= ====== === === ========= ==========
 
 Slowest operations
@@ -74,6 +74,7 @@ Slowest operations
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading site collection 0.00674  0.0       1     
-reading exposure        0.00256  0.0       1     
+reading site collection 0.00952  0.0       1     
+reading exposure        0.00361  0.0       1     
+computing gmfs          0.00268  0.0       1     
 ======================= ======== ========= ======
