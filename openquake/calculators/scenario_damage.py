@@ -118,8 +118,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         if 'gmfs' in self.oqparam.inputs:
-            self.pre_calculator = None
-        super().pre_execute()
+            self.read_inputs()
+            base.save_gmfs(self)
+        else:
+            super().pre_execute()
+            self.param = {}
         E = self.oqparam.number_of_ground_motion_fields
         self.param['number_of_ground_motion_fields'] = E
         self.param['consequence_models'] = riskmodels.get_risk_models(

@@ -159,6 +159,7 @@ class EbrCalculator(base.RiskCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             super().pre_execute()
+            base.save_gmfs(self)
             parent = ()
         elif oq.hazard_calculation_id:
             super().pre_execute()
