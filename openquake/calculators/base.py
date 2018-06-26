@@ -784,6 +784,8 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
+        if not hasattr(self, 'riskinputs'):  # in the reportwriter
+            return
         mon = self.monitor('risk')
         all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
