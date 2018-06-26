@@ -359,17 +359,6 @@ class HazardCalculator(BaseCalculator):
         logging.warn('With a parent calculation reading the hazard '
                      'would be much faster')
 
-    def compute_previous(self):
-        precalc = calculators[self.pre_calculator](
-            self.oqparam, self.datastore.calc_id)
-        precalc.run(close=False)
-        if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = precalc.csm
-        pre_attrs = vars(precalc)
-        if 'riskmodel' in pre_attrs:
-            self.riskmodel = precalc.riskmodel
-        return precalc
-
     def read_previous(self, precalc_id):
         """
         Read the previous calculation datastore by checking the consistency
@@ -433,26 +422,43 @@ class HazardCalculator(BaseCalculator):
         self.riskmodel = calc.riskmodel
         self.rlzs_assoc = calc.rlzs_assoc
 
-    def pre_execute(self):
+    def pre_execute(self, pre_calculator=None):
         """
         Check if there is a pre_calculator or a previous calculation ID.
         If yes, read the inputs by invoking the precalculator or by retrieving
         the previous calculation; if not, read the inputs directly.
         """
-        precalc_id = self.oqparam.hazard_calculation_id
-        if self.pre_calculator is not None:
-            # the parameter hazard_calculation_id is only meaningful if
-            # there is a precalculator
-            if precalc_id is None:
-                self.precalc = self.compute_previous()
-                self.sitecol = self.precalc.sitecol
-            else:
-                self.read_previous(precalc_id)
-                self.read_risk_data()
-            self.init()
-        else:  # we are in a basic calculator
-            if precalc_id:
-                self.read_previous(precalc_id)
+        oq = self.oqparam
+        if 'gmfs' in oq.inputs:
+            assert not oq.hazard_calculation_id, (
+                'You cannot use --hc together with gmfs_file')
+            self.read_inputs()
+            save_gmfs(self)
+        elif oq.hazard_calculation_id:
+            parent = self.read_previous(oq.hazard_calculation_id)
+            self.read_inputs()
+            oqp = parent['oqparam']
+            if oqp.investigation_time != oq.investigation_time:
+                raise ValueError(
+                    'The parent calculation was using investigation_time=%s'
+                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
+            if oqp.minimum_intensity != oq.minimum_intensity:
+                raise ValueError(
+                    'The parent calculation was using minimum_intensity=%s'
+                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+        elif pre_calculator:
+            calc = calculators[pre_calculator](self.oqparam)
+            calc.run(close=False)
+            self.set_log_format()
+            self.dynamic_parent = self.datastore.parent = calc.datastore
+            self.oqparam.hazard_calculation_id = self.dynamic_parent.calc_id
+            self.datastore['oqparam'] = self.oqparam
+            self.param = calc.param
+            self.sitecol = calc.sitecol
+            self.assetcol = calc.assetcol
+            self.riskmodel = calc.riskmodel
+            self.rlzs_assoc = calc.rlzs_assoc
+        else:
             self.read_inputs()
 
     def init(self):
