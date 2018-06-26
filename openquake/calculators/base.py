@@ -404,10 +404,11 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
             haz_sitecol = readinput.get_site_collection(oq)
-            self.datastore['poes/grp-00'] = readinput.pmap
-            self.save_params()
-            self.load_riskmodel()
+            # NB: horrible: get_site_collection calls get_pmap_from_nrml
+            # that sets oq.investigation_time, so it must be called first
+            self.load_riskmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
+            self.datastore['poes/grp-00'] = readinput.pmap
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
