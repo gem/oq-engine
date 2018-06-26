@@ -86,7 +86,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical Risk calculator
     """
-    pre_calculator = 'classical'
     core_task = classical_risk
 
     def pre_execute(self):
@@ -108,8 +107,21 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             self.before_export()  # save 'realizations' dataset
-        else:  # compute hazard or read it from the datastore
+        elif oq.hazard_calculation_id:
             super().pre_execute()
+        else:  # compute hazard
+            cl = base.calculators['classical'](self.oqparam)
+            cl.run(close=False)
+            self.set_log_format()
+            parent = self.dynamic_parent = self.datastore.parent = (
+                cl.datastore)
+            oq.hazard_calculation_id = parent.calc_id
+            self.datastore['oqparam'] = oq
+            self.param = cl.param
+            self.sitecol = cl.sitecol
+            self.assetcol = cl.assetcol
+            self.riskmodel = cl.riskmodel
+            self.rlzs_assoc = cl.rlzs_assoc
             if 'poes' not in self.datastore:  # when building short report
                 return
         weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
