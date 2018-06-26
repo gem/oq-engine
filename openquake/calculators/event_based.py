@@ -187,7 +187,6 @@ class EventBasedCalculator(base.HazardCalculator):
     the hazard curves from the ruptures, depending on the configuration
     parameters.
     """
-    pre_calculator = None
     core_task = compute_hazard
     is_stochastic = True
 
