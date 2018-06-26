@@ -162,7 +162,7 @@ class ClassicalCalculator(base.HazardCalculator):
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
-        csm, src_filter = self.filter_csm()
+        src_filter, csm = self.filter_csm()
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
