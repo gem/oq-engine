@@ -341,7 +341,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
             if self.oqparam.ground_motion_fields is False:
-                logging('Generating ruptures only')
+                logging.info('Generating ruptures only')
             acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
                 self.agg_dicts, acc)
         if self.oqparam.hazard_calculation_id is None:
