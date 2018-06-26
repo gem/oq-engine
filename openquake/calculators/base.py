@@ -337,7 +337,7 @@ class HazardCalculator(BaseCalculator):
         else:  # prefilter_sources='no'
             csm = self.csm.filter(SourceFilter(None, {}), mon)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
-        return csm, src_filter
+        return src_filter, csm
 
     def can_read_parent(self):
         """

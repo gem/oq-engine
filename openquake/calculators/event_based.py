@@ -240,7 +240,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if self.oqparam.hazard_calculation_id is None:
             # filter_csm must be called first
-            self.csm, self.src_filter = self.filter_csm()
+            self.src_filter, self.csm = self.filter_csm()
             self.csm_info = self.csm.info
         else:
             self.datastore.parent = datastore.read(
