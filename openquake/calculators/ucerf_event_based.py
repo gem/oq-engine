@@ -272,7 +272,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
-        self.read_risk_data()  # read the site collection
+        self.read_inputs()  # read the site collection
         self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
