@@ -194,7 +194,7 @@ class EngineServerTestCase(unittest.TestCase):
         data = b''.join(ln for ln in self.c.get(extract_url))
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertGreater(len(got['array']['mag']), 1)
-        self.assertGreater(len(got['array']['feeq']), 1)
+        self.assertGreater(len(got['array']['freq']), 1)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
