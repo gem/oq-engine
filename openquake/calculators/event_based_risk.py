@@ -218,6 +218,8 @@ class EbrCalculator(base.RiskCalculator):
         if oq.individual_curves:
             self.datastore.create_dset(
                 'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+            self.datastore.set_attrs(
+                'curves-rlzs', return_periods=builder.return_periods)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
