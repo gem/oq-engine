@@ -363,15 +363,14 @@ def accept_path(path, ref_path):
     return True
 
 
-def get_totrup(data):
+def get_field(data, field, default):
     """
-    :param data: a record with a field `totrup`, possibily missing
+    :param data: a record with a field `field`, possibily missing
     """
     try:
-        totrup = data['totrup']
-    except ValueError:  # engine older than 2.9
-        totrup = 0
-    return totrup
+        return data[field]
+    except ValueError:  # field missing in old engines
+        return default
 
 
 class CompositionInfo(object):
@@ -521,8 +520,9 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[data['trti']], id=data['grp_id'],
-                    name=data['name'], eff_ruptures=data['effrup'],
-                    tot_ruptures=get_totrup(data))
+                    name=get_field(data, 'name', ''),
+                    eff_ruptures=data['effrup'],
+                    tot_ruptures=get_field(data, 'totrup', 0))
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
