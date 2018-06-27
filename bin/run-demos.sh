@@ -18,7 +18,7 @@ for ini in $(find $1 -name job.ini | sort); do
 done
 
 # test generation of statistical hazard curves from previous calculation;
-# -7 is LogicTreeCase3ClassicalPSHA
+# -7 is LogicTreeCase3ClassicalPSHA; FIXME: this is fragile
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -7
 
 # do something with the generated data
@@ -28,11 +28,9 @@ MPLBACKEND=Agg oq plot -1
 MPLBACKEND=Agg oq plot_uhs -1
 MPLBACKEND=Agg oq plot_sites -1
 
-# repeat the failed/executing calculation, which is useful for QGIS
+# fake a failed/executing calculation to check that it is not exported
 oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
-# fake a wrong calculation still in executing status (AreaSource)
-# FIXME this should be a relative id (i.e. -1)
-oq db set_status 28 executing
+oq db set_status -1 executing
 
 # display the calculations
 oq db find %
