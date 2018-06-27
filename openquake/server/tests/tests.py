@@ -189,6 +189,13 @@ class EngineServerTestCase(unittest.TestCase):
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
+        # check MFD distribution
+        extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
+        data = b''.join(ln for ln in self.c.get(extract_url))
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertGreater(len(got['array']['mag']), 1)
+        self.assertGreater(len(got['array']['feeq']), 1)
+
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
