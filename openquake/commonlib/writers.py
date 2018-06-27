@@ -291,6 +291,12 @@ class CsvWriter(object):
         write_csv(fname, data, self.sep, self.fmt, header)
         self.fnames.add(getattr(fname, 'name', fname))
 
+    def save_block(self, data, dest):
+        """
+        Save data on dest, which is file open in 'a' mode
+        """
+        write_csv(dest, data, self.sep, self.fmt, 'no-header')
+
     def getsaved(self):
         """
         Returns the list of files saved by this CsvWriter
