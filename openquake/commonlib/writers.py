@@ -220,8 +220,6 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
        optional first line starting with a # character
     """
     close = True
-    if len(data) == 0:
-        logging.warn('%s is empty', dest)
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')
         os.close(fd)
