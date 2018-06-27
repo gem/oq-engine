@@ -592,7 +592,8 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol'):
             self.datastore['sitecol'] = self.sitecol.complete
-        self.param = {}  # used in the risk calculators
+        # used in the risk calculators
+        self.param = dict(individual_curves=oq.individual_curves)
 
     def count_eff_ruptures(self, result_dict, src_group_id):
         """
