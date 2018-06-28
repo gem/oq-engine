@@ -2,6 +2,7 @@
   * Added Thingbaijam et al. (2017) magnitude-scaling relationship
 
   [Michele Simionato]
+  * Added an /extract/ API for event_based_mfd
   * Fixed a bug in the classical_damage calculators: multiple loss types
     were not treated correctly
 
