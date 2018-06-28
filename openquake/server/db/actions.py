@@ -74,6 +74,11 @@ def set_status(db, job_id, status):
         is_running = 0
     else:  # 'executing'
         is_running = 1
+    if job_id < 0:
+        rows = db('SELECT id FROM job ORDER BY id DESC LIMIT ?x', -job_id)
+        if not rows:
+            return 0
+        job_id = rows[-1].id
     cursor = db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
                 status, is_running, job_id)
     return cursor.rowcount
