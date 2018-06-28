@@ -49,7 +49,7 @@ def weight(src):
         rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
     except AttributeError:
         rate = 1
-    return src.num_ruptures * src.ndists * rate * src.RUPTURE_WEIGHT * 1000
+    return src.num_ruptures * src.ndists * rate * 1000
 
 
 def get_events(ebruptures):
