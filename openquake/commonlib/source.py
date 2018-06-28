@@ -30,7 +30,8 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, gettemp, AccumDict, random_filter)
 from openquake.hazardlib import (
-    nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+    nrml, source, sourceconverter, InvalidFile, probability_map,
+    stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 
@@ -77,6 +78,7 @@ def split_sources(srcs, min_mag):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
                 split.ngsims = src.ngsims
+                split.ndists = src.ndists
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
@@ -710,14 +712,16 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
+        gsims = self.gsim_lt.values
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
                 for src in src_group:
+                    trt = src.tectonic_region_type
                     split_time[src.source_id] = 0
-                    src.ngsims = ngsims[src.tectonic_region_type]
+                    src.ngsims = len(gsims[trt])
+                    src.ndists = contexts.get_num_distances(gsims[trt])
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group, min_mag)
