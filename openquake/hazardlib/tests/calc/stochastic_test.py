@@ -60,6 +60,10 @@ class StochasticEventSetTestCase(unittest.TestCase):
         ebr = dic['eb_ruptures'][0]
         ebr.export(mesh)
 
-        # test no filtering
+        # test no filtering 1
         ruptures = list(stochastic_event_set(group))
         self.assertEqual(len(ruptures), 19)
+
+        # test no filtering 2
+        ruptures = sample_ruptures(group)['eb_ruptures']
+        self.assertEqual(len(ruptures), 2)
