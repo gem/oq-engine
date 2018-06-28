@@ -45,7 +45,7 @@ TWO32 = 2 ** 32
 
 def weight(src):
     # a poor man weight
-    return src.num_ruptures * src.ngsims
+    return src.num_ruptures * src.ndists
 
 
 def get_events(ebruptures):
