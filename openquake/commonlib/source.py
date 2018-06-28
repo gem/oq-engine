@@ -83,6 +83,9 @@ def split_sources(srcs, min_mag):
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
+        else:  # single source
+            splits[0].ngsims = src.ngsims
+            splits[0].ndists = src.ndists
     return sources, split_time
 
 
