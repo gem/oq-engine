@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
+import operator
 import logging
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
@@ -91,6 +92,7 @@ class Extract(collections.OrderedDict):
             return self[k](dstore, v)
         else:
             return extract_(dstore, key)
+
 
 extract = Extract()
 
@@ -508,3 +510,17 @@ def extract_dmg_by_asset_npz(dstore, what):
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
             assets, dmg_by_asset)
+
+
+@extract.add('event_based_mfd')
+def extract_mfd(dstore, what):
+    """
+    Display num_ruptures by magnitude for event based calculations.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd
+    """
+    dd = collections.defaultdict(int)
+    for rup in dstore['ruptures'].value:
+        dd[rup['mag']] += 1
+    dt = numpy.dtype([('mag', float), ('freq', int)])
+    magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
+    return magfreq
