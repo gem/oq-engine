@@ -201,12 +201,13 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+        concurrent_tasks = oq.concurrent_tasks * 3.33
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
             logging.info('Found %d ruptures', U)
             parent = self.can_read_parent() or self.datastore
             samples_by_grp = self.csm_info.get_samples_by_grp()
-            for slc in split_in_slices(U, oq.concurrent_tasks or 1):
+            for slc in split_in_slices(U, concurrent_tasks or 1):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     ruptures = RuptureGetter(parent, slc, grp_id)
@@ -214,7 +215,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
             return
 
-        maxweight = self.csm.get_maxweight(weight, oq.concurrent_tasks or 1)
+        maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         num_tasks = 0
         num_sources = 0
