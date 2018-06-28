@@ -44,8 +44,11 @@ TWO32 = 2 ** 32
 
 
 def weight(src):
-    # a poor man weight
-    return src.num_ruptures * src.ndists
+    try:
+        rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
+    except AttributeError:
+        rate = 1
+    return src.num_ruptures * src.ndists * rate
 
 
 def get_events(ebruptures):
