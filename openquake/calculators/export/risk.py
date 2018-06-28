@@ -357,15 +357,24 @@ def export_dmg_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
-    all_losses = dstore[ekey[0]].value
+    dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
+        (f, damage_dt.fields[f][0]) for f in damage_dt.names]
+    all_losses = dstore[ekey[0]].value  # shape (E, R, LI)
     eids = dstore['events']['eid']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('dmg_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(damage_dt).squeeze()
-        writer.save(compose_arrays(eids, data, 'event_id'), dest)
-    return writer.getsaved()
+    fname = dstore.build_fname('dmg_by_event', '', 'csv')
+    writer.save(numpy.zeros(0, dt_list), fname)
+    with open(fname, 'ab') as dest:
+        for rlz in rlzs:
+            data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
+            arr = numpy.zeros(len(data), dt_list)
+            arr['event_id'] = eids
+            arr['rlzi'] = rlz.ordinal
+            for field in damage_dt.names:
+                arr[field] = data[field].squeeze()
+            writer.save_block(arr, dest)
+    return [fname]
 
 
 # emulate a Django point
