@@ -204,7 +204,7 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        concurrent_tasks = oq.concurrent_tasks * 3.33
+        concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
             logging.info('Found %d ruptures', U)
@@ -235,7 +235,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(sg.sources, maxweight, weight):
                     yield block, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
-                    num_sources += 1
+                    num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
