@@ -19,6 +19,7 @@ import operator
 import collections
 import logging
 import time
+import os
 import numpy
 
 from openquake.baselib.general import groupby
@@ -535,6 +536,8 @@ class SourceConverter(RuptureConverter):
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+            if os.environ.get('OQ_SPINNING') == 'no':
+                npdist = [(1, npdist[0][1])]  # consider only the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hpdist(self, node):
