@@ -197,6 +197,11 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
+            if hasattr(src, 'location'):  # point source
+                min_dist = src.location.distance_to_mesh(sites).min()
+                if min_dist > 50:  # disable floating and spinning
+                    src.nodal_plane_distribution.reduce()
+                    src.hypocenter_distribution.reduce()
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen
