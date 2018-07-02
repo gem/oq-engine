@@ -49,7 +49,7 @@ class PmapGetter(object):
     """
     def __init__(self, dstore, rlzs_assoc=None, sids=None):
         self.dstore = dstore
-        self.sids = sids
+        self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.eids = None
         self.nbytes = 0
@@ -140,12 +140,14 @@ class PmapGetter(object):
         """
         return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
 
-    def get_hcurves(self, imtls):
+    def get_hcurves(self, imtls=None):
         """
         :param imtls: intensity measure types and levels
         :returns: an array of (R, N) hazard curves
         """
-        assert self.sids is not None, 'PmapGetter not bound to sids'
+        self.init()
+        if imtls is None:
+            imtls = self.imtls
         pmaps = [pmap.convert2(imtls, self.sids)
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
@@ -187,14 +189,22 @@ class PmapGetter(object):
             returns the mean considering only the contribution for group XX
         """
         self.init()
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
             return self.get(0, grp)
         else:  # multiple realizations, assume hcurves/mean is there
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
             return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
+
+    def get_mean_std(self):
+        """
+        :returns: mean and std for all curves and IMTs
+        """
+        self.init()
+        res = stats.mean_std_curve(
+            [pmap.array[:, :, 0] for pmap in self.get_pmaps(self.sids)],
+            self.weights)
+        return res
 
 
 class GmfDataGetter(collections.Mapping):

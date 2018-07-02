@@ -20,6 +20,8 @@ Utilities to compute mean and quantile curves
 """
 import numpy
 
+mean_std_dt = numpy.dtype([('mean', float), ('std', float)])
+
 
 def mean_curve(values, weights=None):
     """
@@ -30,6 +32,23 @@ def mean_curve(values, weights=None):
     if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
         return numpy.average(values, axis=0, weights=weights)
     return sum(value * weight for value, weight in zip(values, weights))
+
+
+def mean_std_curve(values, weights=None):
+    """
+    :param values: an array of (R ...) values
+    :param weights: R weights
+    :returns: array with fields 'mean', 'std'
+    """
+    if weights is None:
+        weights = [1. / len(values)] * len(values)
+    if not isinstance(values, numpy.ndarray):
+        values = numpy.array(values)
+    res = numpy.zeros(values.shape[1:], mean_std_dt)
+    res['mean'] = numpy.average(values, axis=0, weights=weights)
+    res['std'] = numpy.sqrt(
+        numpy.einsum('i,i...', weights, (res['mean'] - values) ** 2))
+    return res
 
 
 def quantile_curve(quantile, curves, weights=None):
