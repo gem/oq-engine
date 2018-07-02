@@ -83,7 +83,7 @@ class ContextMaker(object):
                  monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.param = param or {}
+        param = param or {}
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
