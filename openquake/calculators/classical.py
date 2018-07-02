@@ -158,7 +158,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
-                     filter_distance=oq.filter_distance)
+                     filter_distance=oq.filter_distance, reqv=oq.get_reqv())
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
