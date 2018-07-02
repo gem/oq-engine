@@ -93,8 +93,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(gsims, maxdist,
-                          param['filter_distance'], param['reqv'], monitor)
+    cmaker = ContextMaker(gsims, maxdist, param, monitor)
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     # AccumDict of arrays with 4 elements weight, nsites, calc_time, split

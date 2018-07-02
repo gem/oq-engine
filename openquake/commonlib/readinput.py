@@ -120,7 +120,8 @@ def _update(params, items, base_path):
                 raise ValueError('%s=%s is an absolute path' % (key, value))
             input_type, _ext = key.rsplit('_', 1)
             params['inputs'][input_type] = (
-                os.path.join(base_path, value) if value else '')
+                os.path.normpath(os.path.join(base_path, value))
+                if value else '')
         else:
             params[key] = value
 
