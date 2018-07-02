@@ -198,7 +198,7 @@ class PmapGetter(object):
 
     def gen_mean_std(self):
         """
-        :yields: mean and std for all curves and IMTs
+        :yields: mean and std for each IMT and all sites
         """
         self.init()
         pmaps = self.get_pmaps(self.sids)
