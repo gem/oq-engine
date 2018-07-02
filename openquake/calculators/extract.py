@@ -30,6 +30,7 @@ else:
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import DictArray, group_array
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib import stats
 from openquake.calculators import getters
 from openquake.commonlib import calc, util
 
@@ -524,3 +525,8 @@ def extract_mfd(dstore, what):
     dt = numpy.dtype([('mag', float), ('freq', int)])
     magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
     return magfreq
+
+
+@extract.add('mean_std_curves')
+def extract_mean_std(dstore, what):
+    return getters.PmapGetter(dstore).gen_mean_std()
