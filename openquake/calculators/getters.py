@@ -196,15 +196,16 @@ class PmapGetter(object):
                    if grp is None else {grp: self.dstore['poes/' + grp]})
             return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
 
-    def get_mean_std(self):
+    def gen_mean_std(self):
         """
-        :returns: mean and std for all curves and IMTs
+        :yields: mean and std for all curves and IMTs
         """
         self.init()
-        res = stats.mean_std_curve(
-            [pmap.array[:, :, 0] for pmap in self.get_pmaps(self.sids)],
-            self.weights)
-        return res
+        pmaps = self.get_pmaps(self.sids)
+        for imt in self.imtls:
+            yield imt, stats.mean_std_curve(
+                [pmap.array[:, self.imtls.slicedic[imt], 0]
+                 for pmap in pmaps], self.weights)
 
 
 class GmfDataGetter(collections.Mapping):
