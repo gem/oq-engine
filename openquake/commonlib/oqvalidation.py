@@ -50,9 +50,17 @@ class RepiEquivalent(object):
             self.reqv = f['default/reqv'].value  # shape D x M
 
     def get(self, repi, mag):
-        repi_idx = numpy.abs(repi - self.repi).argmin()
+        """
+        :param repi: an array of epicentral distances in the range self.repi
+        :param mag: a magnitude in the range self.mags
+        :returns: an array of equivalent distances
+        """
         mag_idx = numpy.abs(mag - self.mags).argmin()
-        return self.reqv[repi_idx, mag_idx]
+        dists = []
+        for dist in repi:
+            repi_idx = numpy.abs(dist - self.repi).argmin()
+            dists.append(self.reqv[repi_idx, mag_idx])
+        return numpy.array(dists)
 
 
 class OqParam(valid.ParamSet):
