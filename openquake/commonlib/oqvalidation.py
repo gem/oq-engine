@@ -22,7 +22,7 @@ import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib import datastore, hdf5
+from openquake.baselib import datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation, stats
@@ -37,30 +37,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-
-
-class RepiEquivalent(object):
-    """
-    Compute the equivalent epicentral distance
-    """
-    def __init__(self, hdf5path):
-        with hdf5.File(hdf5path, 'r') as f:
-            self.repi = f['default/repi'].value  # shape D
-            self.mags = f['default/mags'].value  # shape M
-            self.reqv = f['default/reqv'].value  # shape D x M
-
-    def get(self, repi, mag):
-        """
-        :param repi: an array of epicentral distances in the range self.repi
-        :param mag: a magnitude in the range self.mags
-        :returns: an array of equivalent distances
-        """
-        mag_idx = numpy.abs(mag - self.mags).argmin()
-        dists = []
-        for dist in repi:
-            repi_idx = numpy.abs(dist - self.repi).argmin()
-            dists.append(self.reqv[repi_idx, mag_idx])
-        return numpy.array(dists)
 
 
 class OqParam(valid.ParamSet):
@@ -192,7 +168,7 @@ class OqParam(valid.ParamSet):
         :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
         """
         if 'reqv' in self.inputs:
-            return RepiEquivalent(self.inputs['reqv'])
+            return valid.RepiEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
