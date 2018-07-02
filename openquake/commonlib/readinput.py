@@ -115,7 +115,7 @@ def extract_from_zip(path, candidates):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key.endswith(('_file', '_csv')):
+        if key.endswith(('_file', '_csv', '_hdf5')):
             if os.path.isabs(value):
                 raise ValueError('%s=%s is an absolute path' % (key, value))
             input_type, _ext = key.rsplit('_', 1)

@@ -23,6 +23,9 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.scalerel.point import PointMSR
+
+pointMSR = PointMSR()
 
 
 def get_distances(rupture, mesh, param):
@@ -77,7 +80,7 @@ class ContextMaker(object):
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
     def __init__(self, gsims, maximum_distance=None, filter_distance=None,
-                 monitor=Monitor()):
+                 reqv=None, monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
         for req in self.REQUIRES:
@@ -93,7 +96,10 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.reqv = reqv
         self.REQUIRES_DISTANCES.add(self.filter_distance)
+        if reqv is not None:
+            self.REQUIRES_DISTANCES.add('repi')
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
             # same TRT, given a realization there is a single gsim
@@ -176,7 +182,10 @@ class ContextMaker(object):
         """
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
-            setattr(dctx, param, get_distances(rupture, sites, param))
+            distances = get_distances(rupture, sites, param)
+            if param == 'repi' and self.reqv:
+                distances = self.reqv.get(distances, rupture.mag)
+            setattr(dctx, param, distances)
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
@@ -197,6 +206,8 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
+            if self.reqv and hasattr(src, 'location'):  # point source
+                src.magnitude_scaling_relationship = pointMSR
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen
