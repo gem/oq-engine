@@ -133,7 +133,7 @@ def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
     num_ruptures = 0
     eids = numpy.zeros(0)
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
-                          param['filter_distance'], monitor)
+                          param, monitor)
     for src, s_sites in src_filter(group):
         t0 = time.time()
         num_ruptures += src.num_ruptures
