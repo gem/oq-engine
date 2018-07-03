@@ -68,6 +68,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_4(self):
         self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
+
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])

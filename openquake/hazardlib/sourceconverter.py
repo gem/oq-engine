@@ -537,7 +537,7 @@ class SourceConverter(RuptureConverter):
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
             if os.environ.get('OQ_SPINNING') == 'no':
-                npdist = [(1, npdist[0][1])]  # consider only the first nodal plane
+                npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hpdist(self, node):
@@ -549,8 +549,11 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            return pmf.PMF([(hd['probability'], hd['depth'])
-                            for hd in node.hypoDepthDist])
+            hcdist = [(hd['probability'], hd['depth'])
+                      for hd in node.hypoDepthDist]
+            if os.environ.get('OQ_FLOATING') == 'no':
+                hcdist = [(1, hcdist[0][1])]
+            return pmf.PMF(hcdist)
 
     def convert_areaSource(self, node):
         """

@@ -524,3 +524,15 @@ def extract_mfd(dstore, what):
     dt = numpy.dtype([('mag', float), ('freq', int)])
     magfreq = numpy.array(sorted(dd.items(), key=operator.itemgetter(0)), dt)
     return magfreq
+
+
+@extract.add('mean_std_curves')
+def extract_mean_std_curves(dstore, what):
+    """
+    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
+    """
+    getter = getters.PmapGetter(dstore)
+    arr = getter.get_mean().array
+    for imt in getter.imtls:
+        yield 'imls/' + imt, getter.imtls[imt]
+        yield 'poes/' + imt, arr[:, getter.imtls.slicedic[imt]]
