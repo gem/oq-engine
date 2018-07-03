@@ -30,7 +30,6 @@ else:
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import DictArray, group_array
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats
 from openquake.calculators import getters
 from openquake.commonlib import calc, util
 
@@ -528,8 +527,12 @@ def extract_mfd(dstore, what):
 
 
 @extract.add('mean_std_curves')
-def extract_mean_std(dstore, what):
+def extract_mean_std_curves(dstore, what):
     """
     Yield mean and stddev for each IMT for each site
     """
-    return getters.PmapGetter(dstore).gen_mean_std()
+    getter = getters.PmapGetter(dstore)
+    arr = getter.get_mean().array
+    for imt in getter.imtls:
+        yield 'imls/' + imt, getter.imtls[imt]
+        yield 'poes/' + imt, arr[:, getter.imtls.slicedic[imt]]
