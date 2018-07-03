@@ -1030,6 +1030,7 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
                      lat=latitude(lat), depth=float_(depth),
                      backarc=boolean(backarc))
 
+
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
@@ -1198,3 +1199,30 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+
+class RepiEquivalent(object):
+    """
+    A class to compute the equivalent epicentral distance. Usage:
+
+    >> reqv = RepiEquivalent('lookup.hdf5')
+    >> reqv.get(repi_distances, mag)
+    """
+    def __init__(self, hdf5path):
+        with hdf5.File(hdf5path, 'r') as f:
+            self.repi = f['default/repi'].value  # shape D
+            self.mags = f['default/mags'].value  # shape M
+            self.reqv = f['default/reqv'].value  # shape D x M
+
+    def get(self, repi, mag):
+        """
+        :param repi: an array of epicentral distances in the range self.repi
+        :param mag: a magnitude in the range self.mags
+        :returns: an array of equivalent distances
+        """
+        mag_idx = numpy.abs(mag - self.mags).argmin()
+        dists = []
+        for dist in repi:
+            repi_idx = numpy.abs(dist - self.repi).argmin()
+            dists.append(self.reqv[repi_idx, mag_idx])
+        return numpy.array(dists)
