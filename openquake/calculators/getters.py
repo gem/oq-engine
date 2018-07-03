@@ -194,19 +194,8 @@ class PmapGetter(object):
         else:  # multiple realizations, assume hcurves/mean is there
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
-
-    def gen_mean_std(self):
-        """
-        :yields: mean and std for each IMT and all sites
-        """
-        self.init()
-        pmaps = self.get_pmaps(self.sids)
-        for imt in self.imtls:
-            yield 'imls/' + imt, self.imtls[imt]
-            yield 'poes/' + imt, stats.mean_std_curve(
-                [pmap.array[:, self.imtls.slicedic[imt], 0]
-                 for pmap in pmaps], self.weights)
+            return self.rlzs_assoc.compute_pmap_stats(
+                dic, [stats.mean_curve, stats.std_curve])
 
 
 class GmfDataGetter(collections.Mapping):
