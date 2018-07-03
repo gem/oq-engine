@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,9 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
 import operator
 import collections
+import logging
+import time
+import os
 import numpy
 
 from openquake.baselib.general import groupby
@@ -144,7 +146,10 @@ class SourceGroup(collections.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        self.tot_ruptures += get_set_num_ruptures(src)
+        nr = get_set_num_ruptures(src)
+        if nr == 0:  # the minimum_magnitude filters all ruptures
+            return
+        self.tot_ruptures += nr
         self.sources.append(src)
         min_mag, max_mag = src.get_min_max_mag()
         prev_min_mag = self.min_mag
@@ -186,7 +191,23 @@ def get_set_num_ruptures(src):
     Extract the number of ruptures and set it
     """
     if not src.num_ruptures:
+        t0 = time.time()
         src.num_ruptures = src.count_ruptures()
+        dt = time.time() - t0
+        clsname = src.__class__.__name__
+        if dt > 10:
+            if 'Area' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'area discretization is too small', src, dt)
+            elif 'ComplexFault' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
+                             'omplex_fault_mesh_spacing is too small', src, dt)
+            elif 'SimpleFault' in clsname:
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'rupture_mesh_spacing is too small', src, dt)
+            else:
+                # multiPointSource
+                logging.warn('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 
@@ -298,7 +319,6 @@ class RuptureConverter(object):
             br = surface.bottomRight
             bottom_right = geo.Point(br['lon'], br['lat'], br['depth'])
         return geo.PlanarSurface.from_corner_points(
-            self.rupture_mesh_spacing,
             top_left, top_right, bottom_right, bottom_left)
 
     def convert_surfaces(self, surface_nodes):
@@ -349,8 +369,7 @@ class RuptureConverter(object):
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_complexFaultRupture(self, node):
@@ -365,8 +384,7 @@ class RuptureConverter(object):
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_singlePlaneRupture(self, node):
@@ -382,8 +400,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_multiPlanesRupture(self, node):
@@ -399,8 +416,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_griddedRupture(self, node):
@@ -416,8 +432,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
-            surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource)
+            surface=self.convert_surfaces(surfaces))
         return rupt
 
     def convert_ruptureCollection(self, node):
@@ -431,16 +446,16 @@ class RuptureConverter(object):
             coll[grp_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
-                rupid = int(node['id'])
+                rup.serial = int(node['id'])
                 sesnodes = node.stochasticEventSets
                 events = []
                 for sesnode in sesnodes:
                     with context(self.fname, sesnode):
                         ses = sesnode['id']
-                        for eid in (~sesnode).split():
+                        for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
-                    rup, (), numpy.array(events, event_dt), rupid)
+                    rup, (), numpy.array(events, event_dt))
                 ebrs.append(ebr)
         return coll
 
@@ -521,6 +536,8 @@ class SourceConverter(RuptureConverter):
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+            if os.environ.get('OQ_SPINNING') == 'no':
+                npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hpdist(self, node):
@@ -532,8 +549,11 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            return pmf.PMF([(hd['probability'], hd['depth'])
-                            for hd in node.hypoDepthDist])
+            hcdist = [(hd['probability'], hd['depth'])
+                      for hd in node.hypoDepthDist]
+            if os.environ.get('OQ_FLOATING') == 'no':
+                hcdist = [(1, hcdist[0][1])]
+            return pmf.PMF(hcdist)
 
     def convert_areaSource(self, node):
         """
@@ -717,7 +737,7 @@ class SourceConverter(RuptureConverter):
         trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         for rupnode in node:
-            probs = pmf.PMF(rupnode['probs_occur'])
+            probs = pmf.PMF(valid.pmf(rupnode['probs_occur']))
             rup = RuptureConverter.convert_node(self, rupnode)
             rup.tectonic_region_type = trt
             rup_pmf_data.append((rup, probs))

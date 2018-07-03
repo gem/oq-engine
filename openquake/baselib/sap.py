@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -110,9 +110,6 @@ class Script(object):
         self.checked = False  # used in the check_arguments method
         if registry:
             self.registry['%s.%s' % (func.__module__, func.__name__)] = self
-
-    def __call__(self, *args):
-        return self.func(*args)
 
     def group(self, descr):
         """Added a new group of arguments with the given description"""

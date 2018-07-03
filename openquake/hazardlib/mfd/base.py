@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,10 +18,9 @@ Module :mod:`openquake.hazardlib.mfd.base` defines base class for MFD --
 :class:`BaseMFD`.
 """
 import abc
-from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseMFD(with_metaclass(abc.ABCMeta)):
+class BaseMFD(metaclass=abc.ABCMeta):
     """
     Abstract base class for Magnitude-Frequency Distribution function.
     """

@@ -2,9 +2,9 @@ scenario risk
 =============
 
 ============== ===================
-checksum32     1,697,824,437      
-date           2018-02-25T06:44:28
-engine_version 2.10.0-git1f7c0c0  
+checksum32     818,655,088        
+date           2018-06-26T14:58:39
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -48,11 +48,11 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 simple(2)       2/2             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -63,13 +63,6 @@ Realizations per (TRT, GSIM)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
 
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons True            
-================ ================
-
 Exposure model
 --------------
 =============== ========
@@ -79,23 +72,37 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
+
+Information about the tasks
+---------------------------
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+scenario_risk      0.03035 0.00333 0.02366 0.03305 7        
+================== ======= ======= ======= ======= =========
+
+Data transfer
+-------------
+============= ================================================================= =========
+task          sent                                                              received 
+scenario_risk riskmodel=45.27 KB riskinput=23.96 KB monitor=2.88 KB param=623 B 174.54 KB
+============= ================================================================= =========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.018     0.0       1     
-computing gmfs          0.012     0.0       1     
-saving gmfs             0.007     0.0       1     
-reading exposure        0.002     0.0       1     
-building epsilons       3.786E-04 0.0       1     
-reading site collection 5.484E-06 0.0       1     
-======================= ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total scenario_risk      0.21243  6.95703   7     
+computing risk           0.08636  0.37109   7     
+getting hazard           0.06575  4.68359   14    
+building riskinputs      0.00397  0.0       1     
+unpickling scenario_risk 0.00373  0.0       7     
+building epsilons        0.00142  0.0       1     
+======================== ======== ========= ======

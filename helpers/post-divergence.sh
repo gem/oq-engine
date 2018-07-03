@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# post-divergence.sh  Copyright (C) 2017 GEM Foundation
+# post-divergence.sh  Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 usage () {
     cat <<EOF
 
-$0 <new-engine-stable-branch_(engine-2.x))>
+$0 <new-engine-stable-branch_(engine-3.x))>
     update documentation files and README.md with links related to the new stable engine branch name
 
 $0 <-h|--help>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,6 @@ Module exports :class:`GhofraniAtkinson2014`,
                :class:`GhofraniAtkinson2014CascadiaLower`,
                :class:`GhofraniAtkinson2014CascadiaUpper`
 """
-from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

@@ -2,9 +2,9 @@ Scenario QA Test 3
 ==================
 
 ============== ===================
-checksum32     3,085,599,105      
-date           2018-02-25T06:44:27
-engine_version 2.10.0-git1f7c0c0  
+checksum32     775,322,845        
+date           2018-05-15T04:14:23
+engine_version 3.1.0-git0acbc11   
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -43,11 +43,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -56,13 +56,6 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
-
-Informational data
-------------------
-================ ================
-hostname         tstation.gem.lan
-require_epsilons False           
-================ ================
 
 Exposure model
 --------------
@@ -73,23 +66,23 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-RM       1.000 NaN    1   1   1         1         
-RC       1.000 NaN    1   1   1         1         
-W        1.000 0.0    1   1   2         2         
-*ALL*    1.000 0.0    1   1   4         4         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+RM       1.00000 NaN    1   1   1         1         
+RC       1.00000 NaN    1   1   1         1         
+W        1.00000 0.0    1   1   2         2         
+*ALL*    1.00000 0.0    1   1   4         4         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-saving gmfs             0.032     0.0       1     
-building riskinputs     0.023     0.0       1     
-computing gmfs          0.005     0.0       1     
-reading exposure        0.001     0.0       1     
-building epsilons       6.754E-04 0.0       1     
-reading site collection 5.722E-06 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+building riskinputs     0.04396  0.0       1     
+saving gmfs             0.04374  0.0       1     
+computing gmfs          0.00949  0.0       1     
+reading site collection 0.00337  0.0       1     
+building epsilons       0.00139  0.0       1     
+reading exposure        0.00101  0.0       1     
+======================= ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017 GEM Foundation
+# Copyright (C) 2017-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,19 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import io
 import inspect
 import logging
-try:
-    # Python 3
-    from urllib.parse import quote_plus
-    from urllib.request import urlopen
-except ImportError:
-    # Python 2
-    from urllib import quote_plus
-    from urllib2 import urlopen
+from urllib.parse import quote_plus
+from urllib.request import urlopen
 
 import numpy
 from openquake.baselib import performance, sap, hdf5, datastore
@@ -69,6 +61,7 @@ def extract(what, calc_id=-1, server_url=None):
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         if server_url:
+            print('Calling %s%s' % (server_url, urlpath))
             data = urlopen(server_url.rstrip('/') + urlpath).read()
             items = (item for item in numpy.load(io.BytesIO(data)).items())
         else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,6 @@
 Module exports :class:`BooreEtAl1993GSCBest`,
 :class:`BooreEtAl1993GSCUpperLimit`, :class:`BooreEtAl1993GSCLowerLimit`.
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g
 

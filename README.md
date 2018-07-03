@@ -26,8 +26,8 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine.
-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.9/doc/whats-new.md)
+Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.1#openquake-engine.
+* [What's new](https://github.com/gem/oq-engine/blob/engine-3.1/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -56,7 +56,7 @@ Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documenta
 #### Linux
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
 * [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
@@ -84,6 +84,14 @@ Current stable version is the **OpenQuake Engine 2.9** 'Jeffreys'. The documenta
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
 * [Using the WebUI](https://github.com/gem/oq-engine/blob/master/doc/running/server.md)
 
+### Visualizing outputs via QGIS
+
+![IRMT Logo](https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png)
+
+* [Installation](https://docs.openquake.org/oq-irmt-qgis/latest/00_installation.html)
+* [Driving the Engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html)
+* [Visualizing outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html)
+* [Source code](https://github.com/gem/oq-irmt-qgis)
 
 ## License
 

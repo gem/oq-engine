@@ -1,22 +1,22 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (C) 2016-2017 GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import psutil
 import operator
 from datetime import datetime
 
@@ -74,6 +74,11 @@ def set_status(db, job_id, status):
         is_running = 0
     else:  # 'executing'
         is_running = 1
+    if job_id < 0:
+        rows = db('SELECT id FROM job ORDER BY id DESC LIMIT ?x', -job_id)
+        if not rows:
+            return 0
+        job_id = rows[-1].id
     cursor = db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
                 status, is_running, job_id)
     return cursor.rowcount
@@ -109,6 +114,22 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
     job_id = db('INSERT INTO job (?S) VALUES (?X)',
                 job.keys(), job.values()).lastrowid
     return job_id
+
+
+def import_job(db, calc_id, calc_mode, description, user_name, status,
+               hc_id, datadir):
+    """
+    Insert a calculation inside the database, if calc_id is not taken
+    """
+    job = dict(id=calc_id,
+               calculation_mode=calc_mode,
+               description=description,
+               user_name=user_name,
+               hazard_calculation_id=hc_id,
+               is_running=0,
+               status=status,
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+    db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
 
 
 def delete_uncompleted_calculations(db, user):
@@ -244,15 +265,15 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'dmg_by_asset': 'Average Asset Damages',
-    # 'damages_by_asset': 'Average Asset Damages',
-    # 'damages_by_event': 'Aggregate Event Damages',
+    'dmg_by_event': 'Aggregate Event Damages',
     'losses_by_asset': 'Average Asset Losses',
     'losses_by_event': 'Aggregate Event Losses',
     'damages-rlzs': 'Asset Damage Distribution',
     'damages-stats': 'Asset Damage Statistics',
+    'dmg_by_event': 'Aggregate Event Damages',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
-    'loss_curves': 'Asset Loss Curves',
+    'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
@@ -268,8 +289,11 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
+    'disagg-stats': 'Disaggregation Statistics',
+    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
+    'input_zip': 'Input Files'
 }
 
 # sanity check, all display name keys must be exportable
@@ -278,7 +302,7 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, dskeys):
+def create_outputs(db, job_id, keysize):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -287,8 +311,9 @@ def create_outputs(db, job_id, dskeys):
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    rows = [(job_id, DISPLAY_NAME.get(key, key), key) for key in dskeys]
-    db.insert('output', 'oq_job_id display_name ds_key'.split(), rows)
+    rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
+            for key, size in keysize]
+    db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
 def finish(db, job_id, status):
@@ -490,10 +515,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         a :class:`openquake.server.dbapi.Db` instance
     :param request_get_dict:
         a dictionary
-    :param user_name:
-        user name
+    :param allowed_users:
+        a list of users
     :param user_acl_on:
-        if True, returns only the calculations owned by the user
+        if True, returns only the calculations owned by the user or the group
     :param id:
         if given, extract only the specified calculation
     :returns:
@@ -529,8 +554,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
-    # user_acl_on is true if settings.ACL_ON = True or when the user is a
-    # Django super user
     if user_acl_on:
         users_filter = "user_name IN (?X)"
     else:
@@ -540,7 +563,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               ' ORDER BY id DESC LIMIT %d'
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
-             job.is_running, job.description, job.pid) for job in jobs]
+             job.is_running, job.description, job.pid,
+             job.hazard_calculation_id) for job in jobs]
 
 
 def update_job(db, job_id, dic):
@@ -632,7 +656,8 @@ def get_result(db, result_id):
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
              'oq_job_id=job.id AND output.id=?x', result_id, one=True)
-    return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
+    return (job.id, job.status, job.user_name,
+            os.path.dirname(job.ds_calc_dir), job.ds_key)
 
 
 def get_results(db, job_id):
@@ -650,6 +675,32 @@ def get_results(db, job_id):
 
 
 # ############################### db commands ########################### #
+
+class List(list):
+    _fields = ()
+
+
+def get_executing_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns:
+        (id, pid, user_name, start_time) tuples
+    """
+    fields = 'id,pid,user_name,start_time'
+    running = List()
+    running._fields = fields.split(',')
+
+    query = ('''-- executing jobs
+SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
+    rows = db(query)
+    for r in rows:
+        # if r.pid is 0 it means that such information
+        # is not available in the database
+        if r.pid and psutil.pid_exists(r.pid):
+            running.append(r)
+    return running
+
 
 def get_longest_jobs(db):
     """

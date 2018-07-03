@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ import sys
 import unittest
 import numpy
 from nose.plugins.attrib import attr
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.probability_map import combine
 from openquake.calculators import getters
 from openquake.calculators.views import view
@@ -42,10 +42,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
+        return out
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_1(self):
-        self.assert_curves_ok(
+        out = self.assert_curves_ok(
             ['poe-0.02-rlz-0-PGA-10.1-40.1_Mag.csv',
              'poe-0.02-rlz-0-PGA-10.1-40.1_Mag_Dist.csv',
              'poe-0.02-rlz-0-PGA-10.1-40.1_Lon_Lat.csv',
@@ -61,8 +62,16 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
+        # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
+        self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
+        for fname in out['disagg_by_src', 'csv']:
+            self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
+                                  fname)
+
         # disaggregation by source group
-        pgetter = getters.PmapGetter(self.calc.datastore)
+        rlzs_assoc = self.calc.datastore['csm_info'].get_rlzs_assoc()
+        pgetter = getters.PmapGetter(self.calc.datastore, rlzs_assoc)
+        pgetter.init()
         pmaps = []
         for grp in sorted(pgetter.dstore['poes']):
             pmaps.append(pgetter.get_mean(grp))
@@ -125,7 +134,7 @@ producing too small PoEs.''')
         # this tests exercise the case of a complex logic tree; it also
         # prints the warning on poe_agg very different from the expected poe
         self.run_calc(case_master.__file__, 'job.ini')
-        fname = writetmp(view('mean_disagg', self.calc.datastore))
+        fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 
@@ -133,3 +142,11 @@ producing too small PoEs.''')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 192)  # 2 sid x 8 keys x 2 poe x 2 imt
         # = 64 x 3 for mean, quantile-0.15, quantile-0.85
+
+    @attr('qa', 'hazard', 'disagg')
+    def test_disagg_by_src(self):
+        # this is a case with iml_disagg and disagg_by_src
+        self.run_calc(case_master.__file__, 'job1.ini')
+        arr = self.calc.datastore[
+            'disagg_by_src/iml-0.02-PGA--122.6-38.3'].value
+        numpy.testing.assert_almost_equal(arr, [0.6757448, 0.1780308])

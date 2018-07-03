@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,6 @@ Module exports :class:`AtkinsonBoore2006`,
 :class:`AtkinsonBoore2006Mwbar200NSHMP2008`,
 :class:`AtkinsonBoore2006Modified2011`.
 """
-from __future__ import division
-
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
@@ -549,6 +547,5 @@ class AtkinsonBoore2006SGS(AtkinsonBoore2006):
         dists_mod = copy.deepcopy(dists)
         dists_mod.rrup[dists.rrup <= 5.] = 5.
 
-        return super(
-            AtkinsonBoore2006SGS, self).get_mean_and_stddevs(
+        return super().get_mean_and_stddevs(
                 sites, rup, dists_mod, imt, stddev_types)

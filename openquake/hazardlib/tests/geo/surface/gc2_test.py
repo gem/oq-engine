@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # The Hazard Library
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -112,10 +112,10 @@ def _setup_peer_test_bending_fault_config():
         Line([PNT1, PNT2, PNT3, PNT4, PNT5]), usd, lsd, dip, mesh_spacing)
     # As a set of planes describing a concordant "Stirling fault"
     stirling_planes = [
-        PlanarSurface.from_corner_points(1.0, PNT1, PNT2, PNT2b, PNT1b),
-        PlanarSurface.from_corner_points(1.0, PNT2, PNT3, PNT3b, PNT2b),
-        PlanarSurface.from_corner_points(1.0, PNT3, PNT4, PNT4b, PNT3b),
-        PlanarSurface.from_corner_points(1.0, PNT4, PNT5, PNT5b, PNT4b)
+        PlanarSurface.from_corner_points(PNT1, PNT2, PNT2b, PNT1b),
+        PlanarSurface.from_corner_points(PNT2, PNT3, PNT3b, PNT2b),
+        PlanarSurface.from_corner_points(PNT3, PNT4, PNT4b, PNT3b),
+        PlanarSurface.from_corner_points(PNT4, PNT5, PNT5b, PNT4b)
     ]
     stirling_fault1 = MultiSurface(stirling_planes)
 
@@ -125,22 +125,22 @@ def _setup_peer_test_bending_fault_config():
 
     frankel_planes = [
         PlanarSurface.from_corner_points(
-            1.0, PNT1, PNT2,
+            PNT1, PNT2,
             PNT2.point_at(as_length, lsd, dipdir1),
             PNT1.point_at(as_length, lsd, dipdir1)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT2, PNT3,
+            PNT2, PNT3,
             PNT3.point_at(as_length, lsd, dipdir2),
             PNT2.point_at(as_length, lsd, dipdir2)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT3, PNT4,
+            PNT3, PNT4,
             PNT4.point_at(as_length, lsd, dipdir3),
             PNT3.point_at(as_length, lsd, dipdir3)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT4, PNT5,
+            PNT4, PNT5,
             PNT5.point_at(as_length, lsd, dipdir4),
             PNT4.point_at(as_length, lsd, dipdir4)
             )
@@ -153,22 +153,22 @@ def _setup_peer_test_bending_fault_config():
     as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
     frankel_discordant = [
         PlanarSurface.from_corner_points(
-            1.0, PNT1, PNT2,
+            PNT1, PNT2,
             PNT2.point_at(as_length, lsd, dipdir1),
             PNT1.point_at(as_length, lsd, dipdir1)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT3, PNT2,
+            PNT3, PNT2,
             PNT2.point_at(as_length_alt, lsd, dipdir2b),
             PNT3.point_at(as_length_alt, lsd, dipdir2b)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT3, PNT4,
+            PNT3, PNT4,
             PNT4.point_at(as_length, lsd, dipdir3),
             PNT3.point_at(as_length, lsd, dipdir3)
             ),
         PlanarSurface.from_corner_points(
-            1.0, PNT4, PNT5,
+            PNT4, PNT5,
             PNT5.point_at(as_length, lsd, dipdir4),
             PNT4.point_at(as_length, lsd, dipdir4)
             )

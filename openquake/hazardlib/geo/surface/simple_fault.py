@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ import math
 import numpy
 
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
@@ -52,7 +52,7 @@ def simple_fault_node(fault_trace, dip, upper_depth, lower_depth):
     return node
 
 
-class SimpleFaultSurface(BaseQuadrilateralSurface):
+class SimpleFaultSurface(BaseSurface):
     """
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
 
@@ -64,17 +64,10 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
     :meth:`from_fault_data`.
     """
     def __init__(self, mesh):
-        super(SimpleFaultSurface, self).__init__()
         self.mesh = mesh
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
-
-    def _create_mesh(self):
-        """
-        Return a mesh provided to object's constructor.
-        """
-        return self.mesh
 
     def get_dip(self):
         """
@@ -91,7 +84,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             # calculate weighted average dip and strike of only the top row
             # of cells since those values are uniform along dip for simple
             # faults
-            top_row = self.get_mesh()[0:2]
+            top_row = self.mesh[0:2]
             self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
         return self.dip
 
@@ -373,5 +366,5 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         # calculate width only along the first mesh column, because
         # width is uniform for simple faults
-        left_column = self.get_mesh()[:, 0:2]
+        left_column = self.mesh[:, 0:2]
         return left_column.get_mean_width()

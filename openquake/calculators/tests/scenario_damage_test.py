@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,8 +25,7 @@ from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, REFERENCE_OS)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -44,8 +43,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                           if f.endswith(exports) and 'by_taxon' not in f)
         self.assertEqual(len(got), len(expected))
         for fname, actual in zip(expected, got):
-            if REFERENCE_OS:  # broken on macOS
-                self.assertEqualFiles('expected/%s' % fname, actual)
+            self.assertEqualFiles('expected/%s' % fname, actual)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1(self):
@@ -76,8 +74,12 @@ RM       4,000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
         total = extract(self.calc.datastore, 'aggdamages/structural')
-        aae([[0.47999877, 0.35379884, 0.06553464, 0.01844897, 0.08221881]],
+        aae([[0.4799988, 0.3537988, 0.0655346, 0.018449, 0.0822188]],
             total)  # shape (R, D) = (1, 5)
+
+        # check extract gmf_data works with a filtered site collection
+        gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
+        self.assertEqual(gmf_data['rlz-000'].shape, (7,))
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1h(self):
@@ -98,8 +100,18 @@ RM       4,000
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_4b(self):
-        self.assert_ok(case_4b, 'job_haz.ini,job_risk.ini', exports='csv',
-                       kind='losses')
+        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
+
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        fnames = export(('losses_by_asset', 'csv'), self.calc.datastore)
+        self.assertEqual(len(fnames), 2)  # one per realization
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_wrong_gsim_lt(self):

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -83,7 +83,7 @@ class DisaggregateTestCase(unittest.TestCase):
 
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
-        super(PMFExtractorsTestCase, self).setUp()
+        super().setUp()
         self.aae = numpy.testing.assert_almost_equal
 
         # test matrix is not normalized, but that's fine for test
