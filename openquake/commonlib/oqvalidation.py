@@ -142,8 +142,8 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
-    spinning_distance = valid.Param(valid.maximum_distance)
-    floating_distance = valid.Param(valid.maximum_distance)
+    spinning_distance = valid.Param(valid.positivefloat, None)
+    floating_distance = valid.Param(valid.positivefloat, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -165,6 +165,13 @@ class OqParam(valid.ParamSet):
         except AttributeError:
             self._file_type, self._risk_files = get_risk_files(self.inputs)
             return self._file_type
+
+    def get_reqv(self):
+        """
+        :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
+        """
+        if 'reqv' in self.inputs:
+            return valid.RepiEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
