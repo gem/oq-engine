@@ -53,6 +53,24 @@ complex_fault_mesh_spacing:
   can become up to 25 times faster, assuming the complex fault sources
   are dominating the computation time.
 
+Intensity measure types and levels
+----------------------------------
+
+Classical calculations are roughly linear in the number of intensity
+measure types and levels. A common mistake is to use too many levels.
+For instance a configuration like the following one::
+
+  intensity_measure_types_and_levels = {"PGA":  logscale(0.001,4.0, 100),
+                                        "SA(0.3)":  logscale(0.001,4.0, 100),
+                                        "SA(1.0)":  logscale(0.001,4.0, 100)}
+
+requires computing the PoEs on 300 levels. Is that really what the user wants?
+Since calculations are usually dominated by epistemic errors, it could very
+well be that within the systematic error using only 20 levels per each intensity
+measure type produces good enough results, while reducing the computation
+time by a factor of 5.
+
+
 event_based/scenario parameters
 --------------------------------
 
