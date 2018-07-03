@@ -2,9 +2,9 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     3,482,777,328      
-date           2018-02-25T06:43:26
-engine_version 2.10.0-git1f7c0c0  
+checksum32     4,081,447,500      
+date           2018-06-05T06:39:34
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 3, num_levels = 10
@@ -44,11 +44,11 @@ structural_vulnerability `vulnerability_2IM.xml <vulnerability_2IM.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,7 +60,7 @@ Realizations per (TRT, GSIM)
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 480 B
+3 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 60 tasks = 1.41 KB
 
 Exposure model
 --------------
@@ -71,19 +71,19 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-RM       1.000 0.0    1   1   2         2         
-RC       1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   3         3         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+RM       1.00000 0.0    1   1   2         2         
+RC       1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   3         3         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.008     0.0       1     
-reading exposure        0.001     0.0       1     
-reading site collection 2.091E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+building riskinputs     0.00999  0.12109   1     
+reading site collection 0.00241  0.0       1     
+reading exposure        0.00113  0.0       1     
+======================= ======== ========= ======

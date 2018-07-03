@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -162,7 +162,8 @@ def example_calc(apply):
     imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
              'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
     gsims = {'Active Shallow Crust': akkar_bommer_2010.AkkarBommer2010()}
-    return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply)
+    return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply,
+                              filter_distance='rrup')
 
 
 class HazardCurvesParallelTestCase(unittest.TestCase):

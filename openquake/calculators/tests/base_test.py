@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 
 import unittest
 import mock
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.baselib import hdf5
 from openquake.calculators import base
 
@@ -26,8 +26,9 @@ from openquake.calculators import base
 class FakeParams(hdf5.LiteralAttrs):
     export_dir = '/tmp'
     hazard_calculation_id = None
-    inputs = {'job_ini': writetmp('fake_job.ini')}
+    inputs = {'job_ini': gettemp('fake_job.ini')}
     concurrent_tasks = 0
+    minimum_magnitude = 0
 
     def to_params(self):
         return {}

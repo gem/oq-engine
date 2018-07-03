@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -71,7 +71,6 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-from __future__ import print_function
 import io
 import re
 import sys
@@ -100,6 +99,25 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
+class SourceModel(collections.Sequence):
+    """
+    A container of source groups with attributes name, investigation_time,
+    start_time.
+    """
+    def __init__(self, src_groups, name=None, investigation_time=None,
+                 start_time=None):
+        self.src_groups = src_groups
+        self.name = name
+        self.investigation_time = investigation_time
+        self.start_time = start_time
+
+    def __getitem__(self, i):
+        return self.src_groups[i]
+
+    def __len__(self):
+        return len(self.src_groups)
+
+
 def get_tag_version(nrml_node):
     """
     Extract from a node of kind NRML the tag and the version. For instance
@@ -118,6 +136,7 @@ def to_python(fname, *args):
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
 
+
 parse = deprecated('Use nrml.to_python instead')(to_python)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
@@ -127,6 +146,7 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 @node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
+
 
 default = sourceconverter.SourceConverter()
 
@@ -147,8 +167,9 @@ def get_source_model_04(node, fname, converter=default):
             logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    return sorted(sourceconverter.SourceGroup(trt, srcs)
-                  for trt, srcs in groups.items())
+    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+                        for trt, srcs in groups.items())
+    return SourceModel(src_groups, node.get('name'))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -162,7 +183,14 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return sorted(groups)
+    itime = node.get('investigation_time')
+    if itime is not None:
+        itime = valid.positivefloat(itime)
+    stime = node.get('start_time')
+    if stime is not None:
+        stime = valid.positivefloat(stime)
+    return SourceModel(sorted(groups), node.get('name'), itime, stime)
+
 
 validators = {
     'strike': valid.strike_range,
@@ -193,7 +221,6 @@ validators = {
     'bin_width': valid.positivefloats,
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
-    'probs_occur': valid.pmf,
     'weight': valid.probability,
     'uncertaintyWeight': decimal.Decimal,
     'alongStrike': valid.probability,
@@ -214,13 +241,9 @@ validators = {
     'poes': valid.positivefloats,
     'description': valid.utf8_not_empty,
     'noDamageLimit': valid.NoneOr(valid.positivefloat),
-    'investigationTime': valid.positivefloat,
     'poEs': valid.probabilities,
     'gsimTreePath': lambda v: v.split('_'),
     'sourceModelTreePath': lambda v: v.split('_'),
-    'poE': valid.probability,
-    'IMLs': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMT': str,
     'saPeriod': valid.positivefloat,
     'saDamping': valid.positivefloat,
@@ -228,10 +251,7 @@ validators = {
     'investigationTime': valid.positivefloat,
     'poE': valid.probability,
     'periods': valid.positivefloats,
-    'pos': valid.lon_lat,
     'IMLs': valid.positivefloats,
-    'lon': valid.longitude,
-    'lat': valid.latitude,
     'magBinEdges': valid.integers,
     'distBinEdges': valid.integers,
     'epsBinEdges': valid.integers,
@@ -239,14 +259,12 @@ validators = {
     'latBinEdges': valid.latitudes,
     'type': valid.simple_id,
     'dims': valid.positiveints,
-    'poE': valid.probability,
     'iml': valid.positivefloat,
     'index': valid.positiveints,
     'value': valid.positivefloat,
     'assetLifeExpectancy': valid.positivefloat,
     'interestRate': valid.positivefloat,
     'statistics': valid.Choice('mean', 'quantile'),
-    'pos': valid.lon_lat,
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
     'srcs_weights': valid.positivefloats,
@@ -263,58 +281,54 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.groups = {}  # cache fname -> groups
+        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
 
-    def parse_src_groups(self, fname, apply_uncertainties=None):
+    def parse_src_groups(self, fname, apply_uncertainties):
         """
         :param fname:
             the full pathname of the source model file
         :param apply_uncertainties:
-            a function modifying the sources (or None)
+            a function modifying the sources
         """
         try:
-            groups = self.groups[fname]
+            groups = self.sm[fname]
         except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
+            groups = self.sm[fname] = to_python(fname, self.converter)
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
-            nrup = 0
             for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
+                changed = apply_uncertainties(src)
+                if changed:
+                    # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
-                    nrup += src.num_ruptures
-            # NB: if the user sets a wrong discretization parameter
-            # the call to `.count_ruptures()` can be ultra-slow
-            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
-                          fname, group.trt, len(group), nrup)
+                    self.changed_sources += 1
         self.fname_hits[fname] += 1
         return groups
 
-    def parse_groups(self, fname):
+    def check_nonparametric_sources(self, investigation_time):
         """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
+        :param investigation_time:
+            investigation_time to compare with in the case of
+            nonparametric sources
+        :returns:
+            list of nonparametric sources in the composite source model
         """
-        try:
-            return to_python(fname, self.converter)
-        except ValueError as e:
-            err = str(e)
-            e1 = 'Surface does not conform with Aki & Richards convention'
-            e2 = 'Edges points are not in the right order'
-            if e1 in err or e2 in err:
-                raise InvalidFile('''\
-        %s: %s. Probably you are using an obsolete model.
-        In that case you can fix the file with the command
-        %s -m openquake.engine.tools.correct_complex_sources %s
-        ''' % (fname, e, sys.executable, fname))
-            else:
-                raise
+        npsources = []
+        for fname, sm in self.sm.items():
+            # NonParametricSeismicSources
+            np = [src for sg in sm.src_groups for src in sg
+                  if hasattr(src, 'data')]
+            if np:
+                npsources.extend(np)
+                if sm.investigation_time != investigation_time:
+                    raise ValueError(
+                        'The source model %s contains an investigation_time '
+                        'of %s, while the job.ini has %s' % (
+                            fname, sm.investigation_time, investigation_time))
+        return npsources
 
 
 def read(source, chatty=True, stop=None):

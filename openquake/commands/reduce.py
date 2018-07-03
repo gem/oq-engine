@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,29 +16,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import csv
-import random
 import shutil
+import numpy
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.baselib.python3compat import encode
-from openquake.baselib import sap
-
-
-def random_filter(objects, reduction_factor, seed=42):
-    """
-    Given a list of objects, returns a sublist by extracting randomly
-    some elements. The reduction factor (< 1) tells how small is the extracted
-    list compared to the original list.
-    """
-    assert 0 < reduction_factor <= 1, reduction_factor
-    rnd = random.Random(seed)
-    out = []
-    for obj in objects:
-        if rnd.random() <= reduction_factor:
-            out.append(obj)
-    return out
+from openquake.baselib import sap, general
 
 
 def _save_csv(fname, lines, header):
@@ -67,21 +50,30 @@ def reduce(fname, reduction_factor):
                 header = None
                 f.seek(0)
                 all_lines = f.readlines()
-        lines = random_filter(all_lines, reduction_factor)
+        lines = general.random_filter(all_lines, reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
         _save_csv(fname, lines, header)
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
+    elif fname.endswith('.npy'):
+        array = numpy.load(fname)
+        shutil.copy(fname, fname + '.bak')
+        print('Copied the original file in %s.bak' % fname)
+        arr = numpy.array(general.random_filter(array, reduction_factor))
+        numpy.save(fname, arr)
+        print('Extracted %d rows out of %d' % (len(arr), len(array)))
+        return
     node = nrml.read(fname)
     model = node[0]
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
-        model.assets.nodes = random_filter(model.assets, reduction_factor)
+        model.assets.nodes = general.random_filter(
+            model.assets, reduction_factor)
         num_nodes = len(model.assets)
     elif model.tag.endswith('siteModel'):
         total = len(model)
-        model.nodes = random_filter(model, reduction_factor)
+        model.nodes = general.random_filter(model, reduction_factor)
         num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
         if node['xmlns'] != 'http://openquake.org/xmlns/nrml/0.5':
@@ -89,7 +81,7 @@ def reduce(fname, reduction_factor):
         total = sum(len(sg) for sg in model)
         num_nodes = 0
         for sg in model:
-            sg.nodes = random_filter(sg, reduction_factor)
+            sg.nodes = general.random_filter(sg, reduction_factor)
             num_nodes += len(sg)
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
@@ -98,6 +90,7 @@ def reduce(fname, reduction_factor):
     with open(fname, 'wb') as f:
         nrml.write([model], f, xmlns=node['xmlns'])
     print('Extracted %d nodes out of %d' % (num_nodes, total))
+
 
 reduce.arg('fname', 'path to the model file')
 reduce.arg('reduction_factor', 'reduction factor in the range 0..1',

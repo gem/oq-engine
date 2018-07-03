@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 
 from xml.etree.ElementTree import parse
 
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.baselib.node import tostring
 from openquake.hazardlib.nrml import PARSE_NS_MAP
 
@@ -27,7 +27,7 @@ def get_path(fname_or_fileobject):
     if isinstance(fname_or_fileobject, str):
         return fname_or_fileobject
     elif hasattr(fname_or_fileobject, 'getvalue'):
-        return writetmp(fname_or_fileobject.getvalue())
+        return gettemp(fname_or_fileobject.getvalue())
     elif hasattr(fname_or_fileobject, 'name'):
         return fname_or_fileobject.name
     else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,6 @@
 Check GMPE/IPE class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
-from __future__ import print_function
-from __future__ import division
 import csv
 import math
 import sys
@@ -32,10 +30,11 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
-from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
-                                           DistancesContext)
+from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
+                                          DistancesContext)
 from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
                                      RSD595, RSD2080)
+
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
@@ -83,11 +82,9 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
-
             ctxs.append(
                 (orig_sctx == sctx) and (orig_rctx == rctx) and
-                (orig_dctx == dctx)
-            )
+                (orig_dctx == dctx))
             if not numpy.all(ctxs) and debug:
                 msg = 'file %r line %r imt %r. Context object ' \
                       'has changed after get_mean_and_stddevs has been ' \
@@ -111,8 +108,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 (result_type, type(result))
 
             discrep_percentage = numpy.abs(
-                result / expected_result * 100 - 100
-            )
+                result / expected_result * 100 - 100)
             discrepancies.extend(discrep_percentage)
             errors += (discrep_percentage > max_discrep_percentage).sum()
 
@@ -120,8 +116,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                       '(delta %.4f%%)' % (
                           datafile.name, linenum, imt, result_type.lower(),
-                          expected_result[0], result[0], discrep_percentage[0]
-                      )
+                          expected_result[0], result[0], discrep_percentage[0])
                 print(msg, file=sys.stderr)
                 break
 
@@ -130,8 +125,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     return (
         errors,
         _format_stats(time.time() - started, discrepancies, errors, ctxs),
-        sctx, rctx, dctx, ctxs
-    )
+        sctx, rctx, dctx, ctxs)
 
 
 def _format_stats(time_spent, discrepancies, errors, ctxs):
@@ -220,9 +214,9 @@ def _parse_csv(datafile, debug):
                                                       expected_results2[imt]))
         else:
             yield sctx, rctx, dctx, stddev_types, expected_results, result_type
-            (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
-                = (sctx2, rctx2, dctx2, stddev_types2,
-                   expected_results2, result_type2)
+            (sctx, rctx, dctx, stddev_types, expected_results,
+             result_type) = (sctx2, rctx2, dctx2, stddev_types2,
+                             expected_results2, result_type2)
     yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
@@ -333,30 +327,26 @@ if __name__ == '__main__':
     import argparse
 
     def gsim_by_import_path(import_path):
-        if not '.' in import_path:
+        if '.' not in import_path:
             raise argparse.ArgumentTypeError(
-                '%r is not well-formed import path' % import_path
-            )
+                '%r is not well-formed import path' % import_path)
         module_name, class_name = import_path.rsplit('.', 1)
         try:
             module = __import__(module_name, fromlist=[class_name])
         except ImportError:
             raise argparse.ArgumentTypeError(
                 'can not import module %r, make sure '
-                'it is in your $PYTHONPATH' % module_name
-            )
+                'it is in your $PYTHONPATH' % module_name)
         if not hasattr(module, class_name):
             raise argparse.ArgumentTypeError(
-                "module %r doesn't export name %r" % (module_name, class_name)
-            )
+                "module %r doesn't export name %r" % (module_name, class_name))
         gsim_class = getattr(module, class_name)
         if not isinstance(gsim_class, type) \
                 or not issubclass(gsim_class, GroundShakingIntensityModel):
             raise argparse.ArgumentTypeError(
                 "%r is not subclass of "
                 "openquake.hazardlib.gsim.base.GroundShakingIntensityModel"
-                % import_path
-            )
+                % import_path)
         return gsim_class
 
     parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
@@ -387,8 +377,7 @@ if __name__ == '__main__':
     errors, stats, _, _, _, _ = check_gsim(
         gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
-        debug=args.debug
-    )
+        debug=args.debug)
     if not args.quiet:
         print(stats, file=sys.stderr)
     if errors:

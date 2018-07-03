@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,14 +36,13 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
     # test that complex fault sources of simple geometry behave
     # exactly the same as simple fault sources of the same geometry
     def _make_source(self, *args, **kwargs):
-        source = super(ComplexFaultSourceSimpleGeometryIterRupturesTestCase,
-                       self)._make_source(*args, **kwargs)
+        source = super()._make_source(*args, **kwargs)
         surface = SimpleFaultSurface.from_fault_data(
             source.fault_trace, source.upper_seismogenic_depth,
             source.lower_seismogenic_depth, source.dip,
             source.rupture_mesh_spacing
         )
-        mesh = surface.get_mesh()
+        mesh = surface.mesh
         top_edge = Line(list(mesh[0:1]))
         bottom_edge = Line(list(mesh[-1:]))
 
@@ -244,40 +243,6 @@ class ComplexFaultSourceIterRupturesTestCase(
                                    test_data.TEST4_MESH_SPACING,
                                    test_data.TEST4_EDGES)
         self._test_ruptures(test_data.TEST4_RUPTURES, source)
-
-
-class ComplexFaultSourceRupEnclPolyTestCase(
-        simple_fault_test.SimpleFaultRupEncPolyTestCase):
-    # test that complex fault sources of simple geometry behave
-    # exactly the same as simple fault sources of the same geometry
-    def _make_source(self, mfd, aspect_ratio, fault_trace, dip):
-        sf = super(ComplexFaultSourceRupEnclPolyTestCase, self)._make_source(
-            mfd, aspect_ratio, fault_trace, dip
-        )
-        # create an equivalent top and bottom edges
-        vdist_top = sf.upper_seismogenic_depth
-        vdist_bottom = sf.lower_seismogenic_depth
-
-        hdist_top = vdist_top / numpy.tan(numpy.radians(dip))
-        hdist_bottom = vdist_bottom / numpy.tan(numpy.radians(dip))
-
-        strike = fault_trace[0].azimuth(fault_trace[-1])
-        azimuth = (strike + 90.0) % 360
-
-        top_edge = []
-        bottom_edge = []
-        for point in fault_trace.points:
-            top_edge.append(point.point_at(hdist_top, vdist_top, azimuth))
-            bottom_edge.append(point.point_at(hdist_bottom, vdist_bottom,
-                                              azimuth))
-        edges = [Line(top_edge), Line(bottom_edge)]
-
-        return ComplexFaultSource(
-            sf.source_id, sf.name, sf.tectonic_region_type,
-            sf.mfd, sf.rupture_mesh_spacing,
-            sf.magnitude_scaling_relationship, sf.rupture_aspect_ratio,
-            sf.temporal_occurrence_model, edges, sf.rake
-        )
 
 
 class FloatRupturesTestCase(unittest.TestCase):

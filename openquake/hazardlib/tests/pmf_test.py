@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from decimal import Decimal
-
 import unittest
 import numpy as np
 from openquake.hazardlib.pmf import PMF
@@ -22,7 +20,7 @@ from openquake.hazardlib.pmf import PMF
 
 class PMFTestCase(unittest.TestCase):
     def test_creation(self):
-        pmf = PMF((Decimal('0.1'), i) for i in range(10))
+        pmf = PMF((0.1, i) for i in range(10))
         self.assertEqual(pmf.data, [(0.1, i) for i in range(10)])
 
     def test_wrong_sum(self):
@@ -34,11 +32,11 @@ class PMFTestCase(unittest.TestCase):
 
     def test_negative_or_zero_prob(self):
         # negative probs are refused
-        data = [(-1, 0)] + [(Decimal('1.0'), 1), (Decimal('1.0'), 2)]
+        data = [(-1, 0)] + [(1.0, 1), (1.0, 2)]
         self.assertRaises(ValueError, PMF, data)
 
         # 0 probs are accepted
-        data = [(0, 0)] + [(Decimal('0.5'), 1), (Decimal('0.5'), 2)]
+        data = [(0, 0)] + [(0.5, 1), (0.5, 2)]
         PMF(data)
 
     def test_sample_pmf_numerical(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,6 @@ types.
 import re
 import operator
 import functools
-from openquake.baselib.python3compat import with_metaclass
 
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
@@ -70,7 +69,7 @@ class IMTMeta(type):
 
 
 @functools.total_ordering
-class _IMT(with_metaclass(IMTMeta, tuple)):
+class _IMT(tuple, metaclass=IMTMeta):
     """
     Base class for intensity measure type.
 
@@ -106,6 +105,7 @@ class PGA(_IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
+    period = 0.0
 
 
 class PGV(_IMT):
