@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
-from __future__ import division
 import sys
 import warnings
 import operator
@@ -29,7 +28,7 @@ import collections
 import numpy
 import scipy.stats
 
-from openquake.baselib.python3compat import raise_, range
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import AccumDict, pack, groupby
@@ -87,7 +86,8 @@ def collect_bin_data(sources, sitecol, cmaker, iml4,
     epsilons = numpy.linspace(truncnorm.a, truncnorm.b, n_epsilons + 1)
     acc = AccumDict(accum=[])
     for source in sources:
-        ruptures = source.iter_ruptures()
+        with cmaker.ir_mon:
+            ruptures = list(source.iter_ruptures())
         try:
             acc += cmaker.disaggregate(
                 sitecol, ruptures, iml4, truncnorm, epsilons, monitor)
@@ -223,7 +223,7 @@ def _digitize_lons(lons, lon_bins):
 def disaggregation(
         sources, site, imt, iml, gsim_by_trt, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_filter=filters.source_site_noop_filter):
+        source_filter=filters.source_site_noop_filter, filter_distance='rjb'):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -292,7 +292,8 @@ def disaggregation(
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
-    cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance)
+    cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance,
+                          filter_distance)
     iml4 = make_iml4(1, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -58,7 +58,7 @@ class AreaSource(ParametricSeismicSource):
                  nodal_plane_distribution, hypocenter_distribution,
                  # area-specific parameters
                  polygon, area_discretization):
-        super(AreaSource, self).__init__(
+        super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
@@ -70,21 +70,10 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
-    def get_rupture_enclosing_polygon(self, dilation=0):
-        """
-        Extends the area source polygon by ``dilation`` plus
-        :meth:`~openquake.hazardlib.source.point.PointSource._get_max_rupture_projection_radius`.
-
-        See :meth:`superclass method
-        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
-        for parameter and return value definition.
-        """
-        max_rup_radius = self._get_max_rupture_projection_radius()
-        return self.polygon.dilate(max_rup_radius + dilation)
-
     def iter_ruptures(self):
         """
-        See :meth:`openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`
+        See :meth:
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`
         for description of parameters and return value.
 
         Area sources are treated as a collection of point sources
@@ -112,16 +101,16 @@ class AreaSource(ParametricSeismicSource):
         # epicenter location (first point of the polygon's mesh) but different
         # magnitudes, nodal planes, hypocenters' depths and occurrence rates
         ref_ruptures = []
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            for (np_prob, np) in self.nodal_plane_distribution.data:
-                for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            for np_prob, np in self.nodal_plane_distribution.data:
+                for hc_prob, hc_depth in self.hypocenter_distribution.data:
                     hypocenter = geo.Point(latitude=epicenter0.latitude,
                                            longitude=epicenter0.longitude,
                                            depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate
-                                       * float(np_prob) * float(hc_prob))
-                    occurrence_rate *= rate_scaling_factor
-                    surface = self._get_rupture_surface(mag, np, hypocenter)
+                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
+                                       * rate_scaling_factor)
+                    surface = PointSource._get_rupture_surface(
+                        self, mag, np, hypocenter)
                     ref_ruptures.append((mag, np.rake, hc_depth,
                                          surface, occurrence_rate))
 
@@ -137,8 +126,7 @@ class AreaSource(ParametricSeismicSource):
                 hypocenter.depth = hc_depth
                 rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self), occ_rate,
-                    self.temporal_occurrence_model)
+                    surface, occ_rate, self.temporal_occurrence_model)
                 yield rupture
 
     def count_ruptures(self):
@@ -152,11 +140,6 @@ class AreaSource(ParametricSeismicSource):
                 len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
-
-    _get_rupture_dimensions = PointSource.__dict__['_get_rupture_dimensions']
-    _get_max_rupture_projection_radius = PointSource.__dict__[
-        '_get_max_rupture_projection_radius']
-    _get_rupture_surface = PointSource.__dict__['_get_rupture_surface']
 
     def __iter__(self):
         """
@@ -198,7 +181,7 @@ class AreaSource(ParametricSeismicSource):
             pt = PointSource(
                 # Generate a new ID and name
                 source_id='%s:%s' % (self.source_id, i),
-                name='%s:%s' % (self.name, i),
+                name=self.name,
                 tectonic_region_type=self.tectonic_region_type,
                 mfd=new_mfd,
                 rupture_mesh_spacing=self.rupture_mesh_spacing,

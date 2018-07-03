@@ -2,9 +2,9 @@ Ucerf test
 ==========
 
 ============== ===================
-checksum32     2,080,369,829      
-date           2018-02-25T06:41:57
-engine_version 2.10.0-git1f7c0c0  
+checksum32     4,149,403,932      
+date           2018-06-26T14:56:58
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 155, num_levels = 6
@@ -12,7 +12,7 @@ num_sites = 155, num_levels = 6
 Parameters
 ----------
 =============================== ==================
-calculation_mode                'ucerf_rupture'   
+calculation_mode                'ucerf_hazard'    
 number_of_logic_tree_samples    0                 
 maximum_distance                {'default': 200.0}
 investigation_time              200.0             
@@ -43,34 +43,34 @@ source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-ltbr0001  0.006  simple(2)       2/2             
-ltbr0002  0.006  simple(2)       2/2             
-ltbr0003  0.050  simple(2)       2/2             
-ltbr0037  0.006  simple(2)       2/2             
-ltbr0038  0.006  simple(2)       2/2             
-ltbr0039  0.050  simple(2)       2/2             
-ltbr0541  0.019  simple(2)       2/2             
-ltbr0542  0.019  simple(2)       2/2             
-ltbr0543  0.150  simple(2)       2/2             
-ltbr0577  0.019  simple(2)       2/2             
-ltbr0578  0.019  simple(2)       2/2             
-ltbr0579  0.150  simple(2)       2/2             
-ltbr0721  0.006  simple(2)       2/2             
-ltbr0722  0.006  simple(2)       2/2             
-ltbr0723  0.050  simple(2)       2/2             
-ltbr0757  0.006  simple(2)       2/2             
-ltbr0758  0.006  simple(2)       2/2             
-ltbr0759  0.050  simple(2)       2/2             
-ltbr1261  0.019  simple(2)       2/2             
-ltbr1262  0.019  simple(2)       2/2             
-ltbr1263  0.150  simple(2)       2/2             
-ltbr1297  0.019  simple(2)       2/2             
-ltbr1298  0.019  simple(2)       2/2             
-ltbr1299  0.150  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+ltbr0001  0.00625 simple(2)       2/2             
+ltbr0002  0.00625 simple(2)       2/2             
+ltbr0003  0.05000 simple(2)       2/2             
+ltbr0037  0.00625 simple(2)       2/2             
+ltbr0038  0.00625 simple(2)       2/2             
+ltbr0039  0.05000 simple(2)       2/2             
+ltbr0541  0.01875 simple(2)       2/2             
+ltbr0542  0.01875 simple(2)       2/2             
+ltbr0543  0.15000 simple(2)       2/2             
+ltbr0577  0.01875 simple(2)       2/2             
+ltbr0578  0.01875 simple(2)       2/2             
+ltbr0579  0.15000 simple(2)       2/2             
+ltbr0721  0.00625 simple(2)       2/2             
+ltbr0722  0.00625 simple(2)       2/2             
+ltbr0723  0.05000 simple(2)       2/2             
+ltbr0757  0.00625 simple(2)       2/2             
+ltbr0758  0.00625 simple(2)       2/2             
+ltbr0759  0.05000 simple(2)       2/2             
+ltbr1261  0.01875 simple(2)       2/2             
+ltbr1262  0.01875 simple(2)       2/2             
+ltbr1263  0.15000 simple(2)       2/2             
+ltbr1297  0.01875 simple(2)       2/2             
+ltbr1298  0.01875 simple(2)       2/2             
+ltbr1299  0.15000 simple(2)       2/2             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -158,10 +158,34 @@ Realizations per (TRT, GSIM)
   23,AbrahamsonSilva2008(): [46]
   23,BooreEtAl2014(): [47]>
 
+Information about the tasks
+---------------------------
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+compute_hazard     0.02675 0.01077 0.00818 0.04621 24       
+================== ======= ======= ======= ======= =========
+
+Data transfer
+-------------
+============== ======================================================================================== =========
+task           sent                                                                                     received 
+compute_hazard src_filter=213.16 KB param=50.98 KB sources=43.8 KB rlzs_by_gsim=9.77 KB monitor=7.71 KB 288.73 KB
+============== ======================================================================================== =========
+
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 9.491E-04 0.0       1     
-======================= ========= ========= ======
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+total compute_hazard           0.64204  7.62109   24    
+sampling ruptures              0.32048  0.94141   24    
+managing sources               0.28709  0.01562   1     
+filtering ruptures             0.09225  0.0       24    
+saving ruptures                0.05988  0.01562   24    
+reading composite source model 0.02013  0.0       1     
+unpickling compute_hazard      0.01021  0.0       24    
+store source_info              0.00849  0.0       1     
+aggregating hcurves            0.00577  0.0       24    
+reading site collection        0.00215  0.0       1     
+splitting sources              0.00142  0.0       1     
+============================== ======== ========= ======

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2017 GEM Foundation
+# Copyright (C) 2013-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,16 +24,16 @@ import re
 import ast
 import logging
 import collections
-from decimal import Decimal
 import numpy
 
-from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim
-from openquake.hazardlib.gsim.gsim_table import GMPETable
+from openquake.hazardlib import imt, scalerel, gsim, pmf
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
+
+PRECISION = pmf.PRECISION
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
@@ -56,8 +56,15 @@ def disagg_outputs(value):
     return values
 
 
-class FromFile(object):  # fake GSIM
-    def __str__(self):
+class FromFile(object):
+    """
+    Fake GSIM to be used when the GMFs are imported from an
+    external file and not computed with a GSIM.
+    """
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
+    REQUIRES_SITES_PARAMETERS = set()
+
+    def __repr__(self):
         return 'FromFile'
 
 
@@ -220,6 +227,7 @@ class Regex(object):
             raise ValueError("'%s' does not match the regex '%s'" %
                              (value, self.rx.pattern))
         return value
+
 
 name = Regex(r'^[a-zA-Z_]\w*$')
 
@@ -459,14 +467,18 @@ def coordinates(value):
     >>> coordinates('0 0 0, 0 0 -1')
     Traceback (most recent call last):
     ...
-    ValueError: There are overlapping points in 0 0 0, 0 0 -1
+    ValueError: Found overlapping site #2,  0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    points = list(map(point, value.split(',')))
-    num_distinct = len(set(pnt[:2] for pnt in points))
-    if num_distinct < len(points):
-        raise ValueError("There are overlapping points in %s" % value)
+    points = []
+    pointset = set()
+    for i, line in enumerate(value.split(','), 1):
+        pnt = point(line)
+        if pnt[:2] in pointset:
+            raise ValueError("Found overlapping site #%d, %s" % (i, line))
+        pointset.add(pnt[:2])
+        points.append(pnt)
     return points
 
 
@@ -749,7 +761,7 @@ def dictionary(value):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
     >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.037606030930863933, 0.14142135623730948, 0.53182958969449856, 1.9999999999999991]}
+    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
     """
     if not value:
         return {}
@@ -834,7 +846,7 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if sum(map(Decimal, value.split())) != 1:
+    if abs(1.-sum(map(float, value.split()))) > 1e-12:
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
@@ -846,7 +858,7 @@ def check_weights(nodes_with_a_weight):
     :param nodes_with_a_weight: a list of Node objects with a weight attribute
     """
     weights = [n['weight'] for n in nodes_with_a_weight]
-    if abs(sum(weights) - 1.) > 1E-12:
+    if abs(sum(weights) - 1.) > PRECISION:
         raise ValueError('The weights do not sum up to 1: %s' % weights)
     return nodes_with_a_weight
 
@@ -864,7 +876,7 @@ def weights(value):
     ValueError: The weights do not sum up to 1: [0.1, 0.2, 0.8]
     """
     probs = probabilities(value)
-    if abs(sum(probs) - 1.) > 1E-12:
+    if abs(sum(probs) - 1.) > PRECISION:
         raise ValueError('The weights do not sum up to 1: %s' % probs)
     return probs
 
@@ -999,7 +1011,7 @@ def simple_slice(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 measured vs30 backarc'.split())
+    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
@@ -1010,10 +1022,10 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
        <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
        z1pt0="100" z2pt5="5" backarc="False"/>
 
-    into a 7-tuple (z1pt0, z2pt5, measured, vs30, backarc, lon, lat)
+    into a 7-tuple (z1pt0, z2pt5, vs30measured, vs30, backarc, lon, lat)
     """
     return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
-                     measured=vs30_type(vs30Type) == 'measured',
+                     vs30measured=vs30_type(vs30Type) == 'measured',
                      vs30=positivefloat(vs30), lon=longitude(lon),
                      lat=latitude(lat), depth=float_(depth),
                      backarc=boolean(backarc))
@@ -1071,7 +1083,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
+class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:

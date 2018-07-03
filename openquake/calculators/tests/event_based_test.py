@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import os
 import re
 import math
@@ -24,18 +22,19 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, writetmp
+from openquake.baselib.general import group_array, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.extract import extract
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_12, case_13, case_17, case_18)
+    case_8, case_9, case_10, case_12, case_13, case_17, case_18, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -170,7 +169,6 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
-
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
@@ -194,13 +192,11 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-6)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -218,7 +214,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
-        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        got = gettemp(rst_table(self.calc.datastore['gmdata'].value))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
@@ -240,19 +236,31 @@ class EventBasedTestCase(CalculatorTestCase):
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
 
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        self.assertEqual(exp, 375496)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/rup_data.csv', fname)
+        years = sorted(self.calc.datastore['events']['year'])
+        self.assertEqual(years, [15, 29, 39, 43])
+        self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 17)
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 29)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_10(self):
+        # this is a case with multiple files in the smlt uncertaintyModel
+        # and with sampling
+        self.run_calc(case_10.__file__, 'job.ini')
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
@@ -300,6 +308,9 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
+        events = extract(self.calc.datastore, 'events')
+        years = numpy.unique(events['year'])
+        numpy.testing.assert_equal(years, [1])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
@@ -315,3 +326,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(str(ctx.exception),
                          'The event based calculator is restricted '
                          'to 256 imts, got 900')
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_mutex(self):
+        out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
+        [fname] = out['ruptures', 'xml']
+        self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)

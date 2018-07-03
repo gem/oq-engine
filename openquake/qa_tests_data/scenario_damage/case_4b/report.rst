@@ -3,8 +3,8 @@ scenario hazard
 
 ============== ===================
 checksum32     2,482,429,138      
-date           2018-02-25T06:41:58
-engine_version 2.10.0-git1f7c0c0  
+date           2018-06-26T14:56:59
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -42,11 +42,11 @@ rupture_model   `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  simple(2)       2/2             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 simple(2)       2/2             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -66,19 +66,20 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading exposure        0.002     0.0       1     
-reading site collection 4.530E-06 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+computing gmfs          0.00420  0.0       1     
+reading site collection 0.00402  0.0       1     
+reading exposure        0.00145  0.0       1     
+======================= ======== ========= ======

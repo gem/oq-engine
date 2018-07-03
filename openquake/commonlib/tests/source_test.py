@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,14 +69,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        cls.conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
-        ))
-        groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
+        )
+        groups = nrml.to_python(MIXED_SRC_MODEL, cls.conv)
         ([cls.point], [cls.cmplx], [cls.area, cls.simple],
          [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
 
@@ -295,7 +295,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0)
         surfaces = [
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=9.696547068,
                 top_left=geo.Point(-1, 1, 21),
@@ -304,7 +303,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 bottom_right=geo.Point(1, -1, 59)
             ),
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=15.0987061388,
                 top_left=geo.Point(1, 1, 20),
@@ -345,15 +343,15 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
-        ))
+        )
         with self.assertRaises(nrml.DuplicatedID):
-            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
+            nrml.to_python(DUPLICATE_ID_SRC_MODEL, conv)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -449,7 +447,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 """)
         [area] = nrml.read(area_file).sourceModel
         with self.assertRaises(AttributeError) as ctx:
-            self.parser.converter.convert_node(area)
+            self.conv.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
@@ -510,7 +508,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_groups(simple_file)
+            nrml.to_python(simple_file, self.conv)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -635,14 +633,14 @@ class SourceGroupTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = nrml.SourceModelParser(s.SourceConverter(
+        conv = s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.))
+            area_source_discretization=1.)
         cls.source_collector = {
-            sc.trt: sc for sc in cls.parser.parse_src_groups(MIXED_SRC_MODEL)}
+            sc.trt: sc for sc in nrml.to_python(MIXED_SRC_MODEL, conv)}
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -821,78 +819,3 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
                          replace('0.20000000000000004', '0.2'))
-
-
-class FilterSourceTestCase(unittest.TestCase):
-    bad_source = BytesIO(b'''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.4"
-xmlns:gml="http://www.opengis.net/gml"
->
-    <sourceModel>
-        <simpleFaultSource
-        id="61"
-        name="Great Sumatra Fault Seg 9"
-        tectonicRegion="Active Shallow Crust"
-        >
-            <simpleFaultGeometry>
-                <gml:LineString>
-                    <gml:posList>
-                        100.25937 -0.031671 100.0266 0.405493
-                    </gml:posList>
-                </gml:LineString>
-                <dip>
-                    90.0
-                </dip>
-                <upperSeismoDepth>
-                    0.0
-                </upperSeismoDepth>
-                <lowerSeismoDepth>
-                    15.0
-                </lowerSeismoDepth>
-            </simpleFaultGeometry>
-            <magScaleRel>
-                WC1994
-            </magScaleRel>
-            <ruptAspectRatio>
-                2.0
-            </ruptAspectRatio>
-            <incrementalMFD
-            binWidth="0.1"
-            minMag="6.6"
-            >
-                <occurRates>
-                    0.000159132913052 0.000639357094314 0.00128272504335 0.00128508030857 0.00064288541598 0.00016059924101 2.00336468094e-05
-                </occurRates>
-            </incrementalMFD>
-            <rake>
-                0.0
-            </rake>
-        </simpleFaultSource>
-    </sourceModel>
-</nrml>''')
-
-    def test(self):
-        mod = mock.Mock(
-            reference_vs30_value=760,
-            reference_vs30_type='measured',
-            reference_depth_to_1pt0km_per_sec=100.,
-            reference_depth_to_2pt5km_per_sec=5.0,
-            reference_backarc=False)
-        sitecol = site.SiteCollection.from_points(
-            [102.32], [-2.9107], [0], mod)
-        parser = nrml.SourceModelParser(s.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,  # km
-            complex_fault_mesh_spacing=1,  # km
-            width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.,  # km
-        ))
-        [[src]] = parser.parse_groups(self.bad_source)
-        with self.assertRaises(AttributeError) as ctx, context(src):
-            max_dist = 250
-            # NB: with a distance of 200 km the error does not happen
-            src.filter_sites_by_distance_to_source(max_dist, sitecol)
-        self.assertIn('An error occurred with source id=61',
-                      str(ctx.exception))

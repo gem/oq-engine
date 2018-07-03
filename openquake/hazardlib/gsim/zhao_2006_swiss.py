@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,20 +22,16 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc
-
 from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS05,
     COEFFS_FS_ROCK_SWISS03,
-    COEFFS_FS_ROCK_SWISS08
-)
+    COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
@@ -82,8 +78,8 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
         sites.vs30 = 700 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(ZhaoEtAl2006AscSWISS05, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tauC'
         log_phi_ss = 1.00

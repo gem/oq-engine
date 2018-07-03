@@ -1,32 +1,29 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2017, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2017-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import nrml
-from openquake.risklib import read_nrml
-
-read_nrml.update_validators()
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
     def test_invalid_vf_pmf(self):
-        fname = writetmp('''\
+        fname = gettemp('''\
 <?xml version="1.0" encoding="UTF-8"?> 
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"> 
 	<vulnerabilityModel id="Vulnerabilidad" assetCategory="MI_AIS" lossCategory="structural"> 

@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2016, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2016-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
 import signal
@@ -44,14 +44,15 @@ def dbserver(cmd, dbhostport=None,
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server(dbpath, dbhostport)
+            dbs.run_server.func(dbpath, dbhostport)
         else:
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGINT)
-        dbs.run_server(dbpath, dbhostport)
+        dbs.run_server.func(dbpath, dbhostport)
+
 
 dbserver.arg('cmd', 'dbserver command',
              choices='start stop status restart'.split())

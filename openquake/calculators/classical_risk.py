@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ from openquake.baselib.general import groupby, AccumDict
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
-from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
@@ -86,7 +85,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     """
     Classical Risk calculator
     """
-    pre_calculator = 'classical'
     core_task = classical_risk
 
     def pre_execute(self):
@@ -97,24 +95,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if oq.insured_losses:
             raise ValueError(
                 'insured_losses are not supported for classical_risk')
-        if 'hazard_curves' in oq.inputs:  # read hazard from file
-            haz_sitecol = readinput.get_site_collection(oq)
-            self.datastore['poes/grp-00'] = readinput.pmap
-            self.save_params()
-            self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.load_riskmodel()
-            self.datastore['assetcol'] = self.assetcol
-            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
-            self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.before_export()  # save 'realizations' dataset
-        else:  # compute hazard or read it from the datastore
-            super(ClassicalRiskCalculator, self).pre_execute()
-            if 'poes' not in self.datastore:  # when building short report
-                return
-        weights = self.datastore['csm_info'].rlzs['weight']
-        self.R = len(weights)
-        self.riskinputs = self.build_riskinputs('poe')
+        super().pre_execute('classical')
+        if 'poes' not in self.datastore:  # when building short report
+            return
+        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         self.param = dict(stats=oq.risk_stats(), weights=weights)
+        self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.I = oq.insured_losses + 1
@@ -134,9 +120,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         ltypes = self.riskmodel.loss_types
 
         # loss curves stats are generated always
-        stats = [encode(n) for (n, f) in self.oqparam.risk_stats()]
+        stats = b' '.join(encode(n) for (n, f) in self.oqparam.risk_stats())
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
-        avg_losses = numpy.zeros((self.A, self.R, self.L * self.I), F32)
+        avg_losses = numpy.zeros((self.A, self.S, self.L * self.I), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
             stat_curves_lt = stat_curves[ltypes[l]]
             for s in range(self.S):

@@ -13,12 +13,43 @@
       <costType name="business_interruption" type="per_asset" unit="USD/month" />
     </costTypes>
   </conversions>
+  <occupancyPeriods>
+    day night transit
+  </occupancyPeriods>
   <assets>
     <asset id="a1" number="1" area="100" taxonomy="tax1" >
       <location lon="-122.000" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" />
         <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    <asset id="a2" number="2" area="180" taxonomy="tax1" >
+      <location lon="-122.010" lat="38.113" />
+      <costs>
+        <cost type="structural" value="1000" />
+        <cost type="nonstructural" value="1500" />
+        <cost type="contents" value="500" />
+        <cost type="business_interruption" value="2000" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    <asset id="a3" number="1" area="120" taxonomy="tax1" >
+      <location lon="-122.020" lat="38.113" />
+      <costs>
+        <cost type="structural" value="20000" />
+        <cost type="nonstructural" value="25000" />
         <cost type="contents" value="5000" />
         <cost type="business_interruption" value="2000" />
       </costs>

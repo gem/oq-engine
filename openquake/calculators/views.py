@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,10 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
-import io
 import ast
-import math
 import os.path
 import numbers
 import operator
@@ -32,9 +29,9 @@ from openquake.baselib.general import (
     humansize, groupby, DictArray, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
-from openquake.baselib.python3compat import unicode, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import group_array
-from openquake.hazardlib import valid, stats as hstats
+from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
@@ -67,7 +64,7 @@ def form(value):
     >>> form(103.4)
     '103'
     >>> form(9.3)
-    '9.300'
+    '9.30000'
     >>> form(-1.2)
     '-1.2'
     """
@@ -77,7 +74,7 @@ def form(value):
         elif value < .001:
             return '%.3E' % value
         elif value < 10 and isinstance(value, FLOAT):
-            return '%.3f' % value
+            return '%.5f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
         elif numpy.isnan(value):
@@ -86,7 +83,7 @@ def form(value):
             return str(int(value))
     elif isinstance(value, bytes):
         return decode(value)
-    elif isinstance(value, unicode):
+    elif isinstance(value, str):
         return value
     elif isinstance(value, numpy.object_):
         return str(value)
@@ -244,25 +241,20 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_ruptures = 0
     csm_info = dstore['csm_info']
-    oq = dstore['oqparam']
-    num_sites = len(dstore['sitecol'])
-    num_tiles = math.ceil(num_sites / oq.sites_per_tile)
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
             trt = source.capitalize(src_group.trt)
-            er = src_group.eff_ruptures / num_tiles
+            er = src_group.eff_ruptures
             if er:
                 num_trts += 1
                 eff_ruptures += er
                 tbl.append(
-                    (sm.names, src_group.id, trt, er, src_group.tot_ruptures))
+                    (sm.name, src_group.id, trt, er, src_group.tot_ruptures))
             tot_ruptures += src_group.tot_ruptures
     rows = [('#TRT models', num_trts),
             ('#eff_ruptures', eff_ruptures),
             ('#tot_ruptures', tot_ruptures),
             ('#tot_weight', csm_info.tot_weight)]
-    if num_tiles > 1:
-        rows.insert(0, ('#tiles', num_tiles))
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -329,9 +321,17 @@ def view_job_info(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = dict(dstore.hdf5['job_info'])
-    rows = [(k, _humansize(v)) for k, v in sorted(job_info.items())]
-    return rst_table(rows)
+    data = [['task', 'sent', 'received']]
+    for task in dstore['task_info']:
+        if task not in ('task_sources', 'source_data'):
+            dset = dstore['task_info/' + task]
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset.attrs['sent']
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
+    return rst_table(data)
 
 
 @view.add('avglosses_data_transfer')
@@ -357,7 +357,7 @@ def ebr_data_transfer(token, dstore):
     """
     Display the data transferred in an event based risk calculation
     """
-    attrs = dstore['agg_loss_table'].attrs
+    attrs = dstore['losses_by_event'].attrs
     sent = humansize(attrs['sent'])
     received = humansize(attrs['tot_received'])
     return 'Event Based Risk: sent %s, received %s' % (sent, received)
@@ -387,7 +387,7 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
     R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
@@ -422,14 +422,13 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].loss_dt()
-    weights = dstore['csm_info'].rlzs['weight']
-    array = dstore['avg_losses-rlzs'].value  # shape (N, R)
-    if len(weights) == 1:  # one realization
-        mean = array[:, 0]
+    oq = dstore['oqparam']
+    R = dstore['csm_info'].get_num_rlzs()
+    if R == 1:  # one realization
+        mean = dstore['avg_losses-rlzs'][:, 0]
     else:
-        mean = hstats.compute_stats2(array, [hstats.mean_curve], weights)[:, 0]
-    data = numpy.array([tuple(row) for row in mean], dt)
+        mean = dstore['avg_losses-stats'][:, 0]
+    data = numpy.array([tuple(row) for row in mean], oq.loss_dt())
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
@@ -607,25 +606,51 @@ def view_task_durations(token, dstore):
     return '\n'.join(map(str, array))
 
 
-@view.add('task')
-def view_task(token, dstore):
+@view.add('task_hazard')
+def view_task_hazard(token, dstore):
     """
     Display info about a given task. Here are a few examples of usage::
 
-     $ oq show task:0  # the fastest task
-     $ oq show task:-1  # the slowest task
+     $ oq show task_hazard:0  # the fastest task
+     $ oq show task_hazard:-1  # the slowest task
     """
-    data = dstore['task_info/classical'].value
+    tasks = set(dstore['task_info'])
+    if 'task_info/source_data' not in dstore:
+        return 'Missing source_data'
+    if 'classical' in tasks:
+        data = dstore['task_info/classical'].value
+    elif 'count_eff_ruptures' in tasks:
+        data = dstore['task_info/count_eff_ruptures'].value
+    else:
+        data = dstore['task_info/compute_hazard'].value
     data.sort(order='duration')
-    i = int(token.split(':')[1])
-    taskno, weight, duration = data[i]
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
     arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
     st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
     sources = dstore['task_info/task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
-        taskno, weight, duration, ' '.join(sorted(srcs)))
+        taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs)))
     return res + rst_table(st, header='variable mean stddev min max n'.split())
+
+
+@view.add('task_risk')
+def view_task_risk(token, dstore):
+    """
+    Display info about a given risk task. Here are a few examples of usage::
+
+     $ oq show task_risk:0  # the fastest task
+     $ oq show task_risk:-1  # the slowest task
+    """
+    [key] = dstore['task_info']
+    data = dstore['task_info/' + key].value
+    data.sort(order='duration')
+    rec = data[int(token.split(':')[1])]
+    taskno = rec['taskno']
+    res = 'taskno=%d, weight=%d, duration=%d s' % (
+        taskno, rec['weight'], rec['duration'])
+    return res
 
 
 @view.add('hmap')
@@ -662,7 +687,8 @@ def view_flat_hcurves(token, dstore):
     """
     oq = dstore['oqparam']
     nsites = len(dstore['sitecol'])
-    mean = getters.PmapGetter(dstore).get_mean()
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     array = calc.convert_to_array(mean, nsites, oq.imtls)
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
@@ -680,9 +706,10 @@ def view_flat_hmaps(token, dstore):
     """
     oq = dstore['oqparam']
     assert oq.poes
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     nsites = len(dstore['sitecol'])
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    mean = getters.PmapGetter(dstore).get_mean()
+    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
     hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
     array = calc.convert_to_array(hmaps, nsites, pdic)
     res = numpy.zeros(1, array.dtype)
@@ -704,14 +731,13 @@ def view_dupl_sources(token, dstore):
         if len(records) > 1:  # dupl
             calc_time = records['calc_time'].sum()
             tot_calc_time += calc_time
-            grp_ids = sorted(rec['grp_id'] for rec in records)
-            tbl.append((source_id, calc_time, grp_ids))
+            tbl.append((source_id, calc_time, len(records)))
     if tbl and info.attrs['has_dupl_sources']:
         tot = info['calc_time'].sum()
         percent = tot_calc_time / tot * 100
         m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
             tot_calc_time, tot, percent)
-        return rst_table(tbl, ['source_id', 'calc_time', 'src_group_ids']) + m
+        return rst_table(tbl, ['source_id', 'calc_time', 'num_dupl']) + m
     else:
         return 'There are no duplicated sources'
 
@@ -754,7 +780,7 @@ def view_elt(token, dstore):
     """
     oq = dstore['oqparam']
     R = len(dstore['csm_info'].rlzs)
-    dic = group_array(dstore['agg_loss_table'].value, 'rlzi')
+    dic = group_array(dstore['losses_by_event'].value, 'rlzi')
     header = oq.loss_dt().names
     tbl = []
     for rlzi in range(R):
@@ -772,7 +798,8 @@ def view_pmap(token, dstore):
     """
     name = token.split(':')[1]  # called as pmap:name
     pmap = {}
-    pgetter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    pgetter = getters.PmapGetter(dstore, rlzs_assoc)
     for grp, dset in dstore['poes'].items():
         if dset.attrs['name'] == name:
             pmap = pgetter.get_mean(grp)

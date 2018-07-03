@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2013-2017 GEM Foundation
+# Copyright (c) 2013-2018 GEM Foundation
 #
 # openquake is free software: you can redistribute it and/or modify it
 # under the terms of the gnu affero general public license as published
@@ -18,8 +18,6 @@
 """
 module exports :class:`HongGoda2007RotD100`.
 """
-from __future__ import division
-
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

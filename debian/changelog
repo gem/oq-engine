@@ -1,4 +1,228 @@
-  [Poggi Valerio]
+  [Marco Pagani]
+  * Added Thingbaijam et al. (2017) magnitude-scaling relationship
+
+  [Michele Simionato]
+  * Added an /extract/ API for event_based_mfd
+  * Fixed a bug in the classical_damage calculators: multiple loss types
+    were not treated correctly
+
+  [Marco Pagani]
+  * Adding tests to the method computing decimal time
+
+  [Michele Simionato]
+  * Removed the event_based_rupture calculator and three others
+  * Added a field `size_mb` to the `output` table in the database and made
+    it visible in the WebUI as a tooltip
+  * Added a command `oq check_input job.ini` to check the input files
+  * Made the loss curves and maps outputs from an event based risk calculation
+    visible to the engine and the WebUI (only the stats)
+  * Added a check on duplicated branchIDs in GMPE logic trees
+
+  [Daniele Viganò]
+  * Fixed a bug when reading exposure with utf8 names on systems with non-utf8
+    terminals (Windows)
+  * Changed the openquake.cfg file and added a dbserver.listen parameter
+  * Added the hostname in the WebUI page. It can be customize by the user
+    via the `local_settings.py` file
+
+  [Michele Simionato]
+  * Added a Content-Length to the outputs downloadable from the WebUI
+  * Fixed a bug when extracting gmf_data from a hazard calculation with a
+    filtered site collection
+  * Stored an attributed `events.max_gmf_size`
+  * Added a check on exposures with missing loss types
+  * Added a LargeExposureGrid error to protect the user by tricky exposures
+    (i.e. France with assets in the Antilles)
+  * Changed the event_based_risk calculator to compute the loss curves and
+    maps directly; removed the asset_loss_table
+  * Changed the event_based_risk calculator to distribute by GMFs always
+  * Optimized the memory consumption in the UCERF classical calculator
+  * Added a parameter `minimum_magnitude` in the job.ini
+  * Added an utility `utils/combine_mean_curves.py`
+
+python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
+
+  [Marco Pagani and Changlong Li]
+  * Added a version of the Yu et al. (2013) GMPE supporting Mw
+
+  [Michele Simionato]
+  * Reduced the data transfer in the UCERF calculators
+  * Stored the zipped input files in the datastore for reproducibility
+  * Fixed a regression when reading GMFs from an XML in absence of a sites.csv
+    file
+
+  [Robin Gee]
+  * Extend `oq to_shapefile` method to also work with `YoungsCoppersmithMFD`
+    and `arbitraryMFD` MFD typologies.
+
+  [Michele Simionato]
+  * Now the hazard statistics can be computed efficiently even in a single
+    calculation, i.e. without the `--hc` option
+  * Added a check on the Python version in the `oq` command
+  * Reduced the data transfer when sending the site collection
+  * Changed the default `filter_distance`
+
+  [Daniele Viganò]
+  * Fixed a bug where the PID was not saved into the database
+    when using the command line interface
+  * Made it impossible to fire  multiple `CTRL-C` in sequence
+    to allow processes teardown and tasks revocation when Celery is used
+
+  [Michele Simionato]
+  * Used `scipy.spatial.distance.cdist` in `Mesh.get_min_distance`
+  * Prefiltered sites and assets in scenario calculations
+  * Made it possible to specify the `filter_distance` in the `job.ini`
+  * Made rtree optional again and disabled it in macOS
+  * Optimized the SiteCollection class and doubled the speed of distance
+    calculations in most continental scale calculations
+  * Fixed an ordering bug in event based risk from GMFs when using a
+    vulnerability function with PMF
+  * Replaced Rtree with KDtree except in the source filtering
+  * Parallelized the source prefiltering
+  * Removed the tiling feature from the classical calculator
+  * Undeprecated `hazardlib.calc.stochastic.stochastic_event_set` and
+    made its signature right
+  * Removed the source typology from the ruptures and reduced the rupture
+    hierarchy
+  * Removed the mesh spacing from PlanarSurfaces
+  * Optimized the instantiation of the rtree index
+  * Replaced the old prefiltering mechanism with the new one
+
+  [Daniele Viganò]
+  * Managed the case of a dead controlling terminal (SIGHUP)
+
+  [Michele Simionato]
+  * Removed Decimal numbers from the PMF distribution in hazardlib
+  * Fixed another tricky bug with rtree filtering across the international
+    date line
+  * Added a parameter `prefilter_sources` with values `rtree|numpy|no`
+  * Removed the prefiltering on the workers, resulting in a huge speedup
+    for gridded ruptures at the cost of a larger data transfer
+  * Changed the `losses_by_event` output to export a single .csv file with
+    all realizations
+  * Added a `cross_correlation` parameter used when working with shakemaps
+  * Now sites and exposure can be set at the same time in the job.ini
+  * Introduced a `preclassical` calculator
+  * Extended the scenario_damage calculator to export `dmg_by_event`
+    outputs as well as `losses_by_event` outputs if there is a consequence
+    model
+  * Unified `region` and `region_constraint` parameters in the job.ini
+  * Added a check to forbid duplicated GSIMs in the logic tree
+  * Introduced some changes to the `realizations` exporter (renamed field
+    `uid` -> `branch_path` and removed the `model` field)
+  * Added a command `oq celery inspect`
+  * Reduced the check on too many realizations to a warning, except for
+    event based calculations
+  * Improved the hazard exporter to exports only data for the filtered
+    site collection and not the full site collection
+  * Extended the BCR exporter to export the asset tags
+
+  [Catalina Yepes]
+  * Revised/enhanced the risk demos
+
+  [Michele Simionato]
+  * Added a warning about the option `optimize_same_id_sources` when the user
+    should take advantage of it
+
+  [Daniele Viganò]
+  * `celery-status` script converted into `oq celery status` command
+  * Removed Django < 1.10 backward compatibility
+  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+    Django 1.10+, Celery 4+)
+
+  [Michele Simionato]
+  * Implemented scenario_risk/scenario_damage from shakemap calculators
+  * Exported the asset tags in the asset based risk outputs
+  * Fixed a numeric issue for nonparametric sources causing the hazard curves
+    to saturate at high intensities
+  * Added an utility to download shakemaps
+  * Added an XML exporter for the site model
+  * Slight change to the correlation module to fix a bug in the SMTK
+  * Added a distribution mechanism `threadpool`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 01 Jun 2018 09:02:01 +0000
+
+python3-oq-engine (3.0.0-1~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug with newlines in the logic tree path breaking the CSV exporter
+    for the realizations output
+  * When setting the event year, each stochastic event set is now considered
+    independent
+  * Fixed a bug in the HMTK plotting libraries and added the ability to
+    customize the figure size
+  * Fixed bug in the datastore: now we automatically look for the attributes
+    in the parent dataset, if the dataset is missing in the child datastore
+  * Extended extract_losses_by_asset to the event based risk calculator
+  * Stored in source_info the number of events generated per source
+  * Added a script utils/reduce_sm to reduce the source model of a calculation
+    by removing all the sources not affecting the hazard
+  * Deprecated `openquake.hazardlib.calc.stochastic.stochastic_event_set`
+  * Fixed the export of ruptures with a GriddedSurface geometry
+  * Added a check for wrong or missing `<occupancyPeriods>` in the exposure
+  * Fixed the issue of slow tasks in event_based_risk from precomputed GMFs
+    for sites without events
+  * Now the engine automatically associates the exposure to a grid if
+    `region_grid_spacing` is given and the sites are not specified otherwise
+  * Extracting the site mesh from the exposure before looking at the site model
+  * Added a check on probs_occur summing up to 1 in the SourceWriter
+  * `oq show job_info` now shows the received data amount while the
+    calculation is progressing
+
+  [Daniele Viganò]
+  * Removed support for Python 2 in `setup.py`
+  * Removed files containing Python 2 dependencies
+  * Added support for WebUI groups/permissions on the
+    export outputs and datastore API endpoints
+
+  [Michele Simionato]
+  * Fixed `oq show` for multiuser with parent calculations
+  * Fixed `get_spherical_bounding_box` for griddedSurfaces
+  * Implemented disaggregation by source only for the case
+    of a single realization in the logic tree (experimental)
+  * Replaced celery with celery_zmq as distribution mechanism
+  * Extended `oq info` to work on source model logic tree files
+  * Added a check against duplicated fields in the exposure CSV
+  * Implemented event based with mutex sources (experimental)
+  * Add an utility to read XML shakemap files in hazardlib
+  * Added a check on IMTs for GMFs read from CSV
+
+  [Daniele Viganò]
+  * Changed the default DbServer port in Linux packages from 1908 to 1907
+
+  [Michele Simionato]
+  * Logged rupture floating factor and rupture spinning factor
+  * Added an extract API for losses_by_asset
+  * Added a check against GMF csv files with more than one realization
+  * Fixed the algorithm setting the event year for event based with sampling
+  * Added a command `oq importcalc` to import a remote calculation in the
+    local database
+  * Stored avg_losses-stats in event based risk if there are multiple
+    realizations
+  * Better error message in case of overlapping sites in sites.csv
+  * Added a an investigation time attribute to source models with
+    nonparametric sources
+  * Bug fix: in some cases the calculator `event_based_rupture` was generating
+    too few tasks and the same happened for classical calculation with
+    `optimize_same_id_sources=true
+  * Changed the ordering of the epsilons in scenario_risk
+  * Added the ability to use a pre-imported risk model
+  * Very small result values in scenario_damage (< 1E-7) are clipped to zero,
+    to hide numerical artifacts
+  * Removed an obsolete PickleableSequence class
+  * Fixed error in classical_risk when num_statistics > num_realizations
+  * Fixed a TypeError when reading CSV exposures with occupancy periods
+  * Extended the check on duplicated source IDs to models in format NRML 0.5
+  * Added a warning when reading the sources if .count_ruptures() is
+    suspiciously slow
+  * Changed the splitting logic: now all sources are split upfront
+  * Improved the splitting of complex fault sources
+  * Added a script to renumber source models with non-unique source IDs
+  * Made the datastore of calculations using GMPETables relocatable; in
+    practice you can run the Canada model on a cluster, copy the .hdf5 on
+    a laptop and do the postprocessing there, a feat previously impossible.
+
+  [Valerio Poggi]
   * Included a method to export data directly from the Catalogue() object into
     standard HMTK format.
 
@@ -15,6 +239,8 @@
   * Added the ability to use a preimported exposure in risk calculations
   * Substantial cleanup of the parallelization framework
   * Fixed a bug with nonparametric sources producing negative probabilities
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 09 Apr 2018 09:52:32 +0200
 
 python3-oq-engine (2.9.0-1~precise01) precise; urgency=low
 

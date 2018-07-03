@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,9 +30,6 @@ LEVELS = {'debug': logging.DEBUG,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
-
-LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
-              '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
 LOG = logging.getLogger()
 
@@ -87,13 +84,12 @@ class LogStreamHandler(logging.StreamHandler):
     Log stream handler
     """
     def __init__(self, job_id):
-        super(LogStreamHandler, self).__init__()
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        super().__init__()
         self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
-        super(LogStreamHandler, self).emit(record)
+        super().emit(record)
 
 
 class LogFileHandler(logging.FileHandler):
@@ -101,14 +97,13 @@ class LogFileHandler(logging.FileHandler):
     Log file handler
     """
     def __init__(self, job_id, log_file):
-        super(LogFileHandler, self).__init__(log_file)
-        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        super().__init__(log_file)
         self.job_id = job_id
         self.log_file = log_file
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
-        super(LogFileHandler, self).emit(record)
+        super().emit(record)
 
 
 class LogDatabaseHandler(logging.Handler):
@@ -116,7 +111,7 @@ class LogDatabaseHandler(logging.Handler):
     Log stream handler
     """
     def __init__(self, job_id):
-        super(LogDatabaseHandler, self).__init__()
+        super().__init__()
         self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
