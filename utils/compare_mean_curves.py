@@ -17,17 +17,22 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import matplotlib.pyplot as plt
 from openquake.baselib import sap, datastore
 from openquake.calculators.getters import PmapGetter
 
 
 @sap.Script
-def compare_mean_curves(calc_ref, calc, rtol=.01, atol=1E-5):
+def compare_mean_curves(calc_ref, calc):
     """
     Compare the hazard curves coming from two different calculations.
     """
     dstore_ref = datastore.read(calc_ref)
     dstore = datastore.read(calc)
+    imtls = dstore_ref['oqparam'].imtls
+    if dstore['oqparam'].imtls != imtls:
+        raise RuntimeError('The IMTs and levels are different between '
+                           'calculation %d and %d' % (calc_ref, calc))
     sitecol_ref = dstore_ref['sitecol']
     sitecol = dstore['sitecol']
     site_id_ref = {(lon, lat): sid for sid, lon, lat in zip(
@@ -42,18 +47,24 @@ def compare_mean_curves(calc_ref, calc, rtol=.01, atol=1E-5):
                                             for lonlat in common]).get_mean()
     pmap = PmapGetter(dstore, sids=[site_id[lonlat]
                                     for lonlat in common]).get_mean()
-    for sid in pmap:
-        ok = numpy.allclose(pmap[sid].array, pmap_ref[sid].array,
-                            rtol=rtol, atol=atol)
-        print(sid, ok)
-        if not ok:
-            print(numpy.hstack([pmap[sid].array, pmap_ref[sid].array]))
+    for lonlat in common:
+        mean, std = pmap[site_id[lonlat]].array.T  # shape (2, N)
+        mean_ref, std_ref = pmap_ref[site_id_ref[lonlat]].array.T
+        err = numpy.sqrt(std**2 + std_ref**2)
+        for imt in imtls:
+            sl = imtls.slicedic[imt]
+            ok = (numpy.abs(mean[sl] - mean_ref[sl]) < 3 * err[sl]).all()
+            if not ok:
+                md = (numpy.abs(mean[sl] - mean_ref[sl])).max()
+                plt.title('point=%s, imt=%s, maxdiff=%.2e' % (lonlat, imt, md))
+                plt.plot(imtls[imt], mean_ref[sl], label=str(calc_ref))
+                plt.plot(imtls[imt], mean[sl], label=str(calc))
+                plt.legend()
+                plt.show()
 
 
 compare_mean_curves.arg('calc_ref', 'first calculation', type=int)
 compare_mean_curves.arg('calc', 'second calculation', type=int)
-compare_mean_curves.arg('rtol', 'relative tolerance', type=float)
-compare_mean_curves.arg('atol', 'absolute tolerance', type=float)
 
 
 if __name__ == '__main__':
