@@ -23,7 +23,7 @@ from openquake.calculators.getters import PmapGetter
 
 
 @sap.Script
-def compare_mean_curves(calc_ref, calc):
+def compare_mean_curves(calc_ref, calc, nsigma=1):
     """
     Compare the hazard curves coming from two different calculations.
     """
@@ -53,7 +53,7 @@ def compare_mean_curves(calc_ref, calc):
         err = numpy.sqrt(std**2 + std_ref**2)
         for imt in imtls:
             sl = imtls.slicedic[imt]
-            ok = (numpy.abs(mean[sl] - mean_ref[sl]) < 3 * err[sl]).all()
+            ok = (numpy.abs(mean[sl] - mean_ref[sl]) < nsigma * err[sl]).all()
             if not ok:
                 md = (numpy.abs(mean[sl] - mean_ref[sl])).max()
                 plt.title('point=%s, imt=%s, maxdiff=%.2e' % (lonlat, imt, md))
@@ -65,7 +65,7 @@ def compare_mean_curves(calc_ref, calc):
 
 compare_mean_curves.arg('calc_ref', 'first calculation', type=int)
 compare_mean_curves.arg('calc', 'second calculation', type=int)
-
+compare_mean_curves.opt('nsigma', 'tolerance as number of sigma', type=float)
 
 if __name__ == '__main__':
     compare_mean_curves.callfunc()
