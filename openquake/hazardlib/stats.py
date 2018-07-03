@@ -30,9 +30,9 @@ def mean_curve(values, weights=None):
     global _mean
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
-        _mean = numpy.average(values, axis=0, weights=weights)
-    _mean = sum(value * weight for value, weight in zip(values, weights))
+    if not isinstance(values, numpy.ndarray):
+        values = numpy.array(values)
+    _mean = numpy.average(values, axis=0, weights=weights)
     return _mean
 
 
