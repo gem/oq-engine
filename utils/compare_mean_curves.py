@@ -57,8 +57,8 @@ def compare_mean_curves(calc_ref, calc):
             if not ok:
                 md = (numpy.abs(mean[sl] - mean_ref[sl])).max()
                 plt.title('point=%s, imt=%s, maxdiff=%.2e' % (lonlat, imt, md))
-                plt.plot(imtls[imt], mean_ref[sl], label=str(calc_ref))
-                plt.plot(imtls[imt], mean[sl], label=str(calc))
+                plt.loglog(imtls[imt], mean_ref[sl], label=str(calc_ref))
+                plt.loglog(imtls[imt], mean[sl], label=str(calc))
                 plt.legend()
                 plt.show()
 
