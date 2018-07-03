@@ -529,7 +529,7 @@ def extract_mfd(dstore, what):
 @extract.add('mean_std_curves')
 def extract_mean_std_curves(dstore, what):
     """
-    Yield mean and stddev for each IMT for each site
+    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
     """
     getter = getters.PmapGetter(dstore)
     arr = getter.get_mean().array
