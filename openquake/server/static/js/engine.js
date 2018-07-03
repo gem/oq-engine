@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2015-2017 GEM Foundation
+ Copyright (C) 2015-2018 GEM Foundation
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -439,7 +439,7 @@
             calculations.fetch({reset: true});
             setTimer();
 
-            ajax = $.ajax({url: gem_oq_server_url + "/engine_latest_version",
+            ajax = $.ajax({url: gem_oq_server_url + "/v1/engine_latest_version",
                            async: true}).done(function (data) {
                                                  /* None is returned in case of an error,
                                                     but we don't care about errors here */

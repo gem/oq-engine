@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -85,6 +85,7 @@ def export_from_db(output_key, calc_id, datadir, target):
             return os.path.join(target, archname)
         else:  # single file
             return exported[0]
+
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'

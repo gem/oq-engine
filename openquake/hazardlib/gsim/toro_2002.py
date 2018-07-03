@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,11 +19,7 @@
 """
 Module exports :class:`ToroEtAl2002`, class:`ToroEtAl2002SHARE`.
 """
-from __future__ import division
-
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
 
 from openquake.hazardlib.gsim.campbell_2003 import _compute_faulting_style_term
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -188,8 +184,8 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
         # given imt
         C_ADJ = self.COEFFS_FS_ROCK[imt]
 
-        mean, stddevs = super(ToroEtAl2002SHARE, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         # apply faulting style and rock adjustment factor for mean and std
         mean = np.log(np.exp(mean) *

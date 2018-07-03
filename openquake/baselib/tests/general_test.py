@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2010-2017 GEM Foundation
+# Copyright (C) 2010-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from collections import namedtuple
 
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, search_module, assert_close,
-    deprecated, DeprecationWarning)
+    deprecated, DeprecationWarning, cached_property)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -188,3 +188,22 @@ class DeprecatedTestCase(unittest.TestCase):
         with mock.patch('warnings.warn') as warn:
             dummy()
         self.assertIsNone(warn.call_args)
+
+
+class CachedPropertyTestCase(unittest.TestCase):
+
+    @cached_property
+    def one(self):
+        self.ncalls += 1
+        return 1
+
+    def test(self):
+        self.ncalls = 0
+        assert 'one' not in vars(self)
+        self.assertEqual(self.one, 1)
+        assert 'one' in vars(self)
+        self.assertEqual(self.__dict__['one'], 1)
+        self.assertEqual(self.ncalls, 1)
+        self.__dict__['one'] = 2
+        self.assertEqual(self.one, 2)
+        self.assertEqual(self.ncalls, 1)

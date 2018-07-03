@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,6 @@ Module exports :class:`AbrahamsonEtAl2015`
                :class:`AbrahamsonEtAl2015SSlabLow`
 
 """
-
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -185,7 +182,6 @@ class AbrahamsonEtAl2015SInter(GMPE):
         Walling et al (2008) as implemented in the Abrahamson & Silva (2008)
         GMPE. The functional form is retained here.
         """
-
         vs_star = sites.vs30.copy()
         vs_star[vs_star > 1000.0] = 1000.
         arg = vs_star / C["vlin"]

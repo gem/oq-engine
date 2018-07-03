@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -49,6 +49,10 @@
 from openquake.hmtk.seismicity.declusterer.dec_afteran import Afteran
 from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
 from openquake.hmtk.seismicity.declusterer.base import DECLUSTERER_METHODS
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import TIME_DISTANCE_WINDOW_FUNCTIONS
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import GardnerKnopoffWindow
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import GruenthalWindow
+from openquake.hmtk.seismicity.declusterer.distance_time_windows import UhrhammerWindow
 
 from openquake.hmtk.seismicity.completeness.comp_stepp_1971 import Stepp1971
 from openquake.hmtk.seismicity.completeness.base import COMPLETENESS_METHODS

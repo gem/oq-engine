@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2018-02-25T06:41:57
-engine_version 2.10.0-git1f7c0c0  
+date           2018-06-26T14:56:57
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  simple(1,4)     4/4             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 simple(1,4)     4/4             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -85,37 +85,21 @@ source_model.xml 1      Subduction Interface 23           23
 #tot_weight   11
 ============= ==
 
-Informational data
-------------------
-======================= =============================================================================
-count_ruptures.received tot 1.61 KB, max_per_task 825 B                                              
-count_ruptures.sent     sources 2.32 KB, param 1.57 KB, srcfilter 1.41 KB, monitor 660 B, gsims 519 B
-hazard.input_weight     4.6000000000000005                                                           
-hazard.n_imts           1                                                                            
-hazard.n_levels         50                                                                           
-hazard.n_realizations   4                                                                            
-hazard.n_sites          1                                                                            
-hazard.n_sources        2                                                                            
-hazard.output_weight    50.0                                                                         
-hostname                tstation.gem.lan                                                             
-require_epsilons        False                                                                        
-======================= =============================================================================
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========= =========
-source_id source_class num_ruptures calc_time num_sites num_split
-========= ============ ============ ========= ========= =========
-A         PointSource  23           2.878E-04 2         1        
-B         PointSource  23           2.434E-04 2         1        
-========= ============ ============ ========= ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+B         PointSource  23           0.00530   1.669E-06  1.00000   1         0     
+A         PointSource  23           0.00368   4.053E-06  1.00000   1         0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  5.312E-04 2     
+PointSource  0.00898   2     
 ============ ========= ======
 
 Duplicated sources
@@ -124,21 +108,55 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.006 0.003  0.004 0.008 2        
-================== ===== ====== ===== ===== =========
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+RtreeFilter        0.00231 5.884E-05 0.00227 0.00235 2        
+count_eff_ruptures 0.00603 0.00161   0.00490 0.00717 2        
+================== ======= ========= ======= ======= =========
+
+Fastest task
+------------
+taskno=1, weight=2, duration=0 s, sources="A"
+
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   2.30000 NaN    2.30000 2.30000 1
+======== ======= ====== ======= ======= =
+
+Slowest task
+------------
+taskno=2, weight=9, duration=0 s, sources="B"
+
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   9.20000 NaN    9.20000 9.20000 1
+======== ======= ====== ======= ======= =
+
+Data transfer
+-------------
+================== ====================================================================== ========
+task               sent                                                                   received
+RtreeFilter        srcs=2.27 KB monitor=644 B srcfilter=558 B                             2.5 KB  
+count_eff_ruptures sources=2.59 KB param=1.6 KB monitor=658 B gsims=519 B srcfilter=492 B 716 B   
+================== ====================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.011     0.352     2     
-store source_info              0.004     0.0       1     
-managing sources               0.003     0.0       1     
-reading composite source model 0.002     0.0       1     
-reading site collection        5.531E-05 0.0       1     
-aggregate curves               4.220E-05 0.0       2     
-saving probability maps        3.123E-05 0.0       1     
+managing sources               0.21960   0.0       1     
+total count_eff_ruptures       0.01207   6.50391   2     
+store source_info              0.00899   0.0       1     
+total prefilter                0.00462   2.01953   2     
+reading composite source model 0.00273   0.0       1     
+aggregate curves               7.279E-04 0.0       2     
+unpickling count_eff_ruptures  6.392E-04 0.0       2     
+unpickling prefilter           5.658E-04 0.0       2     
+reading site collection        3.037E-04 0.0       1     
+splitting sources              2.730E-04 0.0       1     
 ============================== ========= ========= ======

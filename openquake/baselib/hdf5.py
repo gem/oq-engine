@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,7 @@ except ImportError:  # with Python 2
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import pickle, decode
+from openquake.baselib.python3compat import decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -62,7 +62,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     return dset
 
 
-def extend(dset, array):
+def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
 
@@ -74,6 +74,8 @@ def extend(dset, array):
     newlength = length + len(array)
     dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
+    for key, val in attrs.items():
+        dset.attrs[key] = val
     return newlength
 
 
@@ -154,50 +156,6 @@ class LiteralAttrs(object):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
         nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
         return '<%s %s>' % (self.__class__.__name__, nameval)
-
-
-# the implementation below stores a dataset per each object; it would be nicer
-# to store an array, however I am not able to do that with the current version
-# of h5py; the best I could do is to store an array of variable length ASCII
-# strings, but then I would have to use the ASCII format of pickle, which is
-# the least efficient. The current solution looks like a decent compromise.
-class PickleableSequence(collections.Sequence):
-    """
-    An immutable sequence of pickleable objects that can be serialized
-    in HDF5 format. Here is an example, using the LiteralAttrs class defined
-    in this module, but any pickleable class would do:
-
-    >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
-    >>> with File('/tmp/x.h5', 'w') as f:
-    ...     f['data'] = seq
-    >>> with File('/tmp/x.h5') as f:
-    ...     f['data']
-    (<LiteralAttrs >, <LiteralAttrs >)
-    """
-    def __init__(self, objects):
-        self._objects = tuple(objects)
-
-    def __getitem__(self, i):
-        return self._objects[i]
-
-    def __len__(self):
-        return len(self._objects)
-
-    def __repr__(self):
-        return repr(self._objects)
-
-    def __toh5__(self):
-        dic = {}
-        nbytes = 0
-        for i, obj in enumerate(self._objects):
-            pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-            dic['%06d' % i] = numpy.array(pik)
-            nbytes += len(pik)
-        return dic, dict(nbytes=nbytes)
-
-    def __fromh5__(self, dic, attrs):
-        self._objects = tuple(pickle.loads(dic[k].value) for k in sorted(dic))
-        vars(self).update(attrs)
 
 
 def cls2dotname(cls):
@@ -292,20 +250,19 @@ class File(h5py.File):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
         else:
-            super(File, self).__setitem__(path, obj)
+            super().__setitem__(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
-            a = super(File, self).__getitem__(path).attrs
+            a = super().__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
 
     def __getitem__(self, path):
-        h5obj = super(File, self).__getitem__(path)
+        h5obj = super().__getitem__(path)
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
-            # NB: the `decode` below is needed for Python 3
-            cls = dotname2cls(decode(h5attrs['__pyclass__']))
+            cls = dotname2cls(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
@@ -317,11 +274,15 @@ class File(h5py.File):
         else:
             return h5obj
 
+    def __getstate__(self):
+        # make the file pickleable
+        return {'_id': 0}
+
     def set_nbytes(self, key, nbytes=None):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = super(File, self).__getitem__(key)
+        obj = super().__getitem__(key)
         if nbytes is not None:  # size set from outside
             obj.attrs['nbytes'] = nbytes
         else:  # recursively determine the size of the datagroup
@@ -337,8 +298,8 @@ class File(h5py.File):
         :param nodedict:
             a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
         """
-        setitem = super(File, self).__setitem__
-        getitem = super(File, self).__getitem__
+        setitem = super().__setitem__
+        getitem = super().__getitem__
         tag = nodedict['tag']
         text = nodedict.get('text', None)
         if hasattr(text, 'strip'):

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,18 +23,19 @@ from openquake.hazardlib.geo.mesh import Mesh
 POINTS = [Point(0, 0, 0.1), Point(0, 1, 0), Point(1, 1, 0.1),
           Point(1, 0, 0.1)]
 
+POINTSIDL = [Point(179.5, 0, 0.1), Point(179.5, 1, 0), Point(-179.5, 1, 0.1),
+             Point(-179.5, 0, 0.1)]
+
 
 class GriddedSurfaceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
-        self.meshA = Mesh(np.array([1., 2.]), np.array([2., 2.]),
-                          np.array([3., 2.]))
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.232737])
+        expected = np.array([111.204])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
@@ -45,7 +46,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)
-        expected = np.array([111.19493])
+        expected = np.array([111.1935])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_rx_distance(self):
@@ -60,10 +61,10 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_strike(self):
-        self.assertRaises(NotImplementedError, self.surf.get_strike)
+        np.testing.assert_equal(np.nan, self.surf.get_strike())
 
     def test_get_dip(self):
-        self.assertRaises(NotImplementedError, self.surf.get_dip)
+        np.testing.assert_equal(np.nan, self.surf.get_dip())
 
     def test_get_width(self):
         self.assertRaises(NotImplementedError, self.surf.get_width)
@@ -75,5 +76,41 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertEqual((0.0, 1.0, 1.0, 0.0), self.surf.get_bounding_box())
 
     def test_get_middle_point(self):
-        raise unittest.SkipTest(
-            'surface.get_middle_point() has to be implemented')
+        point = self.surf.get_middle_point()
+        self.assertEqual(point.x, 0)
+        self.assertEqual(point.y, 0)
+        self.assertEqual(point.z, 0.1)
+
+
+# FIXME: this test is nearly useless, since the bugs are in the SourceFilter,
+# not in surface.get_closest_points
+class GriddedSurfaceTestCaseIDL(unittest.TestCase):
+
+    def setUp(self):
+        self.surf = GriddedSurface.from_points_list(POINTSIDL)
+        self.mesh = Mesh(np.array([-179.5]), np.array([2.]), np.array([3.]))
+
+    def test_get_min_distance(self):
+        dists = self.surf.get_min_distance(self.mesh)
+        expected = np.array([111.204])
+        np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
+
+    def test_get_closest_points(self):
+        res = self.surf.get_closest_points(self.mesh)
+        self.assertEqual(res.lons, [-179.5])
+        self.assertEqual(res.lats, [1.0])
+        self.assertEqual(res.depths, [0.1])
+
+    def test_get_joyner_boore_distance(self):
+        dists = self.surf.get_joyner_boore_distance(self.mesh)
+        expected = np.array([111.1935])
+        np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
+
+    def test_get_bounding_box(self):
+        self.assertEqual((179.5, -179.5, 1., 0.), self.surf.get_bounding_box())
+
+    def test_get_middle_point(self):
+        point = self.surf.get_middle_point()
+        self.assertEqual(point.x, 179.5)
+        self.assertEqual(point.y, 0)
+        self.assertEqual(point.z, 0.1)

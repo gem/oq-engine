@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2015-2018 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,36 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
-import socket
+import psutil
 from datetime import datetime
 
 import numpy
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
-
-
-import psutil
-if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(proc):
-        return proc.memory_info()
-
-elif psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(proc):
-        return proc.get_memory_info()
-
-else:  # Ubuntu 12.04
-    def virtual_memory():
-        return psutil.phymem_usage()
-
-    def memory_info(proc):
-        return proc.get_memory_info()
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
@@ -117,7 +94,7 @@ class Monitor(object):
         """A memory measurement (in bytes)"""
         proc = psutil.Process(os.getpid())
         try:
-            return memory_info(proc).rss
+            return proc.memory_info().rss
         except psutil.AccessDenied:
             # no access to information about this process
             pass
@@ -164,18 +141,6 @@ class Monitor(object):
         "To be overridden in subclasses"
         if self.autoflush:
             self.flush()
-
-    def save_info(self, dic):
-        """
-        Save (name, value) information in the associated hdf5path
-        """
-        if self.hdf5path:
-            if 'hostname' not in dic:
-                dic['hostname'] = socket.gethostname()
-            data = numpy.array(
-                _pairs(dic.items()),
-                [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])
-            hdf5.extend3(self.hdf5path, 'job_info', data)
 
     def flush(self):
         """

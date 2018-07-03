@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@
 Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
-from __future__ import division
 import numpy as np
 from openquake.hazardlib.gsim.base import IPE, CoeffsTable
 from openquake.hazardlib import const

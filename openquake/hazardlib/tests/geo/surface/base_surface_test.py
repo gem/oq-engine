@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,23 +21,19 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
 
-class DummySurface(BaseQuadrilateralSurface):
+class DummySurface(BaseSurface):
     def __init__(self, coordinates_list):
-        self.coordinates_list = coordinates_list
-        super(DummySurface, self).__init__()
-
-    def _create_mesh(self):
         points = [[Point(*coordinates) for coordinates in row]
-                  for row in self.coordinates_list]
-        return RectangularMesh.from_points_list(points)
+                  for row in coordinates_list]
+        self.mesh = RectangularMesh.from_points_list(points)
 
     def get_strike(self):
-        top_row = self.get_mesh()[0:2]
+        top_row = self.mesh[0:2]
         self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
         return self.strike
 

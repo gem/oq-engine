@@ -475,10 +475,10 @@ ghofrani_atkinson_2014
     :undoc-members:
     :show-inheritance:
 
-gsim_table
+gmpe_table
 ------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.gsim_table
+.. automodule:: openquake.hazardlib.gsim.gmpe_table
     :members:
     :undoc-members:
     :show-inheritance:

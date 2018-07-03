@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 """
 Module exports :class:`LinLee2008SInter`, class:`LinLee2008SSlab`
 """
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -202,8 +200,8 @@ class LinLee2008SSlab(LinLee2008SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stddevs = super(LinLee2008SSlab, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         idx_rock = sites.vs30 >= self.ROCK_VS30
         idx_soil = sites.vs30 < self.ROCK_VS30

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -87,6 +87,15 @@ class TestGeodeticDistance(unittest.TestCase):
                                                 [[0, 0], [0, 0]])
         assert_aeq(dist, [[111.195, 0], [111.195, 0]], decimal=4)
 
+    def test_distance_matrix(self):
+        lons = numpy.array([84., 84., 84., 85.5, 85.5, 85.5])
+        lats = numpy.array([26., 27.5, 29., 26., 27.5, 29.])
+        dmatrix = geodetic.distance_matrix(lons, lats)
+        assert_aeq(numpy.linalg.eigvalsh(dmatrix),
+                   [-550.60045439, -244.54774768, -155.3191062, -116.54457903,
+                    -82.64354555, 1149.65543285])
+        # NB: the sum of the eigenvalues must be zero up to numeric errors
+
 
 class TestAzimuth(unittest.TestCase):
     def test_LAX_to_JFK(self):
@@ -144,69 +153,6 @@ class TestDistance(unittest.TestCase):
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
 
-    def test_pure_distances(self):
-        # distances between a 1D mesh and a 2D mesh are a 3D mesh
-        mlons = numpy.array([.1, .2])
-        mlats = numpy.array([.11, .22])
-        slons = numpy.ones((3, 3))
-        slats = numpy.zeros((3, 3))
-        res = geodetic.pure_distances(mlons, mlats, slons, slats)
-        self.assertEqual(res.shape, (2, 3, 3))
-
-
-class MinDistanceTest(unittest.TestCase):
-    # test relies on geodetic.distance() to work right
-    def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
-              expected_mpoint_indices):
-        mlons, mlats, mdepths = [numpy.array(arr, float)
-                                 for arr in (mlons, mlats, mdepths)]
-        slons, slats, sdepths = [numpy.array(arr, float)
-                                 for arr in (slons, slats, sdepths)]
-        actual_indices, dists = geodetic.min_idx_dst(mlons, mlats, mdepths,
-                                                     slons, slats, sdepths)
-        numpy.testing.assert_equal(actual_indices, expected_mpoint_indices)
-        expected_closest_mlons = mlons.flat[expected_mpoint_indices]
-        expected_closest_mlats = mlats.flat[expected_mpoint_indices]
-        expected_closest_mdepths = mdepths.flat[expected_mpoint_indices]
-        expected_distances = geodetic.distance(
-            expected_closest_mlons, expected_closest_mlats,
-            expected_closest_mdepths,
-            slons, slats, sdepths
-        )
-        assert_aeq(dists, expected_distances)
-
-        # testing min_geodetic_distance with the same lons and lats
-        min_geo_distance = geodetic.min_geodetic_distance(mlons, mlats,
-                                                          slons, slats)
-        min_distance = geodetic.min_idx_dst(mlons, mlats, mdepths * 0,
-                                            slons, slats, sdepths * 0)[1]
-        numpy.testing.assert_almost_equal(min_geo_distance, min_distance)
-
-    def test_one_point(self):
-        mlons = numpy.array([-0.1, 0.0, 0.1])
-        mlats = numpy.array([0.0, 0.0, 0.0])
-        mdepths = numpy.array([0.0, 10.0, 20.0])
-
-        self._test(mlons, mlats, mdepths, [-0.05], [0.0], [0],
-                   expected_mpoint_indices=0)
-        self._test(mlons, mlats, mdepths, [-0.1], [0.0], [20.0],
-                   expected_mpoint_indices=1)
-
-    def test_several_points(self):
-        self._test(mlons=[10., 11.], mlats=[-40, -41], mdepths=[10., 20.],
-                   slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
-                   expected_mpoint_indices=[0, 1])
-
-    def test_different_shapes(self):
-        self._test(mlons=[0.5, 0.7], mlats=[0.7, 0.9], mdepths=[13., 17.],
-                   slons=[-0.5] * 3, slats=[0.6] * 3, sdepths=[0.1] * 3,
-                   expected_mpoint_indices=[0, 0, 0])
-
-    def test_rect_mesh(self):
-        self._test(mlons=[[10., 11.]], mlats=[[-40, -41]], mdepths=[[1., 2.]],
-                   slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
-                   expected_mpoint_indices=[0, 1])
-
 
 class MinDistanceToSegmentTest(unittest.TestCase):
 
@@ -233,7 +179,7 @@ class MinDistanceToSegmentTest(unittest.TestCase):
         dist = float(geodetic.min_distance_to_segment(
             self.slons, self.slats, lons=numpy.array([3.0]),
             lats=numpy.array([0.0])))
-        self.assertAlmostEqual(dist, 186.394507344)
+        self.assertAlmostEqual(dist, 186.38785969)
 
     def test_four(self):
         # Negative distance halfspace - outside segment
@@ -241,7 +187,7 @@ class MinDistanceToSegmentTest(unittest.TestCase):
             self.slons, self.slats,
             lons=numpy.array([-2.0]),
             lats=numpy.array([0.5])))
-        self.assertAlmostEqual(dist, -125.802091893)
+        self.assertAlmostEqual(dist, -125.8000481)
 
     def test_five(self):
         # Seglons with three elements
@@ -418,7 +364,8 @@ class NPointsTowardsTest(unittest.TestCase):
         )
         expected_lons = [0, 0, 0, 0, 0, 0, 0]
         expected_lats = [0, 0, 0, 0, 0, 0, 0]
-        expected_depths = [0, 0.8333333, 1.6666667, 2.5, 3.3333333, 4.1666667, 5]
+        expected_depths = [0, 0.8333333, 1.6666667, 2.5, 3.3333333,
+                           4.1666667, 5]
         numpy.testing.assert_almost_equal(lons, expected_lons)
         numpy.testing.assert_almost_equal(lats, expected_lats)
         numpy.testing.assert_almost_equal(depths, expected_depths)

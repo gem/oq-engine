@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2017 GEM Foundation
+# Copyright (C) 2014-2018 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@
 """
 Utility functions of general interest.
 """
-from __future__ import division, print_function
 import os
 import sys
 import imp
@@ -28,6 +27,7 @@ import copy
 import math
 import socket
 import random
+import atexit
 import zipfile
 import operator
 import warnings
@@ -43,6 +43,24 @@ from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def cached_property(method):
+    """
+    :param method: a method without arguments except self
+    :returns: a cached property
+    """
+    name = method.__name__
+
+    def newmethod(self):
+        try:
+            val = self.__dict__[name]
+        except KeyError:
+            val = method(self)
+            self.__dict__[name] = val
+        return val
+    newmethod.__name__ = method.__name__
+    return property(newmethod)
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -316,7 +334,10 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     raise AssertionError('%r != %r %s' % (a, b, ctx))
 
 
-def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+_tmp_paths = []
+
+
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
     """Create temporary file with the given content.
 
     Please note: the temporary file must be deleted by the caller.
@@ -331,6 +352,7 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    _tmp_paths.append(path)
     if content:
         fh = os.fdopen(fh, "wb")
         if hasattr(content, 'encode'):
@@ -338,6 +360,19 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         fh.write(content)
         fh.close()
     return path
+
+
+@atexit.register
+def removetmp():
+    """
+    Remove the temporary files created by gettemp
+    """
+    for path in _tmp_paths:
+        if os.path.exists(path):  # not removed yet
+            try:
+                os.remove(path)
+            except PermissionError:
+                pass
 
 
 def git_suffix(fname):
@@ -360,7 +395,7 @@ def git_suffix(fname):
                 cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
             return gh
-        except:
+        except Exception:
             # trapping everything on purpose; git may not be installed or it
             # may not work properly
             pass
@@ -417,12 +452,7 @@ def import_all(module_or_package):
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
-                try:
-                    importlib.import_module(modname)
-                except Exception as exc:
-                    print('Could not import %s: %s: %s' % (
-                        modname, exc.__class__.__name__, exc),
-                          file=sys.stderr)
+                importlib.import_module(modname)
     return set(sys.modules) - already_imported
 
 
@@ -489,7 +519,7 @@ class CallableDict(collections.OrderedDict):
     in openquake.calculators.export
     """
     def __init__(self, keyfunc=lambda key: key, keymissing=None):
-        super(CallableDict, self).__init__()
+        super().__init__()
         self.keyfunc = keyfunc
         self.keymissing = keymissing
 
@@ -685,8 +715,8 @@ class DictArray(collections.Mapping):
     ...      f['d'] = d
     ...      f['d']
     <DictArray
-    PGA: [ 0.01  0.02  0.04]
-    PGV: [ 0.1  0.2]>
+    PGA: [0.01 0.02 0.04]
+    PGV: [0.1 0.2]>
 
     The DictArray maintains the lexicographic order of the keys.
     """
@@ -744,6 +774,12 @@ class DictArray(collections.Mapping):
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]
+
+    def __eq__(self, other):
+        return (self.array == other.array).all()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]
@@ -814,6 +850,32 @@ def get_array(array, **kw):
     return array
 
 
+def not_equal(array_or_none1, array_or_none2):
+    """
+    Compare two arrays that can also be None or have diffent shapes
+    and returns a boolean.
+
+    >>> a1 = numpy.array([1])
+    >>> a2 = numpy.array([2])
+    >>> a3 = numpy.array([2, 3])
+    >>> not_equal(a1, a2)
+    True
+    >>> not_equal(a1, a3)
+    True
+    >>> not_equal(a1, None)
+    True
+    """
+    if array_or_none1 is None and array_or_none2 is None:
+        return False
+    elif array_or_none1 is None and array_or_none2 is not None:
+        return True
+    elif array_or_none1 is not None and array_or_none2 is None:
+        return True
+    if array_or_none1.shape != array_or_none2.shape:
+        return True
+    return (array_or_none1 != array_or_none2).any()
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format
@@ -835,9 +897,10 @@ class DeprecationWarning(UserWarning):
     """
 
 
-def deprecated(message):
+@decorator
+def deprecated(func, message='', *args, **kw):
     """
-    Return a decorator to make deprecated functions.
+    A family of decorators to mark deprecated functions.
 
     :param message:
         the message to print the first time the
@@ -852,15 +915,28 @@ def deprecated(message):
     Notice that if the function is called several time, the deprecation
     warning will be displayed only the first time.
     """
-    def _deprecated(func, *args, **kw):
-        msg = '%s.%s has been deprecated. %s' % (
-            func.__module__, func.__name__, message)
-        if not hasattr(func, 'called'):
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-            func.called = 0
-        func.called += 1
-        return func(*args, **kw)
-    return decorator(_deprecated)
+    msg = '%s.%s has been deprecated. %s' % (
+        func.__module__, func.__name__, message)
+    if not hasattr(func, 'called'):
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        func.called = 0
+    func.called += 1
+    return func(*args, **kw)
+
+
+def random_filter(objects, reduction_factor, seed=42):
+    """
+    Given a list of objects, returns a sublist by extracting randomly
+    some elements. The reduction factor (< 1) tells how small is the extracted
+    list compared to the original list.
+    """
+    assert 0 < reduction_factor <= 1, reduction_factor
+    rnd = random.Random(seed)
+    out = []
+    for obj in objects:
+        if rnd.random() <= reduction_factor:
+            out.append(obj)
+    return out
 
 
 def safeprint(*args, **kwargs):
@@ -896,6 +972,7 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
 
 port_candidates = list(range(1920, 2000))
 
@@ -944,3 +1021,23 @@ def detach_process():
     fork_then_exit_parent()
     os.setsid()
     fork_then_exit_parent()
+
+
+def println(msg):
+    """
+    Convenience function to print messages on a single line in the terminal
+    """
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+    sys.stdout.write('\x08' * len(msg))
+    sys.stdout.flush()
+
+
+def debug(templ, *args):
+    """
+    Append a debug line to the file /tmp/debug.txt
+    """
+    msg = templ % args if args else templ
+    tmp = tempfile.gettempdir()
+    with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
+        f.write(msg + '\n')
