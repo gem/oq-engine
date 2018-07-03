@@ -775,6 +775,12 @@ class DictArray(collections.Mapping):
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]
 
+    def __eq__(self, other):
+        return (self.array == other.array).all()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(data))
