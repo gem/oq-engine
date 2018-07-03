@@ -203,7 +203,8 @@ class PmapGetter(object):
         self.init()
         pmaps = self.get_pmaps(self.sids)
         for imt in self.imtls:
-            yield imt, stats.mean_std_curve(
+            yield 'imls/' + imt, self.imtls[imt]
+            yield 'poes/' + imt, stats.mean_std_curve(
                 [pmap.array[:, self.imtls.slicedic[imt], 0]
                  for pmap in pmaps], self.weights)
 
