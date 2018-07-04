@@ -126,6 +126,9 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
 
+        # exercising extract/mean_std_curves
+        dict(extract(self.calc.datastore, 'mean_std_curves'))
+
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
             case_7.__file__, 'job.ini', mean_hazard_curves='false',
