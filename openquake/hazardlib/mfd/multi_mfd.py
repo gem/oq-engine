@@ -147,3 +147,12 @@ class MultiMFD(BaseMFD):
         """
         for src in self:
             src.modify(modification, parameters)
+
+    def __toh5__(self):
+        return self.kwargs, {'kind': self.kind, 'size': self.size,
+                             'width_of_mfd_bin': self.width_of_mfd_bin}
+
+    def __fromh5__(self, kwargs, attrs):
+        vars(self).update(attrs)
+        self.kwargs = kwargs
+        self.mfd_class = ASSOC[self.kind][0]
