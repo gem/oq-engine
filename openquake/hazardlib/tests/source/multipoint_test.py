@@ -39,6 +39,8 @@ class MultiPointTestCase(unittest.TestCase):
                         min_mag=[4.5],
                         bin_width=[2.0],
                         occurRates=[[.3, .1], [.4, .2, .1]])
+        kwargs, attrs = mmfd.__toh5__()
+        mmfd.__fromh5__(kwargs, attrs)
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
                                mmfd, 2.0, PeerMSR(), 1.0,
