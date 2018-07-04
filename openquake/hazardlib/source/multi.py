@@ -22,7 +22,6 @@ from openquake.hazardlib.source.point import PointSource
 
 npd_dt = numpy.dtype([('probability', float),
                       ('dip', float), ('rake', float), ('strike', float)])
-
 hdd_dt = numpy.dtype([('probability', float), ('depth', float)])
 mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
 
