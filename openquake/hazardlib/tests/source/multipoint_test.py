@@ -40,8 +40,6 @@ class MultiPointTestCase(unittest.TestCase):
                         min_mag=[4.5],
                         bin_width=[2.0],
                         occurRates=[[.3, .1], [.4, .2, .1]])
-        kwargs, attrs = mmfd.__toh5__()
-        mmfd.__fromh5__(kwargs, attrs)
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
                                mmfd, 2.0, PeerMSR(), 1.0,
@@ -78,4 +76,3 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
         tmp = general.gettemp(suffix='.hdf5')
         with hdf5.File(tmp, 'w') as f:
             f[mps.source_id] = mps
-        import pdb; pdb.set_trace()

@@ -878,8 +878,8 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
         n = len(rows)
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
         offset += n
-    dstore.save_vlen('gmf_data/indices', lst)
-    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
+    dstore.hdf5.save_vlen('gmf_data/indices', lst)
+    dstore.hdf5.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
         events = numpy.zeros(len(eids), readinput.stored_event_dt)
         events['eid'] = eids

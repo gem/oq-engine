@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.mfd.multi_mfd` defines a composite
 MFD used for MultiPoint sources.
 """
 import numpy
+from openquake.baselib import hdf5
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -147,13 +148,3 @@ class MultiMFD(BaseMFD):
         """
         for src in self:
             src.modify(modification, parameters)
-
-    def __toh5__(self):
-        return {k: numpy.array(v, float) for k, v in self.kwargs.items()}, {
-            'kind': self.kind, 'size': self.size,
-            'width_of_mfd_bin': self.width_of_mfd_bin}
-
-    def __fromh5__(self, kwargs, attrs):
-        vars(self).update(attrs)
-        self.kwargs = kwargs
-        self.mfd_class = ASSOC[self.kind][0]

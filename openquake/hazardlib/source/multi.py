@@ -108,11 +108,15 @@ class MultiPointSource(ParametricSeismicSource):
                for prob, np in self.nodal_plane_distribution.data]
         hdd = self.hypocenter_distribution.data
         points = [(p.x, p.y, p.z) for p in self.mesh]
-        mfd_data, mfd_attrs = self.mfd.__toh5__()
+        mfd = self.mfd.kwargs.copy()
+        for k, vals in mfd.items():
+            if k in ('occurRates', 'magnitudes'):
+                mfd[k] = [numpy.array(lst) for lst in vals]
+        mfd['kind'] = self.mfd.kind
+        mfd['size'] = self.mfd.size
         dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
                'hypocenter_distribution': numpy.array(hdd, hdd_dt),
-               'mesh': numpy.array(points, mesh_dt),
-               'mfd_data': mfd_data}#, 'mfd_attrs': mfd_attrs}
+               'mesh': numpy.array(points, mesh_dt), 'mfd': mfd}
         attrs = {'upper_seismogenic_depth': self.upper_seismogenic_depth,
                  'lower_seismogenic_depth': self.lower_seismogenic_depth,
                  'magnitude_scaling_relationship':
@@ -121,6 +125,4 @@ class MultiPointSource(ParametricSeismicSource):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        self.nodal_plane_distribution = dic['nodal_plane_distribution']
-        self.hypocenter_distribution = dic['hypocenter_distribution']
-        self.mesh = dic['mesh']
+        # TODO: the rest

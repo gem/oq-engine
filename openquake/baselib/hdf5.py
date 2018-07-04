@@ -36,6 +36,7 @@ from openquake.baselib.python3compat import decode
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
+vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -238,6 +239,27 @@ class File(h5py.File):
         self.path = path
         return self
 
+    def save_vlen(self, key, data):
+        """
+        Save a sequence of variable-length arrays
+
+        :param key: name of the dataset
+        :param data: data to store as a list of arrays
+        """
+        dt = data[0].dtype
+        dset = create(self, key, h5py.special_dtype(vlen=dt), (len(data),),
+                      fillvalue=None)
+        nbytes = 0
+        totlen = 0
+        for i, val in enumerate(data):
+            dset[i] = val
+            nbytes += val.nbytes
+            totlen += len(val)
+        attrs = super().__getitem__(key).attrs
+        attrs['nbytes'] = nbytes
+        attrs['avg_len'] = totlen / len(data)
+        self.flush()
+
     def __setitem__(self, path, obj):
         cls = obj.__class__
         if hasattr(obj, '__toh5__'):
@@ -249,6 +271,8 @@ class File(h5py.File):
             for k, v in sorted(obj.items()):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
+        elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
+            self.save_vlen(path, obj)
         else:
             super().__setitem__(path, obj)
         if pyclass:
