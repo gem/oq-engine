@@ -879,7 +879,7 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
         lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
         offset += n
     dstore.hdf5.save_vlen('gmf_data/indices', lst)
-    dstore.hdf5.set_attrs('gmf_data', num_gmfs=len(gmfs))
+    dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
         events = numpy.zeros(len(eids), readinput.stored_event_dt)
         events['eid'] = eids
@@ -915,7 +915,7 @@ def import_gmfs(dstore, fname, sids):
         if n:
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
-    dstore.save_vlen('gmf_data/indices', lst)
+    dstore.hdf5.save_vlen('gmf_data/indices', lst)
 
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
