@@ -16,8 +16,15 @@
 """
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
+
+npd_dt = numpy.dtype([('probability', float),
+                      ('dip', float), ('rake', float), ('strike', float)])
+
+hdd_dt = numpy.dtype([('probability', float), ('depth', float)])
+mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -95,3 +102,25 @@ class MultiPointSource(ParametricSeismicSource):
         """
         maxradius = PointSource._get_max_rupture_projection_radius(self)
         return self.mesh.get_convex_hull().dilate(maxradius)
+
+    def __toh5__(self):
+        npd = [(prob, np.dip, np.rake, np.strike)
+               for prob, np in self.nodal_plane_distribution.data]
+        hdd = self.hypocenter_distribution.data
+        points = [(p.x, p.y, p.z) for p in self.mesh]
+        mfd_data, mfd_attrs = self.mfd.__toh5__()
+        dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
+               'hypocenter_distribution': numpy.array(hdd, hdd_dt),
+               'mesh': numpy.array(points, mesh_dt),
+               'mfd_data': mfd_data}#, 'mfd_attrs': mfd_attrs}
+        attrs = {'upper_seismogenic_depth': self.upper_seismogenic_depth,
+                 'lower_seismogenic_depth': self.lower_seismogenic_depth,
+                 'magnitude_scaling_relationship':
+                 self.magnitude_scaling_relationship.__class__.__name__}
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.nodal_plane_distribution = dic['nodal_plane_distribution']
+        self.hypocenter_distribution = dic['hypocenter_distribution']
+        self.mesh = dic['mesh']
