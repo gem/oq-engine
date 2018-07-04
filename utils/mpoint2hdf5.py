@@ -1,14 +1,17 @@
 from openquake.baselib import hdf5, sap
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, sourceconverter
 
 
 @sap.Script
 def multipoint2hdf5(fname):
-    sm = nrml.to_python(fname)
-    with hdf5.File(fname.replace('.xml', '.hdf5', 'w')) as f:
+    sc = sourceconverter.SourceConverter(
+        area_source_discretization=10, width_of_mfd_bin=.1)
+    sm = nrml.to_python(fname, sc)
+    with hdf5.File(fname.replace('.xml', '.hdf5'), 'w') as f:
         for grp in sm:
             for src in grp:
                 if src.__class__.__name__ == 'MultiPointSource':
+                    print('saving', src)
                     f[src.source_id] = src
 
 
