@@ -622,10 +622,13 @@ class SourceModelLogicTree(object):
         """
         weight_sum = 0
         branches = branchset_node.nodes
+        values = []
         for branchnode in branches:
             weight = ~branchnode.uncertaintyWeight
             weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
+            if value_node.text is not None:
+                values.append(value_node.text.strip())
             if validate:
                 self.validate_uncertainty_value(value_node, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
@@ -641,6 +644,24 @@ class SourceModelLogicTree(object):
             raise ValidationError(
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
+        if len(set(values)) < len(values):
+            # TODO: add a test for this case
+            # <logicTreeBranch branchID="b71">
+            #     <uncertaintyModel> 7.7 </uncertaintyModel>
+            #     <uncertaintyWeight>0.333</uncertaintyWeight>
+            # </logicTreeBranch>
+            # <logicTreeBranch branchID="b72">
+            #     <uncertaintyModel> 7.695 </uncertaintyModel>
+            #     <uncertaintyWeight>0.333</uncertaintyWeight>
+            # </logicTreeBranch>
+            # <logicTreeBranch branchID="b73">
+            #     <uncertaintyModel> 7.7 </uncertaintyModel>
+            #     <uncertaintyWeight>0.334</uncertaintyWeight>
+            # </logicTreeBranch>
+            raise ValidationError(
+                branchset_node, self.filename,
+                "there are duplicate values in uncertaintyModel: " +
+                ' '.join(values))
 
     def gen_source_models(self, gsim_lt):
         """
