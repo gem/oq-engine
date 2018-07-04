@@ -149,8 +149,9 @@ class MultiMFD(BaseMFD):
             src.modify(modification, parameters)
 
     def __toh5__(self):
-        return self.kwargs, {'kind': self.kind, 'size': self.size,
-                             'width_of_mfd_bin': self.width_of_mfd_bin}
+        return {k: numpy.array(v, float) for k, v in self.kwargs.items()}, {
+            'kind': self.kind, 'size': self.size,
+            'width_of_mfd_bin': self.width_of_mfd_bin}
 
     def __fromh5__(self, kwargs, attrs):
         vars(self).update(attrs)
