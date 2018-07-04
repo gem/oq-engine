@@ -20,10 +20,11 @@ import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.point import PointSource
 
-npd_dt = numpy.dtype([('probability', float),
-                      ('dip', float), ('rake', float), ('strike', float)])
-hdd_dt = numpy.dtype([('probability', float), ('depth', float)])
-mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
+F32 = numpy.float32
+npd_dt = numpy.dtype([('probability', F32),
+                      ('dip', F32), ('rake', F32), ('strike', F32)])
+hdd_dt = numpy.dtype([('probability', F32), ('depth', F32)])
+mesh_dt = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -110,12 +111,12 @@ class MultiPointSource(ParametricSeismicSource):
         mfd = self.mfd.kwargs.copy()
         for k, vals in mfd.items():
             if k in ('occurRates', 'magnitudes'):
-                mfd[k] = [numpy.array(lst) for lst in vals]
+                mfd[k] = [numpy.array(lst, F32) for lst in vals]
         mfd['kind'] = self.mfd.kind
-        mfd['size'] = self.mfd.size
         dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
                'hypocenter_distribution': numpy.array(hdd, hdd_dt),
-               'mesh': numpy.array(points, mesh_dt), 'mfd': mfd}
+               'mesh': numpy.array(points, mesh_dt),
+               'mfd': mfd}
         attrs = {'upper_seismogenic_depth': self.upper_seismogenic_depth,
                  'lower_seismogenic_depth': self.lower_seismogenic_depth,
                  'magnitude_scaling_relationship':
