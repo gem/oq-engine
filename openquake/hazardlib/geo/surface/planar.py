@@ -20,8 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 :class:`PlanarSurface`.
 """
+import logging
 import numpy
-
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -137,7 +137,7 @@ class PlanarSurface(BaseSurface):
         tolerance = (self.width * self.length *
                      self.IMPERFECT_RECTANGLE_TOLERANCE)
         if numpy.max(numpy.abs(dists)) > tolerance:
-            raise ValueError("corner points do not lie on the same plane")
+            logging.warn("corner points do not lie on the same plane")
         if length2 < 0:
             raise ValueError("corners are in the wrong order")
         if abs(length1 - length2) > tolerance:
