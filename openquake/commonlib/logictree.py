@@ -645,6 +645,19 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
         if len(set(values)) < len(values):
+            # TODO: add a test for this case
+            # <logicTreeBranch branchID="b71">
+            #     <uncertaintyModel> 7.7 </uncertaintyModel>
+            #     <uncertaintyWeight>0.333</uncertaintyWeight>
+            # </logicTreeBranch>
+            # <logicTreeBranch branchID="b72">
+            #     <uncertaintyModel> 7.695 </uncertaintyModel>
+            #     <uncertaintyWeight>0.333</uncertaintyWeight>
+            # </logicTreeBranch>
+            # <logicTreeBranch branchID="b73">
+            #     <uncertaintyModel> 7.7 </uncertaintyModel>
+            #     <uncertaintyWeight>0.334</uncertaintyWeight>
+            # </logicTreeBranch>
             raise ValidationError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
