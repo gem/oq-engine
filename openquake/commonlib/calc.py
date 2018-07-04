@@ -43,7 +43,7 @@ F64 = numpy.float64
 # ############## utilities for the classical calculator ############### #
 
 
-def convert_to_array(pmap, nsites, imtls):
+def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     """
     Convert the probability map into a composite array with header
     of the form PGA-0.1, PGA-0.2 ...
@@ -64,7 +64,7 @@ def convert_to_array(pmap, nsites, imtls):
         idx = 0
         for imt, imls in imtls.items():
             for iml in imls:
-                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
+                curve['%s-%s' % (imt, iml)] = pcurve.array[idx, inner_idx]
                 idx += 1
     return curves
 

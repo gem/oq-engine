@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added a flag `std_hazard_curves`; by setting it to `true` the user can
+    compute the standard deviation of the hazard curves across realizations
+
   [Marco Pagani]
   * Added Thingbaijam et al. (2017) magnitude-scaling relationship
 
