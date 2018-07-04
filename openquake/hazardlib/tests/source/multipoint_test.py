@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import numpy
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi import MultiPointSource
@@ -72,3 +73,9 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
   hypoDepthDist
     hypoDepth{depth=14, probability=1.0}
 ''')
+
+        # test serialization to hdf5
+        tmp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(tmp, 'w') as f:
+            f[mps.source_id] = mps
+        import pdb; pdb.set_trace()
