@@ -82,6 +82,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
@@ -122,9 +123,11 @@ class SourceModel(collections.Sequence):
 
     def __toh5__(self):
         dic = {}
-        for grp in self.src_groups:
-            dic[grp.name] = {src.source_id: src for src in grp}
-            dic[grp.name]['__attrs__'] = {'trt': grp.trt}
+        for i, grp in enumerate(self.src_groups):
+            grpname = grp.name or 'group-%d' % i
+            srcs = {src.source_id: src for src in grp
+                    if hasattr(src, '__toh5__')}
+            dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
         attrs = dict(name=self.name,
                      investigation_time=self.investigation_time or 'NA',
                      start_time=self.start_time or 'NA')
@@ -133,9 +136,13 @@ class SourceModel(collections.Sequence):
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
         self.src_groups = []
-        for grp_name, dset in dic.items():
-            trt = dset.attrs['trt']
-            srcs = [dset[src_id] for src_id in dset]
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for src_id in sorted(grp):
+                src = grp[src_id]
+                src.num_ruptures = src.count_ruptures()
+                srcs.append(src)
             grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
             self.src_groups.append(grp)
 
