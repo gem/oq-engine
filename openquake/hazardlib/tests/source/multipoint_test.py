@@ -23,7 +23,6 @@ from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi import MultiPointSource
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.scalerel.peer import PeerMSR
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
 
@@ -34,7 +33,6 @@ class MultiPointTestCase(unittest.TestCase):
                    (0.5, NodalPlane(2, 2, 4))])
         hd = PMF([(1, 14)])
         mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
-        tom = PoissonTOM(50.)
         mmfd = MultiMFD('incrementalMFD',
                         size=2,
                         min_mag=[4.5],
@@ -42,8 +40,8 @@ class MultiPointTestCase(unittest.TestCase):
                         occurRates=[[.3, .1], [.4, .2, .1]])
         mps = MultiPointSource('mp1', 'multi point source',
                                'Active Shallow Crust',
-                               mmfd, 2.0, PeerMSR(), 1.0,
-                               tom, 10, 20, npd, hd, mesh)
+                               mmfd, PeerMSR(), 1.0,
+                               10, 20, npd, hd, mesh)
         # test the splitting
         splits = list(mps)
         self.assertEqual(len(splits), 2)
