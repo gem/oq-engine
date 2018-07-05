@@ -34,14 +34,14 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, valid, nrml
+from openquake.hazardlib import geo, valid, nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -485,6 +485,31 @@ class FakeSmlt(object):
                 yield Realization(name, weight, smlt_path, None, smlt_path)
         else:  # there is a single realization
             yield Realization(name, 1.0, smlt_path, 0, smlt_path)
+
+
+def collect_source_model_paths(smlt):
+    """
+    Given a path to a source model logic tree or a file-like, collect all of
+    the soft-linked path names to the source models it contains and return them
+    as a sorted uniquified list (no duplicates).
+
+    :param smlt: source model logic tree file
+    """
+    n = nrml.read(smlt)
+    try:
+        blevels = n.logicTree
+    except Exception:
+        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
+                          % smlt)
+    paths = set()
+    for blevel in blevels:
+        with node.context(smlt, blevel):
+            for bset in blevel:
+                for br in bset:
+                    smfname = ' '.join(br.uncertaintyModel.text.split())
+                    if smfname:
+                        paths.add(smfname)
+    return sorted(paths)
 
 
 class SourceModelLogicTree(object):

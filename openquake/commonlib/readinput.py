@@ -179,7 +179,7 @@ def gen_sm_paths(smlt):
     a block at the time.
     """
     base_path = os.path.dirname(smlt)
-    for model in source.collect_source_model_paths(smlt):
+    for model in logictree.collect_source_model_paths(smlt):
         paths = []
         for name in model.split():
             if os.path.isabs(name):
