@@ -981,7 +981,7 @@ def collect_source_model_paths(smlt):
     """
     Given a path to a source model logic tree or a file-like, collect all of
     the soft-linked path names to the source models it contains and return them
-    as a uniquified list (no duplicates).
+    as a sorted uniquified list (no duplicates).
 
     :param smlt: source model logic tree file
     """
@@ -991,13 +991,15 @@ def collect_source_model_paths(smlt):
     except Exception:
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
+    paths = set()
     for blevel in blevels:
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
                     smfname = ' '.join(br.uncertaintyModel.text.split())
                     if smfname:
-                        yield smfname
+                        paths.add(smfname)
+    return sorted(paths)
 
 
 # ########################## SourceManager ########################### #
