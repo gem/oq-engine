@@ -108,7 +108,7 @@ class MultiPointSource(ParametricSeismicSource):
         return self.mesh.get_convex_hull().dilate(maxradius)
 
     def __toh5__(self):
-        npd = [(prob, np.dip, np.rake, np.strike)
+        npd = [(prob, np.strike, np.dip, np.rake)
                for prob, np in self.nodal_plane_distribution.data]
         hdd = self.hypocenter_distribution.data
         points = [(p.x, p.y) for p in self.mesh]
@@ -116,25 +116,39 @@ class MultiPointSource(ParametricSeismicSource):
         for k, vals in mfd.items():
             if k in ('occurRates', 'magnitudes'):
                 mfd[k] = [numpy.array(lst, F32) for lst in vals]
-        mfd['kind'] = self.mfd.kind
-        mfd['size'] = len(points)
         dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
                'hypocenter_distribution': numpy.array(hdd, hdd_dt),
                'mesh': numpy.array(points, mesh_dt),
-               'mfd': mfd}
-        attrs = {'upper_seismogenic_depth': self.upper_seismogenic_depth,
+               self.mfd.kind: mfd}
+        attrs = {'source_id': self.source_id,
+                 'name': self.name,
+                 'tectonic_region_type': self.tectonic_region_type,
+                 'rupture_aspect_ratio': self.rupture_aspect_ratio,
+                 'upper_seismogenic_depth': self.upper_seismogenic_depth,
                  'lower_seismogenic_depth': self.lower_seismogenic_depth,
                  'magnitude_scaling_relationship':
                  self.magnitude_scaling_relationship.__class__.__name__}
         return dic, attrs
 
     def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
-        self.nodal_plane_distribution = PMF([
-            (prob, NodalPlane(strike, dip, rake))
-            for prob, strike, dip, rake in dic['nodal_plane_distribution']])
-        self.hypocenter_distribution = PMF(dic['hypocenter_distribution'])
-        self.mesh = Mesh(dic['mesh']['lon'], dic['mesh']['lat'])
+        self.source_id = attrs['source_id']
+        self.name = attrs['name']
+        self.tectonic_region_type = attrs['tectonic_region_type']
+        self.upper_seismogenic_depth = attrs['upper_seismogenic_depth']
+        self.lower_seismogenic_depth = attrs['lower_seismogenic_depth']
         self.magnitude_scaling_relationship = SCALEREL[
             attrs['magnitude_scaling_relationship']]
-        self.mfd = MultiMFD(**dic['mfd'])
+        self.rupture_aspect_ratio = attrs['rupture_aspect_ratio']
+        npd = dic.pop('nodal_plane_distribution').value
+        hdd = dic.pop('hypocenter_distribution').value
+        mesh = dic.pop('mesh').value
+        [(mfd_kind, mfd)] = dic.items()
+        self.nodal_plane_distribution = PMF([
+            (prob, NodalPlane(strike, dip, rake))
+            for prob, strike, dip, rake in npd])
+        self.hypocenter_distribution = PMF(hdd)
+        self.mesh = Mesh(mesh['lon'], mesh['lat'])
+        kw = {k: dset.value for k, dset in mfd.items()}
+        kw['size'] = len(mesh)
+        kw['kind'] = mfd_kind
+        self.mfd = MultiMFD(**kw)
