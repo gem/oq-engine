@@ -219,9 +219,7 @@ class DataStore(collections.MutableMapping):
         """
         Set the HDF5 attributes of the given key
         """
-        attrs = h5py.File.__getitem__(self.hdf5, key).attrs
-        for k, v in kw.items():
-            attrs[k] = v
+        self.hdf5.save_attrs(key, kw)
 
     def get_attr(self, key, name, default=None):
         """

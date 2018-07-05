@@ -101,8 +101,11 @@ class DuplicatedID(Exception):
 
 class SourceModel(collections.Sequence):
     """
-    A container of source groups with attributes name, investigation_time,
-    start_time.
+    A container of source groups with attributes name, investigation_time
+    and start_time. It is serialize on hdf5 as follows:
+
+    >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
+    ..    f['/'] = source_model
     """
     def __init__(self, src_groups, name=None, investigation_time=None,
                  start_time=None):
@@ -116,6 +119,25 @@ class SourceModel(collections.Sequence):
 
     def __len__(self):
         return len(self.src_groups)
+
+    def __toh5__(self):
+        dic = {}
+        for grp in self.src_groups:
+            dic[grp.name] = {src.source_id: src for src in grp}
+            dic[grp.name]['__attrs__'] = {'trt': grp.trt}
+        attrs = dict(name=self.name,
+                     investigation_time=self.investigation_time or 'NA',
+                     start_time=self.start_time or 'NA')
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, dset in dic.items():
+            trt = dset.attrs['trt']
+            srcs = [dset[src_id] for src_id in dset]
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):

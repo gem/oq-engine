@@ -10,7 +10,7 @@ def multipoint2hdf5(fname):
     with hdf5.File(fname.replace('.xml', '.hdf5'), 'w') as f:
         for grp in sm:
             for src in grp:
-                if src.__class__.__name__ == 'MultiPointSource':
+                if hasattr(src, '__toh5__'):
                     print('saving', src)
                     f[src.source_id] = src
 

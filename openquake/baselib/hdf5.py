@@ -260,6 +260,13 @@ class File(h5py.File):
         attrs['avg_len'] = totlen / len(data)
         self.flush()
 
+    def save_attrs(self, path, attrs, **kw):
+        items = list(attrs.items()) + list(kw.items())
+        if items:
+            a = super().__getitem__(path).attrs
+            for k, v in sorted(items):
+                a[k] = v
+
     def __setitem__(self, path, obj):
         cls = obj.__class__
         if hasattr(obj, '__toh5__'):
@@ -268,19 +275,18 @@ class File(h5py.File):
         else:
             pyclass = ''
         if isinstance(obj, dict):
+            __attrs__ = obj.pop('__attrs__', {})
             for k, v in sorted(obj.items()):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
+            self.save_attrs(path, __attrs__)
         elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
         else:
             super().__setitem__(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
-            a = super().__getitem__(path).attrs
-            a['__pyclass__'] = pyclass
-            for k, v in sorted(attrs.items()):
-                a[k] = v
+            self.save_attrs(path, attrs, __pyclass__=pyclass)
 
     def __getitem__(self, path):
         h5obj = super().__getitem__(path)
