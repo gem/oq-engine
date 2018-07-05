@@ -18,11 +18,16 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.mfd.multi import MultiMFD
+from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.valid import SCALEREL
 from openquake.hazardlib.source.point import PointSource
 
 F32 = numpy.float32
 npd_dt = numpy.dtype([('probability', F32),
-                      ('dip', F32), ('rake', F32), ('strike', F32)])
+                      ('strike', F32), ('dip', F32), ('rake', F32)])
 hdd_dt = numpy.dtype([('probability', F32), ('depth', F32)])
 mesh_dt = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
@@ -112,6 +117,7 @@ class MultiPointSource(ParametricSeismicSource):
             if k in ('occurRates', 'magnitudes'):
                 mfd[k] = [numpy.array(lst, F32) for lst in vals]
         mfd['kind'] = self.mfd.kind
+        mfd['size'] = len(points)
         dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
                'hypocenter_distribution': numpy.array(hdd, hdd_dt),
                'mesh': numpy.array(points, mesh_dt),
@@ -124,4 +130,11 @@ class MultiPointSource(ParametricSeismicSource):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        # TODO: the rest
+        self.nodal_plane_distribution = PMF([
+            (prob, NodalPlane(strike, dip, rake))
+            for prob, strike, dip, rake in dic['nodal_plane_distribution']])
+        self.hypocenter_distribution = PMF(dic['hypocenter_distribution'])
+        self.mesh = Mesh(dic['mesh']['lon'], dic['mesh']['lat'])
+        self.magnitude_scaling_relationship = SCALEREL[
+            attrs['magnitude_scaling_relationship']]
+        self.mfd = MultiMFD(**dic['mfd'])
