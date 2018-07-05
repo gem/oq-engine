@@ -79,7 +79,7 @@ class SourceWriterTestCase(unittest.TestCase):
             f['/'] = smodel
         with hdf5.File(temp, 'r') as f:
             f['/']
-        import pdb; pdb.set_trace()
+
 
 class DeepcopyTestCase(unittest.TestCase):
     def test_is_writeable(self):
