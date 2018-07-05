@@ -70,7 +70,10 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
     hypoDepth{depth=14, probability=1.0}
 ''')
 
-        # test serialization to hdf5
+        # test serialization to and from hdf5
         tmp = general.gettemp(suffix='.hdf5')
         with hdf5.File(tmp, 'w') as f:
             f[mps.source_id] = mps
+
+        with hdf5.File(tmp, 'r') as f:
+            f[mps.source_id]
