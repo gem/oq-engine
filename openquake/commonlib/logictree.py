@@ -461,6 +461,9 @@ class FakeSmlt(object):
         self.num_samples = num_samples
         self.tectonic_region_types = set()
 
+    def on_each_source(self):
+        return False
+
     def gen_source_models(self, gsim_lt):
         """
         Yield the underlying LtSourceModel, multiple times if there is sampling
@@ -536,14 +539,15 @@ class SourceModelLogicTree(object):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
                     'characteristicFault')
 
-    def __init__(self, filename, validate=True, seed=0, num_samples=0):
+    def __init__(self, filename, validate=True, seed=0, num_samples=0,
+                 source_ids=()):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
         self.open_ends = set()
-        self.source_ids = set()
+        self.source_ids = set(source_ids)
         self.tectonic_region_types = set()
         self.source_types = set()
         self.root_branchset = None
@@ -560,7 +564,6 @@ class SourceModelLogicTree(object):
         """
         :returns: True if the logic tree is defined on each source
         """
-        import pdb; pdb.set_trace()
         return self.apply_to_sources == self.source_ids
 
     def parse_tree(self, tree_node, validate):
@@ -1046,27 +1049,23 @@ class SourceModelLogicTree(object):
                 raise ValidationError(
                     branchset_node, self.filename,
                     'there must be only one branch set '
-                    'on first branching level'
-                )
+                    'on first branching level')
             elif branchset.uncertainty_type != 'sourceModel':
                 raise ValidationError(
                     branchset_node, self.filename,
                     'first branchset must define an uncertainty '
-                    'of type "sourceModel"'
-                )
+                    'of type "sourceModel"')
         else:
             if branchset.uncertainty_type == 'sourceModel':
                 raise ValidationError(
                     branchset_node, self.filename,
                     'uncertainty of type "sourceModel" can be defined '
-                    'on first branchset only'
-                )
+                    'on first branchset only')
             elif branchset.uncertainty_type == 'gmpeModel':
                 raise ValidationError(
                     branchset_node, self.filename,
                     'uncertainty of type "gmpeModel" is not allowed '
-                    'in source model logic tree'
-                )
+                    'in source model logic tree')
 
     def apply_branchset(self, branchset_node, branchset):
         """
@@ -1087,20 +1086,17 @@ class SourceModelLogicTree(object):
                 if branch_id not in self.branches:
                     raise ValidationError(
                         branchset_node, self.filename,
-                        "branch '%s' is not yet defined" % branch_id
-                    )
+                        "branch '%s' is not yet defined" % branch_id)
                 branch = self.branches[branch_id]
                 if branch.child_branchset is not None:
                     raise ValidationError(
                         branchset_node, self.filename,
-                        "branch '%s' already has child branchset" % branch_id
-                    )
+                        "branch '%s' already has child branchset" % branch_id)
                 if branch not in self.open_ends:
                     raise ValidationError(
                         branchset_node, self.filename,
                         'applyToBranches must reference only branches '
-                        'from previous branching level'
-                    )
+                        'from previous branching level')
                 branch.child_branchset = branchset
         else:
             for branch in self.open_ends:
@@ -1109,6 +1105,7 @@ class SourceModelLogicTree(object):
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file))
 
+    # this is somewhat duplicated with readinput.get_source_ids
     def collect_source_model_data(self, source_model):
         """
         Parse source model file and collect information about source ids,
@@ -1118,11 +1115,12 @@ class SourceModelLogicTree(object):
         """
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
-        for node in smodel:
-            with context(source_model, node):
-                self.tectonic_region_types.add(node['tectonicRegion'])
-                source_id = node['id']
-                source_type = striptag(node.tag)[n:]
+        for src_node in smodel:
+            with context(source_model, src_node):
+                trt = src_node['tectonicRegion']
+                source_id = src_node['id']
+                source_type = striptag(src_node.tag)[n:]
+                self.tectonic_region_types.add(trt)
                 self.source_ids.add(source_id)
                 self.source_types.add(source_type)
 
