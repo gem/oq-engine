@@ -24,10 +24,7 @@ import operator
 import tempfile
 import importlib
 import itertools
-try:  # with Python 3
-    from urllib.parse import quote_plus, unquote_plus
-except ImportError:  # with Python 2
-    from urllib import quote_plus, unquote_plus
+from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
@@ -211,6 +208,27 @@ class ByteCounter(object):
             self.nbytes += nbytes
 
 
+class Group(collections.Mapping):
+    """
+    A mock for a h5py group object
+    """
+    def __init__(self, items, attrs):
+        self.dic = {quote_plus(k): v for k, v in items}
+        self.attrs = attrs
+
+    def __getitem__(self, key):
+        return self.dic[key]
+
+    def __setitem__(self, key, value):
+        self.dic[key] = value
+
+    def __iter__(self):
+        yield from self.dic
+
+    def __len__(self):
+        return len(self.dic)
+
+
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
@@ -274,12 +292,13 @@ class File(h5py.File):
             pyclass = cls2dotname(cls)
         else:
             pyclass = ''
-        if isinstance(obj, dict):
-            __attrs__ = obj.pop('__attrs__', {})
+        if isinstance(obj, (dict, Group)):
             for k, v in sorted(obj.items()):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
-            self.save_attrs(path, __attrs__)
+            if isinstance(obj, Group):
+                self.save_attrs(
+                    path, obj.attrs, __pyclass__=cls2dotname(Group))
         elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
         else:
@@ -299,7 +318,11 @@ class File(h5py.File):
                          for k, v in h5obj.items()}
             elif hasattr(h5obj, 'value'):
                 h5obj = h5obj.value
-            obj.__fromh5__(h5obj, h5attrs)
+            if hasattr(obj, '__fromh5__'):
+                obj.__fromh5__(h5obj, h5attrs)
+            else:  # Group object
+                obj.dic = h5obj
+                obj.attrs = h5attrs
             return obj
         else:
             return h5obj

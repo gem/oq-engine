@@ -8,11 +8,7 @@ def multipoint2hdf5(fname):
         area_source_discretization=10, width_of_mfd_bin=.1)
     sm = nrml.to_python(fname, sc)
     with hdf5.File(fname.replace('.xml', '.hdf5'), 'w') as f:
-        for grp in sm:
-            for src in grp:
-                if hasattr(src, '__toh5__'):
-                    print('saving', src)
-                    f[src.source_id] = src
+        f['/'] = sm
 
 
 multipoint2hdf5.arg('fname', 'source model file in XML format')

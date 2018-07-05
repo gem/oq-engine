@@ -116,6 +116,8 @@ class MultiPointSource(ParametricSeismicSource):
         for k, vals in mfd.items():
             if k in ('occurRates', 'magnitudes'):
                 mfd[k] = [numpy.array(lst, F32) for lst in vals]
+            else:
+                mfd[k] = numpy.array(vals, F32)
         dic = {'nodal_plane_distribution': numpy.array(npd, npd_dt),
                'hypocenter_distribution': numpy.array(hdd, hdd_dt),
                'mesh': numpy.array(points, mesh_dt),
