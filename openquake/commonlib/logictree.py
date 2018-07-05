@@ -528,7 +528,15 @@ class SourceModelLogicTree(object):
         except AttributeError:
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
+        self.apply_to_sources = set()
         self.parse_tree(tree, validate)
+
+    def on_each_source(self):
+        """
+        :returns: True if the logic tree is defined on each source
+        """
+        import pdb; pdb.set_trace()
+        return self.apply_to_sources == self.source_ids
 
     def parse_tree(self, tree_node, validate):
         """
@@ -809,8 +817,7 @@ class SourceModelLogicTree(object):
                     return
             raise ValidationError(
                 node, self.filename,
-                'expected a pair of floats separated by space'
-            )
+                'expected a pair of floats separated by space')
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
             min_mag, bin_width = (node.incrementalMFD["minMag"],
                                   node.incrementalMFD["binWidth"])
@@ -822,8 +829,7 @@ class SourceModelLogicTree(object):
                 return
             raise ValidationError(
                 node, self.filename,
-                "expected valid 'incrementalMFD' node"
-            )
+                "expected valid 'incrementalMFD' node")
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
             self._validate_simple_fault_geometry(node.simpleFaultGeometry,
                                                  _float_re)
@@ -847,8 +853,7 @@ class SourceModelLogicTree(object):
             if not _float_re.match(node.text.strip()):
                 raise ValidationError(
                     node, self.filename,
-                    'expected single float value'
-                )
+                    'expected single float value')
 
     def _validate_simple_fault_geometry(self, node, _float_re):
         """
@@ -927,7 +932,8 @@ class SourceModelLogicTree(object):
         Converts "applyToSources" filter value by just splitting it to a list.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = filters['applyToSources'].split()
+            filters['applyToSources'] = ss = filters['applyToSources'].split()
+            self.apply_to_sources.update(ss)
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
@@ -950,14 +956,12 @@ class SourceModelLogicTree(object):
         if uncertainty_type == 'sourceModel' and filters:
             raise ValidationError(
                 branchset_node, self.filename,
-                'filters are not allowed on source model uncertainty'
-            )
+                'filters are not allowed on source model uncertainty')
 
         if len(filters) > 1:
             raise ValidationError(
                 branchset_node, self.filename,
-                "only one filter is allowed per branchset"
-            )
+                "only one filter is allowed per branchset")
 
         if 'applyToTectonicRegionType' in filters:
             if not filters['applyToTectonicRegionType'] \
@@ -965,8 +969,7 @@ class SourceModelLogicTree(object):
                 raise ValidationError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "
-                    "type '%s'" % filters['applyToTectonicRegionType']
-                )
+                    "type '%s'" % filters['applyToTectonicRegionType'])
 
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
                                 'simpleFaultGeometryAbsolute',
@@ -976,8 +979,7 @@ class SourceModelLogicTree(object):
                 raise ValidationError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define 'applyToSources' "
-                    "with only one source id" % uncertainty_type
-                )
+                    "with only one source id" % uncertainty_type)
         if uncertainty_type in ('simpleFaultDipRelative',
                                 'simpleFaultDipAbsolute'):
             if not filters or (not ('applyToSources' in filters.keys()) and not
@@ -986,16 +988,14 @@ class SourceModelLogicTree(object):
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define either"
                     "'applyToSources' or 'applyToSourceType'"
-                    % uncertainty_type
-                )
+                    % uncertainty_type)
 
         if 'applyToSourceType' in filters:
             if not filters['applyToSourceType'] in self.source_types:
                 raise ValidationError(
                     branchset_node, self.filename,
                     "source models don't define sources of type '%s'" %
-                    filters['applyToSourceType']
-                )
+                    filters['applyToSourceType'])
 
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
@@ -1003,8 +1003,7 @@ class SourceModelLogicTree(object):
                     raise ValidationError(
                         branchset_node, self.filename,
                         "source with id '%s' is not defined in source models"
-                        % source_id
-                    )
+                        % source_id)
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
