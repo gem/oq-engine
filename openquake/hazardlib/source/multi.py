@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.mfd.multi import MultiMFD
+from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.pmf import PMF
@@ -29,7 +29,7 @@ F32 = numpy.float32
 npd_dt = numpy.dtype([('probability', F32),
                       ('strike', F32), ('dip', F32), ('rake', F32)])
 hdd_dt = numpy.dtype([('probability', F32), ('depth', F32)])
-mesh_dt = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
+mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
 
 
 class MultiPointSource(ParametricSeismicSource):
