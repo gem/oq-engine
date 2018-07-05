@@ -292,7 +292,7 @@ class File(h5py.File):
             pyclass = cls2dotname(cls)
         else:
             pyclass = ''
-        if isinstance(obj, (dict, Group)):
+        if isinstance(obj, (dict, Group)) and obj:
             for k, v in sorted(obj.items()):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v

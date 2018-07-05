@@ -127,10 +127,13 @@ class SourceModel(collections.Sequence):
             grpname = grp.name or 'group-%d' % i
             srcs = [(src.source_id, src) for src in grp
                     if hasattr(src, '__toh5__')]
-            dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
+            if srcs:
+                dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
         attrs = dict(name=self.name,
                      investigation_time=self.investigation_time or 'NA',
                      start_time=self.start_time or 'NA')
+        if not dic:
+            raise ValueError('There are no serializable sources in %s' % self)
         return dic, attrs
 
     def __fromh5__(self, dic, attrs):
