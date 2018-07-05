@@ -2463,7 +2463,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def test_parse_invalid_smlt(self):
         smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
         with self.assertRaises(Exception) as ctx:
-            for smpath in source.collect_source_model_paths(smlt):
+            for smpath in logictree.collect_source_model_paths(smlt):
                 pass
         exc = ctx.exception
         self.assertIn('not well-formed (invalid token)', str(exc))
