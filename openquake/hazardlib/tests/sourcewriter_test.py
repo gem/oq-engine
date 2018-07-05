@@ -78,7 +78,9 @@ class SourceWriterTestCase(unittest.TestCase):
         with hdf5.File(temp, 'w') as f:
             f['/'] = smodel
         with hdf5.File(temp, 'r') as f:
-            f['/']
+            sm = f['/']
+        self.assertEqual(smodel.name, sm.name)
+        self.assertEqual(len(smodel.src_groups), len(sm.src_groups))
 
 
 class DeepcopyTestCase(unittest.TestCase):

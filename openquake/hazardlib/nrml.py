@@ -125,8 +125,8 @@ class SourceModel(collections.Sequence):
         dic = {}
         for i, grp in enumerate(self.src_groups):
             grpname = grp.name or 'group-%d' % i
-            srcs = {src.source_id: src for src in grp
-                    if hasattr(src, '__toh5__')}
+            srcs = [(src.source_id, src) for src in grp
+                    if hasattr(src, '__toh5__')]
             dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
         attrs = dict(name=self.name,
                      investigation_time=self.investigation_time or 'NA',
