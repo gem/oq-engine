@@ -23,7 +23,7 @@ from openquake.hazardlib.source.point import PointSource
 npd_dt = numpy.dtype([('probability', float),
                       ('dip', float), ('rake', float), ('strike', float)])
 hdd_dt = numpy.dtype([('probability', float), ('depth', float)])
-mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
+mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
 
 
 class MultiPointSource(ParametricSeismicSource):
@@ -37,23 +37,22 @@ class MultiPointSource(ParametricSeismicSource):
     RUPTURE_WEIGHT = 0.1
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing,
-                 magnitude_scaling_relationship,
-                 rupture_aspect_ratio, temporal_occurrence_model,
+                 mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 nodal_plane_distribution, hypocenter_distribution, mesh):
+                 nodal_plane_distribution, hypocenter_distribution,
+                 mesh, temporal_occurrence_model=None):
         assert len(mfd) == len(mesh), (len(mfd), len(mesh))
+        rupture_mesh_spacing = None
         super().__init__(
-            source_id, name, tectonic_region_type, mfd,
-            rupture_mesh_spacing, magnitude_scaling_relationship,
-            rupture_aspect_ratio, temporal_occurrence_model)
+            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model)
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.mesh = mesh
-        self.max_radius = 0
 
     def __iter__(self):
         for i, (mfd, point) in enumerate(zip(self.mfd, self.mesh)):
@@ -106,7 +105,7 @@ class MultiPointSource(ParametricSeismicSource):
         npd = [(prob, np.dip, np.rake, np.strike)
                for prob, np in self.nodal_plane_distribution.data]
         hdd = self.hypocenter_distribution.data
-        points = [(p.x, p.y, p.z) for p in self.mesh]
+        points = [(p.x, p.y) for p in self.mesh]
         mfd = self.mfd.kwargs.copy()
         for k, vals in mfd.items():
             if k in ('occurRates', 'magnitudes'):
