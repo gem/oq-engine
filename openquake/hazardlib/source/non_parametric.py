@@ -17,12 +17,15 @@
 Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
+import numpy
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.mesh import Mesh, point3d
+from openquake.hazardlib.pmf import PMF
 from openquake.baselib.slots import with_slots
 
 
@@ -58,8 +61,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
         consists of.
 
         :returns:
-            Generator of instances of :class:
-            `~openquake.hazardlib.source.rupture.NonParametricProbabilisticRupture`.
+            Generator of instances of :class:`openquake.hazardlib.source.
+            rupture.NonParametricProbabilisticRupture`.
         """
         for rup, pmf in self.data:
             yield NonParametricProbabilisticRupture(
@@ -116,29 +119,39 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns: True if containing only GriddedRuptures, False otherwise
         """
         for rup, pmf in self.data:
-            if (not isinstance(rup, NonParametricProbabilisticRupture)
-                    or not isinstance(rup.surface, GriddedSurface)):
+            if not isinstance(rup.surface, GriddedSurface):
                 return False
         return True
 
     def __toh5__(self):
         assert self.is_gridded(), '%s is not gridded' % self
-        attrs = {'id': self.source_id, 'name': self.name,
-                 'trt': self.tectonic_region_type}
+        attrs = {'source_id': self.source_id, 'name': self.name,
+                 'tectonic_region_type': self.tectonic_region_type}
         dic = {'probs_occur': [], 'magnitude': [], 'rake': [],
                'hypocenter': [], 'points': []}
         for rup, pmf in self.data:
             dic['probs_occur'].append([prob for (prob, _) in pmf.data])
             dic['magnitude'].append(rup.mag)
             dic['rake'].append(rup.rake)
-            dic['hypocenter'].append(rup.hypo)
-            dic['points'].append(rup.surface.mesh)
+            dic['hypocenter'].append((rup.hypocenter.x, rup.hypocenter.y,
+                                      rup.hypocenter.z))
+            dic['points'].append([(p.x, p.y, p.z) for p in rup.surface.mesh])
+        dic['hypocenter'] = numpy.array(dic['hypocenter'], point3d)
+        dic['points'] = [numpy.array(p, point3d) for p in dic['points']]
         return dic, attrs
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        for k in dic:
-            setattr(self, k, dic[k].value)
+        self.data = []
+        for mag, rake, hypocenter, probs, points in zip(
+                dic['magnitude'], dic['rake'], dic['hypocenter'],
+                dic['probs_occur'], dic['points']):
+            mesh = Mesh(points['lon'], points['lat'], points['depth'])
+            surface = GriddedSurface(mesh)
+            pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
+            rup = NonParametricProbabilisticRupture(
+                mag, rake, self.tectonic_region_type, hypocenter, surface, pmf)
+            self.data.append((rup, pmf))
 
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
