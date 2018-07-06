@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
@@ -109,3 +110,35 @@ class NonParametricSeismicSource(BaseSeismicSource):
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
+
+    def is_gridded(self):
+        """
+        :returns: True if containing only GriddedRuptures, False otherwise
+        """
+        for rup, pmf in self.data:
+            if (not isinstance(rup, NonParametricProbabilisticRupture)
+                    or not isinstance(rup.surface, GriddedSurface)):
+                return False
+        return True
+
+    def __toh5__(self):
+        assert self.is_gridded(), '%s is not gridded' % self
+        attrs = {'id': self.source_id, 'name': self.name,
+                 'trt': self.tectonic_region_type}
+        dic = {'probs_occur': [], 'magnitude': [], 'rake': [],
+               'hypocenter': [], 'points': []}
+        for rup, pmf in self.data:
+            dic['probs_occur'].append([prob for (prob, _) in pmf.data])
+            dic['magnitude'].append(rup.mag)
+            dic['rake'].append(rup.rake)
+            dic['hypocenter'].append(rup.hypo)
+            dic['points'].append(rup.surface.mesh)
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        for k in dic:
+            setattr(self, k, dic[k].value)
+
+    def __repr__(self):
+        return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
