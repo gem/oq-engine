@@ -923,8 +923,9 @@ def to_python(fname, converter):
         source_model = f['/']
     for sg in source_model:
         for src in sg:
-            src.tom = converter.tom
             if hasattr(src, 'mfd'):
+                # multipoint source
+                src.tom = converter.tom
                 kwargs = getattr(src.mfd, 'kwargs', {})
                 if 'bin_width' not in kwargs:
                     kwargs['bin_width'] = [converter.width_of_mfd_bin]
