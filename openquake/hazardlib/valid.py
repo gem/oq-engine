@@ -1011,11 +1011,14 @@ def simple_slice(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
+    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc liquefaction_susceptibility landsliding_susceptibility dw yield_acceleration slope cti dc dr dwb hwater precip'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
-               depth=0, backarc="false"):
+               depth=0, backarc="false", liquefaction_susceptibility=0,
+               landsliding_susceptibility=0, dw=10.,
+               yield_acceleration=0.0, slope=0.0, cti=0.0, dc=0.0, dr=0.0,
+               dwb=0.0, hwater=0.0, precip=0.0):
     """
     Used to convert a node like
 
@@ -1028,7 +1031,15 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
                      vs30measured=vs30_type(vs30Type) == 'measured',
                      vs30=positivefloat(vs30), lon=longitude(lon),
                      lat=latitude(lat), depth=float_(depth),
-                     backarc=boolean(backarc))
+                     backarc=boolean(backarc),
+                     liquefaction_susceptibility=positiveint(liquefaction_susceptibility),
+                     landsliding_susceptibility=positiveint(landsliding_susceptibility),
+                     dw=float_(dw),
+                     yield_acceleration=float_(yield_acceleration),
+                     slope=float_(slope),
+                     cti=float_(cti), dc=float_(dc), dr=float_(dr),
+                     dwb=float_(dwb), hwater=float_(hwater),
+                     precip=float_(precip))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',

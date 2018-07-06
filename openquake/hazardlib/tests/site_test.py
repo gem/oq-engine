@@ -35,6 +35,17 @@ class SiteModelParam(object):
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
         self.reference_backarc = False
+        self.liquefaction_susceptibility = 2
+        self.landsliding_susceptibility = 1
+        self.dw = 3.0
+        self.yield_acceleration = 0.15
+        self.slope = 10.0
+        self.cti = 4.5
+        self.dc = 0.0
+        self.dr = 0.0
+        self.dwb = 0.0
+        self.precip = 0.0
+        self.hwater = 0.0
 
 
 class SiteTestCase(unittest.TestCase):
@@ -45,7 +56,12 @@ class SiteTestCase(unittest.TestCase):
             'vs30measured': False,
             'z1pt0': 20,
             'z2pt5': 30,
-            'backarc': True
+            'backarc': True,
+            'liquefaction_susceptibility': 2,
+            'landsliding_susceptibility': 1,
+            'dw': 3.0,
+            'yield_acceleration': 0.15,
+            'cti': 4.5
         }
         default_kwargs.update(kwargs)
         kwargs = default_kwargs
@@ -73,6 +89,16 @@ class SiteTestCase(unittest.TestCase):
         self._assert_creation(error=error, z2pt5=0)
         self._assert_creation(error=error, z2pt5=-1)
 
+    def test_wrong_liquefaction_susceptibility(self):
+        error = 'liqufaction_susceptibility must be integer between 0 and 5'
+        self._assert_creation(error=error, liquefaction_susceptibility=6)
+        self._assert_creation(error=error, liquefaction_susceptibility=3.4)
+    
+    def test_wrong_landsliding_susceptibility(self):
+        error = 'landsliding_susceptibility must be integer between 0 and 10'
+        self._assert_creation(error=error, landsliding_susceptibility=13)
+        self._assert_creation(error=error, landsliding_susceptibility=3.4)
+
     def test_successful_creation(self):
         self._assert_creation()
 
@@ -81,10 +107,16 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
     def test_from_sites(self):
         s1 = Site(location=Point(10, 20, 30),
                   vs30=1.2, vs30measured=True,
-                  z1pt0=3.4, z2pt5=5.6, backarc=True)
+                  z1pt0=3.4, z2pt5=5.6, backarc=True,
+                  liquefaction_susceptibility=2,
+                  landsliding_susceptibility=1,
+                  dw=3.0, cti=4.5, yield_acceleration=0.15)
         s2 = Site(location=Point(-1.2, -3.4, -5.6),
                   vs30=55.4, vs30measured=False,
-                  z1pt0=66.7, z2pt5=88.9, backarc=False)
+                  z1pt0=66.7, z2pt5=88.9, backarc=False,
+                  liquefaction_susceptibility=4,
+                  landsliding_susceptibility=0,
+                  dw=5.0, cti=5.5, yield_acceleration=0.1)
         cll = SiteCollection([s1, s2])
         assert_eq(cll.vs30, [1.2, 55.4])
         assert_eq(cll.vs30measured, [True, False])
@@ -94,6 +126,11 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, [30, -5.6])
         assert_eq(cll.backarc, [True, False])
+        assert_eq(cll.liquefaction_susceptibility, [2, 4])
+        assert_eq(cll.landsliding_susceptibility, [1, 0])
+        assert_eq(cll.dw, [3.0, 5.0])
+        assert_eq(cll.cti, [4.5, 5.5])
+        assert_eq(cll.yield_acceleration, [0.15, 0.1])
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.flags.writeable, False)
@@ -128,13 +165,23 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, [30, -5.6])
         assert_eq(cll.backarc, [False, False])
+        assert_eq(cll.liquefaction_susceptibility, [2, 2])
+        assert_eq(cll.landsliding_susceptibility, [1, 1])
+        assert_eq(cll.dw, [3.0, 3.0])
+        assert_eq(cll.cti, [4.5, 4.5])
+        assert_eq(cll.yield_acceleration, [0.15, 0.15])
 
-        for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
+        for arr in (cll.vs30, cll.z1pt0, cll.z2pt5, cll.dw, cll.cti,
+                    cll.yield_acceleration):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured, cll.backarc):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, bool)
+        for arr in (cll.liquefaction_susceptibility,
+                    cll.landsliding_susceptibility):
+            self.assertIsInstance(arr, numpy.ndarray)
+            self.assertEqual(arr.dtype, numpy.uint32)
         self.assertEqual(len(cll), 2)
 
         # test split_in_tiles
