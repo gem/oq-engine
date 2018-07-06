@@ -22,6 +22,7 @@ import time
 import os
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
@@ -912,3 +913,18 @@ def update_source_model(sm_node):
         others.sort(key=lambda src: (src.tag, src['id']))
         i, sources = _pointsources2multipoints(psrcs, i)
         group.nodes = sources + others
+
+
+def to_python(fname, converter):
+    """
+    Convert a source model .hdf5 file into a :class:`SourceModel` object
+    """
+    with hdf5.File(fname, 'r') as f:
+        source_model = f['/']
+    for sg in source_model:
+        for src in sg:
+            src.tom = PoissonTOM(converter.investigation_time)
+            kwargs = getattr(src.mfd, 'kwargs', {})
+            if 'bin_width' not in kwargs:
+                kwargs['bin_width'] = [converter.width_of_mfd_bin]
+    return source_model
