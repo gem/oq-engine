@@ -358,7 +358,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                self.datastore.save_vlen(
+                self.datastore.hdf5.save_vlen(
                     'gmf_data/indices',
                     [numpy.array(self.indices[sid], indices_dt)
                      for sid in self.sitecol.complete.sids])
