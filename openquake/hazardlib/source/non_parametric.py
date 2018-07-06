@@ -25,6 +25,7 @@ from openquake.hazardlib.source.rupture import \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.geo.mesh import Mesh, point3d
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
 from openquake.baselib.slots import with_slots
 
@@ -143,12 +144,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
         self.data = []
-        for mag, rake, hypocenter, probs, points in zip(
+        for mag, rake, hp, probs, points in zip(
                 dic['magnitude'], dic['rake'], dic['hypocenter'],
                 dic['probs_occur'], dic['points']):
             mesh = Mesh(points['lon'], points['lat'], points['depth'])
             surface = GriddedSurface(mesh)
             pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
+            hypocenter = Point(hp['lon'], hp['lat'], hp['depth'])
             rup = NonParametricProbabilisticRupture(
                 mag, rake, self.tectonic_region_type, hypocenter, surface, pmf)
             self.data.append((rup, pmf))
