@@ -271,12 +271,7 @@ class File(h5py.File):
         nbytes = 0
         totlen = 0
         for i, val in enumerate(data):
-            if hasattr(val, 'dtype'):
-                dset[i] = val
-            else:
-                1 / 0
-                for j, v in enumerate(val):
-                    dset[i, j] = v
+            dset[i] = val
             nbytes += val.nbytes
             totlen += len(val)
         attrs = super().__getitem__(key).attrs
