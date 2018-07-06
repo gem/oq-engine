@@ -302,7 +302,10 @@ class File(h5py.File):
         elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
             self.save_vlen(path, obj)
         else:
-            super().__setitem__(path, obj)
+            try:
+                super().__setitem__(path, obj)
+            except:
+                import pdb; pdb.set_trace()
         if pyclass:
             self.flush()  # make sure it is fully saved
             self.save_attrs(path, attrs, __pyclass__=pyclass)
