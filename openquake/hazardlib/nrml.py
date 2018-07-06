@@ -327,12 +327,12 @@ class SourceModelParser(object):
         try:
             sm = self.sm[fname]
         except KeyError:
-            if fname.endswith('.xml'):
+            if fname.endswith(('.xml', '.nrml')):
                 sm = to_python(fname, self.converter)
             elif fname.endswith('.hdf5'):
                 sm = sourceconverter.to_python(fname, self.converter)
             else:
-                raise ValueError('Unrecognized source model %s' % fname)
+                raise ValueError('Unrecognized extension in %s' % fname)
             self.sm[fname] = sm
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in sm]
