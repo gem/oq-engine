@@ -62,7 +62,10 @@ class SourceWriterTestCase(unittest.TestCase):
         self.check_round_trip(MIXED)
 
     def test_nonparam(self):
-        self.check_round_trip(NONPARAM)
+        [[src]] = self.check_round_trip(NONPARAM)
+
+        # test GriddedSource
+        self.assertFalse(src.is_gridded())
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
