@@ -29,6 +29,8 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.pmf import PMF
 from openquake.baselib.slots import with_slots
 
+F32 = numpy.float32
+
 
 @with_slots
 class NonParametricSeismicSource(BaseSeismicSource):
@@ -129,25 +131,27 @@ class NonParametricSeismicSource(BaseSeismicSource):
         attrs = {'source_id': self.source_id, 'name': self.name,
                  'tectonic_region_type': self.tectonic_region_type}
         dic = {'probs_occur': [], 'magnitude': [], 'rake': [],
-               'hypocenter': [], 'points': []}
+               'hypocenter': [], 'lons': [], 'lats': [], 'depths': []}
         for rup, pmf in self.data:
             dic['probs_occur'].append([prob for (prob, _) in pmf.data])
             dic['magnitude'].append(rup.mag)
             dic['rake'].append(rup.rake)
             dic['hypocenter'].append((rup.hypocenter.x, rup.hypocenter.y,
                                       rup.hypocenter.z))
-            dic['points'].append([(p.x, p.y, p.z) for p in rup.surface.mesh])
+            for coord in ('lons', 'lats', 'depths'):
+                dic[coord].append(getattr(rup.surface.mesh, coord))
         dic['hypocenter'] = numpy.array(dic['hypocenter'], point3d)
-        dic['points'] = [numpy.array(p, point3d) for p in dic['points']]
+        for coord in ('lons', 'lats', 'depths'):
+            dic[coord] = [numpy.array(vals, F32) for vals in dic[coord]]
         return dic, attrs
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
         self.data = []
-        for mag, rake, hp, probs, points in zip(
+        for mag, rake, hp, probs, lons, lats, depths in zip(
                 dic['magnitude'], dic['rake'], dic['hypocenter'],
-                dic['probs_occur'], dic['points']):
-            mesh = Mesh(points['lon'], points['lat'], points['depth'])
+                dic['probs_occur'], dic['lons'], dic['lats'], dic['depths']):
+            mesh = Mesh(lons, lats, depths)
             surface = GriddedSurface(mesh)
             pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
             hypocenter = Point(hp['lon'], hp['lat'], hp['depth'])
