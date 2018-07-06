@@ -629,15 +629,15 @@ class SourceConverter(RuptureConverter):
             name=node['name'],
             tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=~node.ruptAspectRatio,
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
+            mesh=geo.Mesh(F32(lons), F32(lats)),
             temporal_occurrence_model=self.tom,
-            mesh=geo.Mesh(F32(lons), F32(lats)))
+        )
 
     def convert_simpleFaultSource(self, node):
         """
