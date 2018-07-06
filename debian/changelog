@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Extends site object to include geotechnical (secondary hazards) parameters
+  
   [Michele Simionato]
   * Added a check on source model logic tree files: the uncertaintyModel
     values cannot be repeated in the same branchset
