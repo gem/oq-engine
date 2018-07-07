@@ -60,7 +60,7 @@ def build_array(lons_lats_depths):
 def surface_to_array(surface):
     """
     :param surface: a Surface object
-    :returns: a 3D array of dtype point3d
+    :returns: a 3D array of shape (3, N, M)
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         n = len(surface.surfaces)
