@@ -190,8 +190,8 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
-        self.req = ['sids', 'lons', 'lats', 'depths'] + sorted(req_site_params)
-        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in self.req])
+        req = ['sids', 'lons', 'lats', 'depths'] + sorted(req_site_params)
+        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lons'] = fix_lon(numpy.array(lons))
@@ -213,7 +213,7 @@ class SiteCollection(object):
         return self
 
     def _set(self, param, value):
-        if param in self.req:
+        if param in self.array.dtype.names:
             self.array[param] = value
 
     xyz = Mesh.xyz
@@ -377,8 +377,7 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name not in ('vs30 vs30measured z1pt0 z2pt5 backarc lons lats '
-                        'depths sids'):
+        if name not in self.array.dtype.names:
             raise AttributeError(name)
         return self.array[name]
 
