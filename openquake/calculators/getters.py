@@ -531,7 +531,7 @@ class RuptureGetter(object):
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
             if surface_cls is geo.PlanarSurface:
-                rupture.surface = geo.PlanarSurface.from_array(mesh.squeeze())
+                rupture.surface = geo.PlanarSurface.from_array(mesh[:, 0, :])
             elif surface_cls is geo.MultiSurface:
                 # mesh has shape (3, n, 4)
                 rupture.surface.__init__([
@@ -541,7 +541,8 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.mesh = Mesh(*mesh)
-            else:  # fault surface, strike and dip will be computed
+            else:
+                # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
             ebr = EBRupture(rupture, (), evs)
