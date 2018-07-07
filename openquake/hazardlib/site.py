@@ -145,11 +145,6 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
-    dtype = numpy.dtype(  # default site params
-        [(name, site_param_dt[name])
-         for name in ('sids',  'lons', 'lats', 'depths', 'vs30',
-                      'vs30measured', 'z1pt0', 'z2pt5', 'backarc')])
-
     @classmethod
     def from_shakemap(cls, shakemap_array):
         """
@@ -158,7 +153,9 @@ class SiteCollection(object):
         self = object.__new__(cls)
         self.complete = self
         n = len(shakemap_array)
-        self.array = arr = numpy.zeros(n, self.dtype)
+        dtype = numpy.dtype([(p, site_param_dt[p])
+                             for p in 'sids lons lats depths vs30'.split()])
+        self.array = arr = numpy.zeros(n, dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
         arr['lons'] = shakemap_array['lon']
         arr['lats'] = shakemap_array['lat']
