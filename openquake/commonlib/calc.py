@@ -22,7 +22,7 @@ import h5py
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
+from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
@@ -372,7 +372,7 @@ class RuptureSerializer(object):
         nbytes = 0
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
-            mesh = surface_to_mesh(rup.surface)
+            mesh = surface_to_array(rup.surface)
             sx, sy, sz = mesh.shape
             points = mesh.flatten()
             # sanity checks
