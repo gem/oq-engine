@@ -516,7 +516,7 @@ class RuptureGetter(object):
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            mesh = rec['points'].reshape(rec['sx'], rec['sz'])
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
@@ -538,13 +538,12 @@ class RuptureGetter(object):
             elif surface_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.mesh = Mesh(m['lon'], m['lat'], m['depth'])
+                rupture.surface.mesh = Mesh(
+                    mesh['lon'], mesh['lat'], mesh['depth'])
             else:  # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
                 rupture.surface.__init__(
-                    RectangularMesh(m['lon'], m['lat'], m['depth']))
+                    RectangularMesh(mesh['lon'], mesh['lat'], mesh['depth']))
             ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
