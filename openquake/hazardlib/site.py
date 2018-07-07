@@ -45,7 +45,7 @@ class Site(object):
     :param z2pt5:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
-    :param backarc":
+    :param backarc:
         Boolean value, ``True`` if the site is in the subduction backarc and
         ``False`` if it is in the subduction forearc or is unknown
 
@@ -59,7 +59,7 @@ class Site(object):
     _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
 
     def __init__(self, location, vs30=numpy.nan, vs30measured=False,
-                 z1pt0=numpy.nan, z2pt5=numpy.nan, backarc=False):
+                 z1pt0=numpy.nan, z2pt5=numpy.nan, backarc=False, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
         if not numpy.isnan(z1pt0) and z1pt0 <= 0:
@@ -72,6 +72,9 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
+        for param, val in extras.items():
+            assert param in site_param_dt, param
+            setattr(self, param, val)
 
     def __str__(self):
         """
