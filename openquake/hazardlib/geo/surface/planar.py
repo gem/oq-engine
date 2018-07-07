@@ -32,15 +32,6 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.slots import with_slots
 
 
-def _corners(array):
-    # convert a composite array with fields lon, lat, depth into four Points
-    # [topleft, topright, bottomleft, bottomright]
-    points = []
-    for p in array:
-        points.append(Point(p['lon'], p['lat'], p['depth']))
-    return points
-
-
 @with_slots
 class PlanarSurface(BaseSurface):
     """
@@ -174,12 +165,12 @@ class PlanarSurface(BaseSurface):
         return self
 
     @classmethod
-    def from_array(cls, array):
+    def from_array(cls, array3N):
         """
-        :param array: a composite array with fields (lon, lat, depth)
+        :param array3N: an array of shape (3, N)
         :returns: a :class:`PlanarSurface` instance
         """
-        tl, tr, bl, br = _corners(array)
+        tl, tr, bl, br = [Point(*p) for p in array3N.T]
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
