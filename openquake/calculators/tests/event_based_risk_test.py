@@ -149,7 +149,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1391)
+        self.assertEqual(nbytes, 2015)
 
         # test postprocessing
         self.calc.datastore.close()
