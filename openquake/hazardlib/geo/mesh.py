@@ -57,7 +57,7 @@ def build_array(lons_lats_depths):
     return arr
 
 
-def surface_to_mesh(surface):
+def surface_to_array(surface):
     """
     :param surface: a Surface object
     :returns: a 3D array of dtype point3d
