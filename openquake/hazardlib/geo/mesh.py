@@ -48,12 +48,12 @@ def build_array(lons_lats_depths):
     Convert a list of n triples into a composite numpy array with fields
     lon, lat, depth and shape (n,) + lons.shape.
     """
-    shape = (len(lons_lats_depths),) + lons_lats_depths[0][0].shape
-    arr = numpy.zeros(shape, point3d)
+    shape = (3, len(lons_lats_depths)) + lons_lats_depths[0][0].shape
+    arr = numpy.zeros(shape, F32)
     for i, (lons, lats, depths) in enumerate(lons_lats_depths):
-        arr['lon'][i] = lons
-        arr['lat'][i] = lats
-        arr['depth'][i] = depths
+        arr[0, i] = lons
+        arr[1, i] = lats
+        arr[2, i] = depths
     return arr
 
 
@@ -65,12 +65,12 @@ def surface_to_array(surface):
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         n = len(surface.surfaces)
         return build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                            for s in surface.surfaces]).reshape(n, 4)
+                            for s in surface.surfaces]).reshape(3, n, 4)
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
-        shp = (1,) + mesh.lons.shape
+        shp = (3, 1) + mesh.lons.shape
     else:  # 2D mesh
-        shp = mesh.lons.shape
+        shp = (3,) + mesh.lons.shape
     return build_array([[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
 
 
