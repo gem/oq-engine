@@ -341,6 +341,7 @@ def get_site_collection(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     mesh = get_mesh(oqparam)
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         try:
@@ -352,7 +353,7 @@ def get_site_collection(oqparam):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm)
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
@@ -364,7 +365,7 @@ def get_site_collection(oqparam):
                     sitecol.array[sid][name] = param[name]
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam)
+            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation

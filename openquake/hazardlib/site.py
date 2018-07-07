@@ -113,6 +113,20 @@ def _extract(array_or_float, indices):
         return array_or_float
 
 
+# dtype of each valid site parameter
+site_param_dt = {
+    'sids': numpy.uint32,
+    'lons': numpy.float64,
+    'lats': numpy.float64,
+    'depths': numpy.float64,
+    'vs30': numpy.float64,
+    'vs30measured': numpy.bool,
+    'z1pt0': numpy.float64,
+    'z2pt5': numpy.float64,
+    'backarc': numpy.bool,
+}
+
+
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -131,17 +145,10 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
-    dtype = numpy.dtype([
-        ('sids', numpy.uint32),
-        ('lons', numpy.float64),
-        ('lats', numpy.float64),
-        ('depths', numpy.float64),
-        ('vs30', numpy.float64),
-        ('vs30measured', numpy.bool),
-        ('z1pt0', numpy.float64),
-        ('z2pt5', numpy.float64),
-        ('backarc', numpy.bool),
-    ])
+    dtype = numpy.dtype(  # default site params
+        [(name, site_param_dt[name])
+         for name in ('sids',  'lons', 'lats', 'depths', 'vs30',
+                      'vs30measured', 'z1pt0', 'z2pt5', 'backarc')])
 
     @classmethod
     def from_shakemap(cls, shakemap_array):
@@ -160,8 +167,9 @@ class SiteCollection(object):
         arr.flags.writeable = False
         return self
 
-    @classmethod
-    def from_points(cls, lons, lats, depths=None, sitemodel=None):
+    @classmethod  # this is the method used by the engine
+    def from_points(cls, lons, lats, depths=None, sitemodel=None,
+                    req_site_params=()):
         """
         Build the site collection from
 
@@ -172,12 +180,9 @@ class SiteCollection(object):
         :param depths:
             a sequence of depths (or None)
         :param sitemodel:
-            None or an object containing the attributes
-            reference_vs30_value,
-            reference_vs30_type,
-            reference_depth_to_1pt0km_per_sec,
-            reference_depth_to_2pt5km_per_sec,
-            reference_backarc
+            None or an object containing site parameters as attributes
+        :param req_site_params:
+            a sequence of required site parameters, possibly empty
         """
         if depths is None:
             depths = numpy.zeros(len(lons))
@@ -185,6 +190,8 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
+        self.req = ['sids', 'lons', 'lats', 'depths'] + sorted(req_site_params)
+        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in self.req])
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lons'] = fix_lon(numpy.array(lons))
@@ -192,16 +199,22 @@ class SiteCollection(object):
         arr['depths'] = numpy.array(depths)
         if sitemodel is None:
             pass
-        elif hasattr(sitemodel, 'reference_vs30_value'):  # oqparam
-            arr['vs30'] = sitemodel.reference_vs30_value
-            arr['vs30measured'] = sitemodel.reference_vs30_type == 'measured'
-            arr['z1pt0'] = sitemodel.reference_depth_to_1pt0km_per_sec
-            arr['z2pt5'] = sitemodel.reference_depth_to_2pt5km_per_sec
-            arr['backarc'] = sitemodel.reference_backarc
+        elif hasattr(sitemodel, 'reference_vs30_value'):
+            # sitemodel is actually an OqParam instance
+            self._set('vs30', sitemodel.reference_vs30_value)
+            self._set('vs30measured',
+                      sitemodel.reference_vs30_type == 'measured')
+            self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
+            self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
+            self._set('backarc', sitemodel.reference_backarc)
         elif 'vs30' in sitemodel.dtype.names:  # site params
             for name in sitemodel.dtype.names[2:]:  # except lon, lat
-                arr[name] = sitemodel[name]
+                self._set(name, sitemodel[name])
         return self
+
+    def _set(self, param, value):
+        if param in self.req:
+            self.array[param] = value
 
     xyz = Mesh.xyz
 
