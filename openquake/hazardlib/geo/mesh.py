@@ -175,6 +175,17 @@ class Mesh(object):
         return geo_utils.spherical_to_cartesian(
             self.lons.flatten(), self.lats.flatten(), depths)
 
+    @property
+    def _3N(self):
+        """
+        :returns: an array of shape (3, N)
+        """
+        res = numpy.zeros((3, len(self)))
+        res[0] = self.lons.flatten()
+        res[1] = self.lats.flatten()
+        res[2] = self.depths.flatten()
+        return res
+
     def __iter__(self):
         """
         Generate :class:`~openquake.hazardlib.geo.point.Point` objects the mesh
