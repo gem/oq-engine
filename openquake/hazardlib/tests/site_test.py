@@ -118,8 +118,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         lons = [10, -1.2]
         lats = [20, -3.4]
         depths = [30, -5.6]
+        req_params = 'vs30 vs30measured z1pt0 z2pt5 backarc'.split()
         cll = SiteCollection.from_points(
-            lons, lats, depths, SiteModelParam())
+            lons, lats, depths, SiteModelParam(), req_params)
         assert_eq(cll.vs30, [1.2, 1.2])
         assert_eq(cll.vs30measured, [True, True])
         assert_eq(cll.z1pt0, [3.4, 3.4])
