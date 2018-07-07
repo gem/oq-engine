@@ -65,12 +65,12 @@ def surface_to_array(surface):
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         n = len(surface.surfaces)
         return build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                            for s in surface.surfaces]).reshape(n, 2, 2)
+                            for s in surface.surfaces]).reshape(n, 4)
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
-        shp = (1, 1) + mesh.lons.shape
-    else:  # 2D mesh
         shp = (1,) + mesh.lons.shape
+    else:  # 2D mesh
+        shp = mesh.lons.shape
     return build_array([[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
 
 
