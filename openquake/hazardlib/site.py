@@ -377,7 +377,7 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name not in self.array.dtype.names:
+        if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]
 
