@@ -43,20 +43,6 @@ def sqrt(array):
     return numpy.sqrt(array)
 
 
-def build_array(lons_lats_depths):
-    """
-    Convert a list of n triples into a composite numpy array with fields
-    lon, lat, depth and shape (n,) + lons.shape.
-    """
-    shape = (3, len(lons_lats_depths)) + lons_lats_depths[0][0].shape
-    arr = numpy.zeros(shape, F32)
-    for i, (lons, lats, depths) in enumerate(lons_lats_depths):
-        arr[0, i] = lons
-        arr[1, i] = lats
-        arr[2, i] = depths
-    return arr
-
-
 def surface_to_array(surface):
     """
     :param surface: a Surface object
@@ -64,14 +50,16 @@ def surface_to_array(surface):
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         n = len(surface.surfaces)
-        return build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                            for s in surface.surfaces]).reshape(3, n, 4)
+        arr = numpy.zeros((3, n, 4), F32)
+        for i, surf in enumerate(surface.surfaces):
+            arr[:, i] = surf.mesh._3N
+        return arr
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
         shp = (3, 1) + mesh.lons.shape
     else:  # 2D mesh
         shp = (3,) + mesh.lons.shape
-    return build_array([[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
+    return mesh._3N.reshape(shp)
 
 
 class Mesh(object):
