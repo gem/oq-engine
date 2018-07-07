@@ -67,10 +67,6 @@ def surface_to_array(surface):
         return build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
                             for s in surface.surfaces]).reshape(n, 2, 2)
     mesh = surface.mesh
-    if mesh is None:  # planar surface
-        return build_array([[surface.corner_lons,
-                             surface.corner_lats,
-                             surface.corner_depths]]).reshape(1, 2, 2)
     if len(mesh.lons.shape) == 1:  # 1D mesh
         shp = (1, 1) + mesh.lons.shape
     else:  # 2D mesh
