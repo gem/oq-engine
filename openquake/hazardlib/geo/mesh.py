@@ -567,17 +567,17 @@ class RectangularMesh(Mesh):
                 # odd number of columns, we can easily take
                 # the middle point
                 if self.depths is not None:
-                    depth = self.depths[mid_row][mid_col]
-                return Point(self.lons[mid_row][mid_col],
-                             self.lats[mid_row][mid_col], depth)
+                    depth = self.depths[mid_row, mid_col]
+                return Point(self.lons[mid_row, mid_col],
+                             self.lats[mid_row, mid_col], depth)
             else:
                 # even number of columns, need to take two middle
                 # points on the middle row
-                lon1, lon2 = self.lons[mid_row][mid_col - 1: mid_col + 1]
-                lat1, lat2 = self.lats[mid_row][mid_col - 1: mid_col + 1]
+                lon1, lon2 = self.lons[mid_row, mid_col - 1: mid_col + 1]
+                lat1, lat2 = self.lats[mid_row, mid_col - 1: mid_col + 1]
                 if self.depths is not None:
-                    depth1 = self.depths[mid_row][mid_col - 1]
-                    depth2 = self.depths[mid_row][mid_col]
+                    depth1 = self.depths[mid_row, mid_col - 1]
+                    depth2 = self.depths[mid_row, mid_col]
         else:
             # there are even number of rows. take the row just above
             # and the one just below the middle and find middle point
