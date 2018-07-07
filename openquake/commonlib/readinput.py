@@ -302,17 +302,6 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-site_model_dt = numpy.dtype([
-    ('lon', numpy.float64),
-    ('lat', numpy.float64),
-    ('vs30', numpy.float64),
-    ('vs30measured', numpy.bool),
-    ('z1pt0', numpy.float64),
-    ('z2pt5', numpy.float64),
-    ('backarc', numpy.bool),
-])
-
-
 def get_site_model(oqparam):
     """
     Convert the NRML file into an array of site parameters.
@@ -323,12 +312,14 @@ def get_site_model(oqparam):
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
     nodes = nrml.read(oqparam.inputs['site_model']).siteModel
-    params = sorted(valid.site_param(**node.attrib) for node in nodes)
+    params = [valid.site_param(node.attrib) for node in nodes]
+    site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
+                                 for p in params[0]])
     array = numpy.zeros(len(params), site_model_dt)
     for i, param in enumerate(params):
         rec = array[i]
         for name in site_model_dt.names:
-            rec[name] = getattr(param, name)
+            rec[name] = param[name]
     return array
 
 
@@ -353,14 +344,14 @@ def get_site_collection(oqparam):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
+                sm['lons'], sm['lats'], depth, sm, req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             sc, params = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in site_model_dt.names:
+            for name in params.dtype.names:
                 sitecol._set(name, params[name])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
