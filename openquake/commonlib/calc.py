@@ -355,7 +355,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('grp_id', U16), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U16),
+        ('hypo', point3d), ('sx', U16), ('sz', U16),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
@@ -373,19 +373,17 @@ class RuptureSerializer(object):
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
             mesh = surface_to_array(rup.surface)
-            sx, sy, sz = mesh.shape
+            sx, sz = mesh.shape
             points = mesh.flatten()
             # sanity checks
             assert sx < TWO16, 'Too many multisurfaces: %d' % sx
-            assert sy < 256, 'The rupture mesh spacing is too small'
             assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo,
-                   sx, sy, sz, points)
+                   rup.seed, rup.mag, rup.rake, rate, hypo, sx, sz, points)
             lst.append(tup)
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return numpy.array(lst, cls.rupture_dt), nbytes
