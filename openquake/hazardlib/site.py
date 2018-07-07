@@ -243,9 +243,13 @@ class SiteCollection(object):
         """
         Build a complete SiteCollection from a list of Site objects
         """
-        if hasattr(sites, 'sids'):
-            numpy.testing.assert_equal(sites.sids, numpy.arange(len(sites)))
-        self.array = arr = numpy.zeros(len(sites), self.dtype)
+        #if hasattr(sites, 'sids'):
+        #    numpy.testing.assert_equal(sites.sids, numpy.arange(len(sites)))
+        dtlist = ([(p, site_param_dt[p])
+                   for p in ('sids', 'lons', 'lats', 'depths')] +
+                  [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
+                   if p in site_param_dt])
+        self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
         for i in range(len(arr)):
             arr['sids'][i] = i
