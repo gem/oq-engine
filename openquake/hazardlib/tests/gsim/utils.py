@@ -40,7 +40,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
             gsim.__class__, open(filename), max_discrep_percentage)
-        s_att = self.get_context_attributes(sctx)
+        s_att = self.get_context_attributes(sctx) - set('lons lats'.split())
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)

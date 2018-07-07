@@ -191,6 +191,8 @@ class SiteCollection(object):
         self = object.__new__(cls)
         self.complete = self
         req = ['sids', 'lons', 'lats', 'depths'] + sorted(req_site_params)
+        if 'vs30' in req and 'vs30measured' not in req:
+            req.append('vs30measured')
         self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
