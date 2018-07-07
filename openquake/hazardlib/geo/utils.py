@@ -72,10 +72,10 @@ class _GeographicObjects(object):
             lats = objects.lats
             depths = objects.depths
         elif isinstance(objects, numpy.ndarray):
-            lons = objects['lon']
-            lats = objects['lat']
+            lons = objects['lons']
+            lats = objects['lats']
             try:
-                depths = objects['depth']
+                depths = objects['depths']
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
