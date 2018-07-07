@@ -58,13 +58,13 @@ class Site(object):
     """
     _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
 
-    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
-                 backarc=False):
-        if not vs30 > 0:
+    def __init__(self, location, vs30=numpy.nan, vs30measured=False,
+                 z1pt0=numpy.nan, z2pt5=numpy.nan, backarc=False):
+        if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not z1pt0 > 0:
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
             raise ValueError('z1pt0 must be positive')
-        if not z2pt5 > 0:
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
             raise ValueError('z2pt5 must be positive')
         self.location = location
         self.vs30 = vs30
@@ -311,9 +311,10 @@ class SiteCollection(object):
         Iterate through all :class:`sites <Site>` in the collection, yielding
         one at a time.
         """
+        params = self.array.dtype.names[4:]  # except sids, lons, lats, depths
         for i, location in enumerate(self.mesh):
-            yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
+            kw = {p: self.array[i][p] for p in params}
+            yield Site(location, **kw)
 
     def filter(self, mask):
         """
