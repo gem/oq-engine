@@ -356,7 +356,7 @@ class RuptureSerializer(object):
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', point3d), ('sx', U16), ('sz', U16),
-        ('points', h5py.special_dtype(vlen=point3d)),
+        ('points', h5py.special_dtype(vlen=F32)),
         ])
 
     pmfs_dt = numpy.dtype([
@@ -373,7 +373,7 @@ class RuptureSerializer(object):
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
             mesh = surface_to_array(rup.surface)
-            sx, sz = mesh.shape
+            sx, sz = mesh.shape[1:]
             points = mesh.flatten()
             # sanity checks
             assert sx < TWO16, 'Too many multisurfaces: %d' % sx
