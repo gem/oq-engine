@@ -98,7 +98,7 @@ class Mesh(object):
         try:
             return self.array[2]
         except IndexError:
-            return None
+            return numpy.zeros(self.shape)
 
     def __init__(self, lons, lats, depths=None):
         assert ((lons.shape == lats.shape) and
@@ -168,12 +168,8 @@ class Mesh(object):
         """
         :returns: an array of shape (N, 3) with the cartesian coordinates
         """
-        if self.depths is None:
-            depths = numpy.zeros(self.lons.size)
-        else:
-            depths = self.depths.flat
         return geo_utils.spherical_to_cartesian(
-            self.lons.flat, self.lats.flat, depths)
+            self.lons.flat, self.lats.flat, self.depths.flat)
 
     def __iter__(self):
         """
@@ -185,13 +181,8 @@ class Mesh(object):
         """
         lons = self.lons.flat
         lats = self.lats.flat
-        if self.depths is not None:
-            depths = self.depths.flat
-            for i in range(self.lons.size):
-                yield Point(lons[i], lats[i], depths[i])
-        else:
-            for i in range(self.lons.size):
-                yield Point(lons[i], lats[i])
+        for i in range(self.lons.size):
+            yield Point(lons[i], lats[i], self.depths[i])
 
     def __getitem__(self, item):
         """
@@ -209,9 +200,7 @@ class Mesh(object):
             raise ValueError('You must pass a slice, not an index: %s' % item)
         lons = self.lons[item]
         lats = self.lats[item]
-        depths = None
-        if self.depths is not None:
-            depths = self.depths[item]
+        depths = self.depths[item]
         return type(self)(lons, lats, depths)
 
     def __len__(self):
@@ -232,21 +221,16 @@ class Mesh(object):
         :param float tol:
             Numerical precision for equality
         """
-        if self.depths is not None:
-            if mesh.depths is not None:
-                # Both meshes have depth values - compare equality
-                return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
-                    numpy.allclose(self.lats, mesh.lats, atol=tol) and\
-                    numpy.allclose(self.depths, mesh.depths, atol=tol)
-            else:
-                # Second mesh missing depths - not equal
-                return False
-        else:
-            if mesh.depths is None:
-                return False
-            else:
-                return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
-                    numpy.allclose(self.lats, mesh.lats, atol=tol)
+        if self.shape != mesh.shape:
+            return False
+        elif len(self.array) != len(mesh.array):  # 3D vs 2D arrays
+            ok = (numpy.allclose(self.array[0], mesh.array[0], atol=tol) and
+                  numpy.allclose(self.array[1], mesh.array[1], atol=tol))
+            if len(self.array) == 2:
+                return ok and (mesh.array[2] == 0).all()
+            elif len(mesh.array) == 2:
+                return ok and (self.array[2] == 0).all()
+        return numpy.allclose(self.array, mesh.array, atol=tol)
 
     def get_min_distance(self, mesh):
         """
@@ -276,9 +260,8 @@ class Mesh(object):
             min_idx = min_idx.reshape(mesh.shape)
         lons = self.lons.take(min_idx)
         lats = self.lats.take(min_idx)
-        if self.depths is None:
-            return Mesh(lons, lats)
-        return Mesh(lons, lats, self.depths.take(min_idx))
+        deps = self.depths.take(min_idx)
+        return Mesh(lons, lats, deps)
 
     def get_distance_matrix(self):
         """
@@ -303,7 +286,7 @@ class Mesh(object):
         Uses :func:`openquake.hazardlib.geo.geodetic.geodetic_distance`.
         """
         assert self.lons.ndim == 1
-        assert self.depths is None or (self.depths == 0).all()
+        assert (self.depths == 0).all()
         distances = geodetic.geodetic_distance(
             self.lons.reshape(self.lons.shape + (1, )),
             self.lats.reshape(self.lats.shape + (1, )),
@@ -357,8 +340,7 @@ class Mesh(object):
         # if calculated geodetic distance is over some threshold.
         # get the highest slice from the 3D mesh
         distances = geodetic.min_geodetic_distance(
-            self.xyz if self.depths is None else (self.lons, self.lats),
-            mesh.xyz if mesh.depths is None else (mesh.lons, mesh.lats))
+            (self.lons, self.lats), (mesh.lons, mesh.lats))
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
         # lower values increase the maximum possible error, higher
@@ -558,8 +540,7 @@ class RectangularMesh(Mesh):
             if num_cols & 1 == 1:
                 # odd number of columns, we can easily take
                 # the middle point
-                if self.depths is not None:
-                    depth = self.depths[mid_row, mid_col]
+                depth = self.depths[mid_row, mid_col]
                 return Point(self.lons[mid_row, mid_col],
                              self.lats[mid_row, mid_col], depth)
             else:
@@ -567,9 +548,8 @@ class RectangularMesh(Mesh):
                 # points on the middle row
                 lon1, lon2 = self.lons[mid_row, mid_col - 1: mid_col + 1]
                 lat1, lat2 = self.lats[mid_row, mid_col - 1: mid_col + 1]
-                if self.depths is not None:
-                    depth1 = self.depths[mid_row, mid_col - 1]
-                    depth2 = self.depths[mid_row, mid_col]
+                depth1 = self.depths[mid_row, mid_col - 1]
+                depth2 = self.depths[mid_row, mid_col]
         else:
             # there are even number of rows. take the row just above
             # and the one just below the middle and find middle point
@@ -581,8 +561,7 @@ class RectangularMesh(Mesh):
             lon2, lat2, depth2 = p2.longitude, p2.latitude, p2.depth
 
         # we need to find the middle between two points
-        if self.depths is not None:
-            depth = (depth1 + depth2) / 2.0
+        depth = (depth1 + depth2) / 2.0
         lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
         return Point(lon, lat, depth)
 
@@ -602,11 +581,9 @@ class RectangularMesh(Mesh):
         assert 1 not in self.lons.shape, (
             "inclination and azimuth are only defined for mesh of more than "
             "one row and more than one column of points")
-
-        if self.depths is not None:
-            assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), (
-                "get_mean_inclination_and_azimuth() requires next mesh row "
-                "to be not shallower than the previous one")
+        assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), (
+            "get_mean_inclination_and_azimuth() requires next mesh row "
+            "to be not shallower than the previous one")
 
         points, along_azimuth, updip, diag = self.triangulate()
 
@@ -625,7 +602,7 @@ class RectangularMesh(Mesh):
         br_area = geo_utils.triangle_area(e1, e2, diag)
         br_normal = geo_utils.normalized(numpy.cross(e1, e2))
 
-        if self.depths is None:
+        if (self.depths == 0).all():
             # mesh is on earth surface, inclination is zero
             inclination = 0
         else:
