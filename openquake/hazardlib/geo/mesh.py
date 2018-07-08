@@ -155,9 +155,9 @@ class Mesh(object):
         if self.depths is None:
             depths = numpy.zeros(self.lons.size)
         else:
-            depths = self.depths.flatten()
+            depths = self.depths.flat
         return geo_utils.spherical_to_cartesian(
-            self.lons.flatten(), self.lats.flatten(), depths)
+            self.lons.flat, self.lats.flat, depths)
 
     @property
     def _3N(self):
@@ -165,9 +165,9 @@ class Mesh(object):
         :returns: an array of shape (3, N)
         """
         res = numpy.zeros((3, len(self)))
-        res[0] = self.lons.flatten()
-        res[1] = self.lats.flatten()
-        res[2] = self.depths.flatten()
+        res[0] = self.lons.flat
+        res[1] = self.lats.flat
+        res[2] = self.depths.flat
         return res
 
     def __iter__(self):
@@ -323,8 +323,7 @@ class Mesh(object):
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flatten(),
-                                      self.lats.flatten())).copy()
+        coords = numpy.transpose(proj(self.lons.flat, self.lats.flat)).copy()
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
