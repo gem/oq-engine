@@ -355,13 +355,12 @@ class RuptureSerializer(object):
         ('serial', U32), ('grp_id', U16), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U16), ('sz', U16),
-        ('points', h5py.special_dtype(vlen=F32)),
-        ])
+        ('hypo', (F32, 3))])
 
-    pmfs_dt = numpy.dtype([
-        ('serial', U32), ('pmf', h5py.special_dtype(vlen=F32)),
-    ])
+    geom_dt = numpy.dtype([
+        ('points', hdf5.vfloat32), ('sx', U16), ('sz', U16)])
+
+    pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
     @classmethod
     def get_array_nbytes(cls, ebruptures):
@@ -369,6 +368,7 @@ class RuptureSerializer(object):
         Convert a list of EBRuptures into a numpy composite array
         """
         lst = []
+        geom = []
         nbytes = 0
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
@@ -383,15 +383,22 @@ class RuptureSerializer(object):
             tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo, sx, sz, points)
+                   rup.seed, rup.mag, rup.rake, rate, hypo)
             lst.append(tup)
+            geom.append((points, sx, sz))
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
-        return numpy.array(lst, cls.rupture_dt), nbytes
+        return (numpy.array(lst, cls.rupture_dt),
+                numpy.array(geom, cls.geom_dt),
+                nbytes)
 
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
+        datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
+                              attrs={'nbytes': 0})
+        datastore.create_dset('rupgeoms', self.geom_dt, fillvalue=None,
+                              attrs={'nbytes': 0})
 
     def save(self, ebruptures, eidx=0):
         """
@@ -415,22 +422,17 @@ class RuptureSerializer(object):
                 pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
 
         # store the ruptures in a compact format
-        array, nbytes = self.get_array_nbytes(ebruptures)
-        key = 'ruptures'
-        try:
-            dset = self.datastore.getitem(key)
-        except KeyError:  # not created yet
-            previous = 0
-        else:
-            previous = dset.attrs['nbytes']
-        self.datastore.extend(key, array, nbytes=previous + nbytes)
+        array, geom, nbytes = self.get_array_nbytes(ebruptures)
+        previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
+        self.datastore.extend('ruptures', array, nbytes=previous + nbytes)
+        self.datastore.extend('rupgeoms', geom)
 
         # save nbytes occupied by the PMFs
-        if pmfbytes:
-            if 'nbytes' in dset.attrs:
-                dset.attrs['nbytes'] += pmfbytes
-            else:
-                dset.attrs['nbytes'] = pmfbytes
+        #if pmfbytes:
+        #     if 'nbytes' in dset.attrs:
+        #        dset.attrs['nbytes'] += pmfbytes
+        #    else:
+        #        dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
 
     def close(self):
