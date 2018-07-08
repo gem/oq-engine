@@ -52,14 +52,14 @@ def surface_to_array(surface):
         n = len(surface.surfaces)
         arr = numpy.zeros((3, n, 4), F32)
         for i, surf in enumerate(surface.surfaces):
-            arr[:, i] = surf.mesh._3N
+            arr[:, i] = surf.mesh.array
         return arr
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
         shp = (3, 1) + mesh.lons.shape
     else:  # 2D mesh
         shp = (3,) + mesh.lons.shape
-    return mesh._3N.reshape(shp)
+    return mesh.array.reshape(shp)
 
 
 class Mesh(object):
@@ -85,14 +85,30 @@ class Mesh(object):
     #: approximation is required -- set to 5 meters.
     DIST_TOLERANCE = 0.005
 
+    @property
+    def lons(self):
+        return self.array[0]
+
+    @property
+    def lats(self):
+        return self.array[1]
+
+    @property
+    def depths(self):
+        try:
+            return self.array[2]
+        except IndexError:
+            return None
+
     def __init__(self, lons, lats, depths=None):
         assert ((lons.shape == lats.shape) and
                 (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
-        self.lons = lons
-        self.lats = lats
-        self.depths = depths
+        if depths is None:
+            self.array = numpy.array([lons, lats])
+        else:
+            self.array = numpy.array([lons, lats, depths])
 
     @classmethod
     def from_coords(cls, coords, sort=True):
@@ -145,7 +161,7 @@ class Mesh(object):
         :returns tuple:
             The shape of this mesh as (rows, columns)
         """
-        return self.lons.shape
+        return self.array.shape[1:]
 
     @cached_property
     def xyz(self):
@@ -158,17 +174,6 @@ class Mesh(object):
             depths = self.depths.flat
         return geo_utils.spherical_to_cartesian(
             self.lons.flat, self.lats.flat, depths)
-
-    @property
-    def _3N(self):
-        """
-        :returns: an array of shape (3, N)
-        """
-        res = numpy.zeros((3, len(self)))
-        res[0] = self.lons.flat
-        res[1] = self.lats.flat
-        res[2] = self.depths.flat
-        return res
 
     def __iter__(self):
         """
