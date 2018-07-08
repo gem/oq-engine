@@ -181,8 +181,9 @@ class Mesh(object):
         """
         lons = self.lons.flat
         lats = self.lats.flat
+        depths = self.depths.flat
         for i in range(self.lons.size):
-            yield Point(lons[i], lats[i], self.depths[i])
+            yield Point(lons[i], lats[i], depths[i])
 
     def __getitem__(self, item):
         """
