@@ -466,7 +466,7 @@ def get_source_ids(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        the comple set of source IDs found in all the source models
+        the complete set of source IDs found in all the source models
     """
     source_ids = set()
     for fname in oqparam.inputs['source']:
