@@ -179,7 +179,7 @@ def gen_sm_paths(smlt):
     a block at the time.
     """
     base_path = os.path.dirname(smlt)
-    for model in source.collect_source_model_paths(smlt):
+    for model in logictree.collect_source_model_paths(smlt):
         paths = []
         for name in model.split():
             if os.path.isabs(name):
@@ -442,6 +442,40 @@ def get_rupture(oqparam):
     return rup
 
 
+def read_source_groups(fname):
+    """
+    :param fname: a path to a source model XML file
+    :return: a list of SourceGroup objects containing source nodes
+    """
+    smodel = nrml.read(fname).sourceModel
+    src_groups = []
+    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
+        for sg_node in smodel:
+            sg = sourceconverter.SourceGroup(
+                sg_node['tectonicRegion'])
+            sg.sources = sg_node.nodes
+            src_groups.append(sg)
+    else:  # NRML 0.4 format: smodel is a list of source nodes
+        src_groups.extend(
+            sourceconverter.SourceGroup.collect(smodel))
+    return src_groups
+
+
+def get_source_ids(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the comple set of source IDs found in all the source models
+    """
+    source_ids = set()
+    for fname in oqparam.inputs['source']:
+        for sg in read_source_groups(fname):
+            for src_node in sg:
+                source_ids.add(src_node['id'])
+    return source_ids
+
+
 def get_source_model_lt(oqparam):
     """
     :param oqparam:
@@ -455,7 +489,8 @@ def get_source_model_lt(oqparam):
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
             fname, validate=False, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples)
+            num_samples=oqparam.number_of_logic_tree_samples,
+            source_ids=get_source_ids(oqparam))
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
                               oqparam.number_of_logic_tree_samples)
@@ -503,16 +538,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
-                smodel = nrml.read(fname).sourceModel
-                if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
-                    for sg_node in smodel:
-                        sg = sourceconverter.SourceGroup(
-                            sg_node['tectonicRegion'])
-                        sg.sources = sg_node.nodes
-                        src_groups.append(sg)
-                else:  # NRML 0.4 format: smodel is a list of source nodes
-                    src_groups.extend(
-                        sourceconverter.SourceGroup.collect(smodel))
+                src_groups.extend(read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -567,6 +593,8 @@ def get_composite_source_model(oqparam, in_memory=True):
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    if source_model_lt.on_each_source():
+        logging.info('There is a logic tree on each source')
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
         for src_group in source_model.src_groups:
