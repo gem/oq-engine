@@ -358,7 +358,7 @@ class RuptureSerializer(object):
         ('hypo', (F32, 3))])
 
     geom_dt = numpy.dtype([
-        ('points', hdf5.vfloat32), ('sx', U16), ('sz', U16)])
+        ('points', hdf5.vfloat32), ('sy', U16), ('sz', U16)])
 
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
