@@ -17,7 +17,7 @@
       </logicTreeBranch>
 
       <logicTreeBranch branchID="b3">
-		<uncertaintyModel>6.05.xml</uncertaintyModel>
+		<uncertaintyModel>6.05.hdf5</uncertaintyModel>
 		<uncertaintyWeight>0.50</uncertaintyWeight>
       </logicTreeBranch>
 	</logicTreeBranchSet>

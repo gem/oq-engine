@@ -265,7 +265,8 @@ class File(h5py.File):
         :param data: data to store as a list of arrays
         """
         dt = data[0].dtype
-        dset = create(self, key, h5py.special_dtype(vlen=dt), (len(data),),
+        shape = (len(data),) + data[0].shape[:-1]
+        dset = create(self, key, h5py.special_dtype(vlen=dt), shape,
                       fillvalue=None)
         nbytes = 0
         totlen = 0
