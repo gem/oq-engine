@@ -239,8 +239,8 @@ class Mesh(object):
                     numpy.allclose(self.lats, mesh.lats, atol=tol) and\
                     numpy.allclose(self.depths, mesh.depths, atol=tol)
             else:
-                # Second mesh missing depths - not equal
-                return False
+                # Second mesh missing depths
+                return (self.depths == 0).all()
         else:
             if mesh.depths is None:
                 return False
