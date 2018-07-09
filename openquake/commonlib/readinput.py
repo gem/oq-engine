@@ -27,6 +27,7 @@ import configparser
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -275,8 +276,7 @@ def get_mesh(oqparam):
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
-        # TODO: sort=True below would break a lot of tests :-(
-        return geo.Mesh.from_coords(c, sort=False)
+        return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
@@ -467,13 +467,19 @@ def get_source_ids(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        the comple set of source IDs found in all the source models
+        the complete set of source IDs found in all the source models
     """
     source_ids = set()
     for fname in oqparam.inputs['source']:
-        for sg in read_source_groups(fname):
-            for src_node in sg:
-                source_ids.add(src_node['id'])
+        if fname.endswith('.hdf5'):
+            with hdf5.File(fname, 'r') as f:
+                for sg in f['/']:
+                    for src in sg:
+                        source_ids.add(src.source_id)
+        else:
+            for sg in read_source_groups(fname):
+                for src_node in sg:
+                    source_ids.add(src_node['id'])
     return source_ids
 
 
@@ -699,7 +705,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         if len(exposure.mesh) > len(haz_sitecol):
             raise LargeExposureGrid(exposure.mesh, haz_sitecol.mesh,
                                     oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam)  # reload on new mesh
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -729,8 +734,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
 
-    asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site for asset in assets]
+    asset_refs = numpy.array(
+        [exposure.asset_refs[asset.ordinal]
+         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
