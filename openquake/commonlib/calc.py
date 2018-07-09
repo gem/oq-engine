@@ -373,10 +373,10 @@ class RuptureSerializer(object):
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
             mesh = surface_to_array(rup.surface)
-            sx, sz = mesh.shape[1:]
+            sy, sz = mesh.shape[1:]
             points = mesh.flatten()
             # sanity checks
-            assert sx < TWO16, 'Too many multisurfaces: %d' % sx
+            assert sy < TWO16, 'Too many multisurfaces: %d' % sy
             assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
@@ -385,7 +385,7 @@ class RuptureSerializer(object):
                    getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo)
             lst.append(tup)
-            geom.append((points, sx, sz))
+            geom.append((points, sy, sz))
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return (numpy.array(lst, cls.rupture_dt),
                 numpy.array(geom, cls.geom_dt),
@@ -425,15 +425,16 @@ class RuptureSerializer(object):
         # store the ruptures in a compact format
         array, geom, nbytes = self.get_array_nbytes(ebruptures)
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        self.datastore.extend('ruptures', array, nbytes=previous + nbytes)
+        dset = self.datastore.extend(
+            'ruptures', array, nbytes=previous + nbytes)
         self.datastore.extend('rupgeoms', geom)
 
         # save nbytes occupied by the PMFs
-        #if pmfbytes:
-        #     if 'nbytes' in dset.attrs:
-        #        dset.attrs['nbytes'] += pmfbytes
-        #    else:
-        #        dset.attrs['nbytes'] = pmfbytes
+        if pmfbytes:
+            if 'nbytes' in dset.attrs:
+                 dset.attrs['nbytes'] += pmfbytes
+            else:
+                dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
 
     def close(self):
