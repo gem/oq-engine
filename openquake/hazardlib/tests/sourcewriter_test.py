@@ -39,6 +39,9 @@ COLLECTION = os.path.join(os.path.dirname(__file__),
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
+GRIDDED = os.path.join(os.path.dirname(__file__),
+                       'source_model/gridded.xml')
+
 conv = SourceConverter(50., 1., 10, 0.1, 10.)
 
 
@@ -62,7 +65,10 @@ class SourceWriterTestCase(unittest.TestCase):
         self.check_round_trip(MIXED)
 
     def test_nonparam(self):
-        self.check_round_trip(NONPARAM)
+        [[src]] = self.check_round_trip(NONPARAM)
+
+        # test GriddedSource
+        self.assertFalse(src.is_gridded())
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
@@ -81,6 +87,13 @@ class SourceWriterTestCase(unittest.TestCase):
             sm = f['/']
         self.assertEqual(smodel.name, sm.name)
         self.assertEqual(len(smodel.src_groups), len(sm.src_groups))
+
+    def test_gridded(self):
+        # test xml -> hdf5
+        smodel = nrml.to_python(GRIDDED, conv)
+        temp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(temp, 'w') as f:
+            f['/'] = smodel
 
 
 class DeepcopyTestCase(unittest.TestCase):

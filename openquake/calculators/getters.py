@@ -190,7 +190,13 @@ class PmapGetter(object):
         """
         self.init()
         if len(self.weights) == 1:  # one realization
-            return self.get(0, grp)
+            # the standard deviation is zero
+            pmap = self.get(0, grp)
+            for sid, pcurve in pmap.items():
+                array = numpy.zeros(pcurve.array.shape[:-1] + (2,))
+                array[:, 0] = pcurve.array[:, 0]
+                pcurve.array = array
+            return pmap
         else:  # multiple realizations, assume hcurves/mean is there
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
