@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the serialization of ruptures to HDF5: the geometries are now in
+    different dataset
   * Bug fix: the asset->site association was performed even when not needed
   * Made it possible to serialize to .hdf5 multipoint sources and
     nonparametric gridded sources
