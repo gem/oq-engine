@@ -27,6 +27,7 @@ import configparser
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -470,9 +471,15 @@ def get_source_ids(oqparam):
     """
     source_ids = set()
     for fname in oqparam.inputs['source']:
-        for sg in read_source_groups(fname):
-            for src_node in sg:
-                source_ids.add(src_node['id'])
+        if fname.endswith('.hdf5'):
+            with hdf5.File(fname, 'r') as f:
+                for sg in f['/']:
+                    for src in sg:
+                        source_ids.add(src.source_id)
+        else:
+            for sg in read_source_groups(fname):
+                for src_node in sg:
+                    source_ids.add(src_node['id'])
     return source_ids
 
 
@@ -698,7 +705,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         if len(exposure.mesh) > len(haz_sitecol):
             raise LargeExposureGrid(exposure.mesh, haz_sitecol.mesh,
                                     oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam)  # reload on new mesh
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -735,7 +741,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
 
-    return sitecol, assetcol.reduce(sitecol)
+    return sitecol, assetcol
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
