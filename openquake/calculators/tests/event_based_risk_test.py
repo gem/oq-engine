@@ -244,7 +244,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
         assetcol = self.calc.datastore['assetcol']
-        self.assertEqual(len(sitecol), 21)
+        self.assertEqual(len(sitecol), 548)
         self.assertGreater(sitecol.vs30.sum(), 0)
         self.assertEqual(len(assetcol), 548)
 
