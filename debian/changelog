@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Bug fix: the asset->site association was performed even when not needed
   * Added a check on source model logic tree files: the uncertaintyModel
     values cannot be repeated in the same branchset
   * Added a flag `std_hazard_curves`; by setting it to `true` the user can
