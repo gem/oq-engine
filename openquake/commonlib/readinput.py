@@ -275,8 +275,7 @@ def get_mesh(oqparam):
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
-        # TODO: sort=True below would break a lot of tests :-(
-        return geo.Mesh.from_coords(c, sort=False)
+        return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
