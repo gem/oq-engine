@@ -700,13 +700,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
 
-    asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site for asset in assets]
+    asset_refs = numpy.array(
+        [exposure.asset_refs[asset.ordinal]
+         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
 
-    return sitecol, assetcol
+    return sitecol, assetcol.reduce(sitecol)
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
