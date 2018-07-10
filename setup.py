@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import io
 import re
 import sys
 from setuptools import setup, find_packages
@@ -43,8 +42,8 @@ def get_version():
 
 
 def get_readme():
-    with io.open(os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                              'README.md'), encoding='utf-8') as readme:
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                           'README.md'), encoding='utf-8') as readme:
         return readme.read()
 
 
