@@ -262,22 +262,14 @@ def export_agg_losses_ebr(ekey, dstore):
 
 
 # this is used by classical_risk and event_based_risk
-@export.add(('loss_curves', 'csv'))
+@export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
+            ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
-    if '/' not in ekey[0]:  # full loss curves are not exportable
-        logging.error('Use the command oq export loss_curves/rlz-0 to export '
-                      'the first realization')
-        return []
-    what = ekey[0].split('/', 1)[1]
-    return loss_curves.LossCurveExporter(dstore).export('csv', what)
-
-
-# this is used by classical_risk and event_based_risk
-@export.add(('loss_curves-stats', 'csv'))
-def export_loss_curves_stats(ekey, dstore):
-    num_rlzs = dstore['csm_info'].get_num_rlzs()
-    kind = 'stats' if num_rlzs > 1 else 'rlzs'
-    return export_loss_curves(('loss_curves/' + kind, 'csv'), dstore)
+    if '/' in ekey[0]:
+        kind = ekey[0].split('/', 1)[1]
+    else:
+        kind = ekey[0].split('-', 1)[1]  # rlzs or stats
+    return loss_curves.LossCurveExporter(dstore).export('csv', kind)
 
 
 # used by classical_risk and event_based_risk
@@ -322,16 +314,18 @@ def export_loss_maps_npz(ekey, dstore):
 def export_damages_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     oq = dstore['oqparam']
+    loss_types = oq.loss_dt().names
     assets = get_assets(dstore)
-    value = dstore[ekey[0]].value  # matrix N x R or T x R
+    value = dstore[ekey[0]].value  # matrix N x R x LI or T x R x LI
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     if ekey[0].endswith('stats'):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     else:
         tags = ['rlz-%03d' % r for r in range(len(rlzs))]
-    for tag, values in zip(tags, value.T):
-        fname = dstore.build_fname('damages', tag, ekey[1])
-        writer.save(compose_arrays(assets, values), fname)
+    for lti, lt in enumerate(loss_types):
+        for tag, values in zip(tags, value[:, :, lti].T):
+            fname = dstore.build_fname('damages-%s' % lt, tag, ekey[1])
+            writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
 
@@ -363,15 +357,24 @@ def export_dmg_by_event(ekey, dstore):
     :param dstore: datastore object
     """
     damage_dt = build_damage_dt(dstore, mean_std=False)
-    all_losses = dstore[ekey[0]].value
+    dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
+        (f, damage_dt.fields[f][0]) for f in damage_dt.names]
+    all_losses = dstore[ekey[0]].value  # shape (E, R, LI)
     eids = dstore['events']['eid']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('dmg_by_event', rlz, 'csv')
-        data = all_losses[:, rlz.ordinal].copy().view(damage_dt).squeeze()
-        writer.save(compose_arrays(eids, data, 'event_id'), dest)
-    return writer.getsaved()
+    fname = dstore.build_fname('dmg_by_event', '', 'csv')
+    writer.save(numpy.zeros(0, dt_list), fname)
+    with open(fname, 'ab') as dest:
+        for rlz in rlzs:
+            data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
+            arr = numpy.zeros(len(data), dt_list)
+            arr['event_id'] = eids
+            arr['rlzi'] = rlz.ordinal
+            for field in damage_dt.names:
+                arr[field] = data[field].squeeze()
+            writer.save_block(arr, dest)
+    return [fname]
 
 
 # emulate a Django point

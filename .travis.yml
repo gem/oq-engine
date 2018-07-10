@@ -42,8 +42,8 @@ jobs:
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
             pip install dask distributed &&
-            OQ_DISTRIBUTE=dask time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
-            bin/check_demos && oq dbserver stop &&
+            OQ_DISTRIBUTE=zmq bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
+            oq dbserver stop &&
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
             helpers/zipdemos.sh $(pwd)/demos &&

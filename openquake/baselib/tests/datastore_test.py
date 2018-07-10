@@ -84,3 +84,4 @@ class DataStoreTestCase(unittest.TestCase):
         with self.assertRaises(IOError) as ctx:
             read(42, datadir=tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
+        os.remove(fname)

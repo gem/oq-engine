@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 4
 
 ============== ===================
 checksum32     796,188,147        
-date           2018-06-05T06:39:09
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:57:45
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -77,7 +77,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 91           0.00500   2.098E-05  1.00000   1         0     
+1         SimpleFaultSource 91           0.00542   9.537E-06  1.00000   1         0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.00500   1     
+SimpleFaultSource 0.00542   1     
 ================= ========= ======
 
 Duplicated sources
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-RtreeFilter        0.00216 NaN    0.00216 0.00216 1        
-count_eff_ruptures 0.00678 NaN    0.00678 0.00678 1        
+RtreeFilter        0.00202 NaN    0.00202 0.00202 1        
+count_eff_ruptures 0.00719 NaN    0.00719 0.00719 1        
 ================== ======= ====== ======= ======= =========
 
 Fastest task
@@ -127,7 +127,7 @@ Data transfer
 ================== ===================================================================== ========
 task               sent                                                                  received
 RtreeFilter        srcs=0 B srcfilter=0 B monitor=0 B                                    1.16 KB 
-count_eff_ruptures sources=1.21 KB param=431 B monitor=353 B srcfilter=233 B gsims=120 B 358 B   
+count_eff_ruptures sources=1.21 KB param=431 B monitor=329 B srcfilter=246 B gsims=120 B 358 B   
 ================== ===================================================================== ========
 
 Slowest operations
@@ -135,16 +135,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             0.40666   0.0       1     
-managing sources               0.17404   0.0       1     
-reading composite source model 0.03078   0.0       1     
-total count_eff_ruptures       0.00678   5.65234   1     
-store source_info              0.00656   0.0       1     
-total prefilter                0.00216   0.0       1     
-reading site collection        0.00100   0.0       1     
-splitting sources              3.450E-04 0.0       1     
-unpickling count_eff_ruptures  3.138E-04 0.0       1     
-aggregate curves               2.942E-04 0.0       1     
-unpickling prefilter           2.921E-04 0.0       1     
-saving probability maps        2.422E-04 0.0       1     
+managing sources               0.14372   0.01953   1     
+reading composite source model 0.02986   0.0       1     
+total count_eff_ruptures       0.00719   6.33594   1     
+store source_info              0.00611   0.0       1     
+total prefilter                0.00202   0.0       1     
+reading site collection        3.288E-04 0.0       1     
+splitting sources              2.866E-04 0.0       1     
+unpickling prefilter           2.670E-04 0.0       1     
+aggregate curves               2.561E-04 0.0       1     
+unpickling count_eff_ruptures  2.556E-04 0.0       1     
 ============================== ========= ========= ======

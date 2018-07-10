@@ -220,8 +220,6 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
        optional first line starting with a # character
     """
     close = True
-    if len(data) == 0:
-        logging.warn('%s is empty', dest)
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')
         os.close(fd)
@@ -290,6 +288,12 @@ class CsvWriter(object):
         """
         write_csv(fname, data, self.sep, self.fmt, header)
         self.fnames.add(getattr(fname, 'name', fname))
+
+    def save_block(self, data, dest):
+        """
+        Save data on dest, which is file open in 'a' mode
+        """
+        write_csv(dest, data, self.sep, self.fmt, 'no-header')
 
     def getsaved(self):
         """
