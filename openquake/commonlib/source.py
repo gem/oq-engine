@@ -25,13 +25,12 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5, node
+from openquake.baselib import performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, gettemp, AccumDict, random_filter)
 from openquake.hazardlib import (
-    nrml, source, sourceconverter, InvalidFile, probability_map,
-    stats, contexts)
+    source, sourceconverter, probability_map, stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 
@@ -975,29 +974,6 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-def collect_source_model_paths(smlt):
-    """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a uniquified list (no duplicates).
-
-    :param smlt: source model logic tree file
-    """
-    n = nrml.read(smlt)
-    try:
-        blevels = n.logicTree
-    except Exception:
-        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
-    for blevel in blevels:
-        with node.context(smlt, blevel):
-            for bset in blevel:
-                for br in bset:
-                    smfname = ' '.join(br.uncertaintyModel.text.split())
-                    if smfname:
-                        yield smfname
 
 
 # ########################## SourceManager ########################### #
