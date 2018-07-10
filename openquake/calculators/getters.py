@@ -513,16 +513,19 @@ class RuptureGetter(object):
                 code2cls[int(key[5:])] = [classes[v] for v in val.split()]
         grp_trt = self.dstore['csm_info'].grp_by("trt")
         ruptures = self.dstore['ruptures'][self.mask]
+        rupgeoms = self.dstore['rupgeoms'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
         # this is way I am sorting with Python and not with numpy below
-        data = sorted((ser, idx) for idx, ser in enumerate(ruptures['serial']))
+        data = sorted((serial, ridx) for ridx, serial in enumerate(
+            ruptures['serial']))
         for serial, ridx in data:
             rec = ruptures[ridx]
             evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            geom = rupgeoms[ridx]
+            mesh = geom['points'].reshape(3, geom['sy'], geom['sz'])
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
@@ -537,20 +540,20 @@ class RuptureGetter(object):
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
             if surface_cls is geo.PlanarSurface:
-                rupture.surface = geo.PlanarSurface.from_array(rec['points'])
+                rupture.surface = geo.PlanarSurface.from_array(mesh[:, 0, :])
             elif surface_cls is geo.MultiSurface:
+                # mesh has shape (3, n, 4)
                 rupture.surface.__init__([
-                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
+                    geo.PlanarSurface.from_array(mesh[:, i, :])
+                    for i in range(mesh.shape[1])])
             elif surface_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.mesh = Mesh(m['lon'], m['lat'], m['depth'])
-            else:  # fault surface, strike and dip will be computed
+                rupture.surface.mesh = Mesh(*mesh)
+            else:
+                # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.__init__(
-                    RectangularMesh(m['lon'], m['lat'], m['depth']))
+                rupture.surface.__init__(RectangularMesh(*mesh))
             ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
