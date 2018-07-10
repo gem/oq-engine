@@ -138,7 +138,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
             dic['rake'].append(rup.rake)
             dic['hypocenter'].append((rup.hypocenter.x, rup.hypocenter.y,
                                       rup.hypocenter.z))
-            dic['points'].append(rup.surface.mesh._3N)
+            dic['points'].append(rup.surface.mesh.array)
         dic['hypocenter'] = numpy.array(dic['hypocenter'], point3d)
         return dic, attrs
 
