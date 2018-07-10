@@ -253,6 +253,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
         oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
