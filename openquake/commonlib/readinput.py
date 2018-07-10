@@ -332,15 +332,17 @@ def get_site_model(oqparam):
     return array
 
 
-def get_site_collection(oqparam):
+def get_site_collection(oqparam, mesh=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param mesh:
+        the mesh to use; if None, it is extracted from the job.ini
     """
-    mesh = get_mesh(oqparam)
+    mesh = mesh or get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
         try:
@@ -700,11 +702,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
         poly = exposure.mesh.get_convex_hull()
-        exposure.mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+        mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
             oqparam.region_grid_spacing)
-        if len(exposure.mesh) > len(haz_sitecol):
-            raise LargeExposureGrid(exposure.mesh, haz_sitecol.mesh,
+        if len(mesh) > len(haz_sitecol):
+            raise LargeExposureGrid(mesh, haz_sitecol.mesh,
                                     oqparam.region_grid_spacing)
+        haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
