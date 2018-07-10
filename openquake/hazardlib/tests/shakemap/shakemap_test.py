@@ -11,7 +11,7 @@ aae = numpy.testing.assert_almost_equal
 F64 = numpy.float64
 imts = [imt.from_string(x) for x in ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']]
 imt_dt = numpy.dtype([(str(imt), float) for imt in imts])
-shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
+shakemap_dt = numpy.dtype([('lons', float), ('lats', float), ('val', imt_dt),
                            ('std', imt_dt), ('vs30', float)])
 CDIR = os.path.dirname(__file__)
 
@@ -73,8 +73,8 @@ class ShakemapTestCase(unittest.TestCase):
             [(5.38409665, 3.9383686, 3.55435415, 4.37692394)] * 9, imt_dt)
 
         shakemap = numpy.zeros(9, shakemap_dt)  # 9 sites
-        shakemap['lon'] = lons
-        shakemap['lat'] = lats
+        shakemap['lons'] = lons
+        shakemap['lats'] = lats
         shakemap['vs30'] = numpy.array([301.17] * 9)
         shakemap['val'] = val
         shakemap['std'] = std
