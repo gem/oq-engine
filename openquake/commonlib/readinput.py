@@ -351,7 +351,7 @@ def get_site_collection(oqparam):
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             sc, params = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in params.dtype.names:
+            for name in params.dtype.names[2:]:  # except lons, lats
                 sitecol._set(name, params[name])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
