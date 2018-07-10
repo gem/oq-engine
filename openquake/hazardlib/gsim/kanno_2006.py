@@ -30,6 +30,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
+LOG10 = np.log(10)
+
 
 class Kanno2006Shallow(GMPE):
     # pylint: disable=too-few-public-methods
@@ -142,7 +144,6 @@ class Kanno2006Shallow(GMPE):
         log_stddevs = self._get_stddevs(coeffs, sites.vs30.size, stddev_types)
 
         # convert from common to natural logarithm
-        LOG10 = np.log(10)
         ln_mean = log_mean*LOG10
         ln_stddevs = np.array(log_stddevs)*LOG10
 
