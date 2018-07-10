@@ -72,10 +72,10 @@ class _GeographicObjects(object):
             lats = objects.lats
             depths = objects.depths
         elif isinstance(objects, numpy.ndarray):
-            lons = objects['lon']
-            lats = objects['lat']
+            lons = objects['lons']
+            lats = objects['lats']
             try:
-                depths = objects['depth']
+                depths = objects['depths']
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
@@ -167,7 +167,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     Associate geographic objects to a site collection.
 
     :param objects:
-        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
+        something with .lons, .lats or ['lons'] ['lats'], or a list of lists
         of objects with a .location attribute (i.e. assets_by_site)
     :param assoc_dist:
         the maximum distance for association
