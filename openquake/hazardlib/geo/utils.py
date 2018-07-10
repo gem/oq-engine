@@ -167,7 +167,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     Associate geographic objects to a site collection.
 
     :param objects:
-        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
+        something with .lons, .lats or ['lons'] ['lats'], or a list of lists
         of objects with a .location attribute (i.e. assets_by_site)
     :param assoc_dist:
         the maximum distance for association

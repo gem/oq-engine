@@ -50,10 +50,10 @@ class MultiPointTestCase(unittest.TestCase):
 
         got = obj_to_node(mps).to_str()
         print(got)
-        self.assertEqual(got, '''\
+        exp = '''\
 multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
   multiPointGeometry
-    gml:posList [0, 0.5, 1, 1.0]
+    gml:posList [0.0, 0.5, 1.0, 1.0]
     upperSeismoDepth 10
     lowerSeismoDepth 20
   magScaleRel 'PeerMSR'
@@ -68,7 +68,8 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
     nodalPlane{dip=2, probability=0.5, rake=4, strike=2}
   hypoDepthDist
     hypoDepth{depth=14, probability=1.0}
-''')
+'''
+        self.assertEqual(got, exp)
 
         # test serialization to and from hdf5
         tmp = general.gettemp(suffix='.hdf5')

@@ -771,12 +771,12 @@ def dictionary(value):
     value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
-    except:
+    except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
-        except:  # no val[0]
+        except Exception:  # no val[0]
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
@@ -1008,6 +1008,9 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
+
+
+
 
 
 # used for the exposure validation
