@@ -236,9 +236,9 @@ def sitemodel():
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <siteModel>
-        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
-        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
-        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
+        <site lon="0.0" lat="0.0" vs30="1200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" liquefaction_susceptibility="0" landsliding_susceptibility="3" cti="1.0" slope="5" dw="3" yield_acceleration="0.1" dc="1.0" dr="1.0" dwb="1.0" hwater="1.0" precip="1.0" />
+        <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" liquefaction_susceptibility="0" landsliding_susceptibility="3" cti="1.0" slope="5" dw="3" yield_acceleration="0.1" dc="1.0" dr="1.0" dwb="1.0" hwater="1.0" precip="1.0" />
+        <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" liquefaction_susceptibility="0" landsliding_susceptibility="3" cti="1.0" slope="5" dw="3" yield_acceleration="0.1" dc="1.0" dr="1.0" dwb="1.0" hwater="1.0" precip="1.0" />
     </siteModel>
 </nrml>''')
 

@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Extends site object to include geotechnical (secondary hazards) parameters
+  
   [Michele Simionato]
   * Changed the serialization of ruptures to HDF5: the geometries are now
     stored in a different dataset

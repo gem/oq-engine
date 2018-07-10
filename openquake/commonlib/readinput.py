@@ -310,6 +310,17 @@ site_model_dt = numpy.dtype([
     ('z1pt0', numpy.float64),
     ('z2pt5', numpy.float64),
     ('backarc', numpy.bool),
+    ('liquefaction_susceptibility', numpy.int16),
+    ('landsliding_susceptibility', numpy.int16),
+    ('dw', numpy.float64),
+    ('yield_acceleration', numpy.float64),
+    ('slope', numpy.float64),
+    ('cti', numpy.float64),
+    ('dc', numpy.float64),
+    ('dr', numpy.float64),
+    ('dwb', numpy.float64),
+    ('hwater', numpy.float64),
+    ('precip', numpy.float64)
 ])
 
 
@@ -394,6 +405,30 @@ def get_gsim_lt(oqparam, trts=['*']):
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
+    for trt, gsims in gsim_lt.values.items():
+        for gsim in gsims:
+            if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
+                            set([StdDev.TOTAL])):
+                raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+    return gsim_lt
+
+def get_gdem_lt(oqparam, trts=["*"]):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param trts:
+        a sequence of tectonic region types as strings; trts=['*']
+        means that there is no filtering
+    :returns:
+        a GsimLogicTree instance obtained by filtering on the provided
+        tectonic region types.
+    """
+    if 'gsim_logic_tree' not in oqparam.inputs:
+        return logictree.GdemLogicTree.from_(oqparam.gsim)
+    gsim_file = os.path.join(
+        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    gsim_lt = logictree.GdemLogicTree(gsim_file, trts)
+    gmfcorr = oqparam.get_correl_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
