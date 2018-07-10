@@ -32,6 +32,9 @@ from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -73,6 +76,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
+    ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
@@ -96,6 +100,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     mean_hazard_curves = valid.Param(valid.boolean, True)
+    std_hazard_curves = valid.Param(valid.boolean, False)
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -123,7 +128,6 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
-    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
@@ -418,13 +422,22 @@ class OqParam(valid.ParamSet):
         lst = [('poe-%s' % poe, dtype) for poe in self.conditional_loss_poes]
         return numpy.dtype([(lt, lst) for lt in ltypes])
 
+    def gmf_data_dt(self):
+        """
+        Return a composite data type for the GMFs
+        """
+        return numpy.dtype(
+            [('rlzi', U16), ('sid', U32),
+             ('eid', U64), ('gmv', (F32, (len(self.imtls),)))])
+
     def no_imls(self):
         """
         Return True if there are no intensity measure levels
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
 
-    def get_correl_model(self):
+    @property
+    def correl_model(self):
         """
         Return a correlation object. See :mod:`openquake.hazardlib.correlation`
         for more info.
@@ -446,6 +459,9 @@ class OqParam(valid.ParamSet):
         if self.mean_hazard_curves:
             names.append('mean')
             funcs.append(stats.mean_curve)
+        if self.std_hazard_curves:
+            names.append('std')
+            funcs.append(stats.std_curve)
         for q in self.quantile_hazard_curves:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))

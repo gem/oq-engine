@@ -85,7 +85,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_task = scenario_risk
-    pre_calculator = 'scenario'
     is_stochastic = True
 
     def pre_execute(self):
@@ -93,9 +92,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
-        if 'gmfs' in self.oqparam.inputs:
-            self.pre_calculator = None
-        base.RiskCalculator.pre_execute(self)
+        super().pre_execute('scenario')
         self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields

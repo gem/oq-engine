@@ -102,21 +102,26 @@ def set_eids(ebruptures):
     return numpy.array(all_eids)
 
 
-def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
+def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
+                    gsims=(), param=(), monitor=Monitor()):
     """
     :param group:
         a SourceGroup or a sequence of sources of the same group
     :param src_filter:
-        a source site filter
+        a source site filter (default noop filter)
     :param gsims:
         a list of GSIMs for the current tectonic region model
     :param param:
-        a dictionary of additional parameters
+        a dictionary of additional parameters (by default
+        ses_per_logic_tree_path=1,  samples=1, seed=42, filter_distance=1000)
     :param monitor:
         monitor instance
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
+    if not param:
+        param = dict(ses_per_logic_tree_path=1, samples=1, seed=42,
+                     filter_distance=1000)
     if getattr(group, 'src_interdep', None) == 'mutex':
         prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
     else:
@@ -133,7 +138,7 @@ def sample_ruptures(group, src_filter, gsims, param, monitor=Monitor()):
         t0 = time.time()
         num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], group.samples,
+            src, prob[src], param['ses_per_logic_tree_path'], param['samples'],
             param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -188,14 +193,17 @@ def _build_eb_ruptures(
     """
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         rup.serial = rup.seed - random_seed + 1
-        with rup_mon:
-            try:
-                rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
-                indices = rup.sctx.sids
-            except FarAwayRupture:
-                # ignore ruptures which are far away
-                del num_occ_by_rup[rup]  # save memory
-                continue
+        if cmaker.maximum_distance:
+            with rup_mon:
+                try:
+                    rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
+                    indices = rup.sctx.sids
+                except FarAwayRupture:
+                    # ignore ruptures which are far away
+                    del num_occ_by_rup[rup]  # save memory
+                    continue
+        else:
+            indices = ()
 
         # creating EBRuptures
         events = []

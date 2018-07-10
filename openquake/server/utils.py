@@ -99,7 +99,7 @@ def oq_server_context_processor(request):
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
-
+    context['server_name'] = settings.SERVER_NAME
     return context
 
 

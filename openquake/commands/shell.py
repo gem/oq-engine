@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
+from openquake.hazardlib import nrml
 
 
 class OpenQuake(object):
@@ -24,18 +25,19 @@ class OpenQuake(object):
     engine utilities for work in the interactive interpreter.
     """
     def __init__(self):
-        from matplotlib import pyplot
         from openquake.baselib.datastore import read
         from openquake.hazardlib.geo.geodetic import geodetic_distance
         from openquake.commonlib import readinput, calc
         from openquake.calculators.extract import extract
-        self.plt = pyplot
         try:
+            from matplotlib import pyplot
+            self.plt = pyplot
             self.fig, self.ax = pyplot.subplots()
         except Exception:  # for instance, no Tkinter
             pass
         self.extract = extract
         self.read = read
+        self.nrml = nrml
         self.get__exposure = readinput.get_exposure
         self.get_oqparam = readinput.get_oqparam
         self.get_site_collection = readinput.get_site_collection
