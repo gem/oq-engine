@@ -297,7 +297,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
