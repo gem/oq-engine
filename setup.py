@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import sys
 from setuptools import setup, find_packages
@@ -40,16 +41,16 @@ def get_version():
     return version
 
 
+def get_readme():
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                           'README.md'), encoding='utf-8') as readme:
+        return readme.read()
+
+
 version = get_version()
+readme = get_readme()
 
 url = "https://github.com/gem/oq-engine"
-
-README = """
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
-
-Copyright (C) 2010-2018 GEM Foundation
-"""
 
 PY_MODULES = ['openquake.commands.__main__']
 
@@ -98,7 +99,8 @@ setup(
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
     url=url,
-    long_description=README,
+    long_description=readme,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
