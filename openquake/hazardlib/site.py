@@ -160,8 +160,8 @@ class SiteCollection(object):
                              for p in 'sids lons lats depths vs30'.split()])
         self.array = arr = numpy.zeros(n, dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
-        arr['lons'] = shakemap_array['lon']
-        arr['lats'] = shakemap_array['lat']
+        arr['lons'] = shakemap_array['lons']
+        arr['lats'] = shakemap_array['lats']
         arr['depths'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
         arr.flags.writeable = False
