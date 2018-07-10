@@ -45,9 +45,6 @@ class Site(object):
     :param z2pt5:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
-    :param backarc:
-        Boolean value, ``True`` if the site is in the subduction backarc and
-        ``False`` if it is in the subduction forearc or is unknown
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
@@ -56,10 +53,10 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
+    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5'.split()
 
     def __init__(self, location, vs30=numpy.nan, vs30measured=False,
-                 z1pt0=numpy.nan, z2pt5=numpy.nan, backarc=False, **extras):
+                 z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
         if not numpy.isnan(z1pt0) and z1pt0 <= 0:
@@ -71,7 +68,6 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
-        self.backarc = backarc
         for param, val in extras.items():
             assert param in site_param_dt, param
             setattr(self, param, val)
@@ -82,14 +78,13 @@ class Site(object):
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
         >>> str(Site(loc, 760.0, True, 100.0, 5.0))
         '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
-Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000, \
-Backarc=False>'
+Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         return (
             "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
-            "Depth2.5km=%.4f, Backarc=%r>") % (
+            "Depth2.5km=%.4f>") % (
             self.location, self.vs30, self.vs30measured, self.z1pt0,
-            self.z2pt5, self.backarc)
+            self.z2pt5)
 
     def __hash__(self):
         return hash((self.location.x, self.location.y))
@@ -208,7 +203,6 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            self._set('backarc', sitemodel.reference_backarc)
         elif 'vs30' in sitemodel.dtype.names:  # site params
             for name in sitemodel.dtype.names[2:]:  # except lon, lat
                 self._set(name, sitemodel[name])
@@ -248,8 +242,6 @@ class SiteCollection(object):
         """
         Build a complete SiteCollection from a list of Site objects
         """
-        #if hasattr(sites, 'sids'):
-        #    numpy.testing.assert_equal(sites.sids, numpy.arange(len(sites)))
         dtlist = ([(p, site_param_dt[p])
                    for p in ('sids', 'lons', 'lats', 'depths')] +
                   [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
@@ -265,7 +257,6 @@ class SiteCollection(object):
             arr['vs30measured'][i] = sites[i].vs30measured
             arr['z1pt0'][i] = sites[i].z1pt0
             arr['z2pt5'][i] = sites[i].z2pt5
-            arr['backarc'][i] = sites[i].backarc
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
