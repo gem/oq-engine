@@ -284,7 +284,6 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
-        self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
 
     def filter_csm(self):
