@@ -60,6 +60,16 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+def get_num_distances(gsims):
+    """
+    :returns: the number of distances required for the given GSIMs
+    """
+    dists = set()
+    for gsim in gsims:
+        dists.update(gsim.REQUIRES_DISTANCES)
+    return len(dists)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.

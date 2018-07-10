@@ -169,7 +169,6 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
-
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
@@ -237,6 +236,9 @@ class EventBasedTestCase(CalculatorTestCase):
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
 
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        self.assertEqual(exp, 375496)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
@@ -295,7 +297,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
