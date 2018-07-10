@@ -99,14 +99,14 @@ class CalculatorTestCase(unittest.TestCase):
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
-            self.calc = self.get_calc(
+            calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             # run the second job.ini with zero tasks to avoid fork issues
-            with self.calc._monitor:
-                exported = self.calc.run(export_dir=self.edir,
-                                         concurrent_tasks=0)
+            with calc._monitor:
+                exported = calc.run(export_dir=self.edir, concurrent_tasks=0)
                 result.update(exported)
-            duration[inis[1]] = self.calc._monitor.duration
+            duration[inis[1]] = calc._monitor.duration
+            self.calc = calc
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
