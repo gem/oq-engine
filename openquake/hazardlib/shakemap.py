@@ -103,8 +103,8 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
         return site.SiteCollection.from_shakemap(array), array
 
     # associate the shakemap to the (filtered) site collection
-    bbox = (array['lon'].min(), array['lat'].min(),
-            array['lon'].max(), array['lat'].max())
+    bbox = (array['lons'].min(), array['lats'].min(),
+            array['lons'].max(), array['lats'].max())
     indices = sitecol.within_bbox(bbox)
     if len(indices) == 0:
         raise RuntimeError('There are no sites within the boundind box %s'
@@ -256,7 +256,7 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in imts}
     imts_ = [imt.from_string(name) for name in imts]
-    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
+    dmatrix = geo.geodetic.distance_matrix(shakemap['lons'], shakemap['lats'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_)
     stddev = [std[str(imt)] for imt in imts_]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)

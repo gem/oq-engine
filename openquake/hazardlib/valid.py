@@ -210,7 +210,7 @@ def hazard_id(value):
         return ()
     try:
         return tuple(map(int, value.split(',')))
-    except:
+    except Exception:
         raise ValueError('Invalid hazard_id %r' % value)
 
 
@@ -310,7 +310,7 @@ def utf8(value):
             return value.decode('utf-8')
         else:
             return value
-    except:
+    except Exception:
         raise ValueError('Not UTF-8: %r' % value)
 
 
@@ -351,7 +351,7 @@ def float_(value):
     """
     try:
         return float(value)
-    except:
+    except Exception:
         raise ValueError("'%s' is not a float" % value)
 
 
@@ -634,7 +634,7 @@ def intensity_measure_type(value):
     """
     try:
         return str(imt.from_string(value))
-    except:
+    except Exception:
         raise ValueError("Invalid IMT: '%s'" % value)
 
 
@@ -768,12 +768,12 @@ def dictionary(value):
     value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
-    except:
+    except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
-        except:  # no val[0]
+        except Exception:  # no val[0]
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
@@ -970,7 +970,7 @@ def integers(value):
         raise ValueError('Not a list of integers: %r' % value)
     try:
         ints = [int(float(v)) for v in values]
-    except:
+    except Exception:
         raise ValueError('Not a list of integers: %r' % value)
     return ints
 
@@ -1002,16 +1002,18 @@ def simple_slice(value):
         stop = ast.literal_eval(stop)
         if start is not None and stop is not None:
             assert start < stop
-    except:
+    except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
 
 # ############################## site model ################################ #
 
+
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
+    'SiteParam',
+    'lons lats depths z1pt0 z2pt5 vs30measured vs30 backarc'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
@@ -1026,9 +1028,10 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
     """
     return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
                      vs30measured=vs30_type(vs30Type) == 'measured',
-                     vs30=positivefloat(vs30), lon=longitude(lon),
-                     lat=latitude(lat), depth=float_(depth),
+                     vs30=positivefloat(vs30), lons=longitude(lon),
+                     lats=latitude(lat), depths=float_(depth),
                      backarc=boolean(backarc))
+
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',

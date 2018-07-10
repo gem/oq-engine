@@ -303,8 +303,8 @@ def get_mesh(oqparam):
 
 
 site_model_dt = numpy.dtype([
-    ('lon', numpy.float64),
-    ('lat', numpy.float64),
+    ('lons', numpy.float64),
+    ('lats', numpy.float64),
     ('vs30', numpy.float64),
     ('vs30measured', numpy.bool),
     ('z1pt0', numpy.float64),
@@ -354,7 +354,7 @@ def get_site_collection(oqparam, mesh=None):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm)
+                sm['lons'], sm['lats'], depth, sm)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
