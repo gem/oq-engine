@@ -33,7 +33,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def build_loss_tables(dstore):
