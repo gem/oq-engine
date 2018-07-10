@@ -34,7 +34,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
-from openquake.baselib.parallel import Starmap
+from openquake.baselib.parallel import Starmap, get_pickled_sizes
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
@@ -727,10 +727,17 @@ class RiskCalculator(HazardCalculator):
         if not hasattr(self, 'assetcol'):
             self.assetcol = self.datastore['assetcol']
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
+        size = general.AccumDict()
+        riskinputs = []
         with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = list(self._gen_riskinputs(kind, eps, num_events))
+            for ri in self._gen_riskinputs(kind, eps, num_events):
+                tot, items = get_pickled_sizes(ri)
+                size += dict(items)
+            riskinputs.append(ri)
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
+        for name, nbytes in size.items():
+            logging.info('Sending %s: %s', name, general.humansize(nbytes))
         return riskinputs
 
     def _gen_riskinputs(self, kind, eps, num_events):
