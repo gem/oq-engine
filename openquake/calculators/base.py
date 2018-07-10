@@ -696,16 +696,6 @@ class RiskCalculator(HazardCalculator):
             self.datastore['events'] = events
         return sitecol, assetcol
 
-    def make_eps(self, num_ruptures):
-        """
-        :param num_ruptures: the size of the epsilon array for each asset
-        """
-        oq = self.oqparam
-        with self.monitor('building epsilons', autoflush=True):
-            return riskinput.make_eps(
-                self.assetcol, num_ruptures,
-                oq.master_seed, oq.asset_correlation)
-
     def build_riskinputs(self, kind, eps=None, num_events=0):
         """
         :param kind:
