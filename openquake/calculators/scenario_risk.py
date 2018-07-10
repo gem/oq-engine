@@ -98,6 +98,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         A = len(self.assetcol)
         E = oq.number_of_ground_motion_fields
         if oq.ignore_covs:
+            # all zeros; the data transfer is not so big in scenario
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             logging.info('Building the epsilons')
