@@ -142,8 +142,9 @@ class Kanno2006Shallow(GMPE):
         log_stddevs = self._get_stddevs(coeffs, sites.vs30.size, stddev_types)
 
         # convert from common to natural logarithm
-        ln_mean = log_mean*np.log(10)
-        ln_stddevs = np.log(10.0 ** np.array(log_stddevs))
+        LOG10 = np.log(10)
+        ln_mean = log_mean*LOG10
+        ln_stddevs = np.array(log_stddevs)*LOG10
 
         # convert accelerations from cm/s^2 to g
         if not isinstance(imt, PGV):
