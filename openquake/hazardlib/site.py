@@ -219,8 +219,9 @@ class SiteCollection(object):
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
         else:
-            for name in sitemodel.dtype.names[2:]:  # except lon, lat
-                self._set(name, sitemodel[name])
+            for name in sitemodel.dtype.names:
+                if name not in ('lon', 'lat'):
+                    self._set(name, sitemodel[name])
         return self
 
     def _set(self, param, value):
