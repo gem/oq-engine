@@ -28,8 +28,8 @@ SHAKEMAP_FIELDS = set(
     'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
-    'LON': 'lons',
-    'LAT': 'lats',
+    'LON': 'lon',
+    'LAT': 'lat',
     'SVEL': 'vs30',
     'PGA': ('val', 'PGA'),
     'PSA03': ('val', 'SA(0.3)'),
@@ -62,7 +62,7 @@ def _get_shakemap_array(xml_file):
             out[name].append([float(row[i]) for row in rows])
     dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
                 if imt[0] == 'val')
-    dtlist = [('lons', F32), ('lats', F32), ('vs30', F32),
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(rows), dtlist)
     for name, field in sorted(FIELDMAP.items()):
@@ -87,7 +87,7 @@ def get_shakemap_array(grid_file, uncertainty_file=None):
     if uncertainty_file:
         data2 = _get_shakemap_array(uncertainty_file)
         # sanity check: lons and lats must be the same
-        for coord in ('lons', 'lats'):
+        for coord in ('lon', 'lat'):
             numpy.testing.assert_equal(data[coord], data2[coord])
         # copy the stddevs from the uncertainty array
         for imt in data2['std'].dtype.names:
