@@ -322,14 +322,13 @@ def get_site_model(oqparam, req_site_params):
     elif missing:
         raise InvalidFile('%s: missing parameter %s' %
                           (oqparam.inputs['site_model'], ', '.join(missing)))
+    # NB: the sorted in sorted(params[0]) is essential, otherwise there is
+    # an heisenbug in scenario/test_case_4
     site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
-                                 for p in params[0]])
-    array = numpy.zeros(len(params), site_model_dt)
-    for i, param in enumerate(params):
-        rec = array[i]
-        for name in site_model_dt.names:
-            rec[name] = param[name]
-    return array
+                                 for p in sorted(params[0])])
+    tuples = [tuple(param[name] for name in site_model_dt.names)
+              for param in params]
+    return numpy.array(tuples, site_model_dt)
 
 
 def get_site_collection(oqparam, mesh=None):
