@@ -249,7 +249,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam)), 3)
+        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
