@@ -27,7 +27,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, indices_dt
+from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
