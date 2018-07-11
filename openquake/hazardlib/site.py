@@ -161,7 +161,7 @@ class SiteCollection(object):
 
     :param sites:
         A list of instances of :class:`Site` class.
-    """ % '\n'.join('    %s: %s' % item for item in site_param_dt.items())
+    """ % '\n'.join('    - %s: %s' % item for item in site_param_dt.items())
 
     @classmethod
     def from_shakemap(cls, shakemap_array):
