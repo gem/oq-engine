@@ -123,6 +123,19 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'backarc': numpy.bool,
+
+    # parameters for geotechnic hazard
+    'liquefaction_susceptibility': numpy.int16,
+    'landsliding_susceptibility': numpy.int16,
+    'dw': numpy.float64,
+    'yield_acceleration': numpy.float64,
+    'slope': numpy.float64,
+    'cti': numpy.float64,
+    'dc': numpy.float64,
+    'dr': numpy.float64,
+    'dwb': numpy.float64,
+    'hwater': numpy.float64,
+    'precip': numpy.float64
 }
 
 
