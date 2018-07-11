@@ -353,7 +353,7 @@ class EpsilonMatrix0(object):
 
     def make_eps(self):
         """
-        Builds a matrix of N x E epsilons
+        Builds a matrix of A x E epsilons
         """
         eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
         for i, seed in enumerate(self.seeds):
@@ -372,7 +372,7 @@ class EpsilonMatrix0(object):
 
 class EpsilonMatrix1(object):
     """
-    Mock-up for a matrix of epsilons of size N x E,
+    Mock-up for a matrix of epsilons of size A x E,
     used when asset_correlation=1.
 
     :param num_assets: number of assets
