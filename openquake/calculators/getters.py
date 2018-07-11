@@ -249,7 +249,7 @@ class GmfDataGetter(collections.Mapping):
         if idxs.dtype.names:  # engine < 3.2
             array = numpy.concatenate([
                 dset[start:stop] for start, stop in idxs])
-        else:
+        else:  # engine >= 3.2
             idxs2 = self.dstore['gmf_data/indices2'][sid]
             array = numpy.concatenate([
                 dset[start:stop] for start, stop in zip(idxs, idxs2)])
