@@ -302,17 +302,26 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-def get_site_model(oqparam):
+def get_site_model(oqparam, req_site_params):
     """
     Convert the NRML file into an array of site parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param req_site_params:
+        required site parameters
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
     nodes = nrml.read(oqparam.inputs['site_model']).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
+    missing = req_site_params - set(params[0])
+    if missing == set(['backarc']):  # use a default of False
+        for param in params:
+            param['backarc'] = False
+    elif missing:
+        raise InvalidFile('%s: missing parameter %s' %
+                          (oqparam.inputs['site_model'], ', '.join(missing)))
     site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
                                  for p in params[0]])
     array = numpy.zeros(len(params), site_model_dt)
@@ -336,7 +345,7 @@ def get_site_collection(oqparam, mesh=None):
     mesh = mesh or get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam)
+        sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
