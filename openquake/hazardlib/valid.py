@@ -1013,7 +1013,7 @@ vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
     'SiteParam',
-    'lons lats depths z1pt0 z2pt5 vs30measured vs30 backarc'.split())
+    'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
@@ -1028,8 +1028,8 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
     """
     return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
                      vs30measured=vs30_type(vs30Type) == 'measured',
-                     vs30=positivefloat(vs30), lons=longitude(lon),
-                     lats=latitude(lat), depths=float_(depth),
+                     vs30=positivefloat(vs30), lon=longitude(lon),
+                     lat=latitude(lat), depth=float_(depth),
                      backarc=boolean(backarc))
 
 
