@@ -153,12 +153,12 @@ class SiteCollection(object):
         self.complete = self
         n = len(shakemap_array)
         dtype = numpy.dtype([(p, site_param_dt[p])
-                             for p in 'sids lon lat depth vs30'.split()])
+                             for p in 'sids lons lats depths vs30'.split()])
         self.array = arr = numpy.zeros(n, dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
-        arr['lon'] = shakemap_array['lon']
-        arr['lat'] = shakemap_array['lat']
-        arr['depth'] = numpy.zeros(n)
+        arr['lons'] = shakemap_array['lon']
+        arr['lats'] = shakemap_array['lat']
+        arr['depths'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
         arr.flags.writeable = False
         return self
