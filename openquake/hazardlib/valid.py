@@ -1024,10 +1024,11 @@ def site_param(dic):
     """
     new = {}
     for name, val in dic.items():
-        if name not in site.site_param_dt:
-            raise ValueError('Unrecognized parameter %s' % name)
-        elif name == 'vs30Type':
+        if name == 'vs30Type':
+            # avoid "Unrecognized parameter vs30Type"
             new['vs30measured'] = val == 'measured'
+        elif name not in site.site_param_dt:
+            raise ValueError('Unrecognized parameter %s' % name)
         else:
             new[name] = val
     return new
