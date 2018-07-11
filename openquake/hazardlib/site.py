@@ -53,8 +53,6 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5'.split()
-
     def __init__(self, location, vs30=numpy.nan, vs30measured=False,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
@@ -206,7 +204,7 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-        elif 'vs30' in sitemodel.dtype.names:  # site params
+        else:
             for name in sitemodel.dtype.names[2:]:  # except lon, lat
                 self._set(name, sitemodel[name])
         return self
