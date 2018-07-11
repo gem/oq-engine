@@ -346,7 +346,7 @@ def get_site_collection(oqparam, mesh=None):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lons'], sm['lats'], depth, sm, req_site_params)
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(

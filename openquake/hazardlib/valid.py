@@ -1010,9 +1010,6 @@ def simple_slice(value):
     return (start, stop)
 
 
-
-
-
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
@@ -1027,20 +1024,12 @@ def site_param(dic):
     """
     new = {}
     for name, val in dic.items():
-        if name == 'lon':
-            new['lons'] = longitude(val)
-        elif name == 'lat':
-            new['lats'] = latitude(val)
-        elif name == 'depth':
-            new['depths'] = float(val)
+        if name not in site.site_param_dt:
+            raise ValueError('Unrecognized parameter %s' % name)
         elif name == 'vs30Type':
             new['vs30measured'] = val == 'measured'
-        elif name == 'backarc':
-            new['backarc'] = boolean(val)
-        elif name not in site.site_param_dt:
-            raise ValueError('Unrecognized parameter %s' % name)
         else:
-            new[name] = positivefloat(val)
+            new[name] = val
     return new
 
 
