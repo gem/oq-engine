@@ -17,10 +17,10 @@ class ShakemapConverterTestCase(unittest.TestCase):
         n = 3  # number of sites
         self.assertEqual(len(array), n)
         self.assertEqual(array.dtype.names,
-                         ('lons', 'lats', 'vs30', 'val', 'std'))
+                         ('lon', 'lat', 'vs30', 'val', 'std'))
         dec = 4  # four digits
-        aae(array['lons'], [13.580, 13.5883, 13.5967], dec)
-        aae(array['lats'], [39.3103, 39.3103, 39.3103], dec)
+        aae(array['lon'], [13.580, 13.5883, 13.5967], dec)
+        aae(array['lat'], [39.3103, 39.3103, 39.3103], dec)
         aae(array['vs30'], [603, 603, 603], dec)
         val = numpy.zeros(n, imt_dt)
         std = numpy.array([(0.51,), (0.51,), (0.51,)], imt_dt)
@@ -35,10 +35,10 @@ class ShakemapConverterTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(array), n)
         self.assertEqual(array.dtype.names,
-                         ('lons', 'lats', 'vs30', 'val', 'std'))
+                         ('lon', 'lat', 'vs30', 'val', 'std'))
         dec = 4  # four digits
-        aae(array['lons'], [81.7314, 81.7481, 81.7647, 81.7814], dec)
-        aae(array['lats'], [30.8735, 30.8735, 30.8735, 30.8735], dec)
+        aae(array['lon'], [81.7314, 81.7481, 81.7647, 81.7814], dec)
+        aae(array['lat'], [30.8735, 30.8735, 30.8735, 30.8735], dec)
         aae(array['vs30'], [400.758, 352.659, 363.687, 301.17], dec)
         val = numpy.array([(0.44, 1.82, 2.80, 1.26),
                            (0.47, 1.99, 3.09, 1.41),
