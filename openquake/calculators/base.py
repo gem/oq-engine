@@ -730,6 +730,9 @@ class RiskCalculator(HazardCalculator):
             indices = None
         else:
             indices = self.datastore['gmf_data/indices'].value
+            if indices[0].dtype.names:  # engine < 3.2
+                starts = [idx['start'] for idx in indices]
+                stops = [idx['stop'] for idx in indices]
         dstore = self.can_read_parent() or self.datastore
         sid_weight = []
         for sid, assets in enumerate(assets_by_site):
@@ -738,7 +741,8 @@ class RiskCalculator(HazardCalculator):
             elif indices is None:
                 weight = len(assets)
             else:
-                num_gmfs = sum(stop - start for start, stop in indices[sid])
+                num_gmfs = sum(stop - start
+                               for start, stop in zip(starts[sid], stops[sid]))
                 weight = len(assets) * (num_gmfs or 1)
             sid_weight.append((sid, weight))
         for block in general.split_in_blocks(
