@@ -140,11 +140,16 @@ site_param_dt = {
 
 
 class SiteCollection(object):
-    """
+    __doc__ = """\
     A collection of :class:`sites <Site>`.
 
     Instances of this class are intended to represent a large collection
-    of sites in a most efficient way in terms of memory usage.
+    of sites in a most efficient way in terms of memory usage. The most
+    common usage is to instantiate it as `SiteCollection.from_points`, by
+    passing the set of required parameters, which must be a subset of the
+    following parameters:
+
+%s
 
     .. note::
 
@@ -156,7 +161,8 @@ class SiteCollection(object):
 
     :param sites:
         A list of instances of :class:`Site` class.
-    """
+    """ % '\n'.join('    %s: %s' % item for item in site_param_dt.items())
+
     @classmethod
     def from_shakemap(cls, shakemap_array):
         """
