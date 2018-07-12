@@ -161,7 +161,8 @@ class SiteCollection(object):
 
     :param sites:
         A list of instances of :class:`Site` class.
-    """ % '\n'.join('    - %s: %s' % item for item in site_param_dt.items()
+    """ % '\n'.join('    - %s: %s' % item
+                    for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
 
     @classmethod
