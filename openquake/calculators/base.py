@@ -677,6 +677,8 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
+        self.riskmodel.check_imts(oq.risk_imtls)
+
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(

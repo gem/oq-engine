@@ -139,6 +139,17 @@ class CompositeRiskModel(collections.Mapping):
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
 
+    def check_imts(self, imts):
+        extra_imts = set()
+        for taxonomy in self.taxonomies:
+            for lt in self.loss_types:
+                imt = self[taxonomy].risk_functions[lt].imt
+                if imt not in imts:
+                    extra_imts.add(imt)
+        if extra_imts:
+            logging.warn('There are risk functions for not available IMTs '
+                         'which will be ignored: %s' % extra_imts)
+
     def get_min_iml(self):
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
@@ -246,7 +257,8 @@ class CompositeRiskModel(collections.Mapping):
                         for lt in self.loss_types]  # imt for each loss type
                 # discard IMTs without hazard
                 imt_lt = [imt for imt in imts if imt in imti]
-                assert imt_lt, 'No hazard for any IMTs=%s' % imts
+                if not imt_lt:  # a warning is printed in riskmodel.check_imts
+                    continue
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):
