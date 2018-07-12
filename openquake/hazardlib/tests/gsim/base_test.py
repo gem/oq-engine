@@ -357,13 +357,14 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
 class ContextTestCase(unittest.TestCase):
     def test_equality(self):
-        sctx1 = SitesContext()
+        slots = 'vs30 vs30measured z1pt0 z2pt5'.split()
+        sctx1 = SitesContext(slots=slots)
         sctx1.vs30 = numpy.array([500., 600., 700.])
         sctx1.vs30measured = True
         sctx1.z1pt0 = numpy.array([40., 50., 60.])
         sctx1.z2pt5 = numpy.array([1, 2, 3])
 
-        sctx2 = SitesContext()
+        sctx2 = SitesContext(slots=slots)
         sctx2.vs30 = numpy.array([500., 600., 700.])
         sctx2.vs30measured = True
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
@@ -371,7 +372,7 @@ class ContextTestCase(unittest.TestCase):
 
         self.assertTrue(sctx1 == sctx2)
 
-        sctx2 = SitesContext()
+        sctx2 = SitesContext(slots=slots)
         sctx2.vs30 = numpy.array([500., 600.])
         sctx2.vs30measured = True
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
@@ -379,7 +380,7 @@ class ContextTestCase(unittest.TestCase):
 
         self.assertTrue(sctx1 != sctx2)
 
-        sctx2 = SitesContext()
+        sctx2 = SitesContext(slots=slots)
         sctx2.vs30 = numpy.array([500., 600., 700.])
         sctx2.vs30measured = False
         sctx2.z1pt0 = numpy.array([40., 50., 60.])
