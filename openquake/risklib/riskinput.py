@@ -242,8 +242,11 @@ class CompositeRiskModel(collections.Mapping):
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
                 riskmodel = self[taxonomy]
-                imt_lt = [riskmodel.risk_functions[lt].imt
-                          for lt in self.loss_types]  # imt for each loss type
+                imts = [riskmodel.risk_functions[lt].imt
+                        for lt in self.loss_types]  # imt for each loss type
+                # discard IMTs without hazard
+                imt_lt = [imt for imt in imts if imt in imti]
+                assert imt_lt, 'No hazard for any IMTs=%s' % imts
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):
