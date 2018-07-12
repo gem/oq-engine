@@ -2366,6 +2366,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
 
     def test_gsim_with_kwargs(self):
         class FakeGMPETable(object):
+            REQUIRES_SITES_PARAMETERS = ()
+
             def __init__(self, gmpe_table):
                 self.gmpe_table = gmpe_table
 

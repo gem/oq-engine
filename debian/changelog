@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Added 11 new site parameters for geotechnic hazard
+  * Changed the SiteCollection to store only the parameters required by the
+    GSIMs
+
+  [Robin Gee]
+  * The number of sites is now an argument in the method _get_stddevs()
+    in the GMPE of Kanno, 2006
+
+  [Michele Simionato]
   * Changed the serialization of ruptures to HDF5: the geometries are now
     stored in a different dataset
   * Bug fix: the asset->site association was performed even when not needed

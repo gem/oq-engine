@@ -55,6 +55,7 @@ url = "https://github.com/gem/oq-engine"
 PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
+    'setuptools',
     'mock >=1.0, <2.1',
     'nose >=1.3, <1.4',
     'h5py >=2.8, <2.9',
