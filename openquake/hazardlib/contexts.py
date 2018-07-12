@@ -320,7 +320,8 @@ class SitesContext(BaseContext):
     object.
     """
     # _slots_ is used in hazardlib check_gsim and in the SMTK
-    def __init__(self, slots=None, sitecol=None):
+    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
+                 sitecol=None):
         self._slots_ = slots
         if sitecol is not None:
             self.sids = sitecol.sids
