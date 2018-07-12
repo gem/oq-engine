@@ -180,7 +180,7 @@ class ContextMaker(object):
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
-        sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
+        sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
     def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
@@ -320,11 +320,7 @@ class SitesContext(BaseContext):
     object.
     """
     # _slots_ is used in hazardlib check_gsim and in the SMTK
-    #_slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-    #           'lons', 'lats')
-    # lons, lats are needed in si_midorikawa_1999_test.py
-
-    def __init__(self, sitecol=None, slots=None):
+    def __init__(self, slots=None, sitecol=None):
         self._slots_ = slots
         if sitecol is not None:
             self.sids = sitecol.sids
