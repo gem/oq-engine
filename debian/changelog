@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added experimental support for dask
   * Added 11 new site parameters for geotechnic hazard
   * Changed the SiteCollection to store only the parameters required by the
     GSIMs
