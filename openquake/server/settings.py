@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import socket
 import getpass
 
 from openquake.baselib import config, datastore
@@ -163,6 +164,11 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+
+# A server name can be specified to customize the WebUI in case of
+# multiple installations of the Engine are available. This helps avoiding
+# confusion between different installations when the WebUI is used
+SERVER_NAME = socket.gethostname()
 
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE:

@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     2,300,210,911      
-date           2018-05-15T04:12:44
-engine_version 3.1.0-git0acbc11   
+date           2018-06-26T14:57:02
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 7
@@ -55,7 +55,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rjb rrup  vs30       mag rake  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -93,7 +93,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          5.004E-04 2.127E-04  15        15        0     
+1         SimpleFaultSource 482          0.03835   1.876E-04  1.00000   15        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 5.004E-04 1     
+SimpleFaultSource 0.03835   1     
 ================= ========= ======
 
 Duplicated sources
@@ -110,57 +110,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ========= ======= =========
-operation-duration mean    stddev  min       max     num_tasks
-prefilter          0.00682 0.00197 0.00212   0.00876 15       
-count_ruptures     0.00236 0.00105 9.406E-04 0.00366 6        
-================== ======= ======= ========= ======= =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.00683 0.00236 0.00358 0.01046 15       
+count_eff_ruptures 0.00862 0.00120 0.00703 0.00991 6        
+================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=6, weight=84, duration=0 s, sources="1"
+taskno=4, weight=90, duration=0 s, sources="1"
 
-======== ======= ======= === === =
-variable mean    stddev  min max n
-======== ======= ======= === === =
-nsites   1.00000 0.0     1   1   3
-weight   28      4.00000 24  32  3
-======== ======= ======= === === =
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 0.0    1   1   2
+weight   45      0.0    45  45  2
+======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=3, weight=70, duration=0 s, sources="1"
+taskno=2, weight=93, duration=0 s, sources="1"
 
-======== ======= ====== ======= === =
-variable mean    stddev min     max n
-======== ======= ====== ======= === =
-nsites   1.00000 0.0    1       1   4
-weight   17      22     2.00000 50  4
-======== ======= ====== ======= === =
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 0.0    1   1   3
+weight   31      25     15  60  3
+======== ======= ====== === === =
 
-Informational data
-------------------
-============== ========================================================================== ========
-task           sent                                                                       received
-prefilter      srcs=15.36 KB monitor=4.78 KB srcfilter=3.35 KB                            17 KB   
-count_ruptures sources=10.68 KB srcfilter=4.2 KB param=2.6 KB monitor=1.95 KB gsims=720 B 2.1 KB  
-============== ========================================================================== ========
+Data transfer
+-------------
+================== ============================================================================ ========
+task               sent                                                                         received
+RtreeFilter        srcs=15.36 KB monitor=4.72 KB srcfilter=4.09 KB                              17 KB   
+count_eff_ruptures sources=10.68 KB param=2.71 KB monitor=1.93 KB srcfilter=1.44 KB gsims=720 B 2.1 KB  
+================== ============================================================================ ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total prefilter                0.10236   5.07031   15    
-managing sources               0.06039   0.0       1     
-total count_ruptures           0.01416   1.87109   6     
-reading composite source model 0.00656   0.0       1     
-store source_info              0.00635   0.0       1     
-reading site collection        0.00176   0.0       1     
-unpickling prefilter           0.00108   0.0       15    
-reading exposure               7.193E-04 0.0       1     
-splitting sources              6.914E-04 0.0       1     
-unpickling count_ruptures      4.182E-04 0.0       6     
-aggregate curves               1.872E-04 0.0       6     
-saving probability maps        5.484E-05 0.0       1     
+managing sources               0.23553   0.0       1     
+total prefilter                0.10246   4.74219   15    
+total count_eff_ruptures       0.05172   6.50391   6     
+store source_info              0.00686   0.0       1     
+reading composite source model 0.00486   0.0       1     
+unpickling prefilter           0.00358   0.0       15    
+aggregate curves               0.00197   0.0       6     
+unpickling count_eff_ruptures  0.00166   0.0       6     
+reading site collection        8.514E-04 0.0       1     
+reading exposure               6.106E-04 0.0       1     
+splitting sources              4.373E-04 0.0       1     
 ============================== ========= ========= ======
