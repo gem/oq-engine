@@ -123,15 +123,33 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'backarc': numpy.bool,
+
+    # parameters for geotechnic hazard
+    'liquefaction_susceptibility': numpy.int16,
+    'landsliding_susceptibility': numpy.int16,
+    'dw': numpy.float64,
+    'yield_acceleration': numpy.float64,
+    'slope': numpy.float64,
+    'cti': numpy.float64,
+    'dc': numpy.float64,
+    'dr': numpy.float64,
+    'dwb': numpy.float64,
+    'hwater': numpy.float64,
+    'precip': numpy.float64
 }
 
 
 class SiteCollection(object):
-    """
+    __doc__ = """\
     A collection of :class:`sites <Site>`.
 
     Instances of this class are intended to represent a large collection
-    of sites in a most efficient way in terms of memory usage.
+    of sites in a most efficient way in terms of memory usage. The most
+    common usage is to instantiate it as `SiteCollection.from_points`, by
+    passing the set of required parameters, which must be a subset of the
+    following parameters:
+
+%s
 
     .. note::
 
@@ -143,7 +161,10 @@ class SiteCollection(object):
 
     :param sites:
         A list of instances of :class:`Site` class.
-    """
+    """ % '\n'.join('    - %s: %s' % item
+                    for item in sorted(site_param_dt.items())
+                    if item[0] not in ('lon', 'lat'))
+
     @classmethod
     def from_shakemap(cls, shakemap_array):
         """
@@ -206,8 +227,9 @@ class SiteCollection(object):
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
         else:
-            for name in sitemodel.dtype.names[2:]:  # except lon, lat
-                self._set(name, sitemodel[name])
+            for name in sitemodel.dtype.names:
+                if name not in ('lon', 'lat'):
+                    self._set(name, sitemodel[name])
         return self
 
     def _set(self, param, value):
