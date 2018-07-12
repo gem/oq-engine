@@ -302,34 +302,33 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-site_model_dt = numpy.dtype([
-    ('lon', numpy.float64),
-    ('lat', numpy.float64),
-    ('vs30', numpy.float64),
-    ('vs30measured', numpy.bool),
-    ('z1pt0', numpy.float64),
-    ('z2pt5', numpy.float64),
-    ('backarc', numpy.bool),
-])
-
-
-def get_site_model(oqparam):
+def get_site_model(oqparam, req_site_params):
     """
     Convert the NRML file into an array of site parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param req_site_params:
+        required site parameters
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
     nodes = nrml.read(oqparam.inputs['site_model']).siteModel
-    params = sorted(valid.site_param(**node.attrib) for node in nodes)
-    array = numpy.zeros(len(params), site_model_dt)
-    for i, param in enumerate(params):
-        rec = array[i]
-        for name in site_model_dt.names:
-            rec[name] = getattr(param, name)
-    return array
+    params = [valid.site_param(node.attrib) for node in nodes]
+    missing = req_site_params - set(params[0])
+    if missing == set(['backarc']):  # use a default of False
+        for param in params:
+            param['backarc'] = False
+    elif missing:
+        raise InvalidFile('%s: missing parameter %s' %
+                          (oqparam.inputs['site_model'], ', '.join(missing)))
+    # NB: the sorted in sorted(params[0]) is essential, otherwise there is
+    # an heisenbug in scenario/test_case_4
+    site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
+                                 for p in sorted(params[0])])
+    tuples = [tuple(param[name] for name in site_model_dt.names)
+              for param in params]
+    return numpy.array(tuples, site_model_dt)
 
 
 def get_site_collection(oqparam, mesh=None):
@@ -343,8 +342,9 @@ def get_site_collection(oqparam, mesh=None):
         the mesh to use; if None, it is extracted from the job.ini
     """
     mesh = mesh or get_mesh(oqparam)
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam)
+        sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
@@ -354,19 +354,18 @@ def get_site_collection(oqparam, mesh=None):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm)
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths)
+                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             sc, params = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for sid, param in zip(sc.sids, params):
-                for name in site_model_dt.names[2:]:  # except lon, lat
-                    sitecol.array[sid][name] = param[name]
+            for name in req_site_params:
+                sitecol._set(name, params[name])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam)
+            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation

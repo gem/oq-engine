@@ -225,6 +225,7 @@ def get_source_model_05(node, fname, converter=default):
 
 
 validators = {
+    'backarc': valid.boolean,
     'strike': valid.strike_range,
     'dip': valid.dip_range,
     'rake': valid.rake_range,

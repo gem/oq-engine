@@ -1241,6 +1241,10 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
+        self.req_site_params = set()
+        for trt in self.values:
+            for gsim in self.values[trt]:
+                self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
 
     def check_imts(self, imts):
         """
@@ -1357,7 +1361,7 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = branch.uncertaintyModel
-                    if hasattr(uncertainty.text, 'strip'):  # a string
+                    if isinstance(uncertainty.text, str):
                         gsim_name = uncertainty.text.strip()
                         if gsim_name == 'GMPETable':
                             # a bit hackish: set the GMPE_DIR equal to the
