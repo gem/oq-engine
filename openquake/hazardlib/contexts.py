@@ -325,8 +325,8 @@ class SitesContext(BaseContext):
         self._slots_ = slots
         if sitecol is not None:
             self.sids = sitecol.sids
-            for name in self._slots_ if slots is None else slots:
-                setattr(self, name, getattr(sitecol, name))
+            for slot in slots:
+                setattr(self, slot, getattr(sitecol, slot))
 
 
 class DistancesContext(BaseContext):
