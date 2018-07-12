@@ -222,28 +222,22 @@ class CompositeRiskModel(collections.Mapping):
         with monitor('getting hazard'):
             hazard_getter.init()
         sids = hazard_getter.sids
+
         # group the assets by taxonomy
         dic = collections.defaultdict(list)
         for sid, assets in zip(sids, riskinput.assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter
-                dic[taxonomy].append((sid, group[taxonomy], epsgetter))
-        if hasattr(hazard_getter, 'rlzs_by_gsim'):
-            # save memory in event based risk by working one gsim at the time
-            for gsim in hazard_getter.rlzs_by_gsim:
-                for out in self._gen_outputs(hazard_getter, dic, gsim):
-                    yield out
-        else:
-            for out in self._gen_outputs(hazard_getter, dic, None):
-                yield out
+                dic[taxonomy].append(
+                    (sid, group[taxonomy], riskinput.epsilon_getter))
+        yield from self._gen_outputs(hazard_getter, dic)
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard_getter, dic, gsim):
+    def _gen_outputs(self, hazard_getter, dic):
         with self.monitor('getting hazard'):
-            hazard = hazard_getter.get_hazard(gsim)
+            hazard = hazard_getter.get_hazard()
         imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
@@ -359,7 +353,7 @@ class EpsilonMatrix0(object):
 
     def make_eps(self):
         """
-        Builds a matrix of N x E epsilons
+        Builds a matrix of A x E epsilons
         """
         eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
         for i, seed in enumerate(self.seeds):
@@ -378,7 +372,7 @@ class EpsilonMatrix0(object):
 
 class EpsilonMatrix1(object):
     """
-    Mock-up for a matrix of epsilons of size N x E,
+    Mock-up for a matrix of epsilons of size A x E,
     used when asset_correlation=1.
 
     :param num_assets: number of assets

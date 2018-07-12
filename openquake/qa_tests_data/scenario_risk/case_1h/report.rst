@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2018-05-15T04:14:23
-engine_version 3.1.0-git0acbc11   
+date           2018-06-26T14:58:37
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 2, num_levels = 8
@@ -71,15 +71,29 @@ taxonomy mean    stddev min max num_sites num_assets
 tax1     1.00000 0.0    1   1   2         2         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+scenario_risk      0.09501 0.00614 0.09066 0.09935 2        
+================== ======= ======= ======= ======= =========
+
+Data transfer
+-------------
+============= ============================================================= ========
+task          sent                                                          received
+scenario_risk riskinput=5.11 KB riskmodel=2.62 KB monitor=842 B param=178 B 1.6 KB  
+============= ============================================================= ========
+
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.01043   0.0       1     
-saving gmfs             0.00405   0.0       1     
-reading site collection 0.00303   0.0       1     
-reading exposure        0.00131   0.0       1     
-building epsilons       3.765E-04 0.0       1     
-computing gmfs          3.695E-04 0.0       1     
-======================= ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total scenario_risk      0.19001   7.26953   2     
+computing risk           0.17007   0.80859   2     
+getting hazard           0.01496   5.17578   4     
+building riskinputs      0.00156   0.0       1     
+unpickling scenario_risk 9.375E-04 0.0       2     
+building epsilons        4.532E-04 0.0       1     
+======================== ========= ========= ======

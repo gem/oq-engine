@@ -25,12 +25,12 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5, node
+from openquake.baselib import performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, gettemp, AccumDict, random_filter)
 from openquake.hazardlib import (
-    nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+    source, sourceconverter, probability_map, stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 
@@ -46,7 +46,7 @@ rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
 
-def split_sources(srcs):
+def split_sources(srcs, min_mag):
     """
     :param srcs: sources
     :returns: a pair (split sources, split time)
@@ -55,7 +55,19 @@ def split_sources(srcs):
     split_time = {}  # src_id -> dt
     for src in srcs:
         t0 = time.time()
-        splits = list(src)
+        if min_mag and src.get_min_max_mag()[0] < min_mag:
+            splits = []
+            for s in src:
+                if min_mag and s.get_min_max_mag()[0] < min_mag:
+                    # discard some ruptures
+                    s.min_mag = min_mag
+                    s.num_ruptures = s.count_ruptures()
+                    if s.num_ruptures:
+                        splits.append(s)
+                else:
+                    splits.append(s)
+        else:
+            splits = list(src)
         split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
         if len(splits) > 1:
@@ -65,10 +77,14 @@ def split_sources(srcs):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
                 split.ngsims = src.ngsims
+                split.ndists = src.ndists
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
+        elif splits:  # single source
+            splits[0].ngsims = src.ngsims
+            splits[0].ndists = src.ndists
     return sources, split_time
 
 
@@ -321,6 +337,7 @@ source_model_dt = numpy.dtype([
 
 src_group_dt = numpy.dtype(
     [('grp_id', U32),
+     ('name', hdf5.vstr),
      ('trti', U16),
      ('effrup', I32),
      ('totrup', I32),
@@ -350,15 +367,14 @@ def accept_path(path, ref_path):
     return True
 
 
-def get_totrup(data):
+def get_field(data, field, default):
     """
-    :param data: a record with a field `totrup`, possibily missing
+    :param data: a record with a field `field`, possibily missing
     """
     try:
-        totrup = data['totrup']
-    except ValueError:  # engine older than 2.9
-        totrup = 0
-    return totrup
+        return data[field]
+    except ValueError:  # field missing in old engines
+        return default
 
 
 class CompositionInfo(object):
@@ -442,8 +458,16 @@ class CompositionInfo(object):
         """
         :returns: a dictionary src_group_id -> source_model.samples
         """
-        return {sg.id: sm.samples for sm in self.source_models
-                for sg in sm.src_groups}
+        return {grp.id: sm.samples for sm in self.source_models
+                for grp in sm.src_groups}
+
+    def get_rlzs_by_gsim_grp(self, sm_lt_path=None, trts=None):
+        """
+        :returns: a dictionary src_group_id -> gsim -> rlzs
+        """
+        self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
+        return {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
+                for sm in self.source_models for grp in sm.src_groups}
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -468,9 +492,9 @@ class CompositionInfo(object):
             sm_data.append((sm.names, sm.weight, '_'.join(sm.path),
                             num_gsim_paths, sm.samples))
             for src_group in sm.src_groups:
-                sg_data.append((src_group.id, trti[src_group.trt],
-                                src_group.eff_ruptures, src_group.tot_ruptures,
-                                sm.ordinal))
+                sg_data.append((src_group.id, src_group.name,
+                                trti[src_group.trt], src_group.eff_ruptures,
+                                src_group.tot_ruptures, sm.ordinal))
         return (dict(
             sg_data=numpy.array(sg_data, src_group_dt),
             sm_data=numpy.array(sm_data, source_model_dt)),
@@ -500,7 +524,9 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[data['trti']], id=data['grp_id'],
-                    eff_ruptures=data['effrup'], tot_ruptures=get_totrup(data))
+                    name=get_field(data, 'name', ''),
+                    eff_ruptures=data['effrup'],
+                    tot_ruptures=get_field(data, 'totrup', 0))
                 for data in tdata if data['effrup']]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
@@ -523,7 +549,9 @@ class CompositionInfo(object):
             return sum(self.get_num_rlzs(sm) for sm in self.source_models)
         if self.num_samples:
             return source_model.samples
-        trts = set(sg.trt for sg in source_model.src_groups)
+        trts = set(sg.trt for sg in source_model.src_groups if sg.eff_ruptures)
+        if sum(sg.eff_ruptures for sg in source_model.src_groups) == 0:
+            return 0
         return self.gsim_lt.reduce(trts).get_num_paths()
 
     @property
@@ -678,7 +706,7 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
-    def split_all(self):
+    def split_all(self, min_mag=0):
         """
         Split all sources in the composite source model.
 
@@ -686,17 +714,19 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
+        gsims = self.gsim_lt.values
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
                 for src in src_group:
+                    trt = src.tectonic_region_type
                     split_time[src.source_id] = 0
-                    src.ngsims = ngsims[src.tectonic_region_type]
+                    src.ngsims = len(gsims[trt])
+                    src.ndists = contexts.get_num_distances(gsims[trt])
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
-                    srcs, stime = split_sources(src_group)
+                    srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
                         s = src.source_id
                         self.infos[s].split_time = stime[s]
@@ -766,6 +796,7 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
+        new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
         return new
 
     def get_weight(self, weight):
@@ -835,6 +866,8 @@ class CompositeSourceModel(collections.Sequence):
         for src_group in self.src_groups:
             if kind in ('all', src_group.src_interdep):
                 sources.extend(src_group)
+        if kind == 'all' and not sources:
+            raise RuntimeError('All sources were filtered away!')
         return sources
 
     def get_sources_by_trt(self):
@@ -850,23 +883,31 @@ class CompositeSourceModel(collections.Sequence):
         if self.optimize_same_id is False:
             return acc
         # extract a single source from multiple sources with the same ID
+        n = 0
+        tot = 0
         dic = {}
         for trt in acc:
             dic[trt] = []
             for grp in groupby(acc[trt], lambda x: x.source_id).values():
                 src = grp[0]
+                n += 1
+                tot += len(grp)
                 # src.src_group_id can be a list if get_sources_by_trt was
                 # called before
                 if len(grp) > 1 and not isinstance(src.src_group_id, list):
                     src.src_group_id = [s.src_group_id for s in grp]
                 dic[trt].append(src)
+        if n < tot:
+            logging.info('Reduced %d sources to %d sources with unique IDs',
+                         tot, n)
         return dic
 
-    def get_num_sources(self):
+    def get_num_ruptures(self):
         """
-        :returns: the total number of sources in the model
+        :returns: the number of ruptures per source group ID
         """
-        return sum(len(src_group) for src_group in self.src_groups)
+        return {grp.id: sum(src.num_ruptures for src in grp)
+                for grp in self.src_groups}
 
     def init_serials(self):
         """
@@ -933,29 +974,6 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-def collect_source_model_paths(smlt):
-    """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a uniquified list (no duplicates).
-
-    :param smlt: source model logic tree file
-    """
-    n = nrml.read(smlt)
-    try:
-        blevels = n.logicTree
-    except:
-        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
-    for blevel in blevels:
-        with node.context(smlt, blevel):
-            for bset in blevel:
-                for br in bset:
-                    smfname = ' '.join(br.uncertaintyModel.text.split())
-                    if smfname:
-                        yield smfname
 
 
 # ########################## SourceManager ########################### #

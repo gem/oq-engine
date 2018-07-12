@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 8
 
 ============== ===================
 checksum32     745,347,419        
-date           2018-05-15T04:13:26
-engine_version 3.1.0-git0acbc11   
+date           2018-06-26T14:57:44
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -55,9 +55,9 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rjb rrup  vs30       mag rake  
-1      SadighEtAl1997() rjb rrup  vs30       mag rake  
-2      SadighEtAl1997() rjb rrup  vs30       mag rake  
+0      SadighEtAl1997() rrup      vs30       mag rake  
+1      SadighEtAl1997() rrup      vs30       mag rake  
+2      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -92,7 +92,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  3,000        0.00158   1.431E-06  3         3         0     
+1         PointSource  3,000        0.01603   1.669E-06  1.00000   3         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.00158   1     
+PointSource  0.01603   1     
 ============ ========= ======
 
 Duplicated sources
@@ -109,24 +109,13 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-prefilter          0.01447 0.00424 0.00958 0.01698 3        
-count_ruptures     0.00265 0.00121 0.00152 0.00392 3        
-================== ======= ======= ======= ======= =========
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+RtreeFilter        0.01918 0.00563   0.01268 0.02246 3        
+count_eff_ruptures 0.00709 3.436E-04 0.00679 0.00747 3        
+================== ======= ========= ======= ======= =========
 
 Fastest task
-------------
-taskno=1, weight=300, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   300     NaN    300 300 1
-======== ======= ====== === === =
-
-Slowest task
 ------------
 taskno=3, weight=300, duration=0 s, sources="1"
 
@@ -137,28 +126,38 @@ nsites   1.00000 NaN    1   1   1
 weight   300     NaN    300 300 1
 ======== ======= ====== === === =
 
-Informational data
-------------------
-============== ======================================================================= ========
-task           sent                                                                    received
-prefilter      srcs=3.42 KB monitor=978 B srcfilter=687 B                              3.76 KB 
-count_ruptures sources=3.9 KB srcfilter=2.1 KB param=1.23 KB monitor=999 B gsims=360 B 1.05 KB 
-============== ======================================================================= ========
+Slowest task
+------------
+taskno=1, weight=300, duration=0 s, sources="1"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 NaN    1   1   1
+weight   300     NaN    300 300 1
+======== ======= ====== === === =
+
+Data transfer
+-------------
+================== ====================================================================== ========
+task               sent                                                                   received
+RtreeFilter        srcs=3.42 KB monitor=966 B srcfilter=837 B                             3.76 KB 
+count_eff_ruptures sources=3.9 KB param=1.29 KB monitor=987 B srcfilter=738 B gsims=360 B 1.05 KB 
+================== ====================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total prefilter                0.04340   2.93359   3     
-managing sources               0.03158   0.0       1     
-reading composite source model 0.02142   0.0       1     
-total count_ruptures           0.00795   1.37109   3     
-store source_info              0.00405   0.0       1     
-splitting sources              6.542E-04 0.0       1     
-reading site collection        3.018E-04 0.0       1     
-unpickling prefilter           2.446E-04 0.0       3     
-unpickling count_ruptures      1.142E-04 0.0       3     
-aggregate curves               6.294E-05 0.0       3     
-saving probability maps        3.266E-05 0.0       1     
+managing sources               0.21844   0.0       1     
+total prefilter                0.05755   1.64844   3     
+total count_eff_ruptures       0.02127   6.50391   3     
+reading composite source model 0.02015   0.0       1     
+store source_info              0.00640   0.0       1     
+unpickling prefilter           8.287E-04 0.0       3     
+aggregate curves               7.391E-04 0.0       3     
+unpickling count_eff_ruptures  7.377E-04 0.0       3     
+reading site collection        3.471E-04 0.0       1     
+splitting sources              3.054E-04 0.0       1     
 ============================== ========= ========= ======

@@ -53,6 +53,7 @@ NB: the implementation in the engine is smarter and more
 efficient. Here we start a parallel computation per each realization,
 the engine manages all the realizations at once.
 """
+import sys
 import time
 import operator
 import numpy
@@ -84,6 +85,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         mutex_weight = None
     grp_ids = set()
     for src in group:
+        if not src.num_ruptures:
+            # src.num_ruptures is set when parsing the XML, but not when
+            # the source is instantiated manually, so it is set here
+            src.num_ruptures = src.count_ruptures()
         grp_ids.update(src.src_group_ids)
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
@@ -97,7 +102,12 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         indep = group.rup_interdep == 'indep' if mutex_weight else True
-        poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel, indep)
+        try:
+            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel, indep)
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = '%s (source id=%s)' % (str(err), src.source_id)
+            raise etype(msg).with_traceback(tb)
         if mutex_weight:  # mutex sources
             weight = mutex_weight[src.source_id]
             for sid in poemap:
