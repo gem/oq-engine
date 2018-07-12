@@ -57,7 +57,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 1.6.0
+Requires: oq-python3 python3-oq-libs >= 2.0.0
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
@@ -123,8 +123,6 @@ sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" open
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{_oqbindir}
 %{__python3} setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{_oqprefix} --install-scripts=%{_oqbindir}
-# FIXME To be removed after python3 switch is completed
-sed -i "s|/usr/bin/env python|%{__python3}|" %{buildroot}%{_oqbindir}/oq
 ln -sf %{_oqbindir}/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_localstatedir}/lib/openquake

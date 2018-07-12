@@ -17,12 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-import sys
 import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
 
@@ -60,6 +58,16 @@ def get_distances(rupture, mesh, param):
 
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
+
+
+def get_num_distances(gsims):
+    """
+    :returns: the number of distances required for the given GSIMs
+    """
+    dists = set()
+    for gsim in gsims:
+        dists.update(gsim.REQUIRES_DISTANCES)
+    return len(dists)
 
 
 class ContextMaker(object):
@@ -175,31 +183,6 @@ class ContextMaker(object):
         sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
         return sctx, dctx
 
-    def make_pmap(self, ruptures, imtls, trunclevel, rup_indep):
-        """
-        :param src: a source object
-        :param ruptures: a list of "dressed" ruptures
-        :param imtls: intensity measure and levels
-        :param trunclevel: truncation level
-        :param rup_indep: True if the ruptures are independent
-        :returns: a ProbabilityMap instance
-        """
-        sids = set()
-        for rup in ruptures:
-            sids.update(rup.sctx.sids)
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sids, initvalue=rup_indep)
-        for rup in ruptures:
-            pnes = self._make_pnes(rup, imtls, trunclevel)
-            for sid, pne in zip(rup.sctx.sids, pnes):
-                if rup_indep:
-                    pmap[sid].array *= pne
-                else:
-                    pmap[sid].array += pne * rup.weight
-        tildemap = ~pmap
-        tildemap.eff_ruptures = len(ruptures)
-        return tildemap
-
     def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
@@ -209,40 +192,47 @@ class ContextMaker(object):
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
+        pmap = ProbabilityMap.build(
+            len(imtls.array), len(self.gsims), sites.sids,
+            initvalue=rup_indep)
+        eff_ruptures = 0
         with self.ir_mon:
-            all_ruptures = list(src.iter_ruptures())
-        # all_ruptures can be empty only in UCERF
-        weight = 1. / (len(all_ruptures) or 1)
-        ruptures = []
-        with self.ctx_mon:
-            for rup in all_ruptures:
-                rup.weight = weight
-                try:
-                    rup.sctx, rup.dctx = self.make_contexts(sites, rup)
-                except FarAwayRupture:
-                    continue
-                ruptures.append(rup)
-        if not ruptures:
-            return {}
-        try:
+            rups = list(src.iter_ruptures())
+        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
+        # discards far away ruptures: len(rups) < src.num_ruptures can happen
+        if len(rups) > src.num_ruptures:
+            raise ValueError('Expected at max %d ruptures, got %d' % (
+                src.num_ruptures, len(rups)))
+        weight = 1. / len(rups)
+        for rup in rups:
+            rup.weight = weight
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            eff_ruptures += 1
             with self.poe_mon:
-                pmap = self.make_pmap(ruptures, imtls, trunclevel, rup_indep)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise_(etype, msg, tb)
+                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                for sid, pne in zip(sctx.sids, pnes):
+                    if rup_indep:
+                        pmap[sid].array *= pne
+                    else:
+                        pmap[sid].array += pne * rup.weight
+        pmap = ~pmap
+        pmap.eff_ruptures = eff_ruptures
         return pmap
 
     # NB: it is important for this to be fast since it is inside an inner loop
-    def _make_pnes(self, rupture, imtls, trunclevel):
+    def _make_pnes(self, rupture, sctx, dctx, imtls, trunclevel):
         pne_array = numpy.zeros(
-            (len(rupture.sctx.sids), len(imtls.array), len(self.gsims)))
+            (len(sctx.sids), len(imtls.array), len(self.gsims)))
         for i, gsim in enumerate(self.gsims):
-            dctx = rupture.dctx.roundup(gsim.minimum_distance)
+            dctx_ = dctx.roundup(gsim.minimum_distance)
             pnos = []  # list of arrays nsites x nlevels
             for imt in imtls:
                 poes = gsim.get_poes(
-                    rupture.sctx, rupture, dctx,
+                    sctx, rupture, dctx_,
                     imt_module.from_string(imt), imtls[imt], trunclevel)
                 pnos.append(rupture.get_probability_no_exceedance(poes))
             pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
