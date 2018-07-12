@@ -193,7 +193,6 @@ def _parse_csv(datafile, debug, req_site_params):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader), req_site_params)
-    #sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
     sattrs = sctx._slots_
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
