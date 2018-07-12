@@ -107,6 +107,7 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
                          '%s, please change the riskmodel' %
                          (missing.pop(), ', '.join(available_imts)))
 
+    # build a copy of the ShakeMap with only the relevant IMTs
     dt = [(imt, F32) for imt in imts]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
