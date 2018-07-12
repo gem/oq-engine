@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Fixed the risk from ShakeMap feature in the case of missing IMTs
+  * Added experimental support for dask
   * Added 11 new site parameters for geotechnic hazard
   * Changed the SiteCollection to store only the parameters required by the
     GSIMs
