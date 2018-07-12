@@ -676,13 +676,14 @@ class RiskCalculator(HazardCalculator):
         """
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
+        imts = self.datastore.parent['oqparam'].imtls
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap = get_sitecol_shakemap(
-                smap, haz_sitecol, oq.asset_hazard_distance or
+                smap, imts, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
             assetcol = assetcol.reduce_also(sitecol)
 

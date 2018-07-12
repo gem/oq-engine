@@ -88,9 +88,10 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
             return get_shakemap_array(f1, f2)
 
 
-def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
+def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
     """
     :param array_or_id: shakemap array or shakemap ID
+    :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
@@ -99,6 +100,12 @@ def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
         array = download_array(array_or_id)
     else:  # shakemap array
         array = array_or_id
+    available_imts = set(array['val'].dtype.names)
+    missing = set(imts) - available_imts
+    if missing:
+        raise ValueError('The IMT %s is required but not in the available set '
+                         '%s, please change the riskmodel' %
+                         (missing.pop(), ', '.join(available_imts)))
     if sitecol is None:  # extract the sites from the shakemap
         return site.SiteCollection.from_shakemap(array), array
 
