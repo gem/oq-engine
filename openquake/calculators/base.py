@@ -677,7 +677,10 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         E = oq.number_of_ground_motion_fields
         oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
-        self.riskmodel.check_imts(oq.risk_imtls)
+        extra = self.riskmodel.get_extra_imts(oq.risk_imtls)
+        if extra:
+            logging.warn('There are risk functions for not available IMTs '
+                         'which will be ignored: %s' % extra)
 
         logging.info('Getting/reducing shakemap')
         with self.monitor('getting/reducing shakemap'):

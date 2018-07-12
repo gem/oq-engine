@@ -139,16 +139,18 @@ class CompositeRiskModel(collections.Mapping):
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
 
-    def check_imts(self, imts):
+    def get_extra_imts(self, imts):
+        """
+        Returns the extra IMTs in the risk functions, i.e. the ones not in
+        the `imts` set (the set of IMTs for which there is hazard).
+        """
         extra_imts = set()
         for taxonomy in self.taxonomies:
             for lt in self.loss_types:
                 imt = self[taxonomy].risk_functions[lt].imt
                 if imt not in imts:
                     extra_imts.add(imt)
-        if extra_imts:
-            logging.warn('There are risk functions for not available IMTs '
-                         'which will be ignored: %s' % extra_imts)
+        return extra_imts
 
     def get_min_iml(self):
         iml = collections.defaultdict(list)
