@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
 from openquake.calculators import base
@@ -182,6 +182,9 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
+        if not oq.ignore_covs:
+            logging.info('Generating %s of epsilons',
+                         humansize(self.A * self.E * 4))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
