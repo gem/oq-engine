@@ -2,9 +2,9 @@ Classical Hazard-Risk QA test 4
 ===============================
 
 ============== ===================
-checksum32     2,439,591,035      
-date           2018-05-15T04:12:34
-engine_version 3.1.0-git0acbc11   
+checksum32     3,002,809,595      
+date           2018-06-26T14:56:51
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -96,26 +96,26 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-231       AreaSource   4,185        0.00578   0.07523    1,432     279       0     
-376       AreaSource   2,220        0.00142   0.04814    36        36        0     
-10        AreaSource   1,920        0.0       0.09325    0         0         0     
-101       AreaSource   559          0.0       0.01880    0         0         0     
-125       AreaSource   8,274        0.0       0.26497    0         0         0     
-127       AreaSource   2,940        0.0       0.13520    0         0         0     
-13        AreaSource   1,824        0.0       0.07561    0         0         0     
-132       AreaSource   4,131        0.0       0.11217    0         0         0     
-135       AreaSource   3,285        0.0       0.12212    0         0         0     
-137       AreaSource   2,072        0.0       0.07215    0         0         0     
-161       AreaSource   552          0.0       0.03099    0         0         0     
-166       AreaSource   559          0.0       0.02108    0         0         0     
-177       AreaSource   846          0.0       0.03983    0         0         0     
-184       AreaSource   780          0.0       0.01550    0         0         0     
-198       AreaSource   760          0.0       0.03876    0         0         0     
-2         AreaSource   5,446        0.0       0.11362    0         0         0     
-20        AreaSource   1,256        0.0       0.04578    0         0         0     
-208       AreaSource   760          0.0       0.01787    0         0         0     
-225       AreaSource   520          0.0       0.01273    0         0         0     
-253       AreaSource   3,058        0.0       0.08117    0         0         0     
+231       AreaSource   4,185        0.06137   0.06765    5.13262   279       0     
+376       AreaSource   2,220        0.00860   0.04697    1.00000   36        0     
+10        AreaSource   1,920        0.0       0.09047    0.0       0         0     
+101       AreaSource   559          0.0       0.01832    0.0       0         0     
+125       AreaSource   8,274        0.0       0.24394    0.0       0         0     
+127       AreaSource   2,940        0.0       0.12900    0.0       0         0     
+13        AreaSource   1,824        0.0       0.07325    0.0       0         0     
+132       AreaSource   4,131        0.0       0.11197    0.0       0         0     
+135       AreaSource   3,285        0.0       0.12055    0.0       0         0     
+137       AreaSource   2,072        0.0       0.06976    0.0       0         0     
+161       AreaSource   552          0.0       0.03020    0.0       0         0     
+166       AreaSource   559          0.0       0.02087    0.0       0         0     
+177       AreaSource   846          0.0       0.03893    0.0       0         0     
+184       AreaSource   780          0.0       0.01529    0.0       0         0     
+198       AreaSource   760          0.0       0.03755    0.0       0         0     
+2         AreaSource   5,446        0.0       0.10882    0.0       0         0     
+20        AreaSource   1,256        0.0       0.04186    0.0       0         0     
+208       AreaSource   760          0.0       0.01639    0.0       0         0     
+225       AreaSource   520          0.0       0.01134    0.0       0         0     
+253       AreaSource   3,058        0.0       0.07406    0.0       0         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -123,7 +123,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.00720   39    
+AreaSource   0.06997   39    
 ============ ========= ======
 
 Duplicated sources
@@ -134,19 +134,19 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-prefilter          0.03750 0.01128 0.01481 0.06749 60       
-count_ruptures     0.00337 0.00139 0.00162 0.00577 9        
+RtreeFilter        0.03213 0.00935 0.01465 0.05514 60       
+count_eff_ruptures 0.01223 0.00243 0.00915 0.01533 9        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=7, weight=239, duration=0 s, sources="231"
+taskno=4, weight=239, duration=0 s, sources="231"
 
 ======== ======= ======= ======= ======= ==
 variable mean    stddev  min     max     n 
 ======== ======= ======= ======= ======= ==
-nsites   5.52941 0.70648 3       6       34
-weight   7.03836 0.48275 5.19615 7.34847 34
+nsites   5.28571 1.07297 2       6       35
+weight   6.85379 0.78397 4.24264 7.34847 35
 ======== ======= ======= ======= ======= ==
 
 Slowest task
@@ -160,29 +160,28 @@ nsites   3.32075 2.32688 1       6       53
 weight   4.60585 2.53690 2.00000 7.34847 53
 ======== ======= ======= ======= ======= ==
 
-Informational data
-------------------
-============== ============================================================================ ========
-task           sent                                                                         received
-prefilter      srcs=1.55 MB monitor=19.1 KB srcfilter=13.42 KB                              81.27 KB
-count_ruptures sources=87.49 KB srcfilter=8.7 KB param=4.76 KB monitor=2.93 KB gsims=1.9 KB 3.24 KB 
-============== ============================================================================ ========
+Data transfer
+-------------
+================== ============================================================================= ========
+task               sent                                                                          received
+RtreeFilter        srcs=1.55 MB monitor=18.87 KB srcfilter=16.35 KB                              81.27 KB
+count_eff_ruptures sources=87.49 KB param=4.98 KB monitor=2.89 KB srcfilter=2.16 KB gsims=1.9 KB 3.24 KB 
+================== ============================================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-splitting sources              2.81529   3.50781   1     
-reading composite source model 2.74496   0.0       1     
-total prefilter                2.24987   3.37109   60    
-managing sources               0.37235   0.0       1     
-total count_ruptures           0.03036   0.27734   9     
-store source_info              0.00462   0.0       1     
-unpickling prefilter           0.00359   0.0       60    
-reading site collection        0.00269   0.0       1     
-reading exposure               0.00135   0.0       1     
-unpickling count_ruptures      3.350E-04 0.0       9     
-aggregate curves               1.519E-04 0.0       9     
-saving probability maps        3.362E-05 0.0       1     
-============================== ========= ========= ======
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+reading composite source model 2.74509  0.0       1     
+splitting sources              2.68263  3.57031   1     
+total prefilter                1.92790  3.19531   60    
+managing sources               0.51972  0.17188   1     
+total count_eff_ruptures       0.11008  6.52734   9     
+unpickling prefilter           0.01924  0.01172   60    
+store source_info              0.00648  0.0       1     
+reading site collection        0.00242  0.0       1     
+aggregate curves               0.00237  0.0       9     
+unpickling count_eff_ruptures  0.00207  0.0       9     
+reading exposure               0.00157  0.0       1     
+============================== ======== ========= ======

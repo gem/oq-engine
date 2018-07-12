@@ -30,12 +30,11 @@ A 64bit operating system **is required**. Please refer to each OS specific page 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - Ubuntu 14.04 (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
 - Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
+- Ubuntu 18.04 (Bionic) packages work on **Mint Linux 19** and on **Debian 10.0** (Buster)
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
 Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
-
-Official support for Ubuntu 18.04 (Bionic) will be added in release 3.1.
 
 ***
 
@@ -48,7 +47,7 @@ The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are no
 ### Celery support
 
 Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
-Celery must be enabled on a cluster / multi node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
+Celery must be enabled on a cluster / multi-node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
 
 ***
 
@@ -93,6 +92,7 @@ $ sudo apt install python3-oq-engine
 ***
 
 ### OpenQuake Hazardlib errors
+
 ```bash
 pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
 ```
@@ -100,7 +100,7 @@ Since OpenQuake Engine 2.5, the OpenQuake Hazardlib package has been merged with
 
 If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
 
-If `oq-hazardlib` has been installed via `pip` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `oq-engine`.
+If `oq-hazardlib` has been installed via `pip` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `openquake.engine`.
 
 ```bash
 $ pip uninstall openquake.hazardlib openquake.engine
@@ -117,7 +117,7 @@ On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a
 
 ### DbServer ports
 
-The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` and `1907`.
+The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
 
 ***
 
@@ -125,27 +125,33 @@ The default port for the DbServer (configured via the `openquake.cfg` configurat
 
 A more detailed stack trace:
 
-```Python
-File "/usr/local/lib/python2.6/dist-packages/carrot/connection.py", line 135, in connection
+```python
+Traceback (most recent call last):
+  File "/opt/openquake/lib/python3.5/site-packages/kombu/utils/functional.py", line 333, in retry_over_time
+    return fun(*args, **kwargs)
+  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 261, in connect
+    return self.connection
+  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 802, in connection
     self._connection = self._establish_connection()
-File "/usr/local/lib/python2.6/dist-packages/carrot/connection.py", line 148, in _establish_connection
-    return self.create_backend().establish_connection()
-File "/usr/local/lib/python2.6/dist-packages/carrot/backends/pyamqplib.py", line 208, in establish_connection
-    connect_timeout=conninfo.connect_timeout)
-File "/usr/local/lib/python2.6/dist-packages/amqplib/client_0_8/connection.py", line 125, in __init__
-    self.transport = create_transport(host, connect_timeout, ssl)
-File "/usr/local/lib/python2.6/dist-packages/amqplib/client_0_8/transport.py", line 220, in create_transport
-    return TCPTransport(host, connect_timeout)
-File "/usr/local/lib/python2.6/dist-packages/amqplib/client_0_8/transport.py", line 58, in __init__
-    self.sock.connect((host, port))
-File "", line 1, in connect
-error: [Errno 111] Connection refused
+  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 757, in _establish_connection
+    conn = self.transport.establish_connection()
+  File "/opt/openquake/lib/python3.5/site-packages/kombu/transport/pyamqp.py", line 130, in establish_connection
+    conn.connect()
+  File "/opt/openquake/lib/python3.5/site-packages/amqp/connection.py", line 282, in connect
+    self.transport.connect()
+  File "/opt/openquake/lib/python3.5/site-packages/amqp/transport.py", line 109, in connect
+    self._connect(self.host, self.port, self.connect_timeout)
+  File "/opt/openquake/lib/python3.5/site-packages/amqp/transport.py", line 150, in _connect
+    self.sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
 ```
 
 This happens when the **Celery support is enabled but RabbitMQ server is not running**. You can start it running
 ```bash
 $ sudo service rabbitmq-server start
 ``` 
+
+It may also mean that an incompatible version of Celery is used. Please check it with `/opt/openquake/bin/pip3 freeze`.
 
 ***
 
@@ -155,41 +161,41 @@ A more detailed stack trace:
 
 ```python
 Traceback (most recent call last):
-  File "/usr/lib/python2.7/dist-packages/celery/worker/__init__.py", line 206, in start
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/worker/__init__.py", line 206, in start
     self.blueprint.start(self)
-  File "/usr/lib/python2.7/dist-packages/celery/bootsteps.py", line 119, in start
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/bootsteps.py", line 119, in start
     self.on_start()
-  File "/usr/lib/python2.7/dist-packages/celery/apps/worker.py", line 165, in on_start
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/apps/worker.py", line 165, in on_start
     self.purge_messages()
-  File "/usr/lib/python2.7/dist-packages/celery/apps/worker.py", line 189, in purge_messages
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/apps/worker.py", line 189, in purge_messages
     count = self.app.control.purge()
-  File "/usr/lib/python2.7/dist-packages/celery/app/control.py", line 145, in purge
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/app/control.py", line 145, in purge
     return self.app.amqp.TaskConsumer(conn).purge()
-  File "/usr/lib/python2.7/dist-packages/celery/app/amqp.py", line 375, in __init__
+  File "/opt/openquake/lib/python3.5/dist-packages/celery/app/amqp.py", line 375, in __init__
     **kw
-  File "/usr/lib/python2.7/dist-packages/kombu/messaging.py", line 364, in __init__
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/messaging.py", line 364, in __init__
     self.revive(self.channel)
-  File "/usr/lib/python2.7/dist-packages/kombu/messaging.py", line 369, in revive
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/messaging.py", line 369, in revive
     channel = self.channel = maybe_channel(channel)
-  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 1054, in maybe_channel
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 1054, in maybe_channel
     return channel.default_channel
-  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 756, in default_channel
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 756, in default_channel
     self.connection
-  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 741, in connection
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 741, in connection
     self._connection = self._establish_connection()
-  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 696, in _establish_connection
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 696, in _establish_connection
     conn = self.transport.establish_connection()
-  File "/usr/lib/python2.7/dist-packages/kombu/transport/pyamqp.py", line 116, in establish_connection
+  File "/opt/openquake/lib/python3.5/dist-packages/kombu/transport/pyamqp.py", line 116, in establish_connection
     conn = self.Connection(**opts)
-  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 180, in __init__
+  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 180, in __init__
     (10, 30),  # tune
-  File "/usr/lib/python2.7/dist-packages/amqp/abstract_channel.py", line 67, in wait
+  File "/opt/openquake/lib/python3.5/dist-packages/amqp/abstract_channel.py", line 67, in wait
     self.channel_id, allowed_methods, timeout)
-  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 241, in _wait_method
+  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 241, in _wait_method
     channel, method_sig, args, content = read_timeout(timeout)
-  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 330, in read_timeout
+  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 330, in read_timeout
     return self.method_reader.read_method()
-  File "/usr/lib/python2.7/dist-packages/amqp/method_framing.py", line 189, in read_method
+  File "/opt/openquake/lib/python3.5/dist-packages/amqp/method_framing.py", line 189, in read_method
     raise m
 error: [Errno 104] Connection reset by peer
 ```

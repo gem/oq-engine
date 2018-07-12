@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import operator
 import collections
@@ -220,7 +221,10 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        self.distribute = None
+        if os.environ.get('OQ_DISTRIBUTE') == 'no':
+            self.distribute = 'no'
+        else:
+            self.distribute = 'processpool'
 
     @property
     def sitecol(self):
@@ -340,7 +344,6 @@ class RtreeFilter(SourceFilter):
         if rtree is None:
             raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
-        self.distribute = 'processpool'
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
