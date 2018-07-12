@@ -77,6 +77,7 @@ extras_require = {
     'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
     'celery':  ["celery >=4.0, <4.2"],
+    'dask':  ["dask", "distributed"],
     'pam': ["python-pam", "django-pam"],
     'plotting':  [
         'basemap >=1.0',
