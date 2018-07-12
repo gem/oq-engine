@@ -355,10 +355,9 @@ class RuptureSerializer(object):
         ('serial', U32), ('grp_id', U16), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3))])
+        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
-    geom_dt = numpy.dtype([
-        ('points', hdf5.vfloat32), ('sy', U16), ('sz', U16)])
+    geom_dt = numpy.dtype([('points', hdf5.vfloat32)])
 
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
@@ -383,9 +382,9 @@ class RuptureSerializer(object):
             tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo)
+                   rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
             lst.append(tup)
-            geom.append((points, sy, sz))
+            geom.append((points,))
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return (numpy.array(lst, cls.rupture_dt),
                 numpy.array(geom, cls.geom_dt),
