@@ -90,10 +90,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        self.assert_curves_ok(
-            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_2.__file__)
-
         # check view_pmap for a single realization
         got = view('pmap:grp-00', self.calc.datastore)
         self.assertEqual(got, '''\
