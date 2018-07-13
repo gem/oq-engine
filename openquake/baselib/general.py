@@ -60,6 +60,7 @@ def cached_property(method):
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
+    newmethod.__doc__ = method.__doc__
     return property(newmethod)
 
 

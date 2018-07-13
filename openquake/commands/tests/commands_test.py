@@ -225,7 +225,7 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show_attrs.func('sitecol', self.calc_id)
         self.assertEqual(
-            '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 54',
+            '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 37',
             str(p))
 
     def test_export_calc(self):
