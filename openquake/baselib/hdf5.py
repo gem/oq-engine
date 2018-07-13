@@ -273,18 +273,19 @@ class File(h5py.File):
         :param data: data to store as a list of arrays
         """
         dt = data[0].dtype
-        vdt = h5py.special_dtype(vlen=dt)
-        try:
-            dset = self[key]
-        except KeyError:
-            dset = create(self, key, vdt, fillvalue=None)
+        shape = (len(data),) + data[0].shape[:-1]
+        dset = create(self, key, h5py.special_dtype(vlen=dt), shape,
+                      fillvalue=None)
         nbytes = 0
         totlen = 0
         for i, val in enumerate(data):
+            dset[i] = val
             nbytes += val.nbytes
             totlen += len(val)
-        extend(dset, numpy.array(data, vdt),
-               nbytes=nbytes, avg_len=totlen / len(data))
+        attrs = super().__getitem__(key).attrs
+        attrs['nbytes'] = nbytes
+        attrs['avg_len'] = totlen / len(data)
+        self.flush()
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
