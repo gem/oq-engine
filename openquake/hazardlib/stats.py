@@ -20,16 +20,30 @@ Utilities to compute mean and quantile curves
 """
 import numpy
 
+_mean = None  # set by mean_curve and std_curve
+
 
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
+    global _mean
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
-        return numpy.average(values, axis=0, weights=weights)
-    return sum(value * weight for value, weight in zip(values, weights))
+    if not isinstance(values, numpy.ndarray):
+        values = numpy.array(values)
+    _mean = numpy.average(values, axis=0, weights=weights)
+    return _mean
+
+
+def std_curve(values, weights=None):
+    global _mean
+    assert _mean is not None, 'You must call mean_curve before std_curve'
+    if weights is None:
+        weights = [1. / len(values)] * len(values)
+    res = numpy.sqrt(numpy.einsum('i,i...', weights, (_mean - values) ** 2))
+    _mean = None  # reset cache
+    return res
 
 
 def quantile_curve(quantile, curves, weights=None):
