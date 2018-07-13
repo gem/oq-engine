@@ -602,17 +602,14 @@ class Starmap(object):
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
         """
+        task_info = 'task_info/' + self.name
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
             if mon.hdf5 and task_no == 1:
                 self.hdf5 = mon.hdf5
-                try:
-                    hdf5.create(mon.hdf5, 'task_info/' + self.name,
-                                task_data_dt)
-                except RuntimeError:  # name already exists
-                    pass
-
+                if task_info not in self.hdf5:  # first time
+                    hdf5.create(mon.hdf5, task_info, task_data_dt)
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
