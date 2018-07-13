@@ -19,6 +19,7 @@ import os.path
 import logging
 import collections
 import numpy
+import h5py
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
@@ -355,13 +356,15 @@ class EventBasedCalculator(base.HazardCalculator):
         calc.check_overflow(self)
         base.save_gmdata(self, self.R)
         if self.indices:
+            N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                self.datastore.hdf5.save_vlen(
-                    'gmf_data/indices',
-                    [numpy.array(self.indices[sid], indices_dt)
-                     for sid in self.sitecol.complete.sids])
+                dset = self.datastore.create_dset(
+                    'gmf_data/indices', h5py.special_dtype(vlen=indices_dt),
+                    shape=(N,), fillvalue=None)
+                for sid in self.sitecol.complete.sids:
+                    dset[sid] = numpy.array(self.indices[sid], indices_dt)
         elif (self.oqparam.ground_motion_fields and
               'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
