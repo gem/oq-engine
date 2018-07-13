@@ -1,3 +1,27 @@
+  [Michele Simionato]
+  * Supported equivalent epicentral distance with a `reqv_hdf5` file
+  * Fixed the risk from ShakeMap feature in the case of missing IMTs
+  * Changed the way gmf_data/indices and ruptures are stored
+  * Added experimental support for dask
+  * Added 11 new site parameters for geotechnic hazard
+  * Changed the SiteCollection to store only the parameters required by the
+    GSIMs
+
+  [Robin Gee]
+  * The number of sites is now an argument in the method _get_stddevs()
+    in the GMPE of Kanno, 2006
+
+  [Michele Simionato]
+  * Changed the serialization of ruptures to HDF5: the geometries are now
+    stored in a different dataset
+  * Bug fix: the asset->site association was performed even when not needed
+  * Made it possible to serialize to .hdf5 multipoint sources and
+    nonparametric gridded sources
+  * Added a check on source model logic tree files: the uncertaintyModel
+    values cannot be repeated in the same branchset
+  * Added a flag `std_hazard_curves`; by setting it to `true` the user can
+    compute the standard deviation of the hazard curves across realizations
+
   [Marco Pagani]
   * Added Thingbaijam et al. (2017) magnitude-scaling relationship
 
