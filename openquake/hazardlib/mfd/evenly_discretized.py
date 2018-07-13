@@ -58,7 +58,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         if not self.bin_width > 0:
             raise ValueError('bin width must be positive')
 
-        if not self.occurrence_rates:
+        if len(self.occurrence_rates) == 0:
             raise ValueError('at least one bin must be specified')
 
         if not all(value >= 0 for value in self.occurrence_rates):
