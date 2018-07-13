@@ -22,7 +22,7 @@ import h5py
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
+from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
@@ -355,10 +355,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('grp_id', U16), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3))])
-
-    geom_dt = numpy.dtype([
-        ('points', hdf5.vfloat32), ('sy', U16), ('sz', U16)])
+        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
@@ -374,7 +371,6 @@ class RuptureSerializer(object):
             rup = ebrupture.rupture
             mesh = surface_to_array(rup.surface)
             sy, sz = mesh.shape[1:]
-            points = mesh.flatten()
             # sanity checks
             assert sy < TWO16, 'Too many multisurfaces: %d' % sy
             assert sz < TWO16, 'The rupture mesh spacing is too small'
@@ -383,12 +379,12 @@ class RuptureSerializer(object):
             tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo)
+                   rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
             lst.append(tup)
-            geom.append((points, sy, sz))
+            geom.append(mesh.flatten())
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return (numpy.array(lst, cls.rupture_dt),
-                numpy.array(geom, cls.geom_dt),
+                numpy.array(geom, hdf5.vfloat32),
                 nbytes)
 
     def __init__(self, datastore):
@@ -398,8 +394,7 @@ class RuptureSerializer(object):
         if datastore['oqparam'].save_ruptures:
             datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
                                   attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', self.geom_dt, fillvalue=None,
-                                  attrs={'nbytes': 0})
+            datastore.create_dset('rupgeoms', hdf5.vfloat32, fillvalue=None)
 
     def save(self, ebruptures, eidx=0):
         """
@@ -432,7 +427,7 @@ class RuptureSerializer(object):
         # save nbytes occupied by the PMFs
         if pmfbytes:
             if 'nbytes' in dset.attrs:
-                 dset.attrs['nbytes'] += pmfbytes
+                dset.attrs['nbytes'] += pmfbytes
             else:
                 dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
