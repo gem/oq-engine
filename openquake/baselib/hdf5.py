@@ -61,6 +61,15 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     return dset
 
 
+def preshape(obj):
+    """
+    :returns: the shape of obj, except the last dimension
+    """
+    if hasattr(obj, 'shape'):  # array
+        return obj.shape[:-1]
+    return ()
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
@@ -72,7 +81,7 @@ def extend(dset, array, **attrs):
     length = len(dset)
     newlength = length + len(array)
     if array.dtype.name == 'object':  # vlen array
-        shape = (newlength,)
+        shape = (newlength,) + preshape(array[0])
     else:
         shape = (newlength,) + array.shape[1:]
     dset.resize(shape)
@@ -91,7 +100,7 @@ def extend3(hdf5path, key, array, **attrs):
             dset = h5[key]
         except KeyError:
             if array.dtype.name == 'object':  # vlen array
-                shape = (None,)
+                shape = (None,) + preshape(array[0])
             else:
                 shape = (None,) + array.shape[1:]
             dset = create(h5, key, array.dtype, shape)
@@ -273,19 +282,23 @@ class File(h5py.File):
         :param data: data to store as a list of arrays
         """
         dt = data[0].dtype
-        shape = (len(data),) + data[0].shape[:-1]
-        dset = create(self, key, h5py.special_dtype(vlen=dt), shape,
-                      fillvalue=None)
+        vdt = h5py.special_dtype(vlen=dt)
+        shape = (None,) + data[0].shape[:-1]
+        try:
+            dset = self[key]
+        except KeyError:
+            dset = create(self, key, vdt, shape, fillvalue=None)
         nbytes = 0
         totlen = 0
         for i, val in enumerate(data):
-            dset[i] = val
             nbytes += val.nbytes
             totlen += len(val)
-        attrs = super().__getitem__(key).attrs
-        attrs['nbytes'] = nbytes
-        attrs['avg_len'] = totlen / len(data)
-        self.flush()
+        length = len(dset)
+        dset.resize((length + len(data),) + shape[1:])
+        for i, arr in enumerate(data):
+            dset[length + i] = arr
+        dset.attrs['nbytes'] = nbytes
+        dset.attrs['avg_len'] = totlen / len(data)
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())

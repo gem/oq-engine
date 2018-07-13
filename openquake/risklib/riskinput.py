@@ -34,7 +34,6 @@ class ValidationError(Exception):
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def read_composite_risk_model(dstore):
