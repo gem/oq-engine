@@ -26,7 +26,8 @@ import sys
 import mock
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import PSHACalculator, count_eff_ruptures
+from openquake.calculators.classical import (
+    ClassicalCalculator, count_eff_ruptures)
 from openquake.calculators import views
 
 
@@ -138,11 +139,10 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures):
+    with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
         calc.oqparam.ground_motion_fields = False
         calc.pre_execute()
-    if hasattr(calc, 'csm'):
-        calc.datastore['csm_info'] = calc.csm.info
+        calc.execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
