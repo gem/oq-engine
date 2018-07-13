@@ -72,7 +72,7 @@ def extend(dset, array, **attrs):
     length = len(dset)
     newlength = length + len(array)
     if array.dtype.name == 'object':  # vlen array
-        shape = (newlength,)
+        shape = (newlength,) + array[0].shape[:-1]
     else:
         shape = (newlength,) + array.shape[1:]
     dset.resize(shape)
@@ -91,7 +91,7 @@ def extend3(hdf5path, key, array, **attrs):
             dset = h5[key]
         except KeyError:
             if array.dtype.name == 'object':  # vlen array
-                shape = (None,)
+                shape = (None,) + array[0].shape[:-1]
             else:
                 shape = (None,) + array.shape[1:]
             dset = create(h5, key, array.dtype, shape)
@@ -273,19 +273,16 @@ class File(h5py.File):
         :param data: data to store as a list of arrays
         """
         dt = data[0].dtype
-        shape = (len(data),) + data[0].shape[:-1]
-        dset = create(self, key, h5py.special_dtype(vlen=dt), shape,
-                      fillvalue=None)
+        vdt = h5py.special_dtype(vlen=dt)
+        shape = (None,) + data[0].shape[:-1]
+        dset = create(self, key, vdt, shape, fillvalue=None)
         nbytes = 0
         totlen = 0
         for i, val in enumerate(data):
-            dset[i] = val
             nbytes += val.nbytes
             totlen += len(val)
-        attrs = super().__getitem__(key).attrs
-        attrs['nbytes'] = nbytes
-        attrs['avg_len'] = totlen / len(data)
-        self.flush()
+        extend(dset, numpy.array(data, vdt),
+               nbytes=nbytes, avg_len=totlen / len(data))
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
