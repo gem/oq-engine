@@ -168,7 +168,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, memory_rss
 
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
@@ -187,13 +187,6 @@ if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
 task_data_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
      ('duration', numpy.float32), ('received', numpy.int64)])
-
-
-def memory_rss(pid):
-    """
-    :returns: the RSS memory allocated by a process
-    """
-    return psutil.Process(pid).memory_info().rss
 
 
 def oq_distribute(task=None):
