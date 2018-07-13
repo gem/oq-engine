@@ -22,7 +22,7 @@ import h5py
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
+from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
@@ -357,8 +357,6 @@ class RuptureSerializer(object):
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
-    geom_dt = numpy.dtype([('points', hdf5.vfloat32)])
-
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
     @classmethod
@@ -373,7 +371,6 @@ class RuptureSerializer(object):
             rup = ebrupture.rupture
             mesh = surface_to_array(rup.surface)
             sy, sz = mesh.shape[1:]
-            points = mesh.flatten()
             # sanity checks
             assert sy < TWO16, 'Too many multisurfaces: %d' % sy
             assert sz < TWO16, 'The rupture mesh spacing is too small'
@@ -384,10 +381,10 @@ class RuptureSerializer(object):
                    getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
             lst.append(tup)
-            geom.append((points,))
+            geom.append(mesh.flatten())
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return (numpy.array(lst, cls.rupture_dt),
-                numpy.array(geom, cls.geom_dt),
+                numpy.array(geom, hdf5.vfloat32),
                 nbytes)
 
     def __init__(self, datastore):
@@ -397,7 +394,7 @@ class RuptureSerializer(object):
         if datastore['oqparam'].save_ruptures:
             datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
                                   attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', self.geom_dt, fillvalue=None,
+            datastore.create_dset('rupgeoms', hdf5.vfloat32, fillvalue=None,
                                   attrs={'nbytes': 0})
 
     def save(self, ebruptures, eidx=0):
