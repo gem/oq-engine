@@ -490,19 +490,21 @@ from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
     engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
+        username='%(username)s')
     os.remove(__file__)
 '''
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None):
+def submit_job(job_ini, username, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    job_id, oq = engine.job_from_file(job_ini, username, hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
-    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
+    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
+                          username=username)
     tmp_py = gettemp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
     devnull = subprocess.DEVNULL
@@ -555,7 +557,7 @@ def calc_results(request, calc_id):
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
-            outtypes=outtypes, url=url)
+            outtypes=outtypes, url=url, size_mb=result.size_mb)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
@@ -640,6 +642,7 @@ def get_result(request, result_id):
     response = FileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(exported))
     return response
 
 
@@ -693,6 +696,7 @@ def extract(request, calc_id, what):
     response = FileResponse(stream, content_type='application/octet-stream')
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 
@@ -721,6 +725,7 @@ def get_datastore(request, job_id):
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 

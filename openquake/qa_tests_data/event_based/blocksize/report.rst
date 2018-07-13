@@ -2,9 +2,9 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ============== ===================
-checksum32     3,254,196,570      
-date           2018-05-15T04:14:17
-engine_version 3.1.0-git0acbc11   
+checksum32     2,348,158,649      
+date           2018-06-26T14:58:32
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 2, num_levels = 4
@@ -77,15 +77,10 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            0.87342   0.0        584       292       5     
-2         PointSource  6            0.30947   0.0        194       97        155   
-3         PointSource  5            0.13355   0.0        114       57        114   
-9         PointSource  3            0.00333   0.0        3         2         0     
-4         PointSource  3            0.0       0.0        0         0         0     
-5         PointSource  2            0.0       0.0        0         0         0     
-6         PointSource  2            0.0       0.0        0         0         0     
-7         PointSource  4            0.0       0.0        0         0         0     
-8         PointSource  3            0.0       0.0        0         0         0     
+1         PointSource  6            1.69730   0.0        2.00000   292       15    
+2         PointSource  6            0.51341   0.0        2.00000   97        13    
+3         PointSource  5            0.21586   0.0        2.00000   57        0     
+9         PointSource  3            0.00282   0.0        1.50000   2         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -93,7 +88,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  1.31977   9     
+PointSource  2.42940   4     
 ============ ========= ======
 
 Duplicated sources
@@ -104,33 +99,35 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-prefilter          0.00910 0.00607 0.00308 0.03000 59       
-compute_ruptures   0.25180 0.24030 0.01947 0.52791 6        
+RtreeFilter        0.00977 0.00340 0.00407 0.01975 59       
+compute_hazard     0.09544 0.02554 0.01619 0.15088 28       
 ================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-================ ============================================================================== ========
-task             sent                                                                           received
-prefilter        srcs=392.08 KB monitor=18.61 KB srcfilter=13.19 KB                             149 KB  
-compute_ruptures sources=343.83 KB src_filter=4.52 KB param=3.42 KB monitor=1.93 KB gsims=762 B 31.85 KB
-================ ============================================================================== ========
+Data transfer
+-------------
+============== ================================================================================================== ========
+task           sent                                                                                               received
+RtreeFilter    srcs=392.08 KB monitor=18.55 KB srcfilter=16.08 KB                                                 149 KB  
+compute_hazard sources_or_ruptures=169.4 KB param=63.55 KB monitor=8.8 KB rlzs_by_gsim=8.12 KB src_filter=6.73 KB 36.16 KB
+============== ================================================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         1.51082   1.14844   6     
-managing sources               0.83419   0.0       1     
-reading composite source model 0.66274   0.0       1     
-total prefilter                0.53669   3.43359   59    
-splitting sources              0.53152   0.0       1     
-unpickling prefilter           0.01152   0.0       59    
-saving ruptures                0.01121   0.0       6     
-store source_info              0.00686   0.0       1     
-making contexts                0.00480   0.0       5     
-setting event years            0.00207   0.0       1     
-unpickling compute_ruptures    0.00180   0.0       6     
-reading site collection        3.743E-04 0.0       1     
+total compute_hazard           2.67234   7.74219   28    
+building ruptures              2.59350   6.83203   28    
+total prefilter                0.57645   1.19141   59    
+splitting sources              0.50570   0.0       1     
+reading composite source model 0.50554   0.0       1     
+managing sources               0.33993   0.0       1     
+saving ruptures                0.03347   0.0       28    
+unpickling prefilter           0.02491   0.0       59    
+GmfGetter.init                 0.00889   0.20703   28    
+unpickling compute_hazard      0.00755   0.0       28    
+making contexts                0.00704   0.0       5     
+aggregating hcurves            0.00586   0.0       28    
+store source_info              0.00477   0.0       1     
+reading site collection        2.429E-04 0.0       1     
 ============================== ========= ========= ======

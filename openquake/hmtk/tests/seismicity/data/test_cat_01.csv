@@ -1,0 +1,2 @@
+eventID,Agency,year,month,day,hour,minute,second,timeError,longitude,latitude,depth,magnitude
+1,Test,2015,0,0,,,,,10.0000,10.0000,11,4.9

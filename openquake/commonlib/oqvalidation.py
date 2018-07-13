@@ -32,6 +32,9 @@ from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 TWO16 = 2 ** 16  # 65536
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -73,7 +76,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
-    ground_motion_fields = valid.Param(valid.boolean, False)
+    ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.gsim, valid.FromFile())
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
@@ -97,9 +100,11 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     mean_hazard_curves = valid.Param(valid.boolean, True)
+    std_hazard_curves = valid.Param(valid.boolean, False)
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
+    minimum_magnitude = valid.Param(valid.positivefloat, 0)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -123,7 +128,6 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
-    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
@@ -159,6 +163,13 @@ class OqParam(valid.ParamSet):
         except AttributeError:
             self._file_type, self._risk_files = get_risk_files(self.inputs)
             return self._file_type
+
+    def get_reqv(self):
+        """
+        :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
+        """
+        if 'reqv' in self.inputs:
+            return valid.RepiEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
@@ -259,11 +270,6 @@ class OqParam(valid.ParamSet):
                 self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
-        elif (self.calculation_mode == 'event_based_risk' and
-              self.conditional_loss_poes and not self.asset_loss_table):
-            raise InvalidFile(
-                '%s: asset_loss_table is not set, probably you want to remove'
-                ' conditional_loss_poes' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv') and not self.sites and
@@ -349,12 +355,13 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
-        costtypes = sorted(self.risk_files)
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
+        costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._file_type, self._risk_files = get_risk_files(parent.inputs)
-            costtypes = sorted(self.risk_files)
+            costtypes = sorted(rt.rsplit('/')[1] for rt in self.risk_files)
         return costtypes
 
     def set_risk_imtls(self, risk_models):
@@ -368,7 +375,7 @@ class OqParam(valid.ParamSet):
         # in that case we merge the IMLs
         imtls = {}
         for taxonomy, risk_functions in risk_models.items():
-            for loss_type, rf in risk_functions.items():
+            for risk_type, rf in risk_functions.items():
                 imt = rf.imt
                 from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
@@ -422,13 +429,22 @@ class OqParam(valid.ParamSet):
         lst = [('poe-%s' % poe, dtype) for poe in self.conditional_loss_poes]
         return numpy.dtype([(lt, lst) for lt in ltypes])
 
+    def gmf_data_dt(self):
+        """
+        Return a composite data type for the GMFs
+        """
+        return numpy.dtype(
+            [('rlzi', U16), ('sid', U32),
+             ('eid', U64), ('gmv', (F32, (len(self.imtls),)))])
+
     def no_imls(self):
         """
         Return True if there are no intensity measure levels
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
 
-    def get_correl_model(self):
+    @property
+    def correl_model(self):
         """
         Return a correlation object. See :mod:`openquake.hazardlib.correlation`
         for more info.
@@ -450,6 +466,9 @@ class OqParam(valid.ParamSet):
         if self.mean_hazard_curves:
             names.append('mean')
             funcs.append(stats.mean_curve)
+        if self.std_hazard_curves:
+            names.append('std')
+            funcs.append(stats.std_curve)
         for q in self.quantile_hazard_curves:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
