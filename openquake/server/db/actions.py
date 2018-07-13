@@ -74,6 +74,11 @@ def set_status(db, job_id, status):
         is_running = 0
     else:  # 'executing'
         is_running = 1
+    if job_id < 0:
+        rows = db('SELECT id FROM job ORDER BY id DESC LIMIT ?x', -job_id)
+        if not rows:
+            return 0
+        job_id = rows[-1].id
     cursor = db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
                 status, is_running, job_id)
     return cursor.rowcount
@@ -268,7 +273,7 @@ DISPLAY_NAME = {
     'dmg_by_event': 'Aggregate Event Damages',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
-    'loss_curves': 'Asset Loss Curves',
+    'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
@@ -297,7 +302,7 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, dskeys):
+def create_outputs(db, job_id, keysize):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -306,8 +311,9 @@ def create_outputs(db, job_id, dskeys):
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    rows = [(job_id, DISPLAY_NAME.get(key, key), key) for key in dskeys]
-    db.insert('output', 'oq_job_id display_name ds_key'.split(), rows)
+    rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
+            for key, size in keysize]
+    db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
 def finish(db, job_id, status):

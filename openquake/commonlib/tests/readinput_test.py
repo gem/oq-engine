@@ -249,10 +249,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam)), 3)
+        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
         oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
@@ -299,7 +300,7 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
     exposure0 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -332,7 +333,7 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
     exposure1 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -353,7 +354,7 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
     exposure2 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -366,7 +367,7 @@ class ExposureTestCase(unittest.TestCase):
       </costTypes>
     </conversions>
   </exposureModel>
-</nrml>''')  # wrong cost type "aggregate"
+</nrml>''', suffix='.xml')  # wrong cost type "aggregate"
 
     exposure3 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -387,7 +388,26 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
+
+    exposure4 = general.gettemp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+       <costTypes name="structural" type="aggregated" unit="USD"/>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
         exp, _assets = asset._get_exposure(self.exposure, stop='assets')
@@ -493,6 +513,17 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
                       str(ctx.exception))
+
+    def test_missing_cost_types(self):
+        job_ini = general.gettemp('''\
+[general]
+description = Exposure with missing cost_types
+calculation_mode = scenario
+exposure_file = %s''' % os.path.basename(self.exposure4))
+        oqparam = readinput.get_oqparam(job_ini)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
+        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):

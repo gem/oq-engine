@@ -69,7 +69,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     linenum = 1
     discrepancies = []
     started = time.time()
-    for testcase in _parse_csv(datafile, debug):
+    for testcase in _parse_csv(
+            datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
             = testcase
@@ -175,7 +176,7 @@ context objects changed = %s'''
     return stats
 
 
-def _parse_csv(datafile, debug):
+def _parse_csv(datafile, debug, req_site_params):
     """
     Parse a data file in csv format and generate everything needed to exercise
     GSIM and check the result.
@@ -191,13 +192,13 @@ def _parse_csv(datafile, debug):
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
-        = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+        = _parse_csv_line(headers, next(reader), req_site_params)
+    sattrs = sctx._slots_
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
         (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
-            = _parse_csv_line(headers, line)
+            = _parse_csv_line(headers, line, req_site_params)
         if not debug \
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
@@ -220,7 +221,7 @@ def _parse_csv(datafile, debug):
     yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
-def _parse_csv_line(headers, values):
+def _parse_csv_line(headers, values, req_site_params):
     """
     Parse a single line from data file.
 
@@ -254,7 +255,7 @@ def _parse_csv_line(headers, values):
             is taken from column ``result_type``.
     """
     rctx = RuptureContext()
-    sctx = SitesContext()
+    sctx = SitesContext(slots=req_site_params)
     dctx = DistancesContext()
     expected_results = {}
     stddev_types = result_type = damping = None
