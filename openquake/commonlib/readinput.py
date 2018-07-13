@@ -27,6 +27,7 @@ import configparser
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -115,12 +116,13 @@ def extract_from_zip(path, candidates):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key.endswith(('_file', '_csv')):
+        if key.endswith(('_file', '_csv', '_hdf5')):
             if os.path.isabs(value):
                 raise ValueError('%s=%s is an absolute path' % (key, value))
             input_type, _ext = key.rsplit('_', 1)
             params['inputs'][input_type] = (
-                os.path.join(base_path, value) if value else '')
+                os.path.normpath(os.path.join(base_path, value))
+                if value else '')
         else:
             params[key] = value
 
@@ -179,7 +181,7 @@ def gen_sm_paths(smlt):
     a block at the time.
     """
     base_path = os.path.dirname(smlt)
-    for model in source.collect_source_model_paths(smlt):
+    for model in logictree.collect_source_model_paths(smlt):
         paths = []
         for name in model.split():
             if os.path.isabs(name):
@@ -275,8 +277,7 @@ def get_mesh(oqparam):
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = coords[start:stop] if has_header else sorted(coords[start:stop])
-        # TODO: sort=True below would break a lot of tests :-(
-        return geo.Mesh.from_coords(c, sort=False)
+        return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if fname.endswith('.csv'):
@@ -302,47 +303,49 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-site_model_dt = numpy.dtype([
-    ('lon', numpy.float64),
-    ('lat', numpy.float64),
-    ('vs30', numpy.float64),
-    ('vs30measured', numpy.bool),
-    ('z1pt0', numpy.float64),
-    ('z2pt5', numpy.float64),
-    ('backarc', numpy.bool),
-])
-
-
-def get_site_model(oqparam):
+def get_site_model(oqparam, req_site_params):
     """
     Convert the NRML file into an array of site parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param req_site_params:
+        required site parameters
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
     nodes = nrml.read(oqparam.inputs['site_model']).siteModel
-    params = sorted(valid.site_param(**node.attrib) for node in nodes)
-    array = numpy.zeros(len(params), site_model_dt)
-    for i, param in enumerate(params):
-        rec = array[i]
-        for name in site_model_dt.names:
-            rec[name] = getattr(param, name)
-    return array
+    params = [valid.site_param(node.attrib) for node in nodes]
+    missing = req_site_params - set(params[0])
+    if missing == set(['backarc']):  # use a default of False
+        for param in params:
+            param['backarc'] = False
+    elif missing:
+        raise InvalidFile('%s: missing parameter %s' %
+                          (oqparam.inputs['site_model'], ', '.join(missing)))
+    # NB: the sorted in sorted(params[0]) is essential, otherwise there is
+    # an heisenbug in scenario/test_case_4
+    site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
+                                 for p in sorted(params[0])])
+    tuples = [tuple(param[name] for name in site_model_dt.names)
+              for param in params]
+    return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam):
+def get_site_collection(oqparam, mesh=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param mesh:
+        the mesh to use; if None, it is extracted from the job.ini
     """
-    mesh = get_mesh(oqparam)
+    mesh = mesh or get_mesh(oqparam)
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam)
+        sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
@@ -352,19 +355,18 @@ def get_site_collection(oqparam):
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm)
+                sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths)
+                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             sc, params = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for sid, param in zip(sc.sids, params):
-                for name in site_model_dt.names[2:]:  # except lon, lat
-                    sitecol.array[sid][name] = param[name]
+            for name in req_site_params:
+                sitecol._set(name, params[name])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam)
+            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
         # debugging tip to reduce the size of a calculation
@@ -443,6 +445,46 @@ def get_rupture(oqparam):
     return rup
 
 
+def read_source_groups(fname):
+    """
+    :param fname: a path to a source model XML file
+    :return: a list of SourceGroup objects containing source nodes
+    """
+    smodel = nrml.read(fname).sourceModel
+    src_groups = []
+    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
+        for sg_node in smodel:
+            sg = sourceconverter.SourceGroup(
+                sg_node['tectonicRegion'])
+            sg.sources = sg_node.nodes
+            src_groups.append(sg)
+    else:  # NRML 0.4 format: smodel is a list of source nodes
+        src_groups.extend(
+            sourceconverter.SourceGroup.collect(smodel))
+    return src_groups
+
+
+def get_source_ids(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        the complete set of source IDs found in all the source models
+    """
+    source_ids = set()
+    for fname in oqparam.inputs['source']:
+        if fname.endswith('.hdf5'):
+            with hdf5.File(fname, 'r') as f:
+                for sg in f['/']:
+                    for src in sg:
+                        source_ids.add(src.source_id)
+        else:
+            for sg in read_source_groups(fname):
+                for src_node in sg:
+                    source_ids.add(src_node['id'])
+    return source_ids
+
+
 def get_source_model_lt(oqparam):
     """
     :param oqparam:
@@ -456,7 +498,8 @@ def get_source_model_lt(oqparam):
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
             fname, validate=False, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples)
+            num_samples=oqparam.number_of_logic_tree_samples,
+            source_ids=get_source_ids(oqparam))
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
                               oqparam.number_of_logic_tree_samples)
@@ -504,16 +547,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 logging.info('Reading %s', fname)
                 src_groups.extend(psr.parse_src_groups(fname, apply_unc))
             else:  # just collect the TRT models
-                smodel = nrml.read(fname).sourceModel
-                if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
-                    for sg_node in smodel:
-                        sg = sourceconverter.SourceGroup(
-                            sg_node['tectonicRegion'])
-                        sg.sources = sg_node.nodes
-                        src_groups.append(sg)
-                else:  # NRML 0.4 format: smodel is a list of source nodes
-                    src_groups.extend(
-                        sourceconverter.SourceGroup.collect(smodel))
+                src_groups.extend(read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -568,6 +602,8 @@ def get_composite_source_model(oqparam, in_memory=True):
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    if source_model_lt.on_each_source():
+        logging.info('There is a logic tree on each source')
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
         for src_group in source_model.src_groups:
@@ -666,12 +702,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if oqparam.region_grid_spacing and not oqparam.region:
         # extract the hazard grid from the exposure
         poly = exposure.mesh.get_convex_hull()
-        exposure.mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+        mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
             oqparam.region_grid_spacing)
-        if len(exposure.mesh) > len(haz_sitecol):
-            raise LargeExposureGrid(exposure.mesh, haz_sitecol.mesh,
+        if len(mesh) > len(haz_sitecol):
+            raise LargeExposureGrid(mesh, haz_sitecol.mesh,
                                     oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam)  # reload on new mesh
+        haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -701,8 +737,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
 
-    asset_refs = [exposure.asset_refs[asset.ordinal]
-                  for assets in assets_by_site for asset in assets]
+    asset_refs = numpy.array(
+        [exposure.asset_refs[asset.ordinal]
+         for assets in assets_by_site for asset in assets])
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
