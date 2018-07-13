@@ -23,18 +23,19 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.commonlib import source
 
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
+from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.ucerf_base import UcerfFilter
 # FIXME: the counting of effective ruptures has to be revised
 
 
-@base.calculators.add('ucerf_psha')
-class UcerfPSHACalculator(PSHACalculator):
+@base.calculators.add('ucerf_classical')
+class UcerfClassicalCalculator(ClassicalCalculator):
     """
     UCERF classical calculator.
     """
     def pre_execute(self):
         super().pre_execute()
+        self.csm_info = self.csm.info
         self.src_filter = UcerfFilter(
             self.sitecol, self.oqparam.maximum_distance)
         for sm in self.csm.source_models:  # one branch at the time
@@ -77,8 +78,3 @@ class UcerfPSHACalculator(PSHACalculator):
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)
         return acc  # {grp_id: pmap}
-
-
-@base.calculators.add('ucerf_classical')
-class UCERFClassicalCalculator(ClassicalCalculator):
-    pre_calculator = 'ucerf_psha'

@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ===================
 checksum32     2,783,587,006      
-date           2018-06-05T06:38:20
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:56:57
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 50
@@ -90,8 +90,8 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-B         PointSource  23           0.00499   1.907E-06  1.00000   1         0     
-A         PointSource  23           0.00447   6.437E-06  1.00000   1         0     
+B         PointSource  23           0.00530   1.669E-06  1.00000   1         0     
+A         PointSource  23           0.00368   4.053E-06  1.00000   1         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,7 +99,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.00946   2     
+PointSource  0.00898   2     
 ============ ========= ======
 
 Duplicated sources
@@ -110,8 +110,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00304 5.177E-04 0.00267 0.00340 2        
-count_eff_ruptures 0.00653 5.857E-04 0.00611 0.00694 2        
+RtreeFilter        0.00231 5.884E-05 0.00227 0.00235 2        
+count_eff_ruptures 0.00603 0.00161   0.00490 0.00717 2        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
@@ -140,8 +140,8 @@ Data transfer
 -------------
 ================== ====================================================================== ========
 task               sent                                                                   received
-RtreeFilter        srcs=2.27 KB monitor=692 B srcfilter=558 B                             2.5 KB  
-count_eff_ruptures sources=2.59 KB param=1.6 KB monitor=706 B gsims=519 B srcfilter=466 B 716 B   
+RtreeFilter        srcs=2.27 KB monitor=644 B srcfilter=558 B                             2.5 KB  
+count_eff_ruptures sources=2.59 KB param=1.6 KB monitor=658 B gsims=519 B srcfilter=492 B 716 B   
 ================== ====================================================================== ========
 
 Slowest operations
@@ -149,16 +149,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             0.32795   0.0       1     
-managing sources               0.16000   0.0       1     
-total count_eff_ruptures       0.01305   5.65234   2     
-store source_info              0.00681   0.0       1     
-total prefilter                0.00607   2.35547   2     
-reading composite source model 0.00434   0.0       1     
-reading site collection        8.676E-04 0.0       1     
-aggregate curves               7.117E-04 0.0       2     
-unpickling prefilter           5.460E-04 0.0       2     
-unpickling count_eff_ruptures  5.348E-04 0.0       2     
-splitting sources              3.223E-04 0.0       1     
-saving probability maps        2.160E-04 0.0       1     
+managing sources               0.21960   0.0       1     
+total count_eff_ruptures       0.01207   6.50391   2     
+store source_info              0.00899   0.0       1     
+total prefilter                0.00462   2.01953   2     
+reading composite source model 0.00273   0.0       1     
+aggregate curves               7.279E-04 0.0       2     
+unpickling count_eff_ruptures  6.392E-04 0.0       2     
+unpickling prefilter           5.658E-04 0.0       2     
+reading site collection        3.037E-04 0.0       1     
+splitting sources              2.730E-04 0.0       1     
 ============================== ========= ========= ======

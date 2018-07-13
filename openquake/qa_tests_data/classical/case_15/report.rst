@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2018-06-05T06:38:45
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:57:23
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -100,8 +100,8 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         AreaSource   240          0.00617   0.00312    3.00000   99        0     
-2         PointSource  15           0.00577   1.669E-06  3.00000   1         0     
+1         AreaSource   240          0.00525   0.00315    3.00000   99        0     
+2         PointSource  15           0.00492   1.907E-06  3.00000   1         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -109,8 +109,8 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.00617   1     
-PointSource  0.00577   1     
+AreaSource   0.00525   1     
+PointSource  0.00492   1     
 ============ ========= ======
 
 Duplicated sources
@@ -121,8 +121,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00361 0.00178 0.00101 0.00686 34       
-count_eff_ruptures 0.00927 0.00227 0.00767 0.01087 2        
+RtreeFilter        0.00355 0.00174 0.00101 0.00647 34       
+count_eff_ruptures 0.00801 0.00212 0.00651 0.00951 2        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
@@ -151,8 +151,8 @@ Data transfer
 -------------
 ================== ======================================================================= ========
 task               sent                                                                    received
-RtreeFilter        srcs=41.84 KB monitor=11.49 KB srcfilter=9.26 KB                        44.81 KB
-count_eff_ruptures sources=17.42 KB param=1.2 KB monitor=706 B srcfilter=466 B gsims=430 B 737 B   
+RtreeFilter        srcs=41.84 KB monitor=10.69 KB srcfilter=9.26 KB                        44.81 KB
+count_eff_ruptures sources=17.42 KB param=1.2 KB monitor=658 B srcfilter=492 B gsims=430 B 737 B   
 ================== ======================================================================= ========
 
 Slowest operations
@@ -160,16 +160,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             0.44942   0.0       1     
-managing sources               0.25504   0.0       1     
-total prefilter                0.12275   3.46875   34    
-total count_eff_ruptures       0.01854   5.65234   2     
-reading composite source model 0.01636   0.0       1     
-unpickling prefilter           0.01181   0.0       34    
-store source_info              0.00872   0.0       1     
-splitting sources              0.00674   0.0       1     
-aggregate curves               7.701E-04 0.0       2     
-reading site collection        7.505E-04 0.0       1     
-unpickling count_eff_ruptures  6.235E-04 0.0       2     
-saving probability maps        2.396E-04 0.0       1     
+managing sources               0.23442   0.0       1     
+total prefilter                0.12086   3.15625   34    
+total count_eff_ruptures       0.01602   6.39844   2     
+reading composite source model 0.01507   0.0       1     
+unpickling prefilter           0.01118   0.0       34    
+store source_info              0.00737   0.0       1     
+splitting sources              0.00677   0.0       1     
+aggregate curves               6.509E-04 0.0       2     
+unpickling count_eff_ruptures  4.756E-04 0.0       2     
+reading site collection        3.455E-04 0.0       1     
 ============================== ========= ========= ======
