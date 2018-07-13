@@ -60,6 +60,7 @@ def cached_property(method):
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
+    newmethod.__doc__ = method.__doc__
     return property(newmethod)
 
 
@@ -369,7 +370,10 @@ def removetmp():
     """
     for path in _tmp_paths:
         if os.path.exists(path):  # not removed yet
-            os.remove(path)
+            try:
+                os.remove(path)
+            except PermissionError:
+                pass
 
 
 def git_suffix(fname):
@@ -771,6 +775,12 @@ class DictArray(collections.Mapping):
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]
+
+    def __eq__(self, other):
+        return (self.array == other.array).all()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]

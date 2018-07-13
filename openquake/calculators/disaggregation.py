@@ -111,11 +111,10 @@ producing too small PoEs.'''
     def pre_execute(self):
         oq = self.oqparam
         if oq.iml_disagg and not oq.disagg_by_src:
-            # no need to run a PSHACalculator
             base.HazardCalculator.pre_execute(self)
         else:
-            # we need to run a PSHACalculator
-            cl = classical.PSHACalculator(oq, self.datastore.calc_id)
+            # we need to run a ClassicalCalculator
+            cl = classical.ClassicalCalculator(oq, self.datastore.calc_id)
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
@@ -290,7 +289,7 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance,
-                    oq.filter_distance)
+                    {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,

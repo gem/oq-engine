@@ -36,8 +36,8 @@ From a terminal run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-linux64-3.0.0-1.run
-./openquake-setup-linux64-3.0.0-1.run
+chmod +x openquake-setup-linux64-3.1.0-1.run
+./openquake-setup-linux64-3.1.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 

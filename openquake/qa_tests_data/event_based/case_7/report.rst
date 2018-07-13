@@ -3,8 +3,8 @@ Event-based PSHA with logic tree sampling
 
 ============== ===================
 checksum32     3,756,725,912      
-date           2018-06-05T06:39:59
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:58:28
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 3, num_levels = 38
@@ -80,27 +80,27 @@ source_model1.xml 0      Active Shallow Crust 2,456        2,456
 source_model2.xml 1      Active Shallow Crust 2,456        2,456       
 ================= ====== ==================== ============ ============
 
-============= =====
-#TRT models   2    
-#eff_ruptures 4,912
-#tot_ruptures 4,912
-#tot_weight   0    
-============= =====
+============= ======
+#TRT models   2     
+#eff_ruptures 4,912 
+#tot_ruptures 4,912 
+#tot_weight   14,736
+============= ======
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= =======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events 
-========= ============ ============ ========= ========== ========= ========= =======
-1         AreaSource   2,456        8.00614   0.07272    2.05863   614       509,269
-========= ============ ============ ========= ========== ========= ========= =======
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+1         PointSource  8            12        0.0        2.05863   614       49,186
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   8.00614   1     
+PointSource  12        1     
 ============ ========= ======
 
 Duplicated sources
@@ -111,34 +111,39 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00693 0.00267 0.00334 0.01385 56       
-compute_ruptures   1.40972 0.54663 0.75848 2.05632 6        
+RtreeFilter        0.00703 0.00261 0.00296 0.01679 56       
+compute_hazard     0.68970 0.31164 0.25937 1.09428 62       
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-================ ================================================================================ =========
-task             sent                                                                             received 
-RtreeFilter      srcs=209.74 KB monitor=18.92 KB srcfilter=15.26 KB                               238.34 KB
-compute_ruptures sources=210.59 KB param=5.58 KB monitor=2.07 KB gsims=1.88 KB src_filter=1.37 KB 6.98 MB  
-================ ================================================================================ =========
+============== ======================================================================================================= =========
+task           sent                                                                                                    received 
+RtreeFilter    srcs=209.74 KB monitor=17.61 KB srcfilter=15.26 KB                                                      238.34 KB
+compute_hazard sources_or_ruptures=277.75 KB param=209.01 KB rlzs_by_gsim=30.21 KB monitor=19.5 KB src_filter=14.89 KB 4.14 MB  
+============== ======================================================================================================= =========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-total compute_ruptures          8.45834   8.46875   6     
-EventBasedRuptureCalculator.run 3.05539   6.88281   1     
-managing sources                2.56513   6.75781   1     
-making contexts                 1.92244   0.0       2,667 
-total prefilter                 0.38819   3.46875   56    
-unpickling compute_ruptures     0.25232   0.0       6     
-saving ruptures                 0.15619   0.0       6     
-reading composite source model  0.14724   0.0       1     
-splitting sources               0.14662   0.0       1     
-unpickling prefilter            0.03658   0.0       56    
-setting event years             0.01873   0.0       1     
-store source_info               0.00518   0.0       1     
-reading site collection         7.448E-04 0.0       1     
-=============================== ========= ========= ======
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_hazard           42        8.39453   62    
+building hazard                29        1.29297   62    
+building ruptures              12        6.95312   62    
+making contexts                3.12108   0.0       2,667 
+managing sources               2.81319   0.0       1     
+saving ruptures                0.40709   0.0       62    
+total prefilter                0.39354   3.15625   56    
+unpickling compute_hazard      0.30538   0.0       62    
+GmfGetter.init                 0.25371   0.06250   62    
+building hazard curves         0.16819   0.0       798   
+splitting sources              0.14909   0.0       1     
+reading composite source model 0.14595   0.0       1     
+saving gmfs                    0.14177   0.0       62    
+aggregating hcurves            0.05491   0.0       62    
+unpickling prefilter           0.03459   0.0       56    
+store source_info              0.00474   0.0       1     
+saving gmf_data/indices        0.00163   0.0       1     
+reading site collection        3.688E-04 0.0       1     
+============================== ========= ========= ======
