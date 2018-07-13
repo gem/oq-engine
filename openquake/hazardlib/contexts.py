@@ -23,6 +23,9 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.scalerel.point import PointMSR
+
+pointMSR = PointMSR()
 
 
 def get_distances(rupture, mesh, param):
@@ -60,21 +63,33 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
+def get_num_distances(gsims):
+    """
+    :returns: the number of distances required for the given GSIMs
+    """
+    dists = set()
+    for gsim in gsims:
+        dists.update(gsim.REQUIRES_DISTANCES)
+    return len(dists)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, filter_distance=None,
+    def __init__(self, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
+        param = param or {}
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
                 filter_distance = 'rrup'
@@ -83,7 +98,10 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
+        if self.reqv is not None:
+            self.REQUIRES_DISTANCES.add('repi')
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
             # same TRT, given a realization there is a single gsim
@@ -166,11 +184,14 @@ class ContextMaker(object):
         """
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
-            setattr(dctx, param, get_distances(rupture, sites, param))
+            distances = get_distances(rupture, sites, param)
+            if param == 'repi' and self.reqv:
+                distances = self.reqv.get(distances, rupture.mag)
+            setattr(dctx, param, distances)
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
-        sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
+        sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
     def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
@@ -187,6 +208,8 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
+            if self.reqv and hasattr(src, 'location'):  # point source
+                src.magnitude_scaling_relationship = pointMSR
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen
@@ -310,15 +333,13 @@ class SitesContext(BaseContext):
     object.
     """
     # _slots_ is used in hazardlib check_gsim and in the SMTK
-    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats')
-    # lons, lats are needed in si_midorikawa_1999_test.py
-
-    def __init__(self, sitecol=None, slots=None):
+    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
+                 sitecol=None):
+        self._slots_ = slots
         if sitecol is not None:
             self.sids = sitecol.sids
-            for name in self._slots_ if slots is None else slots:
-                setattr(self, name, getattr(sitecol, name))
+            for slot in slots:
+                setattr(self, slot, getattr(sitecol, slot))
 
 
 class DistancesContext(BaseContext):
