@@ -525,8 +525,7 @@ class RuptureGetter(object):
             evs = events[rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            geom = rupgeoms[ridx]
-            mesh = geom['points'].reshape(3, rec['sy'], rec['sz'])
+            mesh = rupgeoms[ridx].reshape(3, rec['sy'], rec['sz'])
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
