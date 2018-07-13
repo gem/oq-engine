@@ -431,7 +431,7 @@ class RuptureSerializer(object):
         # save nbytes occupied by the PMFs
         if pmfbytes:
             if 'nbytes' in dset.attrs:
-                 dset.attrs['nbytes'] += pmfbytes
+                dset.attrs['nbytes'] += pmfbytes
             else:
                 dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
