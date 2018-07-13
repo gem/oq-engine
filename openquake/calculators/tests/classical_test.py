@@ -90,6 +90,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
+        self.run_calc(case_2.__file__, 'job.ini')
+
         # check view_pmap for a single realization
         got = view('pmap:grp-00', self.calc.datastore)
         self.assertEqual(got, '''\
