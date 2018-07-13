@@ -164,6 +164,13 @@ class OqParam(valid.ParamSet):
             self._file_type, self._risk_files = get_risk_files(self.inputs)
             return self._file_type
 
+    def get_reqv(self):
+        """
+        :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
+        """
+        if 'reqv' in self.inputs:
+            return valid.RepiEquivalent(self.inputs['reqv'])
+
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
         job_ini = self.inputs['job_ini']
