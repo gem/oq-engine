@@ -1,0 +1,1 @@
+ALTER TABLE output ADD COLUMN size_mb FLOAT;

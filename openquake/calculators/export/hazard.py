@@ -111,19 +111,20 @@ def export_ruptures_csv(ekey, dstore):
 def export_site_model(ekey, dstore):
     dest = dstore.export_path('site_model.xml')
     site_model_node = Node('siteModel')
-    hdffields = 'lons lats vs30 vs30measured z1pt0 z2pt5 '.split()
-    xmlfields = 'lon lat vs30 vs30Type z1pt0 z2pt5'.split()
-    recs = [tuple(rec[f] for f in hdffields)
-            for rec in dstore['sitecol'].array]
-    unique_recs = sorted(set(recs))
-    for rec in unique_recs:
+    hdf2xml = dict(lons='lon', lats='lat', depths='depth',
+                   vs30measured='vs30Type')
+    for rec in dstore['sitecol'].array:
         n = Node('site')
-        for f, hdffield in enumerate(hdffields):
-            xmlfield = xmlfields[f]
+        for hdffield in rec.dtype.names:
+            if hdffield == 'sids':  # skip
+                continue
+            elif hdffield == 'depths' and rec[hdffield] == 0:
+                continue
+            xmlfield = hdf2xml.get(hdffield, hdffield)
             if hdffield == 'vs30measured':
-                value = 'measured' if rec[f] else 'inferred'
+                value = 'measured' if rec[hdffield] else 'inferred'
             else:
-                value = rec[f]
+                value = rec[hdffield]
             n[xmlfield] = value
         site_model_node.append(n)
     with open(dest, 'wb') as f:

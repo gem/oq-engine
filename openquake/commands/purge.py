@@ -64,5 +64,6 @@ def purge(calc_id, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
+
 purge.arg('calc_id', 'calculation ID', type=int)
 purge.flg('force', 'ignore dependent calculations')

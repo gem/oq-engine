@@ -17,10 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import mock
 import unittest
 import numpy
-import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
@@ -149,7 +147,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1404)
+        self.assertEqual(nbytes, 1911)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -221,11 +219,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
-
-        # check max_gmf_size
-        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
-        got = self.calc.datastore['gmf_data/data'].value.nbytes
-        self.assertGreater(exp, got)  # there is minimum_intensity
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):

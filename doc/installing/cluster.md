@@ -8,7 +8,9 @@ Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](
 
 ## Initial install
 
-Note: you have to **restart every celery node** after a configuration change.
+### Pre-requisites
+
+Have read [Installing on RedHat and derivatives](rhel.md) or [Installing on Ubuntu](ubuntu.md) (depending on the operating system been used).
 
 ### Master node
 The `python3-oq-engine-master` package must be installed on the **master** node. It provides extra functionalities like _RabbitMQ_.
@@ -19,6 +21,8 @@ On **RHEL/CentOS** [EPEL](https://fedoraproject.org/wiki/EPEL) repository *must 
 On **worker** nodes  `python3-oq-engine-worker` must be installed **instead**; it adds _celery_ support on top of the standard `python3-oq-engine` package.
 
 ## OpenQuake Engine 'master' node configuration File
+
+Note: you have to **restart every celery node** after a configuration change.
 
 ### Enable Celery
 
@@ -163,13 +167,13 @@ shared_dir = /home/openquake
 
 When `shared_dir` is set, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
 
-You may need to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
+You need then to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
 
 ```bash
 $ mkdir /home/openquake
 $ chown openquake.openquake /home/openquake
 # Enable setgid on the tree
-$ chmod 2750 /home/openquake
+$ chmod 2770 /home/openquake
 ```
 
 On the workers the _shared_dir_ should be mounted as the `openquake` user too, or access must be given to the user running `celeryd` (which is `openquake` by default in the official packages).
