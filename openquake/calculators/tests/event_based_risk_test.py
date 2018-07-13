@@ -17,10 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import mock
 import unittest
 import numpy
-import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
@@ -149,7 +147,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1404)
+        self.assertEqual(nbytes, 1911)
 
         # test postprocessing
         self.calc.datastore.close()

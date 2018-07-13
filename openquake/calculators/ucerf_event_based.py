@@ -272,7 +272,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
-        self.read_risk_data()  # read the site collection
+        self.read_inputs()  # read the site collection
         self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
@@ -284,12 +284,11 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
-        self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
 
     def filter_csm(self):
-        return self.csm, UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
+        return UcerfFilter(
+            self.sitecol, self.oqparam.maximum_distance), self.csm
 
     def gen_args(self, monitor):
         """
