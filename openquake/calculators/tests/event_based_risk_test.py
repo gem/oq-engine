@@ -17,10 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import mock
 import unittest
 import numpy
-import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
@@ -31,29 +29,6 @@ from openquake.calculators.extract import extract
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
     occupants, case_1g, case_7a)
-
-
-# used for a sanity check
-def check_total_losses(calc):
-    dstore = calc.datastore
-    loss_dt = calc.oqparam.loss_dt()
-    LI = len(loss_dt.names)
-    data1 = numpy.zeros(LI, numpy.float32)
-    alt = dstore['losses_by_event'].value
-    for li, lt in enumerate(loss_dt.names):
-        data1[li] += alt['loss'][:, li].sum()
-
-    # test the asset_loss_table exporter; notice that I need to disable
-    # the parallelism to avoid reading bogus data: this is the usual
-    # heisenbug when reading in parallel an .hdf5 generated in process
-    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
-        [fname] = export(('asset_loss_table', 'hdf5'), dstore)
-    print('Generating %s' % fname)
-    with h5py.File(fname) as f:
-        total = f['asset_loss_table'].attrs['total']
-
-    # check the sums are consistent with the ones coming from asset_loss_table
-    numpy.testing.assert_allclose(data1, total, 1E-6)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -134,7 +109,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
+        parent = self.calc.datastore.parent
+        crm = sorted(parent.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -157,8 +133,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
-        check_total_losses(self.calc)
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
@@ -173,7 +147,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1404)
+        self.assertEqual(nbytes, 1911)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -246,12 +220,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
-        check_total_losses(self.calc)
-
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+
+        # check minimum_magnitude >= 5.2
+        minmag = self.calc.datastore['ruptures']['mag'].min()
+        self.assertGreaterEqual(minmag, 5.2)
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
@@ -285,8 +261,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
-                            calculation_mode='event_based',
-                            ground_motion_fields='false', exports='csv')
+                            calculation_mode='event_based', exports='csv')
         [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)

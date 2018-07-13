@@ -15,36 +15,15 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import time
-from datetime import datetime
 import psutil
+from datetime import datetime
 import numpy
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
-
-
-if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(pid):
-        return psutil.Process(pid).memory_info()
-
-elif psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(pid):
-        return psutil.Process(pid).get_memory_info()
-
-else:  # Ubuntu 12.04
-    def virtual_memory():
-        return psutil.phymem_usage()
-
-    def memory_info(pid):
-        return psutil.Process(pid).get_memory_info()
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
@@ -114,7 +93,7 @@ class Monitor(object):
     def measure_mem(self):
         """A memory measurement (in bytes)"""
         try:
-            return memory_info(os.getpid()).rss
+            return psutil.Process(os.getpid()).memory_info().rss
         except psutil.AccessDenied:
             # no access to information about this process
             pass

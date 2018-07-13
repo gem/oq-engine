@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     513,967,307        
-date           2018-05-15T04:12:45
-engine_version 3.1.0-git0acbc11   
+date           2018-06-26T14:57:02
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 7, num_levels = 8
@@ -55,7 +55,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rjb rrup  vs30       mag rake  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -93,7 +93,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          4.125E-04 2.146E-04  105       15        0     
+1         SimpleFaultSource 482          0.05126   1.824E-04  7.00000   15        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 4.125E-04 1     
+SimpleFaultSource 0.05126   1     
 ================= ========= ======
 
 Duplicated sources
@@ -110,57 +110,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ========= ======= =========
-operation-duration mean    stddev    min       max     num_tasks
-prefilter          0.00858 0.00221   0.00522   0.01266 15       
-count_ruptures     0.00216 7.088E-04 9.222E-04 0.00278 6        
-================== ======= ========= ========= ======= =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.00676 0.00229 0.00183 0.01144 15       
+count_eff_ruptures 0.01123 0.00117 0.00991 0.01290 6        
+================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=6, weight=222, duration=0 s, sources="1"
+taskno=4, weight=238, duration=0 s, sources="1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   7.00000 0.0    7   7   3
-weight   74      10     63  84  3
+nsites   7.00000 0.0    7   7   2
+weight   119     0.0    119 119 2
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=2, weight=246, duration=0 s, sources="1"
+taskno=3, weight=185, duration=0 s, sources="1"
 
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   7.00000 0.0    7   7   3
-weight   82      66     39  158 3
-======== ======= ====== === === =
+======== ======= ====== ======= === =
+variable mean    stddev min     max n
+======== ======= ====== ======= === =
+nsites   7.00000 0.0    7       7   4
+weight   46      58     5.29150 132 4
+======== ======= ====== ======= === =
 
-Informational data
-------------------
-============== ============================================================================ ========
-task           sent                                                                         received
-prefilter      srcs=15.36 KB monitor=4.78 KB srcfilter=3.35 KB                              17.35 KB
-count_ruptures sources=11.03 KB srcfilter=6.12 KB param=2.65 KB monitor=1.95 KB gsims=720 B 2.1 KB  
-============== ============================================================================ ========
+Data transfer
+-------------
+================== ============================================================================ ========
+task               sent                                                                         received
+RtreeFilter        srcs=15.36 KB monitor=4.72 KB srcfilter=4.09 KB                              17.35 KB
+count_eff_ruptures sources=11.03 KB param=2.76 KB monitor=1.93 KB srcfilter=1.44 KB gsims=720 B 2.1 KB  
+================== ============================================================================ ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total prefilter                0.12867   5.07031   15    
-managing sources               0.06076   0.0       1     
-total count_ruptures           0.01294   1.11719   6     
-reading composite source model 0.00657   0.0       1     
-store source_info              0.00398   0.0       1     
-reading site collection        0.00286   0.0       1     
-reading exposure               0.00153   0.0       1     
-unpickling prefilter           0.00107   0.0       15    
-splitting sources              7.074E-04 0.0       1     
-unpickling count_ruptures      2.301E-04 0.0       6     
-aggregate curves               1.082E-04 0.0       6     
-saving probability maps        3.481E-05 0.0       1     
+managing sources               0.24063   0.0       1     
+total prefilter                0.10138   4.74219   15    
+total count_eff_ruptures       0.06740   6.56641   6     
+store source_info              0.00734   0.0       1     
+unpickling prefilter           0.00665   0.0       15    
+reading composite source model 0.00533   0.0       1     
+aggregate curves               0.00201   0.0       6     
+unpickling count_eff_ruptures  0.00180   0.0       6     
+reading site collection        0.00163   0.0       1     
+reading exposure               0.00120   0.0       1     
+splitting sources              4.389E-04 0.0       1     
 ============================== ========= ========= ======
