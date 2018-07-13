@@ -19,6 +19,7 @@ import os.path
 import logging
 import collections
 import numpy
+import h5py
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
@@ -27,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, indices_dt
+from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
@@ -44,8 +45,12 @@ TWO32 = 2 ** 32
 
 
 def weight(src):
-    # a poor man weight
-    return src.num_ruptures * src.ngsims
+    # heuristic weight
+    try:
+        rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
+    except AttributeError:
+        rate = 1
+    return src.num_ruptures * src.ndists * rate * 1000
 
 
 def get_events(ebruptures):
@@ -187,7 +192,6 @@ class EventBasedCalculator(base.HazardCalculator):
     the hazard curves from the ruptures, depending on the configuration
     parameters.
     """
-    pre_calculator = None
     core_task = compute_hazard
     is_stochastic = True
 
@@ -202,12 +206,13 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+        concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
             logging.info('Found %d ruptures', U)
             parent = self.can_read_parent() or self.datastore
             samples_by_grp = self.csm_info.get_samples_by_grp()
-            for slc in split_in_slices(U, oq.concurrent_tasks or 1):
+            for slc in split_in_slices(U, concurrent_tasks or 1):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     ruptures = RuptureGetter(parent, slc, grp_id)
@@ -215,7 +220,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
             return
 
-        maxweight = self.csm.get_maxweight(weight, oq.concurrent_tasks or 1)
+        maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
         logging.info('Using maxweight=%d', maxweight)
         num_tasks = 0
         num_sources = 0
@@ -232,7 +237,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(sg.sources, maxweight, weight):
                     yield block, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
-                    num_sources += 1
+                    num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
@@ -241,7 +246,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if self.oqparam.hazard_calculation_id is None:
             # filter_csm must be called first
-            self.csm, self.src_filter = self.filter_csm()
+            self.src_filter, self.csm = self.filter_csm()
             self.csm_info = self.csm.info
         else:
             self.datastore.parent = datastore.read(
@@ -289,8 +294,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 # computation is going, to see the progress
                 update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in result['indices']:
-                    self.indices[sid].append(
-                        (start + self.offset, stop + self.offset))
+                    self.indices[sid, 0].append(start + self.offset)
+                    self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
                 if self.offset >= TWO32:
                     raise RuntimeError(
@@ -330,7 +335,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.gmf_size = 0
-        self.indices = collections.defaultdict(list)  # sid -> indices
+        self.indices = collections.defaultdict(list)  # sid, idx -> indices
         acc = self.zerodict()
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.monitor('classical'))
@@ -341,6 +346,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
+            if self.oqparam.ground_motion_fields is False:
+                logging.info('Generating ruptures only')
             acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
                 self.agg_dicts, acc)
         if self.oqparam.hazard_calculation_id is None:
@@ -349,13 +356,16 @@ class EventBasedCalculator(base.HazardCalculator):
         calc.check_overflow(self)
         base.save_gmdata(self, self.R)
         if self.indices:
+            N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                self.datastore.save_vlen(
-                    'gmf_data/indices',
-                    [numpy.array(self.indices[sid], indices_dt)
-                     for sid in self.sitecol.complete.sids])
+                dset = self.datastore.create_dset(
+                    'gmf_data/indices', hdf5.vuint32,
+                    shape=(N, 2), fillvalue=None)
+                for sid in self.sitecol.complete.sids:
+                    dset[sid, 0] = self.indices[sid, 0]
+                    dset[sid, 1] = self.indices[sid, 1]
         elif (self.oqparam.ground_motion_fields and
               'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
@@ -388,7 +398,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            logging.info('Setting %d event years', num_events)
+            logging.info('Setting %d event years on %d ruptures',
+                         num_events, self.rupser.nruptures)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 numpy.random.seed(self.oqparam.ses_seed)

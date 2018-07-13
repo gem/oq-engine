@@ -466,7 +466,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh "$lxc_ip" "tar xv"
 
-    ssh "$lxc_ip" "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
+    ssh "$lxc_ip" "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PATH=/opt/openquake/bin:\$PATH ; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
 
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
