@@ -71,7 +71,11 @@ def extend(dset, array, **attrs):
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,) + array.shape[1:])
+    if array.dtype.name == 'object':  # vlen array
+        shape = (newlength,)
+    else:
+        shape = (newlength,) + array.shape[1:]
+    dset.resize(shape)
     dset[length:newlength] = array
     for key, val in attrs.items():
         dset.attrs[key] = val
@@ -86,8 +90,11 @@ def extend3(hdf5path, key, array, **attrs):
         try:
             dset = h5[key]
         except KeyError:
-            dset = create(h5, key, array.dtype,
-                          shape=(None,) + array.shape[1:])
+            if array.dtype.name == 'object':  # vlen array
+                shape = (None,)
+            else:
+                shape = (None,) + array.shape[1:]
+            dset = create(h5, key, array.dtype, shape)
         length = extend(dset, array)
         for key, val in attrs.items():
             dset.attrs[key] = val
