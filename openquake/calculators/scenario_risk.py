@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -92,15 +92,19 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute the GMFs, build the epsilons, the riskinputs, and a dictionary
         with the unit of measure, used in the export phase.
         """
+        oq = self.oqparam
         super().pre_execute('scenario')
         self.assetcol = self.datastore['assetcol']
         A = len(self.assetcol)
-        E = self.oqparam.number_of_ground_motion_fields
-        if self.oqparam.ignore_covs:
+        E = oq.number_of_ground_motion_fields
+        if oq.ignore_covs:
+            # all zeros; the data transfer is not so big in scenario
             eps = numpy.zeros((A, E), numpy.float32)
         else:
             logging.info('Building the epsilons')
-            eps = self.make_eps(E)
+            eps = riskinput.make_eps(
+                self.assetcol, E, oq.master_seed, oq.asset_correlation)
+
         self.riskinputs = self.build_riskinputs('gmf', eps, E)
         self.param['number_of_ground_motion_fields'] = E
         self.param['insured_losses'] = self.oqparam.insured_losses
