@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Supported equivalent epicentral distance with a `reqv_hdf5` file
+  * Fixed the risk from ShakeMap feature in the case of missing IMTs
   * Changed the way gmf_data/indices and ruptures are stored
   * Added experimental support for dask
   * Added 11 new site parameters for geotechnic hazard
