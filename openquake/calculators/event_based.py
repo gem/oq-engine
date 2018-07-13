@@ -19,6 +19,7 @@ import os.path
 import logging
 import collections
 import numpy
+import h5py
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
@@ -27,7 +28,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, indices_dt
+from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
@@ -293,8 +294,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 # computation is going, to see the progress
                 update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in result['indices']:
-                    self.indices[sid].append(
-                        (start + self.offset, stop + self.offset))
+                    self.indices[sid, 0].append(start + self.offset)
+                    self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
                 if self.offset >= TWO32:
                     raise RuntimeError(
@@ -334,7 +335,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.gmf_size = 0
-        self.indices = collections.defaultdict(list)  # sid -> indices
+        self.indices = collections.defaultdict(list)  # sid, idx -> indices
         acc = self.zerodict()
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.monitor('classical'))
@@ -355,13 +356,16 @@ class EventBasedCalculator(base.HazardCalculator):
         calc.check_overflow(self)
         base.save_gmdata(self, self.R)
         if self.indices:
+            N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                self.datastore.save_vlen(
-                    'gmf_data/indices',
-                    [numpy.array(self.indices[sid], indices_dt)
-                     for sid in self.sitecol.complete.sids])
+                dset = self.datastore.create_dset(
+                    'gmf_data/indices', hdf5.vuint32,
+                    shape=(N, 2), fillvalue=None)
+                for sid in self.sitecol.complete.sids:
+                    dset[sid, 0] = self.indices[sid, 0]
+                    dset[sid, 1] = self.indices[sid, 1]
         elif (self.oqparam.ground_motion_fields and
               'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
