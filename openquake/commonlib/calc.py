@@ -394,8 +394,7 @@ class RuptureSerializer(object):
         if datastore['oqparam'].save_ruptures:
             datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
                                   attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', hdf5.vfloat32, fillvalue=None,
-                                  attrs={'nbytes': 0})
+            datastore.create_dset('rupgeoms', hdf5.vfloat32, fillvalue=None)
 
     def save(self, ebruptures, eidx=0):
         """
