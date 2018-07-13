@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
 import numpy
-import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode

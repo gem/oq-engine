@@ -246,7 +246,13 @@ class GmfDataGetter(collections.Mapping):
         idxs = self.dstore['gmf_data/indices'][sid]
         if len(idxs) == 0:  # site ID with no data
             return {}
-        array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
+        if idxs.dtype.names:  # engine < 3.2
+            array = numpy.concatenate([
+                dset[start:stop] for start, stop in idxs])
+        else:  # engine >= 3.2
+            idxs2 = self.dstore['gmf_data/indices2'][sid]
+            array = numpy.concatenate([
+                dset[start:stop] for start, stop in zip(idxs, idxs2)])
         return group_array(array, 'rlzi')
 
     def __iter__(self):

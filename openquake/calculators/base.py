@@ -730,6 +730,12 @@ class RiskCalculator(HazardCalculator):
             indices = None
         else:
             indices = self.datastore['gmf_data/indices'].value
+            if indices[0].dtype.names:  # engine < 3.2
+                starts = [idx['start'] for idx in indices]
+                stops = [idx['stop'] for idx in indices]
+            else:  # engine >= 3.2
+                starts = indices
+                stops = self.datastore['gmf_data/indices2'].value
         dstore = self.can_read_parent() or self.datastore
         sid_weight = []
         for sid, assets in enumerate(assets_by_site):
@@ -738,7 +744,8 @@ class RiskCalculator(HazardCalculator):
             elif indices is None:
                 weight = len(assets)
             else:
-                num_gmfs = sum(stop - start for start, stop in indices[sid])
+                num_gmfs = sum(stop - start
+                               for start, stop in zip(starts[sid], stops[sid]))
                 weight = len(assets) * (num_gmfs or 1)
             sid_weight.append((sid, weight))
         for block in general.split_in_blocks(
@@ -862,13 +869,16 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
     dstore['gmf_data/data'] = gmfa = get_gmv_data(sitecol.sids, gmfs)
     dic = general.group_array(gmfa, 'sid')
     lst = []
+    lst2 = []
     all_sids = sitecol.complete.sids
     for sid in all_sids:
         rows = dic.get(sid, ())
         n = len(rows)
-        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        lst.append([offset])
+        lst2.append([offset + n])
         offset += n
-    dstore.hdf5.save_vlen('gmf_data/indices', lst)
+    dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    dstore['gmf_data/indices2'] = numpy.array(lst2, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
         events = numpy.zeros(len(eids), readinput.stored_event_dt)
@@ -898,14 +908,17 @@ def import_gmfs(dstore, fname, sids):
     # store the GMFs
     dic = general.group_array(array.view(gmf_data_dt), 'sid')
     lst = []
+    lst2 = []
     offset = 0
     for sid in sids:
         n = len(dic.get(sid, []))
-        lst.append(numpy.array([(offset, offset + n)], riskinput.indices_dt))
+        lst.append([offset])
+        lst2.append([offset + n])
         if n:
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
-    dstore.hdf5.save_vlen('gmf_data/indices', lst)
+    dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    dstore['gmf_data/indices2'] = numpy.array(lst2, U32)
 
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
