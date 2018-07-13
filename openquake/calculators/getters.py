@@ -244,10 +244,14 @@ class GmfDataGetter(collections.Mapping):
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
-        if len(idxs) == 0:  # site ID with no data
+        if idxs.dtype.name == 'uint32':  # scenario
+            idxs = [idxs]
+        elif not idxs.dtype.names:  # engine >= 3.2
+            idxs = zip(*idxs)
+        data = [dset[start:stop] for start, stop in idxs]
+        if len(data) == 0:  # site ID with no data
             return {}
-        array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
-        return group_array(array, 'rlzi')
+        return group_array(numpy.concatenate(data), 'rlzi')
 
     def __iter__(self):
         return iter(self.sids)
@@ -525,7 +529,9 @@ class RuptureGetter(object):
             evs = events[rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            mesh = rupgeoms[ridx].reshape(3, rec['sy'], rec['sz'])
+            mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
+            for i, arr in enumerate(rupgeoms[ridx]):  # i = 0, 1, 2
+                mesh[i] = arr.reshape(rec['sy'], rec['sz'])
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
