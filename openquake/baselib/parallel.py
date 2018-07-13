@@ -346,7 +346,6 @@ def safely_call(func, args):
             mon = args[-1]
             mon.operation = func.__name__
             mon.children.append(child)  # child is a child of mon
-            child.hdf5path = mon.hdf5path
         else:  # in the DbServer
             mon = child
         try:
@@ -390,15 +389,18 @@ class IterResult(object):
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     :param progress:
         a logging function for the progress report
+    :param hdf5:
+        if given, hdf5 file where to append the performance information
     """
     def __init__(self, iresults, taskname, argnames, num_tasks, sent,
-                 progress=logging.info):
+                 progress=logging.info, hdf5=None):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
         self.num_tasks = num_tasks
         self.sent = sent
         self.progress = progress
+        self.hdf5 = hdf5
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -454,11 +456,12 @@ class IterResult(object):
                           humansize(tot), humansize(max_per_task))
 
     def save_task_info(self, mon):
-        if mon.hdf5path:
+        if self.hdf5:
+            mon.hdf5 = self.hdf5
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], task_data_dt)
-            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data,
+            hdf5.extend(self.hdf5['task_info/' + self.name], data,
                          argnames=self.argnames, sent=self.sent,
                          memory=self.mem)
         mon.flush()
@@ -516,6 +519,7 @@ def _wakeup(sec, mon):
 class Starmap(object):
     task_ids = []
     calc_id = None
+    hdf5 = None
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
@@ -609,9 +613,14 @@ class Starmap(object):
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
         """
+        task_info = 'task_info/' + self.name
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
+            if mon.hdf5 and task_no == 1:
+                self.hdf5 = mon.hdf5
+                if task_info not in self.hdf5:  # first time
+                    hdf5.create(mon.hdf5, task_info, task_data_dt)
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
@@ -641,7 +650,7 @@ class Starmap(object):
             it = self._iter_dask()
         num_tasks = next(it)
         return IterResult(it, self.name, self.argnames, num_tasks,
-                          self.sent, self.progress)
+                          self.sent, self.progress, self.hdf5)
 
     def reduce(self, agg=operator.add, acc=None):
         """
