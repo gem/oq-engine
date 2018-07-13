@@ -81,11 +81,11 @@ class ContextMaker(object):
 
     def __init__(self, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
+        param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
         self.floating_distance = param.get('floating_distance')
         self.spinning_distance = param.get('spinning_distance')
-        param = param or {}
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
