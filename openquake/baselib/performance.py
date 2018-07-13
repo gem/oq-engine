@@ -40,6 +40,13 @@ def _pairs(items):
     return sorted(lst)
 
 
+def memory_rss(pid):
+    """
+    :returns: the RSS memory allocated by a process
+    """
+    return psutil.Process(pid).memory_info().rss
+
+
 # this is not thread-safe
 class Monitor(object):
     """
@@ -93,7 +100,7 @@ class Monitor(object):
     def measure_mem(self):
         """A memory measurement (in bytes)"""
         try:
-            return psutil.Process(os.getpid()).memory_info().rss
+            return memory_rss(os.getpid())
         except psutil.AccessDenied:
             # no access to information about this process
             pass
