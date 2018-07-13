@@ -90,18 +90,16 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        self.assert_curves_ok(
-            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_2.__file__)
+        self.run_calc(case_2.__file__, 'job.ini')
 
         # check view_pmap for a single realization
         got = view('pmap:grp-00', self.calc.datastore)
         self.assertEqual(got, '''\
 {0: <ProbabilityCurve
-[[9.94026570e-03 0.00000000e+00]
- [7.53551721e-04 0.00000000e+00]
- [9.69007927e-05 0.00000000e+00]
- [0.00000000e+00 0.00000000e+00]]>}''')
+[[0.00103659 0.        ]
+ [0.         0.        ]
+ [0.         0.        ]
+ [0.         0.        ]]>}''')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
