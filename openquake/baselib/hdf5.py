@@ -274,7 +274,10 @@ class File(h5py.File):
         """
         dt = data[0].dtype
         vdt = h5py.special_dtype(vlen=dt)
-        dset = create(self, key, vdt, fillvalue=None)
+        try:
+            dset = self[key]
+        except KeyError:
+            dset = create(self, key, vdt, fillvalue=None)
         nbytes = 0
         totlen = 0
         for i, val in enumerate(data):
