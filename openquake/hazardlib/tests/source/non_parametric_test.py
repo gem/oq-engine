@@ -86,7 +86,7 @@ class NonParametricSourceTestCase(unittest.TestCase):
             self.assertEqual(
                 rup.surface.bottom_right, exp_rup.surface.bottom_right)
             numpy.testing.assert_allclose(
-                rup.pmf, [prob for prob, occ in exp_pmf.data])
+                rup.probs_occur, [prob for prob, occ in exp_pmf.data])
 
     def test_count_ruptures(self):
         source, _ = self.make_non_parametric_source()

@@ -111,19 +111,20 @@ def export_ruptures_csv(ekey, dstore):
 def export_site_model(ekey, dstore):
     dest = dstore.export_path('site_model.xml')
     site_model_node = Node('siteModel')
-    hdffields = 'lons lats vs30 vs30measured z1pt0 z2pt5 '.split()
-    xmlfields = 'lon lat vs30 vs30Type z1pt0 z2pt5'.split()
-    recs = [tuple(rec[f] for f in hdffields)
-            for rec in dstore['sitecol'].array]
-    unique_recs = sorted(set(recs))
-    for rec in unique_recs:
+    hdf2xml = dict(lons='lon', lats='lat', depths='depth',
+                   vs30measured='vs30Type')
+    for rec in dstore['sitecol'].array:
         n = Node('site')
-        for f, hdffield in enumerate(hdffields):
-            xmlfield = xmlfields[f]
+        for hdffield in rec.dtype.names:
+            if hdffield == 'sids':  # skip
+                continue
+            elif hdffield == 'depths' and rec[hdffield] == 0:
+                continue
+            xmlfield = hdf2xml.get(hdffield, hdffield)
             if hdffield == 'vs30measured':
-                value = 'measured' if rec[f] else 'inferred'
+                value = 'measured' if rec[hdffield] else 'inferred'
             else:
-                value = rec[f]
+                value = rec[hdffield]
             n[xmlfield] = value
         site_model_node.append(n)
     with open(dest, 'wb') as f:
@@ -240,25 +241,25 @@ class GmfCollection(object):
         for ses_idx in sorted(gmfset):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
+
 # ####################### export hazard curves ############################ #
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_csv(key, dest, sitemesh, pmap,
-                      imtls, comment):
+def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
     """
-    Export the curves of the given realization into CSV.
+    Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
     :param pmap: a ProbabilityMap
-    :param dict imtls: intensity measure types and levels
+    :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
     curves = util.compose_arrays(
-        sitemesh, calc.convert_to_array(pmap, len(sitemesh), imtls))
+        sitemesh, calc.convert_to_array(pmap, len(sitemesh), pdic))
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -691,12 +692,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-    correl_model = oq.get_correl_model()
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol, imts, min_iml,
-        oq.maximum_distance, oq.truncation_level, correl_model,
-        oq.filter_distance, samples)
+    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, samples)
     getter.init()
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()

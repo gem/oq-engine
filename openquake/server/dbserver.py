@@ -57,7 +57,8 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        self.master = w.WorkerMaster(**config.zworkers)
+        self.master = w.WorkerMaster(config.dbserver.host,
+                                     **config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -190,7 +191,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.host, DBSERVER_PORT)
+        addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
     dirname = os.path.dirname(dbpath)

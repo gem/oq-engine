@@ -22,7 +22,10 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 -## Documentation (master tree)
 -->
 
+[![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
 [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
+[![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
 
 ### Current stable
 
@@ -56,7 +59,7 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 #### Linux
 
 * [Installing on Ubuntu](https://github.com/gem/oq-engine/blob/master/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
+* [Installing on RedHat and derivatives](https://github.com/gem/oq-engine/blob/master/doc/installing/rhel.md)
 * [Installing on other flavors](https://github.com/gem/oq-engine/blob/master/doc/installing/linux-generic.md)
 * [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 * [Installing on a cluster](https://github.com/gem/oq-engine/blob/master/doc/installing/cluster.md)
