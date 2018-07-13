@@ -381,11 +381,9 @@ class RuptureSerializer(object):
                    getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
             lst.append(tup)
-            geom.append(mesh.flatten())
+            geom.append(mesh.reshape(3, -1))
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
-        return (numpy.array(lst, cls.rupture_dt),
-                numpy.array(geom, hdf5.vfloat32),
-                nbytes)
+        return numpy.array(lst, cls.rupture_dt), geom, nbytes
 
     def __init__(self, datastore):
         self.datastore = datastore
@@ -394,7 +392,8 @@ class RuptureSerializer(object):
         if datastore['oqparam'].save_ruptures:
             datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
                                   attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', hdf5.vfloat32, fillvalue=None)
+            datastore.create_dset('rupgeoms', hdf5.vfloat32,
+                                  shape=(None, 3), fillvalue=None)
 
     def save(self, ebruptures, eidx=0):
         """
@@ -422,7 +421,7 @@ class RuptureSerializer(object):
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
         dset = self.datastore.extend(
             'ruptures', array, nbytes=previous + nbytes)
-        self.datastore.extend('rupgeoms', geom)
+        self.datastore.hdf5.save_vlen('rupgeoms', geom)
 
         # save nbytes occupied by the PMFs
         if pmfbytes:
