@@ -180,7 +180,10 @@ class DataStore(collections.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
+            kw = dict(mode=mode, libver='latest')
+            if mode == 'r':
+                kw['swmr'] = True
+            self.hdf5 = hdf5.File(self.hdf5path, **kw)
 
     @property
     def export_dir(self):
