@@ -27,7 +27,6 @@ from functools import partial
 from datetime import datetime
 from shapely import wkt
 import numpy
-import h5py
 
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
