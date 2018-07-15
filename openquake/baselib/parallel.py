@@ -651,7 +651,6 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _iter_sequential(self):
-        self.progress('Executing "%s" in process', self.name)
         allargs = list(self._genargs(pickle=False))
         yield len(allargs)
         for args in allargs:
