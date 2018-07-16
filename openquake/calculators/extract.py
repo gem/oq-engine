@@ -390,9 +390,13 @@ def extract_agg_curves(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if 'curves-stats' in dstore:  # event_based_risk
         losses = dstore['curves-stats'][loss_type]
+        stats = dstore['curves-stats'].attrs['stats']
+    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
+        losses = dstore['curves-rlzs'][loss_type]
+        assert losses.shape[1] == 1, 'There must be a single realization'
+        stats = ['mean']
     else:
         raise KeyError('No curves found in %s' % dstore)
-    stats = dstore['curves-stats'].attrs['stats']
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
