@@ -31,6 +31,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import DictArray, group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
+from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
 
 F32 = numpy.float32
@@ -394,10 +395,14 @@ def extract_agg_curves(dstore, what):
     elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
         losses = dstore['curves-rlzs'][loss_type]
         assert losses.shape[1] == 1, 'There must be a single realization'
-        stats = ['mean']
+        stats = [b'mean']  # suitable to be stored as hdf5 attribute
     else:
         raise KeyError('No curves found in %s' % dstore)
-    return _filter_agg(dstore['assetcol'], losses, tags, stats)
+    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
+    cc = dstore['assetcol/cost_calculator']
+    res.units = cc.get_units(loss_types=[loss_type])
+    res.return_periods = get_loss_builder(dstore).return_periods
+    return res
 
 
 @extract.add('losses_by_asset')
