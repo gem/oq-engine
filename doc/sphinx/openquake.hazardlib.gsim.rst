@@ -755,6 +755,13 @@ utils_swiss_gmpe
     :undoc-members:
     :show-inheritance:
 
+wrapper
+------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.wrapper
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 youngs_1997
 -------------------------------------------
 
