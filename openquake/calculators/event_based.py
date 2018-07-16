@@ -206,7 +206,7 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        concurrent_tasks = oq.concurrent_tasks * 3.33
+        concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
             logging.info('Found %d ruptures', U)
