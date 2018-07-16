@@ -27,7 +27,8 @@ import functools
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
 
-__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
+__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI',
+           'PGDfLatSpread', 'PGDfSettle', 'PGDfSlope', 'PGDfRupture')
 
 DEFAULT_SA_DAMPING = 5.0
 
@@ -190,4 +191,24 @@ class MMI(_IMT):
     Modified Mercalli intensity, a Roman numeral describing the severity
     of an earthquake in terms of its effects on the earth's surface
     and on humans and their structures.
+    """
+
+class PGDfLatSpread(_IMT):
+    """
+    Permanent ground defomation (m) from lateral spread
+    """
+
+class PGDfSettle(_IMT):
+    """
+    Permanent ground defomation (m) from settlement
+    """
+
+class PGDfSlope(_IMT):
+    """
+    Permanent ground deformation (m) from slope failure
+    """
+
+class PGDfRupture(_IMT):
+    """
+    Permanent ground deformation (m) from co-seismic rupture
     """
