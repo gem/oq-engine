@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds geotechnical related IMTs
+  
   [Michele Simionato]
   * Supported equivalent epicentral distance with a `reqv_hdf5` file
   * Fixed the risk from ShakeMap feature in the case of missing IMTs
