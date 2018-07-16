@@ -179,7 +179,12 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
 
-        # TODO: check aggcurves
+        # check agg_curves, there is a single realization
+        resp = self.c.get(
+            extract_url + 'agg_curves/structural?taxonomy=*')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        # import pdb; pdb.set_trace()
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
