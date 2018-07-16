@@ -341,7 +341,8 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
         self.datastore['agg_curves-rlzs'] = array
-        units = self.assetcol.units(loss_types=array.dtype.names)
+        units = self.assetcol.cost_calculator.get_units(
+            loss_types=array.dtype.names)
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=b.return_periods, units=units)
         if arr_stats is not None:
