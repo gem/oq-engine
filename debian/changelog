@@ -1,5 +1,7 @@
   [Graeme Weatherill]
   * Adds geotechnical related IMTs
+  * Adds a "WrapperGMPE" object that can call different GMPEs for different
+    intensity measure types
   
   [Michele Simionato]
   * Supported equivalent epicentral distance with a `reqv_hdf5` file
