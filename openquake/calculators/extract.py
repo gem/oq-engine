@@ -376,8 +376,8 @@ def extract_aggdamages(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags)
 
 
-@extract.add('aggcurves')
-def extract_aggcurves(dstore, what):
+@extract.add('agg_curves')
+def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves of the given loss type and tags for
     event based risk calculations. Use it as
