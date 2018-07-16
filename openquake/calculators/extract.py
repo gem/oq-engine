@@ -328,12 +328,12 @@ def get_loss_type_tags(what):
     return loss_type, tags
 
 
-@extract.add('agglosses')
-def extract_agglosses(dstore, what):
+@extract.add('agg_losses')
+def extract_agg_losses(dstore, what):
     """
     Aggregate losses of the given loss type and tags. Use it as
-    /extract/agglosses/structural?taxonomy=RC&zipcode=20126
-    /extract/agglosses/structural?taxonomy=RC&zipcode=*
+    /extract/agg_losses/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_losses/structural?taxonomy=RC&zipcode=*
 
     :returns:
         an array of shape (T, R) if one of the tag names has a `*` value
@@ -342,7 +342,7 @@ def extract_agglosses(dstore, what):
     """
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
-        raise ValueError('loss_type not passed in agglosses/<loss_type>')
+        raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         stats = None
@@ -358,11 +358,11 @@ def extract_agglosses(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
-@extract.add('aggdamages')
-def extract_aggdamages(dstore, what):
+@extract.add('agg_damages')
+def extract_agg_damages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
-    /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_damages/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D
@@ -382,7 +382,7 @@ def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves of the given loss type and tags for
     event based risk calculations. Use it as
-    /extract/aggcurves/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (S, P), being P the number of return periods
