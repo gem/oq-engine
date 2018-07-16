@@ -410,13 +410,6 @@ class AssetCollection(object):
         """
         return self.array['taxonomy']
 
-    def units(self, loss_types):
-        """
-        :param: a list of loss types
-        :returns: an array of units as byte strings, suitable for HDF5
-        """
-        return self.cost_calculator.get_units(loss_types)
-
     def assets_by_site(self):
         """
         :returns: numpy array of lists with the assets by each site
