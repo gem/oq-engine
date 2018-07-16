@@ -164,7 +164,7 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check avg_losses-rlzs
         resp = self.c.get(
-            extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
+            extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
@@ -172,7 +172,7 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check *-aggregation
         resp = self.c.get(
-            extract_url + 'agglosses/structural?taxonomy=*')
+            extract_url + 'agg_losses/structural?taxonomy=*')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
