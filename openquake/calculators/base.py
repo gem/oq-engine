@@ -116,7 +116,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     """
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
-    dynamic_parent = None
 
     def __init__(self, oqparam, calc_id=None):
         self.datastore = datastore.DataStore(calc_id)
@@ -440,12 +439,9 @@ class HazardCalculator(BaseCalculator):
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         elif pre_calculator:
-            calc = calculators[pre_calculator](self.oqparam)
-            calc.run(close=False)
-            self.set_log_format()
-            self.dynamic_parent = self.datastore.parent = calc.datastore
-            self.oqparam.hazard_calculation_id = self.dynamic_parent.calc_id
-            self.datastore['oqparam'] = self.oqparam
+            calc = calculators[pre_calculator](
+                self.oqparam, self.datastore.calc_id)
+            calc.run()
             self.param = calc.param
             self.sitecol = calc.sitecol
             self.assetcol = calc.assetcol
@@ -770,7 +766,7 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, sids, self.R, num_events,
+                getter = GmfDataGetter(dstore, sids, self.R,
                                        self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node

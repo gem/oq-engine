@@ -341,8 +341,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
             logs.LOG.info('Exposing the outputs to the database')
-            if calc.dynamic_parent:
-                expose_outputs(calc.dynamic_parent)
             expose_outputs(calc.datastore)
             duration = time.time() - t0
             calc._monitor.flush()
