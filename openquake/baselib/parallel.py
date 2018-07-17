@@ -523,6 +523,7 @@ class Starmap(object):
             cls(
                 _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
             ).submit_all(logging.debug)
+            cls.task_ids = []
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
         elif distribute == 'no' and hasattr(cls, 'pool'):
