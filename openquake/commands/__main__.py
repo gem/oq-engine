@@ -31,7 +31,7 @@ PY_VER = sys.version_info[:3]
 if PY_VER < (3, 5):
     sys.exit('Python 3.5+ is required, you are using %s', sys.executable)
 elif PY_VER < (3, 6):
-    print('Warning: Python %s.%s.%s is deprecated. '
+    print('DeprecationWarning: Python %s.%s.%s is deprecated. '
           'Please upgrade to Python 3.6+' % PY_VER)
 
 # force cluster users to use `oq engine` so that we have centralized logs
