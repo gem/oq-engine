@@ -437,10 +437,9 @@ class HazardCalculator(BaseCalculator):
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
         elif pre_calculator:
-            calc = calculators[pre_calculator](self.oqparam,
-                                               self.datastore.calc_id)
-            calc.run(close=False)
-            self.set_log_format()
+            calc = calculators[pre_calculator](
+                self.oqparam, self.datastore.calc_id)
+            calc.run()
             self.param = calc.param
             self.sitecol = calc.sitecol
             self.assetcol = calc.assetcol
@@ -765,7 +764,7 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, sids)
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, sids, self.R, num_events,
+                getter = GmfDataGetter(dstore, sids, self.R,
                                        self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
