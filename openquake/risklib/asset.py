@@ -78,6 +78,22 @@ class CostCalculator(object):
         # this should never happen
         raise RuntimeError('Unable to compute cost')
 
+    def get_units(self, loss_types):
+        """
+        :param: a list of loss types
+        :returns: an array of units as byte strings, suitable for HDF5
+        """
+        lst = []
+        for lt in loss_types:
+            if lt.endswith('_ins'):
+                lt = lt[:-4]
+            if lt == 'occupants':
+                unit = 'people'
+            else:
+                unit = self.units[lt]
+            lst.append(encode(unit))
+        return numpy.array(lst)
+
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
         dt = numpy.dtype([('cost_type', hdf5.vstr),
@@ -99,6 +115,7 @@ class CostCalculator(object):
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
+
 
 costcalculator = CostCalculator(
     cost_types=dict(structural='per_area'),
@@ -392,23 +409,6 @@ class AssetCollection(object):
         Return a list of taxonomies, one per asset (with duplicates)
         """
         return self.array['taxonomy']
-
-    def units(self, loss_types):
-        """
-        :param: a list of loss types
-        :returns: an array of units as byte strings, suitable for HDF5
-        """
-        units = self.cost_calculator.units
-        lst = []
-        for lt in loss_types:
-            if lt.endswith('_ins'):
-                lt = lt[:-4]
-            if lt == 'occupants':
-                unit = 'people'
-            else:
-                unit = units[lt]
-            lst.append(encode(unit))
-        return numpy.array(lst)
 
     def assets_by_site(self):
         """
