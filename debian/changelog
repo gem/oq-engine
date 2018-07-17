@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * zmq
   * Saved the size of the datastore in the database and used it in the WebUI
 
   [Graeme Weatherill]
