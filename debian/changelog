@@ -1,6 +1,9 @@
+  [Michele Simionato]
+  * Saved the size of the datastore in the database and used it in the WebUI
+
   [Graeme Weatherill]
   * Adds geotechnical related IMTs
-  
+
   [Michele Simionato]
   * Renamed /extract/agglosses -> /extract/agg_losses and same for aggdamages
   * Supported equivalent epicentral distance with a `reqv_hdf5` file
