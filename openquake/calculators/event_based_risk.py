@@ -155,9 +155,9 @@ class EbrCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         super().pre_execute('event_based')
-        parent = self.dynamic_parent
+        parent = self.datastore.parent
         if not self.oqparam.ground_motion_fields:
-            return  # this happens in the reportwrite
+            return  # this happens in the reportwriter
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
