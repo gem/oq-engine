@@ -208,7 +208,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract curves by tag
         tags = 'taxonomy=tax1&state=01&cresta=0.11'
-        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
+        a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
