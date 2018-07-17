@@ -278,7 +278,7 @@ class CompositeRiskModel(collections.Mapping):
                                     for imt in imt_lt]
                         elif not haz:  # no hazard for this site
                             eids = []
-                            data = [(numpy.zeros(hazard_getter.E),
+                            data = [(numpy.zeros(len(hazard_getter.eids)),
                                      hazard_getter.eids) for imt in imt_lt]
                         else:  # classical
                             eids = hazard_getter.eids
