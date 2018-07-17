@@ -15,23 +15,29 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import os
 import unittest
 import numpy as np
 from openquake.hazardlib.contexts import (DistancesContext, RuptureContext,
                                           SitesContext)
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import from_string, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.gsim.wrapper import WrapperGMPE
+from openquake.hazardlib.gsim.multi_gsim import MultiGMPE
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
 
 GSIM_LIST = get_available_gsims()
 
 
-class WrapperGMPETestCase(unittest.TestCase):
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
+                              "data",
+                              "gsimtables")
+
+
+class MultiGMPETestCase(unittest.TestCase):
     """
-    Tests the execution of the WrapperGMPE, a GMPE capable of being
+    Tests the execution of the MultiGMPE, a GMPE capable of being
     intantiated with a set of GMPE objects organised by IMT and calling the
     required GMPE when givena specific IMT
     """
@@ -42,7 +48,7 @@ class WrapperGMPETestCase(unittest.TestCase):
                      "PGV": "AkkarEtAlRjb2014",
                      "IA": "TravasarouEtAl2003",
                      "SA(1.0)": "BooreEtAl2014"}
-        wrapper = WrapperGMPE(gmpes_by_imt=test_dict)
+        wrapper = MultiGMPE(gmpes_by_imt=test_dict)
         for key, gmpe in test_dict.items():
             key_imt = from_string(key)
             self.assertTrue(key_imt in wrapper.gmpes)
@@ -52,7 +58,7 @@ class WrapperGMPETestCase(unittest.TestCase):
     def test_wrapper_gmpe_instantiation_str(self):
         test_str = "{PGA: BooreEtAl2014, PGV: AkkarEtAlRjb2014, "\
             "IA: TravasarouEtAl2003, SA(1.0): BooreEtAl2014}"
-        wrapper = WrapperGMPE(gmpes_by_imt=test_str)
+        wrapper = MultiGMPE(gmpes_by_imt=test_str)
         test_dict = {"PGA": "BooreEtAl2014",
                      "PGV": "AkkarEtAlRjb2014",
                      "IA": "TravasarouEtAl2003",
@@ -72,7 +78,7 @@ class WrapperGMPETestCase(unittest.TestCase):
                      "PGV": "AkkarEtAlRjb2014",
                      "IA": "TravasarouEtAl2003",
                      "SA(1.0)": "BooreEtAl2014"}
-        wrapper = WrapperGMPE(gmpes_by_imt=test_dict)
+        wrapper = MultiGMPE(gmpes_by_imt=test_dict)
         for imt, gmpe in test_dict.items():
             gsim = GSIM_LIST[gmpe]()
             self._check_elements_in_sets(
@@ -93,7 +99,7 @@ class WrapperGMPETestCase(unittest.TestCase):
                      "IA": "BooreEtAl2014",
                      "SA(1.0)": "BooreEtAl2014"}
         with self.assertRaises(ValueError) as ve:
-            WrapperGMPE(gmpes_by_imt=test_dict)
+            MultiGMPE(gmpes_by_imt=test_dict)
         self.assertEqual(str(ve.exception),
                          "IMT IA not supported by BooreEtAl2014")
 
@@ -110,7 +116,7 @@ class WrapperGMPETestCase(unittest.TestCase):
                      "PGV": "AkkarEtAlRjb2014",
                      "IA": "TravasarouEtAl2003",
                      "SA(1.0)": "BooreEtAl2014"}
-        wrapper = WrapperGMPE(gmpes_by_imt=test_dict)
+        wrapper = MultiGMPE(gmpes_by_imt=test_dict)
         rctx = RuptureContext()
         rctx.mag = 6.5
         rctx.rake = -90.
@@ -128,7 +134,7 @@ class WrapperGMPETestCase(unittest.TestCase):
                      "PGV": "AkkarEtAlRjb2014",
                      "IA": "TravasarouEtAl2003",
                      "SA(1.0)": "BooreEtAl2014"}
-        wrapper = WrapperGMPE(gmpes_by_imt=test_dict)
+        wrapper = MultiGMPE(gmpes_by_imt=test_dict)
         rctx = RuptureContext()
         rctx.mag = 6.5
         rctx.rake = -90.
@@ -144,4 +150,12 @@ class WrapperGMPETestCase(unittest.TestCase):
         # Don't know why but two matching strings not considered equal by
         # nosetests - stripping the excess inverted commas
         self.assertEqual(str(ke.exception).strip("'"),
-                         "IMT SA(0.5) not defined for WrapperGMPE")
+                         "IMT SA(0.5) not defined for MultiGMPE")
+
+    def test_execution_gmpe_table(self):
+        table_path = os.path.join(BASE_DATA_PATH, "Wcrust_rjb_med.hdf5")
+        test_str = "{PGA: BooreEtAl2014, SA(1.0): GMPETable(gmpe_table=%s)}" %\
+            table_path
+        wrapper = MultiGMPE(gmpes_by_imt=test_str)
+        expected_gmpe = GMPETable(gmpe_table=os.path.abspath(table_path))
+        self.assertEqual(str(wrapper.gmpes[SA(1.0)]), str(expected_gmpe))

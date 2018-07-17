@@ -579,6 +579,13 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+multi_gsim
+------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.multi_gsim
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 munson_thurber_1997
 ---------------------------------------------
 
@@ -751,13 +758,6 @@ utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-wrapper
-------------------------------------------------
-.. automodule:: openquake.hazardlib.gsim.wrapper
     :members:
     :undoc-members:
     :show-inheritance:

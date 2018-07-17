@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`WrapperGMPE`, which can create a composite of
+Module exports :class:`MultiGMPE`, which can create a composite of
 multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
-
+import os
 import re
 from collections import OrderedDict
 from openquake.hazardlib.gsim import get_available_gsims
@@ -33,7 +33,7 @@ from openquake.hazardlib.imt import from_string
 GSIM_LIST = get_available_gsims()
 
 
-class WrapperGMPE(GMPE):
+class MultiGMPE(GMPE):
     """
     The WrapperGMPE can call ground motions for various IMTs when instantiated
     with a dictionary of ground motion models organised by IMT or a string
@@ -78,9 +78,12 @@ class WrapperGMPE(GMPE):
             # IMT should be a string
             gmpe_imt = from_string(imt)
             if gmpe.startswith("GMPETable"):
-                gmpe_table = dict([
-                    re.search(r"\((.*)\)", gmpe).group(1).split("=")])
-                self.gmpes[gmpe_imt] = GMPETable(**gmpe_table)
+                # Assumes the format is
+                # GMPETable(gmpe_table=path/to/table.hdf5)
+                key, path = re.search(r"\((.*)\)", gmpe).group(1).split("=")
+                if not os.path.isabs(path):
+                    path = os.path.abspath(path)
+                self.gmpes[gmpe_imt] = GMPETable(**dict([(key, path)]))
             else:
                 self.gmpes[gmpe_imt] = GSIM_LIST[gmpe]()
             if gmpe_imt.__class__ not in self.gmpes[gmpe_imt].\
@@ -126,6 +129,6 @@ class WrapperGMPE(GMPE):
         Call the get mean and stddevs of the GMPE for the respective IMT
         """
         if imt not in self.gmpes:
-            raise KeyError("IMT %s not defined for WrapperGMPE" % str(imt))
+            raise KeyError("IMT %s not defined for MultiGMPE" % str(imt))
         return self.gmpes[imt].get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                     stddev_types)
