@@ -1,9 +1,13 @@
+  [Michele Simionato]
+  * Saved the size of the datastore in the database and used it in the WebUI
+
   [Graeme Weatherill]
   * Adds geotechnical related IMTs
-  * Adds a "WrapperGMPE" object that can call different GMPEs for different
+  * Adds a "MultiGMPE" object that can call different GMPEs for different
     intensity measure types
-  
+
   [Michele Simionato]
+  * Renamed /extract/agglosses -> /extract/agg_losses and same for aggdamages
   * Supported equivalent epicentral distance with a `reqv_hdf5` file
   * Fixed the risk from ShakeMap feature in the case of missing IMTs
   * Changed the way gmf_data/indices and ruptures are stored
