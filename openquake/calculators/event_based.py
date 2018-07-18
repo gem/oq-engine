@@ -19,7 +19,6 @@ import os.path
 import logging
 import collections
 import numpy
-import h5py
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
