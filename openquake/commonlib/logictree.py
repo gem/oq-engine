@@ -1400,14 +1400,18 @@ class GsimLogicTree(object):
         # TODO: add an .idx to each GSIM ?
         return trts, branches
 
-    def instantiate(self, gsim_name, kw):
+    def instantiate(self, gsim_name, kwargs):
+        """
+        :param gsim_name: name of a GSIM class
+        :param kwargs: keyword arguments used to instantiate the GSIM class
+        """
         if gsim_name == 'GMPETable':
             # a bit hackish: set the GMPE_DIR equal to the
             # directory where the gsim_logic_tree file is
             GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-            self.gmpe_tables.add(kw['gmpe_table'])
+            self.gmpe_tables.add(kwargs['gmpe_table'])
         try:
-            gsim = valid.gsim(gsim_name, **kw)
+            gsim = valid.gsim(gsim_name, **kwargs)
         except Exception:
             etype, exc, tb = sys.exc_info()
             raise_(etype, "%s in file %s" % (exc, self.fname), tb)
