@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-import collections
 import numpy
 
 from openquake.baselib.general import AccumDict
