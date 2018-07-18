@@ -566,7 +566,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id) for job in jobs]
+             job.hazard_calculation_id, job.size_mb) for job in jobs]
 
 
 def update_job(db, job_id, dic):
