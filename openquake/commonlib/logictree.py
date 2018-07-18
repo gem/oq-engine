@@ -38,7 +38,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
@@ -1362,18 +1362,24 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = branch.uncertaintyModel
-                    if uncertainty.text is None:  # expect gsimByImt nodes
-                        gsimdict = collections.OrderedDict()
-                        for nod in uncertainty.getnodes('gsimByImt'):
-                            imt = nod.attrib.pop('imt')
-                            gsim_name = nod.attrib.pop('gsim')
-                            gsimdict[imt] = self.instantiate(gsim_name, nod)
-                        uncertainty.text = gsim = MultiGMPE(
-                            gsim_by_imt=gsimdict)
+                    if uncertainty.text is None:  # expect MultiGMPE
+                        with context(self.fname, uncertainty):
+                            gsimdict = collections.OrderedDict()
+                            imts = set()
+                            for nod in uncertainty.getnodes('gsimByImt'):
+                                kw = nod.attrib.copy()
+                                imt = kw.pop('imt')
+                                imts.add(imt)
+                                gsim_name = kw.pop('gsim')
+                                gsimdict[imt] = self.instantiate(gsim_name, kw)
+                            if len(imts) > len(gsimdict):
+                                raise InvalidLogicTree(
+                                    'Found duplicated IMTs in gsimByImt')
+                            gsim = MultiGMPE(gsim_by_imt=gsimdict)
                     elif isinstance(uncertainty.text, str):
-                        uncertainty.text = self.instantiate(
-                            uncertainty.text.strip(), uncertainty)
-                    else:  # already converted GSIM
+                        uncertainty.text = gsim = self.instantiate(
+                            uncertainty.text.strip(), uncertainty.attrib)
+                    else:  # already converted
                         gsim = uncertainty.text
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
@@ -1394,14 +1400,14 @@ class GsimLogicTree(object):
         # TODO: add an .idx to each GSIM ?
         return trts, branches
 
-    def instantiate(self, gsim_name, node):
+    def instantiate(self, gsim_name, kw):
         if gsim_name == 'GMPETable':
             # a bit hackish: set the GMPE_DIR equal to the
             # directory where the gsim_logic_tree file is
             GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-            self.gmpe_tables.add(node['gmpe_table'])
+            self.gmpe_tables.add(kw['gmpe_table'])
         try:
-            gsim = valid.gsim(gsim_name, **node.attrib)
+            gsim = valid.gsim(gsim_name, **kw)
         except Exception:
             etype, exc, tb = sys.exc_info()
             raise_(etype, "%s in file %s" % (exc, self.fname), tb)
