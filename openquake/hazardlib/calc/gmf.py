@@ -104,7 +104,7 @@ class GmfComputer(object):
 
     def compute(self, gsim, num_events, seed=None):
         """
-        :param gsim: a GSIM instance or a dictionary IMT -> GSIM
+        :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
@@ -119,7 +119,7 @@ class GmfComputer(object):
             (len(self.imts), len(self.sids), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
             try:
-                gs = gsim[imt]  # MultiGMPE
+                gs = gsim[str(imt)]  # MultiGMPE
             except TypeError:
                 gs = gsim  # regular GMPE
             result[imti] = self._compute(None, gs, num_events, imt)
