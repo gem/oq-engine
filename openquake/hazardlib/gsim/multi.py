@@ -89,8 +89,9 @@ class MultiGMPE(GMPE, collections.Mapping):
         return len(self.gsim_by_imt)
 
     def __hash__(self):
-        tup = tuple((imt, str(gsim)) for imt, gsim in self.gsim_by_imt.items())
-        return hash(tup)
+        items = tuple((imt, str(gsim)) for imt, gsim in
+                      sorted(self.gsim_by_imt.items()))
+        return hash(items)
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
