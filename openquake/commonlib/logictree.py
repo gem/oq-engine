@@ -1368,7 +1368,8 @@ class GsimLogicTree(object):
                             imt = nod.attrib.pop('imt')
                             gsim_name = nod.attrib.pop('gsim')
                             gsimdict[imt] = self.instantiate(gsim_name, nod)
-                        uncertainty.text = gsim = MultiGMPE(gsimdict)
+                        uncertainty.text = gsim = MultiGMPE(
+                            gsim_by_imt=gsimdict)
                     elif isinstance(uncertainty.text, str):
                         uncertainty.text = self.instantiate(
                             uncertainty.text.strip(), uncertainty)
