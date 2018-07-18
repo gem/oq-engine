@@ -579,6 +579,13 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+multi_gsim
+------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.multi_gsim
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 munson_thurber_1997
 ---------------------------------------------
 

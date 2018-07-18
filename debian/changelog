@@ -3,6 +3,8 @@
 
   [Graeme Weatherill]
   * Adds geotechnical related IMTs
+  * Adds a "MultiGMPE" object that can call different GMPEs for different
+    intensity measure types
 
   [Michele Simionato]
   * Renamed /extract/agglosses -> /extract/agg_losses and same for aggdamages
