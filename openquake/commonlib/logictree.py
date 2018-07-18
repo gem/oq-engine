@@ -39,6 +39,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile
@@ -1361,20 +1362,16 @@ class GsimLogicTree(object):
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
                     uncertainty = branch.uncertaintyModel
-                    if isinstance(uncertainty.text, str):
-                        gsim_name = uncertainty.text.strip()
-                        if gsim_name == 'GMPETable':
-                            # a bit hackish: set the GMPE_DIR equal to the
-                            # directory where the gsim_logic_tree file is
-                            GMPETable.GMPE_DIR = os.path.dirname(self.fname)
-                            self.gmpe_tables.add(uncertainty['gmpe_table'])
-                        try:
-                            gsim = valid.gsim(gsim_name, **uncertainty.attrib)
-                        except Exception:
-                            etype, exc, tb = sys.exc_info()
-                            raise_(etype, "%s in file %s" % (exc, self.fname),
-                                   tb)
-                        uncertainty.text = gsim
+                    if uncertainty.text is None:  # expect gsimByImt nodes
+                        gsimdict = collections.OrderedDict()
+                        for nod in uncertainty.getnodes('gsimByImt'):
+                            imt = nod.attrib.pop('imt')
+                            gsim_name = nod.attrib.pop('gsim')
+                            gsimdict[imt] = self.instantiate(gsim_name, nod)
+                        uncertainty.text = gsim = MultiGMPE(gsimdict)
+                    elif isinstance(uncertainty.text, str):
+                        uncertainty.text = self.instantiate(
+                            uncertainty.text.strip(), uncertainty)
                     else:  # already converted GSIM
                         gsim = uncertainty.text
                     if gsim in self.values[trt]:
@@ -1395,6 +1392,19 @@ class GsimLogicTree(object):
         branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
         # TODO: add an .idx to each GSIM ?
         return trts, branches
+
+    def instantiate(self, gsim_name, node):
+        if gsim_name == 'GMPETable':
+            # a bit hackish: set the GMPE_DIR equal to the
+            # directory where the gsim_logic_tree file is
+            GMPETable.GMPE_DIR = os.path.dirname(self.fname)
+            self.gmpe_tables.add(node['gmpe_table'])
+        try:
+            gsim = valid.gsim(gsim_name, **node.attrib)
+        except Exception:
+            etype, exc, tb = sys.exc_info()
+            raise_(etype, "%s in file %s" % (exc, self.fname), tb)
+        return gsim
 
     def get_gsim_by_trt(self, rlz, trt):
         """
