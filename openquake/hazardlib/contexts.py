@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
+import collections
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -87,7 +88,11 @@ class ContextMaker(object):
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
-                reqset.update(getattr(gsim, 'REQUIRES_' + req))
+                if isinstance(gsim, collections.Mapping):  # dict of GSIMs
+                    for imt in gsim:
+                        reqset.update(getattr(gsim[imt], 'REQUIRES_' + req))
+                else:
+                    reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         filter_distance = param.get('filter_distance')
         if filter_distance is None:
