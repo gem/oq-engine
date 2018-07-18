@@ -1365,11 +1365,11 @@ class GsimLogicTree(object):
                     if uncertainty.text is None:  # expect MultiGMPE
                         with context(self.fname, uncertainty):
                             gsimdict = collections.OrderedDict()
-                            imts = set()
+                            imts = []
                             for nod in uncertainty.getnodes('gsimByImt'):
                                 kw = nod.attrib.copy()
                                 imt = kw.pop('imt')
-                                imts.add(imt)
+                                imts.append(imt)
                                 gsim_name = kw.pop('gsim')
                                 gsimdict[imt] = self.instantiate(gsim_name, kw)
                             if len(imts) > len(gsimdict):

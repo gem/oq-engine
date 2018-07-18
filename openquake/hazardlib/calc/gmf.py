@@ -120,7 +120,7 @@ class GmfComputer(object):
         for imti, imt in enumerate(self.imts):
             try:
                 gs = gsim[imt]  # MultiGMPE
-            except KeyError:
+            except TypeError:
                 gs = gsim  # regular GMPE
             result[imti] = self._compute(None, gs, num_events, imt)
         return result
