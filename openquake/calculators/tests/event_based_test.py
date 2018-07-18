@@ -321,7 +321,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          for period in numpy.arange(0.1,  1, 0.001)}
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_1.__file__, 'job.ini',
+                case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
                          'The event based calculator is restricted '
