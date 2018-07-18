@@ -23,11 +23,19 @@ models organised by IMT type or by a string describing the association
 """
 import collections
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.multi import MultiGMPE
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import from_string
 
+uppernames = '''
+DEFINED_FOR_INTENSITY_MEASURE_TYPES
+DEFINED_FOR_STANDARD_DEVIATION_TYPES
+REQUIRES_SITES_PARAMETERS
+REQUIRES_RUPTURE_PARAMETERS
+REQUIRES_DISTANCES
+'''.split()
 
-class MultiGMPE(MultiGMPE, collections.Mapping):
+
+class MultiGMPE(GMPE, collections.Mapping):
     """
     The MultiGMPE can call ground motions for various IMTs when instantiated
     with a dictionary of ground motion models organised by IMT or a string
@@ -62,20 +70,14 @@ class MultiGMPE(MultiGMPE, collections.Mapping):
         Instantiate with a dictionary of GMPEs organised by IMT
         """
         self.gsim_by_imt = gsim_by_imt
+        for name in uppernames:
+            setattr(self, name, getattr(self, name).copy())
         for imt, gsim in gsim_by_imt.items():
             imt_class = from_string(imt).__class__
             if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
-            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES.update(
-                gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-            self.DEFINED_FOR_STANDARD_DEVIATION_TYPES.update(
-                gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            self.REQUIRES_SITES_PARAMETERS.update(
-                gsim.REQUIRES_SITES_PARAMETERS)
-            self.REQUIRES_RUPTURE_PARAMETERS.update(
-                gsim.REQUIRES_RUPTURE_PARAMETERS)
-            self.REQUIRES_DISTANCES.update(
-                gsim.REQUIRES_DISTANCES)
+            for name in uppernames:
+                getattr(self, name).update(getattr(gsim, name))
 
     def __iter__(self):
         yield from self.gsim_by_imt
