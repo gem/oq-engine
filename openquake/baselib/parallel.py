@@ -431,7 +431,6 @@ class IterResult(object):
         self.received = []
         if self.num_tasks == 0:
             return
-        self.mem = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
             if isinstance(result, BaseException):
@@ -442,14 +441,13 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool' and hasattr(Starmap, 'pids'):
+            if OQ_DISTRIBUTE == 'processpool':
                 totmem = memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids)
-                self.mem.append(float(totmem) / GB)
+                    memory_rss(pid) for pid in Starmap.pids) / GB
 
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon)
+                self.save_task_info(result.mon, numpy.float32([totmem]))
             yield val
 
         if self.received:
@@ -458,15 +456,16 @@ class IterResult(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(tot), humansize(max_per_task))
 
-    def save_task_info(self, mon):
+    def save_task_info(self, mon, totmem):
         if self.hdf5:
             mon.hdf5 = self.hdf5
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], task_data_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
-                        argnames=self.argnames, sent=self.sent,
-                        memory=self.mem)
+                        argnames=self.argnames, sent=self.sent)
+            if OQ_DISTRIBUTE == 'processpool':
+                hdf5.extend(self.hdf5['memory_info/' + self.name], totmem)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -549,7 +548,7 @@ class Starmap(object):
             cls.pool.terminate()
             cls.pool.join()
             del cls.pool
-            del cls.pids
+            cls.pids = []
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -619,13 +618,16 @@ class Starmap(object):
         the arguments by pickling them.
         """
         task_info = 'task_info/' + self.name
+        memory_info = 'memory_info/' + self.name
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
             if mon.hdf5 and task_no == 1:
                 self.hdf5 = mon.hdf5
-                if task_info not in self.hdf5:  # first time
+                if task_info not in self.hdf5:  # first time, but task_info
+                    # and memory_info should be generated in advance
                     hdf5.create(mon.hdf5, task_info, task_data_dt)
+                    hdf5.create(mon.hdf5, memory_info, numpy.float32)
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
