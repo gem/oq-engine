@@ -44,10 +44,7 @@ def plot_memory(calc_id=-1):
     dstore = datastore.read(calc_id)
     plots = []
     for task_name in dstore['task_info']:
-        try:
-            mem = dstore['task_info/' + task_name]['mem_gb']
-        except KeyError:
-            continue
+        mem = dstore['task_info/' + task_name]['mem_gb']
         plots.append((task_name, mem))
     plt = make_figure(plots)
     plt.show()
