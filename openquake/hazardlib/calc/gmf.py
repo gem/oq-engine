@@ -25,6 +25,7 @@ import scipy.stats
 
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
 
@@ -118,7 +119,11 @@ class GmfComputer(object):
         result = numpy.zeros(
             (len(self.imts), len(self.sids), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
-            result[imti] = self._compute(None, gsim, num_events, imt)
+            if isinstance(gsim, MultiGMPE):
+                gs = gsim[str(imt)]  # MultiGMPE
+            else:
+                gs = gsim  # regular GMPE
+            result[imti] = self._compute(None, gs, num_events, imt)
         return result
 
     def _compute(self, seed, gsim, num_events, imt):

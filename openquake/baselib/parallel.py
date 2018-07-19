@@ -415,6 +415,9 @@ class IterResult(object):
         done = 1
         prev_percent = 0
         while done < self.num_tasks:
+            if done == 1:  # first time
+                self.progress('Submitting %s "%s" tasks', self.num_tasks,
+                              self.name)
             percent = int(float(done) / self.num_tasks * 100)
             if percent > prev_percent:
                 self.progress('%s %3d%%', self.name, percent)
@@ -462,8 +465,8 @@ class IterResult(object):
             tup = (mon.task_no, mon.weight, duration, self.received[-1])
             data = numpy.array([tup], task_data_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
-                         argnames=self.argnames, sent=self.sent,
-                         memory=self.mem)
+                        argnames=self.argnames, sent=self.sent,
+                        memory=self.mem)
         mon.flush()
 
     def reduce(self, agg=operator.add, acc=None):
@@ -518,6 +521,7 @@ def _wakeup(sec, mon):
 
 class Starmap(object):
     task_ids = []
+    pids = []
     calc_id = None
     hdf5 = None
 
@@ -526,8 +530,11 @@ class Starmap(object):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
             m = Monitor('wakeup')
-            arglist = [(.2, m) for _ in range(cls.pool._processes)]
-            cls.pids = [os.getpid()] + list(cls(_wakeup, arglist))
+            ires = cls(
+                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
+            ).submit_all(logging.debug)
+            cls.pids = list(ires)
+            cls.task_ids = []
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
         elif distribute == 'no' and hasattr(cls, 'pool'):
@@ -549,7 +556,8 @@ class Starmap(object):
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
               maxweight=None, weight=lambda item: 1,
-              key=lambda item: 'Unspecified', name=None, distribute=None):
+              key=lambda item: 'Unspecified', name=None,
+              distribute=None, progress=logging.info):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -564,6 +572,7 @@ class Starmap(object):
         :param key: function to extract the kind of an item in arg0
         :param name: name of the task to be used in the log
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
+        :param progress: logging function to use (default logging.info)
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
@@ -573,17 +582,13 @@ class Starmap(object):
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         task_args = [(ch,) + args for ch in chunks]
-        return cls(task, task_args, name, distribute).submit_all()
+        return cls(task, task_args, name, distribute).submit_all(progress)
 
     def __init__(self, task_func, task_args, name=None, distribute=None):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.name = name or task_func.__name__
         self.task_args = task_args
-        if self.name.startswith('_'):  # secret task
-            self.progress = lambda *args: None
-        else:
-            self.progress = logging.info
         self.distribute = distribute or oq_distribute(task_func)
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
@@ -629,12 +634,9 @@ class Starmap(object):
             if pickle:
                 args = pickle_sequence(args)
                 self.sent += numpy.array([len(p) for p in args])
-            if task_no == 1:  # first time
-                self.progress('Submitting %s "%s" tasks', self.num_tasks,
-                              self.name)
             yield args
 
-    def submit_all(self):
+    def submit_all(self, progress=logging.info):
         """
         :returns: an IterResult object
         """
@@ -650,19 +652,18 @@ class Starmap(object):
             it = self._iter_dask()
         num_tasks = next(it)
         return IterResult(it, self.name, self.argnames, num_tasks,
-                          self.sent, self.progress, self.hdf5)
+                          self.sent, progress, self.hdf5)
 
-    def reduce(self, agg=operator.add, acc=None):
+    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         """
         Submit all tasks and reduce the results
         """
-        return self.submit_all().reduce(agg, acc)
+        return self.submit_all(progress).reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
 
     def _iter_sequential(self):
-        self.progress('Executing "%s" in process', self.name)
         allargs = list(self._genargs(pickle=False))
         yield len(allargs)
         for args in allargs:

@@ -19,7 +19,6 @@ import os.path
 import logging
 import collections
 import numpy
-import h5py
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
@@ -284,12 +283,11 @@ class EventBasedCalculator(base.HazardCalculator):
         self.save_ruptures(result['ruptures'])
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        hdf5path = self.datastore.hdf5path
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
             data = result['gmfdata']
             with sav_mon:
-                hdf5.extend3(hdf5path, 'gmf_data/data', data)
+                self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
                 update_nbytes(self.datastore, 'gmf_data/data', data)
@@ -348,8 +346,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 iterargs = list(iterargs)
             if self.oqparam.ground_motion_fields is False:
                 logging.info('Generating ruptures only')
-            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
-                self.agg_dicts, acc)
+            ires = parallel.Starmap(
+                self.core_task.__func__, iterargs
+            ).submit_all()
+        acc = ires.reduce(self.agg_dicts, acc)
         if self.oqparam.hazard_calculation_id is None:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos, acc)
