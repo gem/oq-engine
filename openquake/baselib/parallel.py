@@ -618,16 +618,14 @@ class Starmap(object):
         the arguments by pickling them.
         """
         task_info = 'task_info/' + self.name
-        memory_info = 'memory_info/' + self.name
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
             if mon.hdf5 and task_no == 1:
                 self.hdf5 = mon.hdf5
                 if task_info not in self.hdf5:  # first time, but task_info
-                    # and memory_info should be generated in advance
+                    # should be generated in advance
                     hdf5.create(mon.hdf5, task_info, task_data_dt)
-                    hdf5.create(mon.hdf5, memory_info, numpy.float32)
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
