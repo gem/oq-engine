@@ -10,7 +10,9 @@
               <h2>Outputs from calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>
               <div id="my-datastore">
-                  <a href="/v1/calc/{{ calc_id }}/datastore" class="btn btn-sm">Download hdf5 datastore</a>
+                <a href="/v1/calc/{{ calc_id }}/datastore"
+                   title="Size: {{ size_mb }} MB" class="btn btn-sm">
+                  Download hdf5 datastore</a>
               </div>
           </div>
         </div>

@@ -208,11 +208,10 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
+    def __init__(self, dstore, sids, num_rlzs, imtls):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.E = num_events
         self.imtls = imtls
 
     def init(self):

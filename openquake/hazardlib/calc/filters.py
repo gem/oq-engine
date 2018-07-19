@@ -18,6 +18,7 @@
 
 import os
 import sys
+import logging
 import operator
 import collections
 from contextlib import contextmanager
@@ -305,7 +306,7 @@ class SourceFilter(object):
         """
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor), distribute=self.distribute,
-            name=self.__class__.__name__).reduce()
+            name=self.__class__.__name__, progress=logging.debug).reduce()
         Starmap.shutdown()  # close the processpool
         Starmap.init()  # reopen it when necessary
         # avoid task ordering issues
