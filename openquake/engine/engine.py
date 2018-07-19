@@ -50,6 +50,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
@@ -123,11 +124,6 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    # expose gmf_data only if < 10 MB
-    if calcmode == 'event_based':
-        nbytes = dstore['gmf_data'].attrs['nbytes']
-        if nbytes < 10 * 1024 ** 2:  # expose only small GMFs
-            dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
@@ -161,11 +157,12 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     keysize = []
     for key in sorted(dskeys & exportable):
         try:
-            size_mb = dstore.get_attr(key, 'nbytes') / 1024 ** 2
+            size_mb = dstore.get_attr(key, 'nbytes') / MB
         except KeyError:
             size_mb = None
         keysize.append((key, size_mb))
-    logs.dbcmd('create_outputs', dstore.calc_id, keysize)
+    ds_size = os.path.getsize(dstore.hdf5path) / MB
+    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -344,8 +341,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
             logs.LOG.info('Exposing the outputs to the database')
-            if calc.dynamic_parent:
-                expose_outputs(calc.dynamic_parent)
             expose_outputs(calc.datastore)
             duration = time.time() - t0
             calc._monitor.flush()
