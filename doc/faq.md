@@ -127,21 +127,21 @@ A more detailed stack trace:
 
 ```python
 Traceback (most recent call last):
-  File "/opt/openquake/lib/python3.5/site-packages/kombu/utils/functional.py", line 333, in retry_over_time
+  File "/opt/openquake/lib/python3.6/site-packages/kombu/utils/functional.py", line 333, in retry_over_time
     return fun(*args, **kwargs)
-  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 261, in connect
+  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 261, in connect
     return self.connection
-  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 802, in connection
+  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 802, in connection
     self._connection = self._establish_connection()
-  File "/opt/openquake/lib/python3.5/site-packages/kombu/connection.py", line 757, in _establish_connection
+  File "/opt/openquake/lib/python3.6/site-packages/kombu/connection.py", line 757, in _establish_connection
     conn = self.transport.establish_connection()
-  File "/opt/openquake/lib/python3.5/site-packages/kombu/transport/pyamqp.py", line 130, in establish_connection
+  File "/opt/openquake/lib/python3.6/site-packages/kombu/transport/pyamqp.py", line 130, in establish_connection
     conn.connect()
-  File "/opt/openquake/lib/python3.5/site-packages/amqp/connection.py", line 282, in connect
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 282, in connect
     self.transport.connect()
-  File "/opt/openquake/lib/python3.5/site-packages/amqp/transport.py", line 109, in connect
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 109, in connect
     self._connect(self.host, self.port, self.connect_timeout)
-  File "/opt/openquake/lib/python3.5/site-packages/amqp/transport.py", line 150, in _connect
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/transport.py", line 150, in _connect
     self.sock.connect(sa)
 ConnectionRefusedError: [Errno 111] Connection refused
 ```
@@ -155,52 +155,48 @@ It may also mean that an incompatible version of Celery is used. Please check it
 
 ***
 
-### error: [Errno 104] Connection reset by peer
+### error: [Errno 104] Connection reset by peer _or_ (403) ACCESS_REFUSED
 
-A more detailed stack trace:
+More detailed stack traces:
+
 
 ```python
 Traceback (most recent call last):
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/worker/__init__.py", line 206, in start
-    self.blueprint.start(self)
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/bootsteps.py", line 119, in start
-    self.on_start()
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/apps/worker.py", line 165, in on_start
-    self.purge_messages()
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/apps/worker.py", line 189, in purge_messages
-    count = self.app.control.purge()
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/app/control.py", line 145, in purge
-    return self.app.amqp.TaskConsumer(conn).purge()
-  File "/opt/openquake/lib/python3.5/dist-packages/celery/app/amqp.py", line 375, in __init__
-    **kw
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/messaging.py", line 364, in __init__
-    self.revive(self.channel)
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/messaging.py", line 369, in revive
-    channel = self.channel = maybe_channel(channel)
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 1054, in maybe_channel
-    return channel.default_channel
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 756, in default_channel
-    self.connection
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 741, in connection
-    self._connection = self._establish_connection()
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/connection.py", line 696, in _establish_connection
-    conn = self.transport.establish_connection()
-  File "/opt/openquake/lib/python3.5/dist-packages/kombu/transport/pyamqp.py", line 116, in establish_connection
-    conn = self.Connection(**opts)
-  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 180, in __init__
+  [...]
+  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 180, in __init__
     (10, 30),  # tune
-  File "/opt/openquake/lib/python3.5/dist-packages/amqp/abstract_channel.py", line 67, in wait
+  File "/opt/openquake/lib/python3.6/dist-packages/amqp/abstract_channel.py", line 67, in wait
     self.channel_id, allowed_methods, timeout)
-  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 241, in _wait_method
+  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 241, in _wait_method
     channel, method_sig, args, content = read_timeout(timeout)
-  File "/opt/openquake/lib/python3.5/dist-packages/amqp/connection.py", line 330, in read_timeout
+  File "/opt/openquake/lib/python3.6/dist-packages/amqp/connection.py", line 330, in read_timeout
     return self.method_reader.read_method()
-  File "/opt/openquake/lib/python3.5/dist-packages/amqp/method_framing.py", line 189, in read_method
+  File "/opt/openquake/lib/python3.6/dist-packages/amqp/method_framing.py", line 189, in read_method
     raise m
 error: [Errno 104] Connection reset by peer
 ```
 
-This means that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
+```python
+Traceback (most recent call last):
+  [...]
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 288, in connect
+    self.drain_events(timeout=self.connect_timeout)
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 471, in drain_events
+    while not self.blocking_read(timeout):
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 477, in blocking_read
+    return self.on_inbound_frame(frame)
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/method_framing.py", line 55, in on_frame
+    callback(channel, method_sig, buf, None)
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 481, in on_inbound_method
+    method_sig, payload, content,
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/abstract_channel.py", line 128, in dispatch_method
+    listener(*args)
+  File "/opt/openquake/lib/python3.6/site-packages/amqp/connection.py", line 603, in _on_close
+    (class_id, method_id), ConnectionError)
+amqp.exceptions.AccessRefused: (0, 0): (403) ACCESS_REFUSED - Login was refused using authentication mechanism AMQPLAIN. For details see the broker logfile.
+```
+
+These errors mean that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
 
 ***
 
