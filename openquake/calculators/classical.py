@@ -61,7 +61,7 @@ def get_src_ids(sources):
 
 def saving_sources_by_task(iterargs, dstore):
     """
-    Yield the iterargs again by populating 'task_info/source_data'
+    Yield the iterargs again by populating 'source_data'
     """
     source_ids = []
     data = []
@@ -70,8 +70,8 @@ def saving_sources_by_task(iterargs, dstore):
         for src in args[0]:  # collect source data
             data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
-    dstore['task_info/task_sources'] = encode(source_ids)
-    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
+    dstore['task_sources'] = encode(source_ids)
+    dstore.extend('source_data', numpy.array(data, source_data_dt))
 
 
 @base.calculators.add('classical')
