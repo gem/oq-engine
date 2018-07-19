@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq plot_memory`
   * Introduced a MultiGMPE concept
   * Saved the size of the datastore in the database and used it in the WebUI
 
