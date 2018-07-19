@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   intro
+   baselib
+   hazardlib
    architecture
    effective-realizations
    event-based-with-large-logic-tree

@@ -754,8 +754,10 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict([('calc_id', calc_id)]))
+                  dict(calc_id=calc_id, size_mb=size_mb))
 
 
 @csrf_exempt
