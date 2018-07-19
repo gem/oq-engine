@@ -168,11 +168,13 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, memory_rss
+
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
 
 cpu_count = multiprocessing.cpu_count()
+GB = 1024 ** 3
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
@@ -184,7 +186,8 @@ if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
 # data type for storing the performance information
 task_data_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
-     ('duration', numpy.float32), ('received', numpy.int64)])
+     ('duration', numpy.float32), ('received', numpy.int64),
+     ('mem_gb', numpy.float32)])
 
 
 def oq_distribute(task=None):
@@ -439,9 +442,14 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
+            if OQ_DISTRIBUTE == 'processpool':
+                mem_gb = memory_rss(os.getpid()) + sum(
+                    memory_rss(pid) for pid in Starmap.pids) / GB
+            else:
+                mem_gb = numpy.nan
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon)
+                self.save_task_info(result.mon, mem_gb)
             yield val
 
         if self.received:
@@ -450,12 +458,12 @@ class IterResult(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(tot), humansize(max_per_task))
 
-    def save_task_info(self, mon):
+    def save_task_info(self, mon, mem_gb):
         if self.hdf5:
             mon.hdf5 = self.hdf5
             duration = mon.children[0].duration  # the task is the first child
-            tup = (mon.task_no, mon.weight, duration, self.received[-1])
-            data = numpy.array([tup], task_data_dt)
+            t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
+            data = numpy.array([t], task_data_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
                         argnames=self.argnames, sent=self.sent)
         mon.flush()
@@ -540,6 +548,7 @@ class Starmap(object):
             cls.pool.terminate()
             cls.pool.join()
             del cls.pool
+            cls.pids = []
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -614,7 +623,8 @@ class Starmap(object):
             assert isinstance(mon, Monitor), mon
             if mon.hdf5 and task_no == 1:
                 self.hdf5 = mon.hdf5
-                if task_info not in self.hdf5:  # first time
+                if task_info not in self.hdf5:  # first time, but task_info
+                    # should be generated in advance
                     hdf5.create(mon.hdf5, task_info, task_data_dt)
             # add incremental task number and task weight
             mon.task_no = task_no
