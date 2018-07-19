@@ -17,9 +17,9 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
-- Python 3.6 (from https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.6.pkg)
+- Python 3.6 from [python.org](https://python.org)
 
-Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.6.pkg).
+Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg).
 
 ## Install packages from the OpenQuake website
 
