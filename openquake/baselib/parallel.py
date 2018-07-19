@@ -168,7 +168,7 @@ except ImportError:
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.zeromq import zmq, Socket
-from openquake.baselib.performance import Monitor, memory_rss
+from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize)
@@ -623,9 +623,12 @@ class Starmap(object):
             assert isinstance(mon, Monitor), mon
             if mon.hdf5 and task_no == 1:
                 self.hdf5 = mon.hdf5
-                if task_info not in self.hdf5:  # first time, but task_info
-                    # should be generated in advance
+                if task_info not in self.hdf5:  # first time
+                    # task_info performance_data should be generated in advance
                     hdf5.create(mon.hdf5, task_info, task_data_dt)
+                if 'performance_data' not in self.hdf5:
+                    hdf5.create(mon.hdf5, 'performance_data', perf_dt)
+
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
