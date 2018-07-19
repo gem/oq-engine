@@ -777,7 +777,10 @@ class DictArray(collections.Mapping):
             self[imt] = carray[0][imt]
 
     def __eq__(self, other):
-        return (self.array == other.array).all()
+        arr = self.array == other.array
+        if isinstance(arr, bool):
+            return arr
+        return arr.all()
 
     def __ne__(self, other):
         return not self.__eq__(other)
