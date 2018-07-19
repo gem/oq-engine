@@ -61,7 +61,7 @@ def get_src_ids(sources):
 
 def saving_sources_by_task(iterargs, dstore):
     """
-    Yield the iterargs again by populating 'task_info/source_data'
+    Yield the iterargs again by populating 'source_data'
     """
     source_ids = []
     data = []
@@ -70,8 +70,8 @@ def saving_sources_by_task(iterargs, dstore):
         for src in args[0]:  # collect source data
             data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
-    dstore['task_info/task_sources'] = encode(source_ids)
-    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
+    dstore['task_sources'] = encode(source_ids)
+    dstore.extend('source_data', numpy.array(data, source_data_dt))
 
 
 @base.calculators.add('classical')
@@ -180,7 +180,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.get_sources_by_trt().items():
+        for trt, sources in csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in block_splitter(sources, maxweight, weight):
                 yield block, src_filter, gsims, param, monitor

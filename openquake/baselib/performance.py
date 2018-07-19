@@ -15,11 +15,11 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import time
 import psutil
 from datetime import datetime
-
 import numpy
 
 from openquake.baselib.general import humansize
@@ -38,6 +38,13 @@ def _pairs(items):
         else:
             lst.append((name, repr(value)))
     return sorted(lst)
+
+
+def memory_rss(pid):
+    """
+    :returns: the RSS memory allocated by a process
+    """
+    return psutil.Process(pid).memory_info().rss
 
 
 # this is not thread-safe
@@ -92,9 +99,8 @@ class Monitor(object):
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
-        proc = psutil.Process(os.getpid())
         try:
-            return proc.memory_info().rss
+            return memory_rss(os.getpid())
         except psutil.AccessDenied:
             # no access to information about this process
             pass

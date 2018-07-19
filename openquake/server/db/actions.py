@@ -302,17 +302,19 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, keysize):
+def create_outputs(db, job_id, keysize, ds_size):
     """
     Build a correspondence between the outputs in the datastore and the
-    ones in the database.
+    ones in the database. Also, update the datastore size in the job table.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
-    :param dskeys: a list of datastore keys
+    :param keysize: a list of pairs (key, size_mb)
+    :param ds_size: total datastore size in MB
     """
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
+    db('UPDATE job SET size_mb=?x WHERE id=?x', ds_size, job_id)
     db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
@@ -564,7 +566,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id) for job in jobs]
+             job.hazard_calculation_id, job.size_mb) for job in jobs]
 
 
 def update_job(db, job_id, dic):
