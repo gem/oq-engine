@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, random_filter)
+    groupby, group_array, gettemp, AccumDict, random_filter, cached_property)
 from openquake.hazardlib import (
     source, sourceconverter, probability_map, stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -805,7 +805,7 @@ class CompositeSourceModel(collections.Sequence):
         :returns: total weight of the source model
         """
         tot_weight = 0
-        for srcs in self.get_sources_by_trt().values():
+        for srcs in self.sources_by_trt.values():
             tot_weight += sum(map(weight, srcs))
         for grp in self.gen_mutex_groups():
             tot_weight += sum(map(weight, grp))
@@ -870,7 +870,8 @@ class CompositeSourceModel(collections.Sequence):
             raise RuntimeError('All sources were filtered away!')
         return sources
 
-    def get_sources_by_trt(self):
+    @cached_property
+    def sources_by_trt(self):
         """
         Build a dictionary TRT string -> sources. Sources of kind "mutex"
         (if any) are silently discarded.
