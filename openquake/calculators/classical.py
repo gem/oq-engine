@@ -180,7 +180,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.get_sources_by_trt().items():
+        for trt, sources in csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in block_splitter(sources, maxweight, weight):
                 yield block, src_filter, gsims, param, monitor
