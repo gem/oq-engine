@@ -27,7 +27,7 @@ def make_figure(plots):
 
     fig, ax = plt.subplots()
     ax.grid(True)
-    ax.set_ylabel('tasks')
+    ax.set_xlabel('tasks')
     ax.set_ylabel('GB')
     start = 0
     for task_name, mem in plots:
