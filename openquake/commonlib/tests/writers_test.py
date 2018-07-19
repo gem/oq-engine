@@ -82,7 +82,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             for asset in assetgen(1000):
                 writer.serialize(asset)
         allocated = proc.memory_info().rss - rss
-        self.assertLess(allocated, 204800)  # < 200 KB
+        self.assertLess(allocated, 256000)  # < 250 KB
 
     def test_zero_node(self):
         s = BytesIO()
