@@ -42,7 +42,7 @@ set -e
 env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
+GEM_DEPENDS="oq-python-deb|oq-python3.6|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -1273,11 +1273,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
-        if [ "$dep" = "oq-libs" ]; then
-            sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
-        else
+
+        # if [ "$dep" = "oq-libs" ]; then
+        #     sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+        # else
             sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
-        fi
+        # fi
     done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
