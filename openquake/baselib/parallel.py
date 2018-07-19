@@ -187,7 +187,7 @@ if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
 task_data_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
      ('duration', numpy.float32), ('received', numpy.int64),
-     ('totmem', numpy.float32)])
+     ('mem_gb', numpy.float32)])
 
 
 def oq_distribute(task=None):
@@ -443,13 +443,13 @@ class IterResult(object):
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool':
-                totmem = memory_rss(os.getpid()) + sum(
+                mem_gb = memory_rss(os.getpid()) + sum(
                     memory_rss(pid) for pid in Starmap.pids) / GB
             else:
-                totmem = numpy.nan
+                mem_gb = numpy.nan
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon, totmem)
+                self.save_task_info(result.mon, mem_gb)
             yield val
 
         if self.received:
@@ -458,11 +458,11 @@ class IterResult(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(tot), humansize(max_per_task))
 
-    def save_task_info(self, mon, totmem):
+    def save_task_info(self, mon, mem_gb):
         if self.hdf5:
             mon.hdf5 = self.hdf5
             duration = mon.children[0].duration  # the task is the first child
-            t = (mon.task_no, mon.weight, duration, self.received[-1], totmem)
+            t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
             data = numpy.array([t], task_data_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
                         argnames=self.argnames, sent=self.sent)
