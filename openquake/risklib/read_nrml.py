@@ -202,7 +202,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
                          fname, imls.lineno)
             attrs['imls'] = levels[1:]
             for node in ff[1:]:
-                node.text = node.text[1:]
+                node.text = node.text[1:]  # this is the <poes> node
         valid.check_levels(attrs['imls'], attrs['imt'])
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
