@@ -55,8 +55,6 @@ Module exports
 :class:`DouglasEtAl2013StochasticSD100Q1800K040`
 :class:`DouglasEtAl2013StochasticSD100Q1800K060`
 """
-from __future__ import division
-
 import numpy as np
 from scipy.constants import g
 from math import sqrt

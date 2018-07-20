@@ -2,12 +2,12 @@ Event Based Risk from GMF
 =========================
 
 ============== ===================
-checksum32     692,252,974        
-date           2018-03-26T15:56:34
-engine_version 2.10.0-git543cfb0  
+checksum32     3,424,054,410      
+date           2018-06-05T06:39:34
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
-num_sites = 11, num_levels = 170
+num_sites = 13, num_levels = 170
 
 Parameters
 ----------
@@ -44,11 +44,11 @@ structural_vulnerability `cr_vulnerability_v5.xml <cr_vulnerability_v5.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -71,27 +71,27 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-==================================== ===== ====== === === ========= ==========
-taxonomy                             mean  stddev min max num_sites num_assets
-MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.000 0.0    1   1   2         2         
-W+WLI/LWALL+DNO/HEX:1/YPRE:1980      1.333 0.577  1   2   3         4         
-CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.200 0.447  1   2   5         6         
-MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.500 0.577  1   2   4         6         
-MATO/LN+DNO/HEX:1/Y99                1.500 0.707  1   2   2         3         
-W+WLI/LWALL+DLO/HEX:1/YPRE:1980      1.000 0.0    1   1   3         3         
-CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 1.000 0.0    1   1   2         2         
-MCF/LWALL+DUC/HEX:1/YBET:1980-2010   1.000 0.0    1   1   4         4         
-MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.000 0.0    1   1   2         2         
-MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.000 0.0    1   1   2         2         
-*ALL*                                2.615 1.895  0   6   13        34        
-==================================== ===== ====== === === ========= ==========
+==================================== ======= ======= === === ========= ==========
+taxonomy                             mean    stddev  min max num_sites num_assets
+MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.00000 0.0     1   1   2         2         
+W+WLI/LWALL+DNO/HEX:1/YPRE:1980      1.33333 0.57735 1   2   3         4         
+CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.20000 0.44721 1   2   5         6         
+MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.50000 0.57735 1   2   4         6         
+MATO/LN+DNO/HEX:1/Y99                1.50000 0.70711 1   2   2         3         
+W+WLI/LWALL+DLO/HEX:1/YPRE:1980      1.00000 0.0     1   1   3         3         
+CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 1.00000 0.0     1   1   2         2         
+MCF/LWALL+DUC/HEX:1/YBET:1980-2010   1.00000 0.0     1   1   4         4         
+MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   2         2         
+MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   2         2         
+*ALL*                                2.61538 1.89466 0   6   13        34        
+==================================== ======= ======= === === ========= ==========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.034     0.0       1     
-reading exposure        0.034     0.0       1     
-reading site collection 2.403E-04 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+building riskinputs     0.03507  0.0       1     
+reading site collection 0.02736  0.0       1     
+reading exposure        0.00812  0.0       1     
+======================= ======== ========= ======

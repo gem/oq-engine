@@ -18,8 +18,9 @@ CDIR = os.path.dirname(__file__)
 
 def mean_gmf(shakemap):
     gmfs = to_gmfs(
-        shakemap, site_effects=True, trunclevel=3, num_gmfs=10, seed=42)
-    return [gmfs[str(imt)].mean() for imt in imts]
+        shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+        num_gmfs=10, seed=42)
+    return [gmfs[..., i].mean() for i in range(len(imts))]
 
 
 class ShakemapTestCase(unittest.TestCase):
@@ -28,7 +29,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
         array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array)
+        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap)
@@ -71,17 +72,20 @@ class ShakemapTestCase(unittest.TestCase):
         val = numpy.array(
             [(5.38409665, 3.9383686, 3.55435415, 4.37692394)] * 9, imt_dt)
 
-        shakemap = numpy.zeros(9, shakemap_dt)
+        shakemap = numpy.zeros(9, shakemap_dt)  # 9 sites
         shakemap['lon'] = lons
         shakemap['lat'] = lats
         shakemap['vs30'] = numpy.array([301.17] * 9)
         shakemap['val'] = val
         shakemap['std'] = std
         gmfs = to_gmfs(
-            shakemap, site_effects=False, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.3708301, 0.5671011])
+            shakemap, crosscorr='corr', site_effects=False, trunclevel=3,
+            num_gmfs=2, seed=42)
+        # shape (R, N, E, M)
+        aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
 
         gmfs = to_gmfs(
-            shakemap, site_effects=True, trunclevel=3, num_gmfs=2, seed=42)
-        aae(gmfs['PGA'].sum(axis=0), [0.4101717, 0.6240185])
-        aae(gmfs['SA(1.0)'].sum(axis=0), [0.3946015, 0.5385107])
+            shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+            num_gmfs=2, seed=42)
+        aae(gmfs[..., 0].sum(axis=1), [[0.4101717, 0.6240185]])  # PGA
+        aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)

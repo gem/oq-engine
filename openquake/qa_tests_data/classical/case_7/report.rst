@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2018-03-26T15:56:11
-engine_version 2.10.0-git543cfb0  
+date           2018-06-26T14:57:49
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -43,12 +43,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        0.700  trivial(1)      1/1             
-b2        0.300  trivial(1)      0/0             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        0.70000 trivial(1)      1/1             
+b2        0.30000 trivial(1)      0/1             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -76,20 +76,20 @@ source_model_1.xml 0      Active Shallow Crust 140          140
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-2         ComplexFaultSource 49           0.005     6.437E-06  1         1        
-1         SimpleFaultSource  91           0.005     5.245E-06  1         1        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+1         SimpleFaultSource  91           0.00431   5.007E-06  1.00000   1         0     
+2         ComplexFaultSource 49           0.00425   3.099E-06  1.00000   1         0     
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.005     1     
-SimpleFaultSource  0.005     1     
+ComplexFaultSource 0.00425   1     
+SimpleFaultSource  0.00431   1     
 ================== ========= ======
 
 Duplicated sources
@@ -98,30 +98,55 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_ruptures     0.006 5.088E-04 0.006 0.006 2        
-================== ===== ========= ===== ===== =========
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+RtreeFilter        0.00538 0.00168   0.00416 0.00729 3        
+count_eff_ruptures 0.00565 8.227E-05 0.00559 0.00571 2        
+================== ======= ========= ======= ======= =========
 
-Informational data
-------------------
-============== ======================================================================= ========
-task           sent                                                                    received
-count_ruptures sources=2.22 KB srcfilter=1.41 KB param=836 B monitor=660 B gsims=240 B 728 B   
-============== ======================================================================= ========
+Fastest task
+------------
+taskno=2, weight=196, duration=0 s, sources="2"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 NaN    1   1   1
+weight   196     NaN    196 196 1
+======== ======= ====== === === =
+
+Slowest task
+------------
+taskno=1, weight=91, duration=0 s, sources="1"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   1.00000 NaN    1   1   1
+weight   91      NaN    91  91  1
+======== ======= ====== === === =
+
+Data transfer
+-------------
+================== ===================================================================== ========
+task               sent                                                                  received
+RtreeFilter        srcs=3.23 KB monitor=966 B srcfilter=837 B                            3.56 KB 
+count_eff_ruptures sources=2.49 KB param=862 B monitor=658 B srcfilter=492 B gsims=240 B 716 B   
+================== ===================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.285     0.0       1     
-total count_ruptures           0.012     3.754     2     
-managing sources               0.007     0.0       1     
-store source_info              0.004     0.0       1     
-splitting sources              4.201E-04 0.0       1     
-reading site collection        3.588E-04 0.0       1     
-unpickling count_ruptures      7.987E-05 0.0       2     
-aggregate curves               3.910E-05 0.0       2     
-saving probability maps        2.956E-05 0.0       1     
+reading composite source model 0.19229   0.0       1     
+managing sources               0.10483   0.0       1     
+total prefilter                0.01613   4.17969   3     
+total count_eff_ruptures       0.01131   6.42969   2     
+store source_info              0.00607   0.0       1     
+unpickling prefilter           7.885E-04 0.0       3     
+unpickling count_eff_ruptures  4.709E-04 0.0       2     
+aggregate curves               4.585E-04 0.0       2     
+reading site collection        3.459E-04 0.0       1     
+splitting sources              3.216E-04 0.0       1     
 ============================== ========= ========= ======

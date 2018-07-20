@@ -49,7 +49,7 @@ class ProbabilityCurve(object):
     >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
-    [ 0.405  0.32   0.245  0.5    0.5  ]>
+    [0.405 0.32  0.245 0.5   0.5  ]>
     """
     def __init__(self, array):
         self.array = array
@@ -212,28 +212,30 @@ class ProbabilityMap(dict):
         return curves
 
     # used when exporting to npy
-    def convert_npy(self, imtls, nsites, idx=0):
+    def convert_npy(self, imtls, sids, idx=0):
         """
-        Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.dt`.
+        Convert a probability map into a composite array of dtype `imtls.dt`.
 
         :param imtls:
             DictArray instance
-        :param nsites:
-            the total number of sites
+        :param sids:
+            array of site IDs containing all the sites in the ProbabilityMap
         :param idx:
             index on the z-axis (default 0)
         """
         dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
                   for imt in imtls]
-        curves = numpy.zeros(nsites, dtlist)
-        for sid in self:
-            array = self[sid].array
+        curves = numpy.zeros(len(sids), dtlist)
+        for s, sid in enumerate(sids):
+            try:
+                array = self[sid].array
+            except KeyError:
+                continue
             for imt in imtls:
                 imls = curves.dtype[imt].names
                 values = array[imtls.slicedic[imt], idx]
                 for iml, val in zip(imls, values):
-                    curves[sid][imt][iml] = val
+                    curves[s][imt][iml] = val
         return curves
 
     def convert2(self, imtls, sids):
@@ -332,13 +334,15 @@ class ProbabilityMap(dict):
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
             array[i] = self[sid].array
-        return array, dict(sids=sids)
+        return dict(array=array, sids=sids), {}
 
-    def __fromh5__(self, array, attrs):
+    def __fromh5__(self, dic, attrs):
         # rebuild the map from sids and probs arrays
+        array = dic['array']
+        sids = dic['sids']
         self.shape_y = array.shape[1]
         self.shape_z = array.shape[2]
-        for sid, prob in zip(attrs['sids'], array):
+        for sid, prob in zip(sids, array):
             self[sid] = ProbabilityCurve(prob)
 
 

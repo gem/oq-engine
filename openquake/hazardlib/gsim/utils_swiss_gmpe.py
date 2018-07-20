@@ -15,11 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import CoeffsTable
 
 
 def _compute_C1_term(C, dists):

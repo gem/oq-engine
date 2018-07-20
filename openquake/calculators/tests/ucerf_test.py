@@ -19,9 +19,10 @@ import os
 from decorator import decorator
 from nose.plugins.attrib import attr
 from openquake.baselib import config
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
+from openquake.calculators import ucerf_base
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -66,7 +67,7 @@ class UcerfTestCase(CalculatorTestCase):
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
-        got = writetmp(rst_table(gmdata, fmt='%.6f'))
+        got = gettemp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata_eb.csv', got)
 
         # check the mean hazard map
@@ -81,17 +82,19 @@ class UcerfTestCase(CalculatorTestCase):
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
-        got = writetmp(rst_table(gmdata, fmt='%.6f'))
+        got = gettemp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
         # check the mean hazard map
-        got = writetmp(view('hmap', self.calc.datastore))
+        got = gettemp(view('hmap', self.calc.datastore))
         self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
     @manage_shared_dir_error
     def test_classical(self):
+        ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
+        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
         fnames = export(('hcurves/all', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-0-PGA.csv', 'hazard_curve-0-SA(0.1).csv',
                     'hazard_curve-1-PGA.csv', 'hazard_curve-1-SA(0.1).csv']
@@ -104,8 +107,10 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf_td')
     @manage_shared_dir_error
     def test_classical_time_dep(self):
+        ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
+        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
                               delta=1E-6)
@@ -116,9 +121,11 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf_td')
     @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
+        ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
                             exports='csv')
+        ucerf_base.RUPTURES_PER_BLOCK = 1000  # resume default
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
                               delta=1E-6)
@@ -132,7 +139,7 @@ class UcerfTestCase(CalculatorTestCase):
         # check the right number of events was stored
         self.assertEqual(len(self.calc.datastore['events']), 79)
 
-        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 
         # check the mean losses_by_period

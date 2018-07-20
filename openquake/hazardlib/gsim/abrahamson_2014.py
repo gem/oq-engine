@@ -22,9 +22,6 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegJPN`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
-from __future__ import division
-from __future__ import print_function
-
 import copy
 import numpy as np
 

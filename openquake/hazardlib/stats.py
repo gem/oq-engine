@@ -18,19 +18,32 @@
 """
 Utilities to compute mean and quantile curves
 """
-from __future__ import division
 import numpy
+
+_mean = None  # set by mean_curve and std_curve
 
 
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
+    global _mean
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
-        return numpy.average(values, axis=0, weights=weights)
-    return sum(value * weight for value, weight in zip(values, weights))
+    if not isinstance(values, numpy.ndarray):
+        values = numpy.array(values)
+    _mean = numpy.average(values, axis=0, weights=weights)
+    return _mean
+
+
+def std_curve(values, weights=None):
+    global _mean
+    assert _mean is not None, 'You must call mean_curve before std_curve'
+    if weights is None:
+        weights = [1. / len(values)] * len(values)
+    res = numpy.sqrt(numpy.einsum('i,i...', weights, (_mean - values) ** 2))
+    _mean = None  # reset cache
+    return res
 
 
 def quantile_curve(quantile, curves, weights=None):
@@ -73,7 +86,7 @@ def max_curve(values, weights=None):
     The values can be arrays and then the maximum is taken pointwise:
 
     >>> max_curve([numpy.array([.3, .2]), numpy.array([.1, .4])])
-    array([ 0.3,  0.4])
+    array([0.3, 0.4])
     """
     return numpy.max(values, axis=0)
 
@@ -167,8 +180,7 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> a1 = numpy.array([([1, 2], 3)], dt)
     >>> a2 = numpy.array([([4, 5], 6)], dt)
     >>> apply_stat(mean_curve, [a1, a2])
-    array([([2.5, 3.5], 4.5)], 
-          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
     dtype = arraylist[0].dtype
     shape = arraylist[0].shape

@@ -23,8 +23,6 @@ in the form of binary tables, and
 :class:`openquake.hazardlib.gsim.gmpe_table.AmplificationTable` for defining
 the corresponding amplification of the IMLs
 """
-
-from __future__ import division
 import os
 from copy import deepcopy
 
@@ -34,9 +32,9 @@ from scipy.interpolate import interp1d
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import const
+from openquake.hazardlib import const, site
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
+from openquake.hazardlib.gsim.base import GMPE, RuptureContext
 from openquake.baselib.python3compat import round
 
 
@@ -73,10 +71,8 @@ class AmplificationTable(object):
     :attr distances:
         Distance values for the tables
     :attr parameter:
-        Parameter to which the amplification applies. Must be an element
-        inside the _slots_ defines in the :class:`openquake.hazardlib.
-        gsim.base.RuptureContext` or the :class:`openquake.hazardlib.gsim.base.
-        SitesContext`
+        Parameter to which the amplification applies. There is a check
+        on the parameter name.
     :attr values:
         Array of values to which each amplification table corresponds
     :attr element:
@@ -106,7 +102,7 @@ class AmplificationTable(object):
         self.values = self.values[self.argidx]
         if self.parameter in RuptureContext._slots_:
             self.element = "Rupture"
-        elif self.parameter in SitesContext._slots_:
+        elif self.parameter in site.site_param_dt:
             self.element = "Sites"
         else:
             raise ValueError("Amplification parameter %s not recognised!"
@@ -168,11 +164,9 @@ class AmplificationTable(object):
             Intensity measure type as an instance of the :class:
             `openquake.hazardlib.imt`
         :param sctx:
-            Site parameters as instance of the :class:
-            `openquake.hazardlib.gsim.base.SitesContext`
+            SiteCollection instance
         :param rctx:
-            Rupture parameters as instance of the :class:
-            `openquake.hazardlib.gsim.base.RuptureContext`
+            Rupture instance
         :param dists:
             Source to site distances (km)
         :param stddev_types:
@@ -330,7 +324,7 @@ class GMPETable(GMPE):
                         os.path.join(self.GMPE_DIR, gmpe_table))
             else:
                 raise IOError("GMPE Table Not Defined!")
-        super(GMPETable, self).__init__()
+        super().__init__()
         self.imls = None
         self.stddevs = {}
         self.m_w = None

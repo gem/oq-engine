@@ -295,7 +295,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             a_val=-3.6, b_val=1.0, min_mag=5.2, max_mag=6.4, bin_width=1.0)
         surfaces = [
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=9.696547068,
                 top_left=geo.Point(-1, 1, 21),
@@ -304,7 +303,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 bottom_right=geo.Point(1, -1, 59)
             ),
             geo.PlanarSurface(
-                mesh_spacing=self.rupture_mesh_spacing,
                 strike=89.98254582,
                 dip=15.0987061388,
                 top_left=geo.Point(1, 1, 20),
@@ -821,71 +819,3 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info).
                          replace('0.20000000000000004', '0.2'))
-
-
-class FilterSourceTestCase(unittest.TestCase):
-    bad_source = BytesIO(b'''\
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.4"
-xmlns:gml="http://www.opengis.net/gml"
->
-    <sourceModel>
-        <simpleFaultSource
-        id="61"
-        name="Great Sumatra Fault Seg 9"
-        tectonicRegion="Active Shallow Crust"
-        >
-            <simpleFaultGeometry>
-                <gml:LineString>
-                    <gml:posList>
-                        100.25937 -0.031671 100.0266 0.405493
-                    </gml:posList>
-                </gml:LineString>
-                <dip>
-                    90.0
-                </dip>
-                <upperSeismoDepth>
-                    0.0
-                </upperSeismoDepth>
-                <lowerSeismoDepth>
-                    15.0
-                </lowerSeismoDepth>
-            </simpleFaultGeometry>
-            <magScaleRel>
-                WC1994
-            </magScaleRel>
-            <ruptAspectRatio>
-                2.0
-            </ruptAspectRatio>
-            <incrementalMFD
-            binWidth="0.1"
-            minMag="6.6"
-            >
-                <occurRates>
-                    0.000159132913052 0.000639357094314 0.00128272504335 0.00128508030857 0.00064288541598 0.00016059924101 2.00336468094e-05
-                </occurRates>
-            </incrementalMFD>
-            <rake>
-                0.0
-            </rake>
-        </simpleFaultSource>
-    </sourceModel>
-</nrml>''')
-
-    def test(self):
-        mod = mock.Mock(
-            reference_vs30_value=760,
-            reference_vs30_type='measured',
-            reference_depth_to_1pt0km_per_sec=100.,
-            reference_depth_to_2pt5km_per_sec=5.0,
-            reference_backarc=False)
-        sitecol = site.SiteCollection.from_points(
-            [102.32], [-2.9107], [0], mod)
-        [[src]] = nrml.to_python(self.bad_source)
-        with self.assertRaises(AttributeError) as ctx, context(src):
-            max_dist = 250
-            # NB: with a distance of 200 km the error does not happen
-            src.filter_sites_by_distance_to_source(max_dist, sitecol)
-        self.assertIn('An error occurred with source id=61',
-                      str(ctx.exception))

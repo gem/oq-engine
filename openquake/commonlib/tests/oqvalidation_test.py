@@ -20,13 +20,13 @@ import os
 import mock
 import unittest
 import tempfile
-from openquake.baselib.general import writetmp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 
 TMP = tempfile.gettempdir()
 
-GST = {'gsim_logic_tree': writetmp('''\
+GST = {'gsim_logic_tree': gettemp('''\
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID='lt1'>
         <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -380,18 +380,3 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("iml_disagg and poes_disagg cannot be set at the "
                       "same time", str(ctx.exception))
-
-    def test_event_based_risk(self):
-        with self.assertRaises(InvalidFile) as ctx:
-            OqParam(
-                calculation_mode='event_based_risk',
-                inputs=fakeinputs,
-                gsim='BooreAtkinson2008',
-                reference_vs30_value='200',
-                sites='0.1 0.2',
-                poes='0.2',
-                maximum_distance='400',
-                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
-                conditional_loss_poes='0.02')
-        self.assertIn("asset_loss_table is not set, probably you want to "
-                      "remove conditional_loss_poes", str(ctx.exception))
