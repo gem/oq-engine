@@ -114,15 +114,24 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
+def normalize(key, fnames, base_path):
+    input_type, _ext = key.rsplit('_', 1)
+    filenames = []
+    for val in fnames:
+        if os.path.isabs(val):
+            raise ValueError('%s=%s is an absolute path' % (key, val))
+        filenames.append(os.path.normpath(os.path.join(base_path, val)))
+    return input_type, filenames
+
+
 def _update(params, items, base_path):
     for key, value in items:
-        if key.endswith(('_file', '_csv', '_hdf5')):
-            if os.path.isabs(value):
-                raise ValueError('%s=%s is an absolute path' % (key, value))
-            input_type, _ext = key.rsplit('_', 1)
-            params['inputs'][input_type] = (
-                os.path.normpath(os.path.join(base_path, value))
-                if value else '')
+        if key == 'hazard_curves_csv':
+            input_type, fnames = normalize(key, value.split(), base_path)
+            params['inputs'][input_type] = fnames
+        elif key.endswith(('_file', '_csv', '_hdf5')):
+            input_type, [fname] = normalize(key, [value], base_path)
+            params['inputs'][input_type] = fname if value else ''
         else:
             params[key] = value
 
@@ -280,8 +289,8 @@ def get_mesh(oqparam):
         return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
-        if fname.endswith('.csv'):
-            mesh, pmap = get_pmap_from_csv(oqparam, fname.split())
+        if isinstance(fname, list):  # for csv
+            mesh, pmap = get_pmap_from_csv(oqparam, fname)
         elif fname.endswith('.xml'):
             mesh, pmap = get_pmap_from_nrml(oqparam, fname)
         else:
@@ -1016,7 +1025,7 @@ def get_checksum32(oqparam):
         fname = oqparam.inputs[key]
         if not fname:
             continue
-        elif key == 'source':  # list of fnames and/or strings
+        elif key in ('source', 'hazard_curves'):  # list of fnames
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
