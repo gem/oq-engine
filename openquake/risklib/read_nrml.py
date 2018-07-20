@@ -196,7 +196,13 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             array['mean'][i] = node['mean']
             array['stddev'][i] = node['stddev']
     elif ff['format'] == 'discrete':
-        attrs['imls'] = ~imls
+        attrs['imls'] = levels = ~imls
+        if levels[0] == 0:  # legacy error: we must discard the zero
+            logging.warn('%s:%s removed the 0 intensity level',
+                         fname, imls.lineno)
+            attrs['imls'] = levels[1:]
+            for node in ff[1:]:
+                node.text = node.text[1:]
         valid.check_levels(attrs['imls'], attrs['imt'])
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
