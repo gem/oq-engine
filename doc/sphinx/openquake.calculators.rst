@@ -16,6 +16,14 @@ base module
     :undoc-members:
     :show-inheritance:
 
+getters module
+----------------------------------
+
+.. automodule:: openquake.calculators.getters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 classical module
 --------------------------------------
 
@@ -124,6 +132,14 @@ views module
 ----------------------------------
 
 .. automodule:: openquake.calculators.views
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+extract module
+----------------------------------
+
+.. automodule:: openquake.calculators.extract
     :members:
     :undoc-members:
     :show-inheritance:

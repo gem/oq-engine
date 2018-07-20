@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import sys
 from setuptools import setup, find_packages
@@ -40,47 +41,52 @@ def get_version():
     return version
 
 
+def get_readme():
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                           'README.md'), encoding='utf-8') as readme:
+        return readme.read()
+
+
 version = get_version()
+readme = get_readme()
 
 url = "https://github.com/gem/oq-engine"
-
-README = """
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
-
-Copyright (C) 2010-2018 GEM Foundation
-"""
 
 PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
-    'mock >=1.0, <2.0',
-    'h5py >=2.2, <2.8',
+    'setuptools',
+    'mock >=1.0, <2.1',
     'nose >=1.3, <1.4',
-    'numpy >=1.8, <1.12',
-    'scipy >=0.13, <0.18',
-    'pyzmq <17.0',
-    'psutil >=1.2, <5.5',
+    'h5py >=2.8, <2.9',
+    'numpy >=1.14, <1.15',
+    'scipy >=1.0.1, <1.2',
+    'pyzmq <18.0',
+    'psutil >=2.0, <5.5',
     'shapely >=1.3, <1.7',
     'docutils >=0.11, <0.15',
-    'decorator >=3.4',
-    'django >=1.6, <2.1',
-    'matplotlib >=1.5, <2.2',
-    'requests >=2.2, <2.19',
-    # pyshp is fragile, we want only versions we have tested
-    'pyshp >=1.2.3, <1.2.11',
+    'decorator >=4.3',
+    'django >=1.10, <2.1',
+    'matplotlib >=1.5, <2.3',
+    'requests >=2.9, <2.19',
+    'pyshp ==1.2.3',
     'PyYAML',
 ]
 
 extras_require = {
+    'rtree': ['rtree ==0.8.3'],
     'setproctitle': ["setproctitle"],
     'prctl': ["python-prctl ==1.6.1"],
-    'rtree':  ["Rtree >=0.8.2, <0.8.4"],
-    'celery':  ["celery >=3.1, <4.0"],
+    'celery':  ["celery >=4.0, <4.2"],
+    'dask':  ["dask", "distributed"],
     'pam': ["python-pam", "django-pam"],
     'plotting':  [
         'basemap >=1.0',
         'pyproj >=1.9',
+    ],
+    'dev':  [
+        'flake8 >=3.5, <3.6',
+        'pdbpp',
     ]
 }
 
@@ -95,7 +101,8 @@ setup(
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
     url=url,
-    long_description=README,
+    long_description=readme,
+    long_description_content_type='text/markdown',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
@@ -103,6 +110,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
@@ -121,7 +129,9 @@ setup(
     namespace_packages=['openquake'],
     install_requires=install_requires,
     extras_require=extras_require,
-    scripts=['bin/oq'],
+    entry_points={
+        'console_scripts': ['oq = openquake.commands.__main__:oq'],
+    },
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,

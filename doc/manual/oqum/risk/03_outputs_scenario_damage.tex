@@ -7,7 +7,7 @@ the configuration file:
 
   \item \Verb+Average Asset Damages+: this file contains the damage distribution
     statistics for each of the individual \glspl{asset} defined in the
-    \gls{exposuremodel} that fall within the \Verb+region_constraint+ and have
+    \gls{exposuremodel} that fall within the \Verb+region+ and have
     a computed \gls{acr:gmf} value available within the defined
     \Verb+asset_hazard_distance+. For each \gls{asset}, the mean number of
     buildings (\Verb+mean+) and associated standard deviation (\Verb+stddev+)
@@ -47,7 +47,7 @@ provided in the configuration file:
 
   \item \Verb+Average Asset Losses+: this file contains the scenario consequence
     statistics for each of the individual \glspl{asset} defined in the
-    \gls{exposuremodel} that fall within the \Verb+region_constraint+ and have
+    \gls{exposuremodel} that fall within the \Verb+region+ and have
     a computed \gls{acr:gmf} value available within the defined
     \Verb+asset_hazard_distance+. For each \gls{asset}, the mean consequences
     (\Verb+mean+) and associated standard deviation (\Verb+stddev+) are listed
@@ -92,7 +92,7 @@ more detail in the following subsections.
 
 This output contains the damage distribution statistics for each of the
 individual \glspl{asset} defined in the \gls{exposuremodel} that fall within
-the \Verb+region_constraint+ and have a computed \gls{acr:gmf} value available
+the \Verb+region+ and have a computed \gls{acr:gmf} value available
 within the defined \Verb+asset_hazard_distance+. An example output file for
 structural damage is shown in the file snippet in 
 Table~\ref{output:scenario_damage_asset}.
@@ -146,7 +146,7 @@ illustrated in the example file in Table~\ref{output:scenario_damage_tag}.
 
 This output contains the consequences statistics for each of the individual
 \glspl{asset} defined in the \gls{exposuremodel} that fall within the
-\Verb+region_constraint+ and have a computed \gls{acr:gmf} value available
+\Verb+region+ and have a computed \gls{acr:gmf} value available
 within the defined \Verb+asset_hazard_distance+. An example output file for
 structural damage consequences is shown in
 Table~\ref{output:scenario_consequence_asset}.

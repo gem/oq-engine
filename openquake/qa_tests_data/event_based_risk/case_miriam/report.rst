@@ -2,12 +2,12 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     4,221,156,752      
-date           2018-03-26T15:55:35
-engine_version 2.10.0-git543cfb0  
+checksum32     604,091,143        
+date           2018-06-05T06:38:38
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
-num_sites = 281, num_levels = 50
+num_sites = 1792, num_levels = 50
 
 Parameters
 ----------
@@ -45,11 +45,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  trivial(1,1)    1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 trivial(1,1)    1/1             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -98,37 +98,37 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-========== ===== ====== === === ========= ==========
-taxonomy   mean  stddev min max num_sites num_assets
-MS-FLSB-2  1.250 0.452  1   2   12        15        
-MS-SLSB-1  1.545 0.934  1   4   11        17        
-MC-RLSB-2  1.256 0.880  1   6   39        49        
-W-SLFB-1   1.265 0.520  1   3   83        105       
-MR-RCSB-2  1.456 0.799  1   6   171       249       
-MC-RCSB-1  1.286 0.561  1   3   21        27        
-W-FLFB-2   1.222 0.502  1   3   54        66        
-PCR-RCSM-5 1.000 0.0    1   1   2         2         
-MR-SLSB-1  1.000 0.0    1   1   5         5         
-A-SPSB-1   1.250 0.463  1   2   8         10        
-PCR-SLSB-1 1.000 0.0    1   1   3         3         
-*ALL*      0.306 0.877  0   10  1,792     548       
-========== ===== ====== === === ========= ==========
+========== ======= ======= === === ========= ==========
+taxonomy   mean    stddev  min max num_sites num_assets
+MS-FLSB-2  1.25000 0.45227 1   2   12        15        
+MS-SLSB-1  1.54545 0.93420 1   4   11        17        
+MC-RLSB-2  1.25641 0.88013 1   6   39        49        
+W-SLFB-1   1.26506 0.51995 1   3   83        105       
+MR-RCSB-2  1.45614 0.79861 1   6   171       249       
+MC-RCSB-1  1.28571 0.56061 1   3   21        27        
+W-FLFB-2   1.22222 0.50157 1   3   54        66        
+PCR-RCSM-5 1.00000 0.0     1   1   2         2         
+MR-SLSB-1  1.00000 0.0     1   1   5         5         
+A-SPSB-1   1.25000 0.46291 1   2   8         10        
+PCR-SLSB-1 1.00000 0.0     1   1   3         3         
+*ALL*      0.30580 0.87729 0   10  1,792     548       
+========== ======= ======= === === ========= ==========
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-D         ComplexFaultSource 3,945        0.0       4.268E-04  0         0        
-F         ComplexFaultSource 2,558        0.0       3.581E-04  0         0        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+D         ComplexFaultSource 3,945        8.92168   4.189E-04  1,792     47        2,054 
+F         ComplexFaultSource 2,558        5.39641   3.607E-04  1,792     35        250   
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.0       2     
+ComplexFaultSource 14        2     
 ================== ========= ======
 
 Duplicated sources
@@ -137,32 +137,37 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.596 0.591  1.094 2.929 10       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.01803 0.00974 0.00786 0.04244 41       
+compute_ruptures   1.44569 0.63156 0.19824 2.32474 10       
+================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-================ ============================================================================= ========
-task             sent                                                                          received
-compute_ruptures src_filter=962.95 KB sources=49 KB param=9.41 KB monitor=3.22 KB gsims=1.3 KB 3.41 MB 
-================ ============================================================================= ========
+Data transfer
+-------------
+================ ============================================================================== =========
+task             sent                                                                           received 
+RtreeFilter      srcs=82.43 KB monitor=13.85 KB srcfilter=11.17 KB                              659.52 KB
+compute_ruptures sources=643.07 KB param=9.6 KB monitor=3.45 KB src_filter=2.28 KB gsims=1.3 KB 15.3 MB  
+================ ============================================================================== =========
 
 Slowest operations
 ------------------
-============================== ======== ========= ======
-operation                      time_sec memory_mb counts
-============================== ======== ========= ======
-total compute_ruptures         15       4.367     10    
-managing sources               3.049    0.0       1     
-making contexts                1.030    0.0       489   
-reading composite source model 0.289    0.0       1     
-reading site collection        0.230    0.0       1     
-reading exposure               0.206    0.0       1     
-saving ruptures                0.053    0.0       10    
-unpickling compute_ruptures    0.034    0.0       10    
-setting event years            0.008    0.0       1     
-store source_info              0.007    0.0       1     
-splitting sources              0.001    0.0       1     
-============================== ======== ========= ======
+=============================== ======== ========= ======
+operation                       time_sec memory_mb counts
+=============================== ======== ========= ======
+total compute_ruptures          14       17        10    
+EventBasedRuptureCalculator.run 3.48851  13        1     
+managing sources                2.65927  13        1     
+total prefilter                 0.73928  4.75391   41    
+reading site collection         0.36316  0.30078   1     
+reading composite source model  0.24262  0.0       1     
+making contexts                 0.14567  0.0       489   
+saving ruptures                 0.06078  1.02344   10    
+reading exposure                0.05565  0.0       1     
+unpickling compute_ruptures     0.03523  3.36719   10    
+unpickling prefilter            0.01498  0.0       41    
+store source_info               0.00801  0.0       1     
+setting event years             0.00374  0.0       1     
+splitting sources               0.00107  0.0       1     
+=============================== ======== ========= ======

@@ -19,7 +19,6 @@
 """
 Module exports :class:'AtkinsonMacias2009'
 """
-from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g

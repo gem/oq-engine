@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,220,765,868      
-date           2018-03-26T15:56:16
-engine_version 2.10.0-git543cfb0  
+date           2018-06-26T14:57:53
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -42,11 +42,11 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-========= ====== ====================== ================
-smlt_path weight gsim_logic_tree        num_realizations
-========= ====== ====================== ================
-b1        1.000  complex(4,2,1,5,0,0,4) 4/4             
-========= ====== ====================== ================
+========= ======= ====================== ================
+smlt_path weight  gsim_logic_tree        num_realizations
+========= ======= ====================== ================
+b1        1.00000 complex(0,5,2,4,4,1,0) 4/160           
+========= ======= ====================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -77,35 +77,35 @@ simple_area_source_model.xml 4      Subduction Inslab 7,770        93,219
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= =========
-source_id source_class       num_ruptures calc_time split_time num_sites num_split
-========= ================== ============ ========= ========== ========= =========
-s46       AreaSource         7,770        0.183     0.069      370       370      
-scr301    AreaSource         17,268       0.0       0.344      0         0        
-sh14      AreaSource         41,952       0.0       0.603      0         0        
-scr293    AreaSource         61,740       0.0       1.421      0         0        
-s40       AreaSource         12,327       0.0       0.095      0         0        
-s13       AreaSource         12,726       0.0       0.105      0         0        
-i20       ComplexFaultSource 9,241        0.0       7.246E-04  0         0        
-sh6       AreaSource         12,900       0.0       0.189      0         0        
-s72       AreaSource         17,871       0.0       0.157      0         0        
-v1        AreaSource         42           0.0       0.002      0         0        
-sh13      AreaSource         41,952       0.0       0.594      0         0        
-scr299    AreaSource         1,572        0.0       0.023      0         0        
-scr304    AreaSource         574          0.0       0.007      0         0        
-i17       ComplexFaultSource 33,383       0.0       0.002      0         0        
-v4        AreaSource         168          0.0       0.004      0         0        
-s34       AreaSource         12,327       0.0       0.096      0         0        
-s70       AreaSource         17,871       0.0       0.152      0         0        
-s35       AreaSource         12,327       0.0       0.096      0         0        
-========= ================== ============ ========= ========== ========= =========
+========= ================== ============ ========= ========== ========= ========= ======
+source_id source_class       num_ruptures calc_time split_time num_sites num_split events
+========= ================== ============ ========= ========== ========= ========= ======
+s46       AreaSource         7,770        0.18471   0.08944    1.00000   370       0     
+i17       ComplexFaultSource 33,383       0.0       0.00194    0.0       0         0     
+i20       ComplexFaultSource 9,241        0.0       6.878E-04  0.0       0         0     
+v1        AreaSource         42           0.0       0.00197    0.0       0         0     
+v4        AreaSource         168          0.0       0.00517    0.0       0         0     
+sh13      AreaSource         41,952       0.0       0.76264    0.0       0         0     
+sh14      AreaSource         41,952       0.0       0.77981    0.0       0         0     
+sh6       AreaSource         12,900       0.0       0.19024    0.0       0         0     
+scr293    AreaSource         61,740       0.0       1.77354    0.0       0         0     
+scr299    AreaSource         1,572        0.0       0.02997    0.0       0         0     
+scr301    AreaSource         17,268       0.0       0.45344    0.0       0         0     
+scr304    AreaSource         574          0.0       0.00902    0.0       0         0     
+s13       AreaSource         12,726       0.0       0.13443    0.0       0         0     
+s34       AreaSource         12,327       0.0       0.12246    0.0       0         0     
+s35       AreaSource         12,327       0.0       0.12131    0.0       0         0     
+s40       AreaSource         12,327       0.0       0.12261    0.0       0         0     
+s70       AreaSource         17,871       0.0       0.19757    0.0       0         0     
+s72       AreaSource         17,871       0.0       0.19699    0.0       0         0     
+========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-AreaSource         0.183     16    
+AreaSource         0.18471   16    
 ComplexFaultSource 0.0       2     
 ================== ========= ======
 
@@ -115,30 +115,55 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.008 0.003  0.003 0.012 34       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.14215 0.13785 0.06023 1.10544 60       
+count_eff_ruptures 0.00743 0.00369 0.00322 0.02179 34       
+================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-============== =================================================================================== ========
-task           sent                                                                                received
-count_ruptures sources=111.57 KB param=38.78 KB srcfilter=24.57 KB gsims=12.88 KB monitor=10.96 KB 12.15 KB
-============== =================================================================================== ========
+Fastest task
+------------
+taskno=32, weight=92, duration=0 s, sources="s46"
+
+======== ======= ========= ======= ======= ==
+variable mean    stddev    min     max     n 
+======== ======= ========= ======= ======= ==
+nsites   1.00000 0.0       1       1       11
+weight   8.40000 1.000E-06 8.40000 8.40000 11
+======== ======= ========= ======= ======= ==
+
+Slowest task
+------------
+taskno=3, weight=92, duration=0 s, sources="s46"
+
+======== ======= ========= ======= ======= ==
+variable mean    stddev    min     max     n 
+======== ======= ========= ======= ======= ==
+nsites   1.00000 0.0       1       1       11
+weight   8.40000 1.000E-06 8.40000 8.40000 11
+======== ======= ========= ======= ======= ==
+
+Data transfer
+-------------
+================== ================================================================================== ========
+task               sent                                                                               received
+RtreeFilter        srcs=3.55 MB monitor=18.93 KB srcfilter=17.4 KB                                    85.91 KB
+count_eff_ruptures sources=136.86 KB param=39.21 KB gsims=12.88 KB monitor=10.92 KB srcfilter=8.77 KB 11.95 KB
+================== ================================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 9.505     0.0       1     
-splitting sources              3.968     0.0       1     
-managing sources               3.803     0.0       1     
-total count_ruptures           0.263     1.941     34    
-store source_info              0.018     0.0       1     
-unpickling count_ruptures      0.002     0.0       34    
-aggregate curves               7.370E-04 0.0       34    
-reading site collection        3.188E-04 0.0       1     
-saving probability maps        3.076E-05 0.0       1     
+total prefilter                8.52914   4.31641   60    
+reading composite source model 6.48842   0.0       1     
+splitting sources              5.00308   0.0       1     
+managing sources               1.51827   0.21484   1     
+total count_eff_ruptures       0.25254   6.50391   34    
+store source_info              0.02206   0.0       1     
+unpickling prefilter           0.01805   0.0       60    
+aggregate curves               0.01026   0.0       34    
+unpickling count_eff_ruptures  0.00824   0.0       34    
+reading site collection        2.980E-04 0.0       1     
 ============================== ========= ========= ======

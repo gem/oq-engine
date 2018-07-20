@@ -26,23 +26,21 @@ import math
 import itertools
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
-from openquake.baselib.python3compat import with_metaclass
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
-from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
-                                            directp, average_s_rad,
-                                            isochone_ratio)
-from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.near_fault import (
+    get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
+classes = {}  # initialized in .init()
 
 
 @with_slots
-class BaseRupture(with_metaclass(abc.ABCMeta)):
+class BaseRupture(metaclass=abc.ABCMeta):
     """
     Rupture object represents a single earthquake rupture.
 
@@ -60,10 +58,6 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
         An instance of subclass of
         :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
-    :param source_typology:
-        Subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`
-        (class object, not an instance) referencing the typology
-        of the source that produced this rupture.
     :param rupture_slip_direction:
         Angle describing rupture propagation direction in decimal degrees.
 
@@ -74,7 +68,10 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    source_typology rupture_slip_direction'''.split()
+    rupture_slip_direction'''.split()
+    serial = 0  # set to a value > 0 by the engine
+    _code = {}
+    types = {}
 
     @classmethod
     def init(cls):
@@ -85,22 +82,20 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
         source_class). This is useful when serializing the rupture to and
         from HDF5.
         """
-        source_classes = get_subclasses(BaseSeismicSource)
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
-        surface_classes = get_subclasses(BaseSurface)
-        code, types, n = {}, {}, 0
-        for src, rup, sur in itertools.product(
-                source_classes, rupture_classes, surface_classes):
-            code[rup, sur, src] = n
-            types[n] = rup, sur, src
+        surface_classes = list(get_subclasses(BaseSurface))
+        for cl in rupture_classes + surface_classes:
+            classes[cl.__name__] = cl
+        n = 0
+        for rup, sur in itertools.product(rupture_classes, surface_classes):
+            cls._code[rup, sur] = n
+            cls.types[n] = rup, sur
             n += 1
         if n >= 256:
             raise ValueError('Too many rupture codes: %d' % n)
-        cls._code = code
-        cls.types = types
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology, rupture_slip_direction=None):
+                 surface, rupture_slip_direction=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -109,14 +104,12 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
         self.mag = mag
         self.hypocenter = hypocenter
         self.surface = surface
-        self.source_typology = source_typology
         self.rupture_slip_direction = rupture_slip_direction
 
     @property
     def code(self):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
-        return self._code[self.__class__, self.surface.__class__,
-                          self.source_typology]
+        return self._code[self.__class__, self.surface.__class__]
 
     def get_probability_no_exceedance(self, poes):
         """
@@ -171,15 +164,14 @@ class NonParametricProbabilisticRupture(BaseRupture):
         probability ``0.8`` to not occurr, ``0.15`` to occur once, and
         ``0.05`` to occur twice, the ``pmf`` can be defined as ::
 
-          pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1),
-                      Decimal('0.05', 2)])
+          pmf = PMF([(0.8, 0), (0.15, 1), 0.05, 2)])
 
     :raises ValueError:
         If number of ruptures in ``pmf`` do not start from 0, are not defined
         in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology, pmf, rupture_slip_direction=None):
+                 pmf, rupture_slip_direction=None):
         occ = numpy.array([occ for (prob, occ) in pmf.data])
         if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
@@ -189,11 +181,11 @@ class NonParametricProbabilisticRupture(BaseRupture):
         if not numpy.all(numpy.diff(occ) == 1):
             raise ValueError(
                 'numbers of ruptures must be defined with unit step')
-        super(NonParametricProbabilisticRupture, self).__init__(
+        super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology, rupture_slip_direction)
+            rupture_slip_direction)
         # an array of probabilities with sum 1
-        self.pmf = numpy.array(
+        self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
@@ -217,12 +209,12 @@ class NonParametricProbabilisticRupture(BaseRupture):
         # Converting from 1d to 2d
         if len(poes.shape) == 1:
             poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.pmf
+        p_kT = self.probs_occur
         prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
-        )
+            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
         prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
+        prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):
@@ -234,7 +226,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         Uses 'Inverse Transform Sampling' method.
         """
         # compute cdf from pmf
-        cdf = numpy.cumsum(self.pmf)
+        cdf = numpy.cumsum(self.probs_occur)
 
         rn = numpy.random.random()
         [n_occ] = numpy.digitize([rn], cdf)
@@ -261,14 +253,13 @@ class ParametricProbabilisticRupture(BaseRupture):
         'occurrence_rate', 'temporal_occurrence_model']
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
-                 source_typology, occurrence_rate, temporal_occurrence_model,
+                 occurrence_rate, temporal_occurrence_model,
                  rupture_slip_direction=None):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
-        super(ParametricProbabilisticRupture, self).__init__(
+        super().__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology, rupture_slip_direction
-        )
+            rupture_slip_direction)
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
 
@@ -407,65 +398,49 @@ class ParametricProbabilisticRupture(BaseRupture):
 
     def get_cdppvalue(self, target, buf=1.0, delta=0.01, space=2.):
         """
-        Get the directivity prediction value, centred DPP(cdpp) at
+        Get the directivity prediction value, centered DPP(cdpp) at
         a given site as described in Spudich et al. (2013), and this cdpp is
-        used in Chiou and Young(2014) GMPE for near-fault directivity
+        used in Chiou and Young (2014) GMPE for near-fault directivity
         term prediction.
 
         :param target_site:
             A mesh object representing the location of the target sites.
         :param buf:
-            A float vaule presents  the buffer distance in km to extend the
-            mesh borders to.
+            A buffer distance in km to extend the mesh borders
         :param delta:
-            A float vaule presents the desired distance between two adjacent
-            points in mesh
+            The distance between two adjacent points in the mesh
         :param space:
-            A float vaule presents the tolerance for the same distance of the
-            sites (default 2 km)
+            The tolerance for the distance of the sites (default 2 km)
         :returns:
-            A float value presents the centreed directivity predication value
-            which used in Chioud and Young(2014) GMPE for directivity term
+            The centered directivity prediction value of Chiou and Young
         """
-
         min_lon, max_lon, max_lat, min_lat = self.surface.get_bounding_box()
-
         min_lon -= buf
         max_lon += buf
         min_lat -= buf
         max_lat += buf
 
         lons = numpy.arange(min_lon, max_lon + delta, delta)
+        # ex shape (233,)
         lats = numpy.arange(min_lat, max_lat + delta, delta)
-        lons, lats = numpy.meshgrid(lons, lats)
+        # ex shape (204,)
+        mesh = RectangularMesh(*numpy.meshgrid(lons, lats))
+        mesh_rup = self.surface.get_min_distance(mesh).reshape(mesh.shape)
+        # ex shape (204, 233)
 
         target_rup = self.surface.get_min_distance(target)
-        mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
-        mesh_rup = self.surface.get_min_distance(mesh)
-        target_lons = target.lons
-        target_lats = target.lats
-        cdpp = numpy.empty(len(target_lons))
-
-        for iloc, (target_lon, target_lat) in enumerate(zip(target_lons,
-                                                        target_lats)):
-
-            cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
-                                        & (mesh_rup >= target_rup[iloc]
-                                        - space)]
-            cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
-                                        & (mesh_rup >= target_rup[iloc]
-                                        - space)]
-
-            dpp_sum = []
+        # ex shape (2,)
+        cdpp = numpy.zeros_like(target.lons)
+        for i, (target_lon, target_lat) in enumerate(
+                zip(target.lons, target.lats)):
+            # indices around target_rup[i]
+            around = (mesh_rup <= target_rup[i] + space) & (
+                mesh_rup >= target_rup[i] - space)
             dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
-
-            for lon, lat in zip(cdpp_sites_lons, cdpp_sites_lats):
-                site = Point(lon, lat, 0.)
-                dpp_one = self.get_dppvalue(site)
-                dpp_sum.append(dpp_one)
-
-            mean_dpp = numpy.mean(dpp_sum)
-            cdpp[iloc] = dpp_target - mean_dpp
+            dpp_mean = numpy.mean(
+                [self.get_dppvalue(Point(lon, lat))
+                 for lon, lat in zip(mesh.lons[around], mesh.lats[around])])
+            cdpp[i] = dpp_target - dpp_mean
 
         return cdpp
 
@@ -503,7 +478,7 @@ def get_geom(surface, is_from_fault_source, is_multi_surface,
     if is_from_fault_source:
         # for simple and complex fault sources,
         # rupture surface geometry is represented by a mesh
-        surf_mesh = surface.get_mesh()
+        surf_mesh = surface.mesh
         lons = surf_mesh.lons
         lats = surf_mesh.lats
         depths = surf_mesh.depths
@@ -570,13 +545,19 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events, serial=0):
+    def __init__(self, rupture, sids, events):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.serial = serial
         self.eidx1 = 0
         self.eidx2 = len(events)
+
+    @property
+    def serial(self):
+        """
+        Serial number of the rupture
+        """
+        return self.rupture.serial
 
     @property
     def grp_id(self):

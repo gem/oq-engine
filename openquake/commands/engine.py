@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import os
 import sys
 import getpass
@@ -44,7 +43,7 @@ def get_job_id(job_id, username=None):
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
-            hazard_calculation_id=None, **kw):
+            hazard_calculation_id=None,  username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
 
@@ -58,14 +57,16 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         A comma-separated string of export types requested by the user.
     :param hazard_calculation_id:
         ID of the previous calculation or None
+    :param username:
+        Name of the user running the job
     """
     # if the master dies, automatically kill the workers
     job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = eng.job_from_file(
-        job_ini, getpass.getuser(), hazard_calculation_id)
-    calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id, **kw)
-    calc._monitor.flush()
+        job_ini, username, hazard_calculation_id)
+    kw['username'] = username
+    eng.run_calc(job_id, oqparam, log_level, log_file, exports,
+                 hazard_calculation_id=hazard_calculation_id, **kw)
     for line in logs.dbcmd('list_outputs', job_id, False):
         safeprint(line)
     return job_id
@@ -90,7 +91,7 @@ def del_calculation(job_id, confirmed=False):
             'Are you sure you want to (abort and) delete this calculation and '
             'all associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            abort(job_id)
+            abort.func(job_id)
             resp = logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
             safeprint(err)

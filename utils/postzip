@@ -21,14 +21,16 @@ import os, sys, json, requests
 from openquake.baselib import sap, config
 
 @sap.Script
-def postzip(zipfile):
+def postzip(zipfile, port=8800):
     """Post a zipfile to the WebUI"""
     dic = dict(archive=open(zipfile, 'rb'))
     # NB: there is no WebUI port in openquake.cfg for the moment
-    resp = requests.post("http://localhost:8800/v1/calc/run", {}, files=dic)
-    print(json.loads(resp.content))
+    resp = requests.post("http://localhost:%d/v1/calc/run" % port, {},
+                         files=dic)
+    print(json.loads(resp.text))
 
 postzip.arg('zipfile', 'archive with the files of the computation')
+postzip.arg('port', 'port to use', type=int)
 
 if __name__ == '__main__':
     postzip.callfunc()

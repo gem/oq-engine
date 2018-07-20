@@ -19,10 +19,8 @@
 """
 Module exports :class:`AkkarEtAl2013`.
 """
-from __future__ import division
-
-import warnings
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
+
 
 class AkkarEtAl2013(AkkarEtAlRjb2014):
     """

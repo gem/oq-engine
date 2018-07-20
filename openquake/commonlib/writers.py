@@ -93,6 +93,9 @@ htranslator = HeaderTranslator(
     '(imti):uint8',
     '(gmv_.+):float32',
     '(aid):uint32',
+    '(annual_loss_orig):float32',
+    '(annual_loss_retro):float32',
+    '(bcr):float32',
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
@@ -174,7 +177,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float64':
+        if numpytype != 'float64' and not numpytype.startswith('|S'):
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -189,7 +192,7 @@ def extract_from(data, fields):
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
     >>> extract_from(a, ['PGA'])
-    array([[ 1.,  2.,  3.]])
+    array([[1., 2., 3.]])
 
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
@@ -198,7 +201,7 @@ def extract_from(data, fields):
     >>> extract_from(b, ['idx'])
     array([8], dtype=uint32)
     >>> extract_from(b, ['B', 'PGV'])
-    array([[ 3.,  5.,  6.,  7.]])
+    array([[3., 5., 6., 7.]])
     """
     for f in fields:
         data = data[f]
@@ -217,8 +220,6 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
        optional first line starting with a # character
     """
     close = True
-    if len(data) == 0:
-        logging.warn('%s is empty', dest)
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')
         os.close(fd)
@@ -287,6 +288,12 @@ class CsvWriter(object):
         """
         write_csv(fname, data, self.sep, self.fmt, header)
         self.fnames.add(getattr(fname, 'name', fname))
+
+    def save_block(self, data, dest):
+        """
+        Save data on dest, which is file open in 'a' mode
+        """
+        write_csv(dest, data, self.sep, self.fmt, 'no-header')
 
     def getsaved(self):
         """
@@ -378,8 +385,8 @@ def read_composite_array(fname, sep=','):
     r"""
     Convert a CSV file with header into an ArrayWrapper object.
 
-    >>> from openquake.baselib.general import writetmp
-    >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
+    >>> from openquake.baselib.general import gettemp
+    >>> fname = gettemp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
     >>> print(read_composite_array(fname).array)  # array of shape (1,)
     [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
@@ -426,11 +433,11 @@ def read_array(fname, sep=','):
     r"""
     Convert a CSV file without header into a numpy array of floats.
 
-    >>> from openquake.baselib.general import writetmp
-    >>> print(read_array(writetmp('.1 .2, .3 .4, .5 .6\n')))
-    [[[ 0.1  0.2]
-      [ 0.3  0.4]
-      [ 0.5  0.6]]]
+    >>> from openquake.baselib.general import gettemp
+    >>> print(read_array(gettemp('.1 .2, .3 .4, .5 .6\n')))
+    [[[0.1 0.2]
+      [0.3 0.4]
+      [0.5 0.6]]]
     """
     with open(fname) as f:
         records = []

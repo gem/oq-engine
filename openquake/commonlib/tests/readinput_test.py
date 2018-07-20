@@ -48,8 +48,8 @@ class ParseConfigTestCase(unittest.TestCase):
 
     def test_no_absolute_path(self):
         temp_dir = tempfile.mkdtemp()
-        site_model_input = general.writetmp(dir=temp_dir, content="foo")
-        job_config = general.writetmp(dir=temp_dir, content="""
+        site_model_input = general.gettemp(dir=temp_dir, content="foo")
+        job_config = general.gettemp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [foo]
@@ -70,9 +70,9 @@ export_dir = %s
 
     def test_get_oqparam_with_files(self):
         temp_dir = tempfile.mkdtemp()
-        source_model_input = general.writetmp(dir=temp_dir)
-        site_model_input = general.writetmp(dir=temp_dir, content="foo")
-        job_config = general.writetmp(dir=temp_dir, content="""
+        source_model_input = general.gettemp(dir=temp_dir)
+        site_model_input = general.gettemp(dir=temp_dir, content="foo")
+        job_config = general.gettemp(dir=temp_dir, content="""
 [general]
 calculation_mode = event_based
 [site]
@@ -123,11 +123,11 @@ export_dir = %s
             shutil.rmtree(temp_dir)
 
     def test_get_oqparam_with_sites_csv(self):
-        sites_csv = general.writetmp('1.0,2.1\n3.0,4.1\n5.0,6.1')
+        sites_csv = general.gettemp('1.0,2.1\n3.0,4.1\n5.0,6.1')
         try:
-            source = general.writetmp("""
+            source = general.gettemp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -148,9 +148,8 @@ export_dir = %s
 
             expected_params = {
                 'export_dir': TMP,
-                'hazard_calculation_id': 1,
                 'base_path': exp_base_path,
-                'calculation_mode': 'classical',
+                'calculation_mode': 'scenario',
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': 1.0},
@@ -165,17 +164,17 @@ export_dir = %s
                 'risk_investigation_time': 50.0,
             }
 
-            params = getparams(readinput.get_oqparam(source, hc_id=1))
+            params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
 
     def test_wrong_sites_csv(self):
-        sites_csv = general.writetmp(
+        sites_csv = general.gettemp(
             'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
-calculation_mode = classical
+calculation_mode = scenario
 [geometry]
 sites_csv = %s
 [misc]
@@ -191,14 +190,14 @@ intensity_measure_types_and_levels = {'PGA': [0.1, 0.2]}
 investigation_time = 50.
 export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
-        oq = readinput.get_oqparam(source, hc_id=1)
+        oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
         os.unlink(sites_csv)
 
     def test_wrong_discretization(self):
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
 calculation_mode = event_based
 region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
@@ -220,7 +219,7 @@ source_model_file = fake.xml
         self.assertIn('Could not discretize region', str(ctx.exception))
 
     def test_invalid_magnitude_distance_filter(self):
-        source = general.writetmp("""
+        source = general.gettemp("""
 [general]
 maximum_distance=[(200, 8)]
 """)
@@ -250,10 +249,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam)), 3)
+        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
         oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
@@ -265,12 +265,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # check that the warning was raised
         self.assertEqual(
             warn.call_args[0],
-            ('Association to %s km from site (%s %s)',
-             222.38985328911747, 2.0, 0.0))
+            ('Association to %d km from site (%s %s)', 222, 2.0, 0.0))
 
 
 class ExposureTestCase(unittest.TestCase):
-    exposure = general.writetmp('''\
+    exposure = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -301,9 +300,9 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
-    exposure0 = general.writetmp('''\
+    exposure0 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -334,9 +333,9 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
-    exposure1 = general.writetmp('''\
+    exposure1 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -355,9 +354,9 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
 
-    exposure2 = general.writetmp('''\
+    exposure2 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
   <exposureModel id="ep" category="buildings">
@@ -368,9 +367,9 @@ class ExposureTestCase(unittest.TestCase):
       </costTypes>
     </conversions>
   </exposureModel>
-</nrml>''')  # wrong cost type "aggregate"
+</nrml>''', suffix='.xml')  # wrong cost type "aggregate"
 
-    exposure3 = general.writetmp('''\
+    exposure3 = general.gettemp('''\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
   <exposureModel id="ep" category="buildings">
@@ -389,7 +388,26 @@ class ExposureTestCase(unittest.TestCase):
       </asset>
     </assets>
   </exposureModel>
-</nrml>''')
+</nrml>''', suffix='.xml')
+
+    exposure4 = general.gettemp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+       <costTypes name="structural" type="aggregated" unit="USD"/>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
         exp, _assets = asset._get_exposure(self.exposure, stop='assets')
@@ -405,7 +423,7 @@ class ExposureTestCase(unittest.TestCase):
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['occupants']
         oqparam.inputs = {'exposure': self.exposure}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -421,7 +439,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
         oqparam.inputs = {'exposure': self.exposure0}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -438,7 +456,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure1}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -455,7 +473,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insured_losses = True
         oqparam.inputs = {'exposure': self.exposure,
                           'structural_vulnerability': None}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
@@ -470,7 +488,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': self.exposure2,
                           'structural_vulnerability': None}
@@ -486,7 +504,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure3}
-        oqparam.region_constraint = '''\
+        oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.insured_losses = False
@@ -495,6 +513,17 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
                       str(ctx.exception))
+
+    def test_missing_cost_types(self):
+        job_ini = general.gettemp('''\
+[general]
+description = Exposure with missing cost_types
+calculation_mode = scenario
+exposure_file = %s''' % os.path.basename(self.exposure4))
+        oqparam = readinput.get_oqparam(job_ini)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
+        self.assertIn("Expected cost types ['structural']", str(ctx.exception))
 
 
 class TestReadGmfXmlTestCase(unittest.TestCase):
@@ -535,7 +564,7 @@ PGA:float32,PGV:float32
 
     def test_two_nodes_on_the_same_point(self):
         # after rounding of the coordinates two points can collide
-        fname = general.writetmp('''\
+        fname = general.gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -559,7 +588,7 @@ class TestLoadCurvesTestCase(unittest.TestCase):
     Read the hazard curves from a NRML file
     """
     def test(self):
-        fname = general.writetmp('''\
+        fname = general.gettemp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">

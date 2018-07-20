@@ -710,7 +710,7 @@ class UHSXMLWriter(BaseCurveWriter):
     """
 
     def __init__(self, dest, **metadata):
-        super(UHSXMLWriter, self).__init__(dest, **metadata)
+        super().__init__(dest, **metadata)
 
         if self.metadata.get('poe') is None:
             raise ValueError('`poe` keyword arg is required')
