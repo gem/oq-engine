@@ -130,8 +130,9 @@ def _update(params, items, base_path):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
-            input_type, [fname] = normalize(key, [value], base_path)
-            params['inputs'][input_type] = fname if value else ''
+            if value:
+                input_type, [fname] = normalize(key, [value], base_path)
+                params['inputs'][input_type] = fname
         else:
             params[key] = value
 
