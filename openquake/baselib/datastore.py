@@ -98,7 +98,8 @@ def extract_calc_id_datadir(hdf5path, datadir=None):
         return get_last_calc_id(datadir) + 1, datadir
     try:
         calc_id = int(hdf5path)
-    except:
+    except ValueError:
+        hdf5path = os.path.abspath(hdf5path)
         datadir = os.path.dirname(hdf5path)
         mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
         if mo is None:
@@ -164,23 +165,25 @@ class DataStore(collections.MutableMapping):
         else:  # use the given datastore
             self.calc_id = calc_id
         self.params = params
-        self.mode = mode
         self.parent = ()  # can be set later
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.hdf5path = self.calc_dir + '.hdf5'
-        if mode == 'r' and not os.path.exists(self.hdf5path):
+        self.mode = mode or ('r+' if os.path.exists(self.hdf5path) else 'w')
+        if self.mode == 'r' and not os.path.exists(self.hdf5path):
             raise IOError('File not found: %s' % self.hdf5path)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
-        self.open()
+        self.open(self.mode)
 
-    def open(self):
+    def open(self, mode):
         """
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
-            self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
+            kw = dict(mode=mode, libver='latest')
+            if mode == 'r':
+                kw['swmr'] = True
+            self.hdf5 = hdf5.File(self.hdf5path, **kw)
 
     @property
     def export_dir(self):
@@ -196,6 +199,12 @@ class DataStore(collections.MutableMapping):
         Set the export directory
         """
         self._export_dir = value
+
+    def hdf5cache(self):
+        """
+        :returns: the path to the .hdf5 cache file associated to the calc_id
+        """
+        return os.path.join(self.datadir, 'cache_%d.hdf5' % self.calc_id)
 
     def getitem(self, name):
         """
@@ -213,9 +222,7 @@ class DataStore(collections.MutableMapping):
         """
         Set the HDF5 attributes of the given key
         """
-        attrs = h5py.File.__getitem__(self.hdf5, key).attrs
-        for k, v in kw.items():
-            attrs[k] = v
+        self.hdf5.save_attrs(key, kw)
 
     def get_attr(self, key, name, default=None):
         """
@@ -265,25 +272,6 @@ class DataStore(collections.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
-
-    def save_vlen(self, key, data):
-        """
-        Save a sequence of variable-length arrays
-
-        :param key: name of the dataset
-        :param data: data to store as vlen arrays
-        """
-        dt = data[0].dtype
-        dset = self.create_dset(
-            key, h5py.special_dtype(vlen=dt), (len(data),), fillvalue=None)
-        nbytes = 0
-        totlen = 0
-        for i, val in enumerate(data):
-            dset[i] = val
-            nbytes += val.nbytes
-            totlen += len(val)
-        self.set_attrs(key, nbytes=nbytes, avg_len=totlen / len(data))
-        self.flush()
 
     def extend(self, key, array, **attrs):
         """
@@ -344,7 +332,7 @@ class DataStore(collections.MutableMapping):
         if hasattr(postfix, 'sm_lt_path'):  # is a realization
             fname = '%s-rlz-%03d.%s' % (prefix, postfix.ordinal, fmt)
         else:
-            fname = '%s-%s.%s' % (prefix, postfix, fmt)
+            fname = prefix + ('-%s' % postfix if postfix else '') + '.' + fmt
         return self.export_path(fname, export_dir)
 
     def flush(self):
@@ -389,11 +377,13 @@ class DataStore(collections.MutableMapping):
             return default
 
     def __getitem__(self, key):
+        if self.hdf5 == ():  # the datastore is closed
+            raise ValueError('Cannot find %s in %s' % (key, self))
         try:
             val = self.hdf5[key]
         except KeyError:
             if self.parent != ():
-                self.parent.open()
+                self.parent.open('r')
                 try:
                     val = self.parent[key]
                 except KeyError:
@@ -421,7 +411,7 @@ class DataStore(collections.MutableMapping):
     def __enter__(self):
         self.was_close = self.hdf5 == ()
         if self.was_close:
-            self.open()
+            self.open(self.mode)
         return self
 
     def __exit__(self, etype, exc, tb):
@@ -457,54 +447,3 @@ class DataStore(collections.MutableMapping):
     def __repr__(self):
         status = 'open' if self.hdf5 else 'closed'
         return '<%s %d, %s>' % (self.__class__.__name__, self.calc_id, status)
-
-
-def persistent_attribute(key):
-    """
-    Persistent attributes are persisted to the datastore and cached.
-    Modifications to mutable objects are not automagically persisted.
-    If you have a huge object that does not fit in memory use the datastore
-    directory (for instance, open a HDF5 file to create an empty array, then
-    populate it). Notice that you can use any dict-like data structure in
-    place of the datastore, provided you can set attributes on it.
-    Here is an example:
-
-    >>> class Datastore(dict):
-    ...     "A fake datastore"
-
-    >>> class Store(object):
-    ...     a = persistent_attribute('a')
-    ...     def __init__(self, a):
-    ...         self.datastore = Datastore()
-    ...         self.a = a  # this assegnation will store the attribute
-
-    >>> store = Store([1])
-    >>> store.a  # this retrieves the attribute
-    [1]
-    >>> store.a.append(2)
-    >>> store.a = store.a  # remember to store the modified attribute!
-
-    :param key: the name of the attribute to be made persistent
-    :returns: a property to be added to a class with a .datastore attribute
-    """
-    privatekey = '_' + key
-
-    def getter(self):
-        # Try to get the value from the privatekey attribute (i.e. from
-        # the cache of the datastore); if not possible, get the value
-        # from the datastore and set the cache; if not possible, get the
-        # value from the parent and set the cache. If the value cannot
-        # be retrieved, raise an AttributeError.
-        try:
-            return getattr(self.datastore, privatekey)
-        except AttributeError:
-            value = self.datastore[key]
-            setattr(self.datastore, privatekey, value)
-            return value
-
-    def setter(self, value):
-        # Update the datastore and the private key
-        self.datastore[key] = value
-        setattr(self.datastore, privatekey, value)
-
-    return property(getter, setter)

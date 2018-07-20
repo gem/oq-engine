@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import os
 import re
 import math
@@ -24,7 +22,7 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, writetmp
+from openquake.baselib.general import group_array, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
@@ -33,7 +31,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
-from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_17, case_18, mutex)
@@ -171,7 +169,6 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
-
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
@@ -195,13 +192,11 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-6)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/ruptures.csv', fname)
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -219,7 +214,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
-        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        got = gettemp(rst_table(self.calc.datastore['gmdata'].value))
         self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
@@ -241,14 +236,16 @@ class EventBasedTestCase(CalculatorTestCase):
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
 
+        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
+        self.assertEqual(exp, 375496)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         years = sorted(self.calc.datastore['events']['year'])
         self.assertEqual(years, [15, 29, 39, 43])
-        if REFERENCE_OS:
-            self.assertEqualFiles('expected/rup_data.csv', fname)
+        self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_9(self):
@@ -300,7 +297,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
@@ -324,7 +321,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          for period in numpy.arange(0.1,  1, 0.001)}
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_1.__file__, 'job.ini',
+                case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
                          'The event based calculator is restricted '

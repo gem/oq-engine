@@ -22,7 +22,8 @@ Response:
       "is_running": true,
       "owner: "michele",
       "url": "http://localhost:8800/v1/calc/1",
-      "abortable": true},
+      "abortable": true,
+      "size_mb": 2.34},
      {"description": "Event based calculation",
       "id": 2,
       "status": "complete",
@@ -30,16 +31,18 @@ Response:
       "is_running": false,
       "owner: "armando",
       "url": "http://localhost:8800/v1/calc/2",
-      "abortable": false},
+      "abortable": false,
+      "size_mb": 12.34},
      {"description": "ScenarioRisk calculation",
       "id": 3,
       "status": "complete",
       "calculation_mode": "scenario_risk",
       "is_running": false,
       "owner: "armando",
-      "url": "http://localhost:8800/v1/calc/3"]
+      "url": "http://localhost:8800/v1/calc/3",
       "abortable": false,
-      "parent_id": null
+      "parent_id": null,
+      "size_mb": 1.23}
       ]
 
 
@@ -99,7 +102,7 @@ Response:
     {"area_source_discretization": 10.0,
      "calculation_mode": "classical",
      "description": "Hazard Calculation for end-to-end hazard+risk",
-     "intensity_measure_types_and_levels": {"SA(0.1)": [0.01, 0.04, 0.07, 0.1, 0.13, 0.16, 0.19, 0.22, 0.25, 0.28, 0.31, 0.34, 0.37, 0.4, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58, 0.61, 0.64, 0.67, 0.7, 0.73, 0.77, 0.8, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.01, 1.04, 1.07, 1.1, 1.13, 1.16, 1.19, 1.22, 1.25, 1.28, 1.31, 1.34, 1.37, 1.4, 1.43, 1.46, 1.5]},
+     "intensity_measure_types_and_levels": {"PGA": [0.01, 0.04, 0.07, 0.1]},
      "investigation_time": 50.0,
      "maximum_distance": 300.0,
      "mean_hazard_curves": true,
@@ -151,13 +154,38 @@ List a summary of results for the given `calc_id`. The [url](#get-v1calchazardre
 Parameters: None
 
 Response:
-
-    [{"url": "http://localhost:8800/v1/calc/hazard/result/12", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-22", "id": 12},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/14", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-23", "id": 14},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/16", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-24", "id": 16},
-     {"url": "http://localhost:8800/v1/calc/hazard/result/18", "type": "hazard_curve", "outtypes": [ "xml" ], "name": "hc-rlz-25", "id": 18}]
-
-
+```
+   [{'id': 27,
+     'name': 'Full Report',
+     'outtypes': ['rst'],
+     'size_mb': None,
+     'type': 'fullreport',
+     'url': 'http://127.0.0.1:8800/v1/calc/result/27'},
+    {'id': 28,
+     'name': 'Ground Motion Fields',
+     'outtypes': ['xml', 'csv', 'npz'],
+     'size_mb': 0.00884246826171875,
+     'type': 'gmf_data',
+     'url': 'http://127.0.0.1:8800/v1/calc/result/28'},
+    {'id': 29,
+     'name': 'Hazard Curves',
+     'outtypes': ['csv', 'xml', 'npz'],
+     'size_mb': 0.027740478515625,
+     'type': 'hcurves',
+     'url': 'http://127.0.0.1:8800/v1/calc/result/29'},
+    {'id': 30,
+     'name': 'Earthquake Ruptures',
+     'outtypes': ['xml', 'csv'],
+     'size_mb': 0.008056640625,
+     'type': 'ruptures',
+     'url': 'http://127.0.0.1:8800/v1/calc/result/30'},
+    {'id': 31,
+     'name': 'Seismic Source Groups',
+     'outtypes': ['csv'],
+     'size_mb': None,
+     'type': 'sourcegroups',
+     'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
+```
 #### GET /v1/calc/result/:result_id
 
 Get the full content of a calculation result for the given `result_id`.

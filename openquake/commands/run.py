@@ -15,9 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
-import os
 import collections
 import tempfile
 import logging
@@ -70,21 +67,19 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
+def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
-    with monitor:
-        hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                  exports=exports, **params)
-        hc_id = hcalc.datastore.calc_id
-        oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
+    hcalc = base.calculators(readinput.get_oqparam(job_haz))
+    hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
+              exports=exports, **params)
+    hc_id = hcalc.datastore.calc_id
+    oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq)
-    with rcalc._monitor:
-        # disable concurrency in the second calculation to avoid fork issues
-        rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
-                  hazard_calculation_id=hc_id, **params)
+    # disable concurrency in the second calculation to avoid fork issues
+    rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
+              hazard_calculation_id=hc_id, **params)
     return rcalc
 
 
@@ -93,36 +88,34 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.Monitor('complete runtime', measuremem=True)
-    if len(job_inis) == 1:  # run hazard or risk
-        if hc:
-            hc_id = hc[0]
-            rlz_ids = hc[1:]
-        else:
-            hc_id = None
-            rlz_ids = ()
-        oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
-        if hc_id and hc_id < 0:  # interpret negative calculation ids
-            calc_ids = datastore.get_calc_ids()
-            try:
-                hc_id = calc_ids[hc_id]
-            except IndexError:
-                raise SystemExit(
-                    'There are %d old calculations, cannot '
-                    'retrieve the %s' % (len(calc_ids), hc_id))
-        calc = base.calculators(oqparam, monitor)
-        with calc._monitor:
+    with performance.Monitor('total runtime', measuremem=True) as monitor:
+        if len(job_inis) == 1:  # run hazard or risk
+            if hc:
+                hc_id = hc[0]
+                rlz_ids = hc[1:]
+            else:
+                hc_id = None
+                rlz_ids = ()
+            oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
+            if hc_id and hc_id < 0:  # interpret negative calculation ids
+                calc_ids = datastore.get_calc_ids()
+                try:
+                    hc_id = calc_ids[hc_id]
+                except IndexError:
+                    raise SystemExit(
+                        'There are %d old calculations, cannot '
+                        'retrieve the %s' % (len(calc_ids), hc_id))
+            calc = base.calculators(oqparam)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids, **params)
-    else:  # run hazard + risk
-        calc = run2(
-            job_inis[0], job_inis[1], concurrent_tasks, pdb,
-            exports, params, monitor)
+        else:  # run hazard + risk
+            calc = run2(
+                job_inis[0], job_inis[1], concurrent_tasks, pdb,
+                exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
-    monitor.flush()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
     calc_path = calc.datastore.calc_dir  # used for the .pstat filename
     return calc

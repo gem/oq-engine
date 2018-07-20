@@ -15,9 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
-
 import os
 import shutil
 import operator
@@ -132,7 +129,7 @@ def upgrade_nrml(directory, dry_run, multipoint):
                 try:
                     fulltag = next(ip)[1].tag  # tag of the first node
                     xmlns, tag = fulltag.split('}')
-                except:  # not a NRML file
+                except Exception:  # not a NRML file
                     xmlns, tag = '', ''
                 if xmlns[1:] == NRML05:  # already upgraded
                     if 'sourceModel' in tag and multipoint:

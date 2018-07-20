@@ -27,19 +27,12 @@ import subprocess
 import threading
 import signal
 import zlib
-try:
-    import urllib.parse as urlparse
-except ImportError:
-    import urlparse
+import pickle
+import urllib.parse as urlparse
 import re
 import numpy
 import psutil
-try:
-    # Python 3
-    from urllib.parse import unquote_plus
-except ImportError:
-    # Python 2
-    from urllib import unquote_plus
+from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -49,8 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode, pickle
+from openquake.baselib.general import groupby, gettemp
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -64,16 +56,11 @@ from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils, dbapi
 
 from django.conf import settings
+from django.http import FileResponse
+from wsgiref.util import FileWrapper
+
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-try:
-    from django.http import FileResponse  # Django >= 1.8
-except ImportError:
-    from django.http import StreamingHttpResponse as FileResponse
-try:
-    from wsgiref.util import FileWrapper  # Django >= 1.9
-except ImportError:
-    from django.core.servers.basehttp import FileWrapper
 
 
 METHOD_NOT_ALLOWED = 405
@@ -256,7 +243,7 @@ def validate_nrml(request):
     if not xml_text:
         return HttpResponseBadRequest(
             'Please provide the "xml_text" parameter')
-    xml_file = writetmp(xml_text, suffix='.xml')
+    xml_file = gettemp(xml_text, suffix='.xml')
     try:
         nrml.to_python(xml_file)
     except ExpatError as exc:
@@ -268,13 +255,13 @@ def validate_nrml(request):
         exc_msg = exc.args[0]
         if isinstance(exc_msg, bytes):
             exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
-        elif isinstance(exc_msg, unicode):
+        elif isinstance(exc_msg, str):
             pass
         else:
             # if it is another kind of object, it is not obvious a priori how
             # to extract the error line from it
             return _make_response(
-                error_msg=unicode(exc_msg), error_line=None, valid=False)
+                error_msg=str(exc_msg), error_line=None, valid=False)
         # if the line is not mentioned, the whole message is taken
         error_msg = exc_msg.split(', line')[0]
         # check if the exc_msg contains a line number indication
@@ -318,20 +305,19 @@ def calc_list(request, id=None):
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
-
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
                            utils.get_acl_on(request), id)
 
     response_data = []
+    username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id) in calc_data:
+         parent_id, size_mb) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
-                if (psutil.Process(pid).username() ==
-                        psutil.Process(os.getpid()).username()):
+                if psutil.Process(pid).username() == username:
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
@@ -339,7 +325,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -499,28 +485,29 @@ def run_calc(request):
 
 
 RUNCALC = '''\
-import os, sys
-from openquake.baselib.python3compat import pickle
+import os, sys, pickle
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
     engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s)
+        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
+        username='%(username)s')
     os.remove(__file__)
 '''
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None):
+def submit_job(job_ini, username, hazard_job_id=None):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, user_name, hazard_job_id)
+    job_id, oq = engine.job_from_file(job_ini, username, hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
-    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik)
-    tmp_py = writetmp(code, suffix='.py')
+    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
+                          username=username)
+    tmp_py = gettemp(code, suffix='.py')
     # print(code, tmp_py)  # useful when debugging
-    devnull = getattr(subprocess, 'DEVNULL', None)  # defined in Python 3
+    devnull = subprocess.DEVNULL
     popen = subprocess.Popen([sys.executable, tmp_py],
                              stdin=devnull, stdout=devnull, stderr=devnull)
     threading.Thread(target=popen.wait).start()
@@ -570,7 +557,7 @@ def calc_results(request, calc_id):
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
-            outtypes=outtypes, url=url)
+            outtypes=outtypes, url=url, size_mb=result.size_mb)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
@@ -655,6 +642,7 @@ def get_result(request, result_id):
     response = FileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(exported))
     return response
 
 
@@ -708,6 +696,7 @@ def extract(request, calc_id, what):
     response = FileResponse(stream, content_type='application/octet-stream')
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 
@@ -736,6 +725,7 @@ def get_datastore(request, job_id):
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
     response['Content-Disposition'] = (
         'attachment; filename=%s' % os.path.basename(fname))
+    response['Content-Length'] = str(os.path.getsize(fname))
     return response
 
 
@@ -764,8 +754,10 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict([('calc_id', calc_id)]))
+                  dict(calc_id=calc_id, size_mb=size_mb))
 
 
 @csrf_exempt

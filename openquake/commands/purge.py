@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import os
 import re
 import getpass
@@ -71,5 +69,6 @@ def purge(calc_id):
             print('Calculation %d not found' % calc_id)
             return
     purge_one(calc_id, getpass.getuser())
+
 
 purge.arg('calc_id', 'calculation ID', type=int)

@@ -2,9 +2,9 @@ Classical BCR test
 ==================
 
 ============== ===================
-checksum32     3,011,595,185      
-date           2018-03-26T15:55:40
-engine_version 2.10.0-git543cfb0  
+checksum32     1,808,877,325      
+date           2018-06-05T06:38:43
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 11, num_levels = 8
@@ -45,11 +45,11 @@ structural_vulnerability_retrofitted `vulnerability_model_retrofitted.xml <vulne
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        1.000  simple(3)       3/3             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        1.00000 simple(3)       3/3             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -86,31 +86,31 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-========================== ===== ====== === === ========= ==========
-taxonomy                   mean  stddev min max num_sites num_assets
-Adobe                      1.000 0.0    1   1   2         2         
-Stone-Masonry              1.000 0.0    1   1   6         6         
-Unreinforced-Brick-Masonry 1.000 NaN    1   1   1         1         
-Wood                       1.000 0.0    1   1   2         2         
-*ALL*                      1.000 0.0    1   1   11        11        
-========================== ===== ====== === === ========= ==========
+========================== ======= ====== === === ========= ==========
+taxonomy                   mean    stddev min max num_sites num_assets
+Adobe                      1.00000 0.0    1   1   2         2         
+Stone-Masonry              1.00000 0.0    1   1   6         6         
+Unreinforced-Brick-Masonry 1.00000 NaN    1   1   1         1         
+Wood                       1.00000 0.0    1   1   2         2         
+*ALL*                      1.00000 0.0    1   1   11        11        
+========================== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= =========
-source_id source_class num_ruptures calc_time split_time num_sites num_split
-========= ============ ============ ========= ========== ========= =========
-231       AreaSource   414          0.012     0.017      662       69       
-229       AreaSource   264          0.007     0.013      185       38       
-232       AreaSource   150          0.006     0.009      257       30       
-========= ============ ============ ========= ========== ========= =========
+========= ============ ============ ========= ========== ========= ========= ======
+source_id source_class num_ruptures calc_time split_time num_sites num_split events
+========= ============ ============ ========= ========== ========= ========= ======
+232       AreaSource   150          0.00617   0.01200    9.00000   30        0     
+229       AreaSource   264          0.00599   0.01626    5.34211   38        0     
+231       AreaSource   414          0.00520   0.02262    10        69        0     
+========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.026     3     
+AreaSource   0.01736   3     
 ============ ========= ======
 
 Duplicated sources
@@ -119,31 +119,59 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.013 0.007  0.004 0.017 3        
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.00440 0.00271 0.00124 0.01533 48       
+count_eff_ruptures 0.00940 0.00175 0.00774 0.01123 3        
+================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-============== ========================================================================== ========
-task           sent                                                                       received
-count_ruptures sources=30.12 KB srcfilter=3.71 KB param=1.34 KB monitor=990 B gsims=924 B 1.21 KB 
-============== ========================================================================== ========
+Fastest task
+------------
+taskno=3, weight=22, duration=0 s, sources="232"
+
+======== ======= ======= ======= ======= =
+variable mean    stddev  min     max     n
+======== ======= ======= ======= ======= =
+nsites   9.20000 1.30384 8       11      5
+weight   4.54073 0.31976 4.24264 4.97494 5
+======== ======= ======= ======= ======= =
+
+Slowest task
+------------
+taskno=1, weight=328, duration=0 s, sources="229 231"
+
+======== ======= ======= ======= ======= ==
+variable mean    stddev  min     max     n 
+======== ======= ======= ======= ======= ==
+nsites   7.66176 3.22588 1       11      68
+weight   4.82933 1.23456 1.80000 5.96992 68
+======== ======= ======= ======= ======= ==
+
+Data transfer
+-------------
+================== ========================================================================== ========
+task               sent                                                                       received
+RtreeFilter        srcs=77.11 KB monitor=16.22 KB srcfilter=13.08 KB                          87.33 KB
+count_eff_ruptures sources=50.88 KB param=1.38 KB monitor=1.03 KB gsims=924 B srcfilter=699 B 1.19 KB 
+================== ========================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.090     0.0       1     
-splitting sources              0.040     0.0       1     
-total count_ruptures           0.038     2.086     3     
-managing sources               0.020     0.0       1     
-reading exposure               0.010     0.0       1     
-store source_info              0.004     0.0       1     
-unpickling count_ruptures      1.638E-04 0.0       3     
-aggregate curves               6.580E-05 0.0       3     
-reading site collection        3.362E-05 0.0       1     
-saving probability maps        3.028E-05 0.0       1     
+ClassicalCalculator.run        0.68397   0.0       1     
+PSHACalculator.run             0.61930   0.0       1     
+managing sources               0.34057   0.0       1     
+total prefilter                0.21119   3.46875   48    
+reading composite source model 0.05589   0.0       1     
+splitting sources              0.05138   0.0       1     
+total count_eff_ruptures       0.02819   5.87891   3     
+unpickling prefilter           0.01596   0.0       48    
+store source_info              0.00701   0.0       1     
+reading site collection        0.00396   0.0       1     
+reading exposure               0.00183   0.0       1     
+aggregate curves               0.00103   0.0       3     
+unpickling count_eff_ruptures  8.812E-04 0.0       3     
+saving probability maps        2.401E-04 0.0       1     
 ============================== ========= ========= ======

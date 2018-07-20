@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import re
 import inspect
 import functools
@@ -31,42 +29,40 @@ from openquake.risklib import utils, scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 registry = CallableDict()
 
-
-F64 = numpy.float64
-
 COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
-
-LOSS_TYPE_KEY = re.compile(
+RISK_TYPE_REGEX = re.compile(
     '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
     """
     :param inputs: a dictionary key -> path name
-    :returns: a pair (file_type, {cost_type: path})
+    :returns: a pair (file_type, {risk_type: path})
     """
-    vfs = {}
+    rfs = {}
     names = set()
     for key in inputs:
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            vfs['structural'] = inputs['structural_fragility'] = inputs[key]
+            rfs['fragility/structural'] = inputs[
+                'structural_fragility'] = inputs[key]
             names.add('fragility')
             del inputs['fragility']
             continue
-        match = LOSS_TYPE_KEY.match(key)
+        match = RISK_TYPE_REGEX.match(key)
         if match and 'retrofitted' not in key and 'consequence' not in key:
-            vfs[match.group(1)] = inputs[key]
+            rfs['%s/%s' % (match.group(2), match.group(1))] = inputs[key]
             names.add(match.group(2))
     if not names:
         return None, {}
     elif len(names) > 1:
         raise ValueError('Found inconsistent keys %s in the .ini file'
                          % ', '.join(names))
-    return names.pop(), vfs
+    return names.pop(), rfs
 
 
 # ########################### vulnerability ############################## #

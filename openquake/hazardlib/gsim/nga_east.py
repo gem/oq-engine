@@ -61,7 +61,6 @@ Module exports :class:`NGAEastBaseGMPE`,
                :class:`HollenbackEtAl2015NGAEastEX`,
                :class:`HollenbackEtAl2015NGAEastEXTotalSigma`
 """
-from __future__ import division
 import os
 import h5py
 import numpy as np
@@ -453,7 +452,7 @@ class NGAEastBaseGMPE(GMPETable):
             deviation models. Float in the range 0 to 1, or None (mean value
             used)
         """
-        super(NGAEastBaseGMPE, self).__init__(gmpe_table=gmpe_table)
+        super().__init__(gmpe_table=gmpe_table)
         self.tau_model = tau_model
         self.phi_model = phi_model
         self.phi_s2ss_model = phi_s2ss_model
@@ -600,7 +599,7 @@ class NGAEastGMPE(NGAEastBaseGMPE):
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
-        super(NGAEastGMPE, self).__init__(
+        super().__init__(
             gmpe_table=self.NGA_EAST_TABLE,
             tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, tau_quantile=tau_quantile,
@@ -645,10 +644,10 @@ class NGAEastBaseGMPETotalSigma(NGAEastBaseGMPE):
             standard deviation. Should be float between 0 and 1, or None (mean
             value taken)
         """
-        super(NGAEastBaseGMPETotalSigma, self).__init__(gmpe_table=gmpe_table,
-            tau_model=tau_model, phi_model=phi_model,
-            phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
-            phi_ss_quantile=None, phi_s2ss_quantile=None)
+        super().__init__(gmpe_table=gmpe_table,
+                         tau_model=tau_model, phi_model=phi_model,
+                         phi_s2ss_model=phi_s2ss_model, tau_quantile=None,
+                         phi_ss_quantile=None, phi_s2ss_quantile=None)
         # Upon instantiation the TAU, PHI_SS, and PHI_S2SS objects contain
         # the mean values
         self.SIGMA = None
@@ -800,8 +799,8 @@ class NGAEastGMPETotalSigma(NGAEastBaseGMPETotalSigma):
         if not self.NGA_EAST_TABLE:
             raise NotImplementedError("NGA East Fixed-Table GMPE requires "
                                       "input table")
-        super(NGAEastGMPETotalSigma, self).__init__(self.NGA_EAST_TABLE,
-            tau_model=tau_model, phi_model=phi_model,
+        super().__init__(
+            self.NGA_EAST_TABLE, tau_model=tau_model, phi_model=phi_model,
             phi_s2ss_model=phi_s2ss_model, sigma_quantile=sigma_quantile)
 
 

@@ -21,10 +21,7 @@ Module exports :class:`AkkarEtAlRjb2014`
                :class:`AkkarEtAlRepi2014`
                :class:`AkkarEtAlRhypo2014`.
 """
-from __future__ import division
-
 import numpy as np
-import warnings
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA

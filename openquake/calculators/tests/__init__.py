@@ -22,16 +22,16 @@ import shutil
 import logging
 import tempfile
 import unittest
-import platform
+import sys
 
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import performance, datastore, general
+from openquake.baselib import datastore, general
 from openquake.commonlib import readinput, oqvalidation
 
 
-REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
+NOT_DARWIN = sys.platform != 'darwin'
 
 
 class DifferentFiles(Exception):
@@ -84,8 +84,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = performance.Monitor(self.testdir)
-        return base.calculators(oq, monitor)
+        return base.calculators(oq)
 
     def run_calc(self, testfile, job_ini, **kw):
         """
@@ -100,14 +99,14 @@ class CalculatorTestCase(unittest.TestCase):
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
-            self.calc = self.get_calc(
+            calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             # run the second job.ini with zero tasks to avoid fork issues
-            with self.calc._monitor:
-                exported = self.calc.run(export_dir=self.edir,
-                                         concurrent_tasks=0)
+            with calc._monitor:
+                exported = calc.run(export_dir=self.edir, concurrent_tasks=0)
                 result.update(exported)
-            duration[inis[1]] = self.calc._monitor.duration
+            duration[inis[1]] = calc._monitor.duration
+            self.calc = calc
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
@@ -176,7 +175,7 @@ class CalculatorTestCase(unittest.TestCase):
             self.assertEqual(expected_content, actual.read())
 
     def run(self, result=None):
-        res = super(CalculatorTestCase, self).run(result)
+        res = super().run(result)
         if res is not None:  # for Python 3
             issues = len(res.errors) + len(res.failures)
         else:
