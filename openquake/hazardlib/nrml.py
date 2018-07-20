@@ -71,7 +71,6 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-from __future__ import print_function
 import io
 import re
 import sys
@@ -83,6 +82,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
@@ -102,15 +102,16 @@ class DuplicatedID(Exception):
 
 class SourceModel(collections.Sequence):
     """
-    A container of source groups with attributes name, investigation_time,
-    start_time.
+    A container of source groups with attributes name, investigation_time
+    and start_time. It is serialize on hdf5 as follows:
+
+    >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
+    ..    f['/'] = source_model
     """
     def __init__(self, src_groups, name=None, investigation_time=None,
                  start_time=None):
         self.src_groups = src_groups
         self.name = name
-        if investigation_time is not None:
-            investigation_time = valid.positivefloat(investigation_time)
         self.investigation_time = investigation_time
         self.start_time = start_time
 
@@ -119,6 +120,34 @@ class SourceModel(collections.Sequence):
 
     def __len__(self):
         return len(self.src_groups)
+
+    def __toh5__(self):
+        dic = {}
+        for i, grp in enumerate(self.src_groups):
+            grpname = grp.name or 'group-%d' % i
+            srcs = [(src.source_id, src) for src in grp
+                    if hasattr(src, '__toh5__')]
+            if srcs:
+                dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
+        attrs = dict(name=self.name,
+                     investigation_time=self.investigation_time or 'NA',
+                     start_time=self.start_time or 'NA')
+        if not dic:
+            raise ValueError('There are no serializable sources in %s' % self)
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for src_id in sorted(grp):
+                src = grp[src_id]
+                src.num_ruptures = src.count_ruptures()
+                srcs.append(src)
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):
@@ -139,6 +168,7 @@ def to_python(fname, *args):
     [node] = read(fname)
     return node_to_obj(node, fname, *args)
 
+
 parse = deprecated('Use nrml.to_python instead')(to_python)
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
@@ -148,6 +178,7 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 @node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
+
 
 default = sourceconverter.SourceConverter()
 
@@ -184,11 +215,17 @@ def get_source_model_05(node, fname, converter=default):
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
         groups.append(converter.convert_node(src_group))
-    return SourceModel(sorted(groups), node.get('name'),
-                       node.get('investigation_time'), node.get('start_time'))
+    itime = node.get('investigation_time')
+    if itime is not None:
+        itime = valid.positivefloat(itime)
+    stime = node.get('start_time')
+    if stime is not None:
+        stime = valid.positivefloat(stime)
+    return SourceModel(sorted(groups), node.get('name'), itime, stime)
 
 
 validators = {
+    'backarc': valid.boolean,
     'strike': valid.strike_range,
     'dip': valid.dip_range,
     'rake': valid.rake_range,
@@ -279,6 +316,7 @@ class SourceModelParser(object):
         self.converter = converter
         self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
 
     def parse_src_groups(self, fname, apply_uncertainties):
         """
@@ -288,17 +326,24 @@ class SourceModelParser(object):
             a function modifying the sources
         """
         try:
-            groups = self.sm[fname]
+            sm = self.sm[fname]
         except KeyError:
-            groups = self.sm[fname] = to_python(fname, self.converter)
+            if fname.endswith(('.xml', '.nrml')):
+                sm = to_python(fname, self.converter)
+            elif fname.endswith('.hdf5'):
+                sm = sourceconverter.to_python(fname, self.converter)
+            else:
+                raise ValueError('Unrecognized extension in %s' % fname)
+            self.sm[fname] = sm
         # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in groups]
+        groups = [copy.deepcopy(g) for g in sm]
         for group in groups:
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
                     # redo count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
+                    self.changed_sources += 1
         self.fname_hits[fname] += 1
         return groups
 

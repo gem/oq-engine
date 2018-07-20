@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import print_function
 import io
 import os
 import logging
@@ -50,7 +48,8 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    getter = getters.PmapGetter(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    getter = getters.PmapGetter(dstore, rlzs_assoc)
     sitecol = dstore['sitecol']
     pmaps = getter.get_pmaps(sitecol.sids)
     return dict(zip(getter.rlzs, pmaps)), dstore['hcurves/mean']
@@ -71,7 +70,7 @@ def show(what='contents', calc_id=-1, extra=()):
                 ds = read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
-            except:
+            except Exception:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
                 f = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
@@ -114,6 +113,7 @@ def show(what='contents', calc_id=-1, extra=()):
         print('%s not found' % what)
 
     ds.close()
+
 
 show.arg('what', 'key or view of the datastore')
 show.arg('calc_id', 'calculation ID', type=int)

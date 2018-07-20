@@ -16,44 +16,121 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
+from urllib.error import HTTPError
+import io
+import re
 import math
+import zipfile
+import logging
 import numpy
-from scipy.stats import truncnorm
+from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
 from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
+US_GOV = 'https://earthquake.usgs.gov'
+SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
+URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
+GRID_RX = URL_RX + 'grid\.xml(\.zip)?'
+UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
+
 F32 = numpy.float32
-SHAKEMAP_URL = 'http://shakemap.rm.ingv.it/shake/{}/download/{}.xml'
 PCTG = 100  # percent of g, the gravity acceleration
 
 
-def get_sitecol_shakemap(array_or_id, sitecol=None, assoc_dist=None):
+class DownloadFailed(Exception):
+    """Raised by shakemap.download"""
+
+
+class MissingLink(Exception):
+    """Could not find link in web page"""
+
+
+def _download(url):
+    try:
+        with urlopen(url) as f:
+            return f.read().decode('utf-8')
+    except HTTPError as exc:  # not found
+        raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
+
+
+def urlextract(url, fname):
     """
-    :param array_or_id: shakemap ID or full shakemap array
+    Download and unzip an archive and extract the underlying fname
+    """
+    if url.endswith('.zip'):
+        with urlopen(url) as f:
+            data = io.BytesIO(f.read())
+        with zipfile.ZipFile(data) as z:
+            return z.open(fname)
+    else:  # not a zip
+        return urlopen(url)
+
+
+def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
+    """
+    :param shakemap_id: USGS Shakemap ID
+    :returns: an array with the shakemap
+    """
+    url = shakemap_url.format(shakemap_id)
+    logging.info('Downloading %s', url)
+    grid = re.search(GRID_RX, _download(url))
+    uncertainty = re.search(UNCERTAINTY_RX, _download(url))
+    if grid is None:
+        raise MissingLink('Could not find grid.xml.zip link in %s' % url)
+    if uncertainty is None:
+        with urlopen(US_GOV + grid.group()) as f:
+            return get_shakemap_array(f)
+    else:
+        with urlextract(US_GOV + grid.group(), 'grid.xml') as f1, \
+             urlextract(US_GOV + uncertainty.group(), 'uncertainty.xml') as f2:
+            return get_shakemap_array(f1, f2)
+
+
+def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
+    """
+    :param array_or_id: shakemap array or shakemap ID
+    :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, int):
-        with urlopen(SHAKEMAP_URL.format(array_or_id, 'grid')) as f1, \
-             urlopen(SHAKEMAP_URL.format(array_or_id, 'uncertainty')) as f2:
-            array = get_shakemap_array(f1, f2)
-    else:
+    if isinstance(array_or_id, str):  # shakemap ID
+        array = download_array(array_or_id)
+    else:  # shakemap array
         array = array_or_id
-    if sitecol is None:  # extract the sites from the shakemap
-        return site.SiteCollection.from_shakemap(array), array
+    available_imts = set(array['val'].dtype.names)
+    missing = set(imts) - available_imts
+    if missing:
+        raise ValueError('The IMT %s is required but not in the available set '
+                         '%s, please change the riskmodel' %
+                         (missing.pop(), ', '.join(available_imts)))
 
-    # associate the shakemap to the site collection
-    # TODO: forbid IDL crossing
-    bbox = (array['lon'].min(), array['lat'].min(),
-            array['lon'].max(), array['lat'].max())
-    sitecol = sitecol.within_bb(bbox)
-    data = geo.utils.GeographicObjects(array)
-    dic = data.assoc(sitecol, assoc_dist)
-    sids = sorted(dic)
-    return sitecol.filtered(sids), numpy.array([dic[sid] for sid in sids])
+    # build a copy of the ShakeMap with only the relevant IMTs
+    dt = [(imt, F32) for imt in imts]
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
+    data = numpy.zeros(len(array), dtlist)
+    for name in ('lon',  'lat', 'vs30'):
+        data[name] = array[name]
+    for name in ('val', 'std'):
+        for im in imts:
+            data[name][im] = array[name][im]
+
+    if sitecol is None:  # extract the sites from the shakemap
+        return site.SiteCollection.from_shakemap(data), data
+
+    # associate the shakemap to the (filtered) site collection
+    bbox = (data['lon'].min(), data['lat'].min(),
+            data['lon'].max(), data['lat'].max())
+    indices = sitecol.within_bbox(bbox)
+    if len(indices) == 0:
+        raise RuntimeError('There are no sites within the boundind box %s'
+                           % str(bbox))
+    sites = sitecol.filtered(indices)
+    logging.info('Associating %d GMVs to %d sites', len(data), len(sites))
+    return geo.utils.assoc(data, sites, assoc_dist, 'warn')
 
 
 # Here is the explanation of USGS for the units they are using:
@@ -139,21 +216,19 @@ def amplify_gmfs(imts, vs30s, gmfs):
     Amplify the ground shaking depending on the vs30s
     """
     n = len(vs30s)
-    for i, im in enumerate(imts):
-        for iloc in range(n):
-            gmfs[i * n + iloc] = amplify_ground_shaking(
-                im.period, vs30s[iloc], gmfs[i * n + iloc])
-    return gmfs
+    out = [amplify_ground_shaking(im.period, vs30s[i], gmfs[m * n + i])
+           for m, im in enumerate(imts) for i in range(n)]
+    return numpy.array(out)
 
 
 def amplify_ground_shaking(T, vs30, gmvs):
     """
     :param T: period
     :param vs30: velocity
-    :param gmvs: ground motion values for the current site
+    :param gmvs: ground motion values for the current site in units of g
     """
     interpolator = interpolate.interp1d(
-        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [0, 0.1, 0.2, 0.3, 0.4, 10],
         [(760 / vs30)**0.35,
          (760 / vs30)**0.35,
          (760 / vs30)**0.25,
@@ -161,7 +236,7 @@ def amplify_ground_shaking(T, vs30, gmvs):
          (760 / vs30)**-0.05,
          (760 / vs30)**-0.05],
     ) if T <= 0.3 else interpolate.interp1d(
-        [-1, 0.1, 0.2, 0.3, 0.4, 100],
+        [0, 0.1, 0.2, 0.3, 0.4, 10],
         [(760 / vs30)**0.65,
          (760 / vs30)**0.65,
          (760 / vs30)**0.60,
@@ -189,35 +264,34 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, site_effects, trunclevel, num_gmfs, seed):
+def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
+            imts=None):
     """
-    :returns: an array of GMFs of shape (N, G) and dtype imt_dt
+    :returns: an array of GMFs of shape (R, N, E, M)
     """
     std = shakemap['std']
-    imts = [imt.from_string(name) for name in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt] / PCTG) - std[imt] ** 2 / 2.
-           for imt in std.dtype.names}
+    if imts is None or len(imts) == 0:
+        imts = std.dtype.names
+    val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
+           for imt in imts}
+    imts_ = [imt.from_string(name) for name in imts]
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts)
-    stddev = [std[imt] for imt in std.dtype.names]
+    spatial_corr = spatial_correlation_array(dmatrix, imts_)
+    stddev = [std[str(imt)] for imt in imts_]
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    cross_corr = cross_correlation_matrix(imts)
+    cross_corr = cross_correlation_matrix(imts_, crosscorr)
     M, N = spatial_corr.shape[:2]
-    mu = numpy.array([numpy.ones(num_gmfs) * val[imt][j]
-                      for imt in std.dtype.names for j in range(N)])
-    L = cholesky(spatial_cov, cross_corr)
-    Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
-                      size=(M * N, num_gmfs), random_state=seed)
-    gmfs = numpy.exp(numpy.dot(L, Z) + mu)
+    mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
+                      for imt in imts_ for j in range(N)])
+    # mu has shape (M * N, E)
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    if trunclevel:
+        Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
+                          size=(M * N, num_gmfs), random_state=seed)
+    else:
+        Z = norm.rvs(loc=0, scale=1, size=(M * N, num_gmfs), random_state=seed)
+    # Z has shape (M * N, E)
+    gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
-        gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs) * 0.8
-
-    arr = numpy.zeros((N, num_gmfs), std.dtype)
-    for i, im in enumerate(std.dtype.names):
-        arr[im] = gmfs[i * N:(i + 1) * N]
-    return arr
-
-"""
-here is an example for Tanzania:
-https://earthquake.usgs.gov/archive/product/shakemap/us10006nkx/us/1480920466172/download/grid.xml
-"""
+        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
+    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)

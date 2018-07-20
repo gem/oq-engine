@@ -29,15 +29,15 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="3" value="1.828050E-03"/>
             <prob index="4" value="1.590110E-03"/>
             <prob index="5" value="1.382807E-03"/>
-            <prob index="6" value="1.202071E-03"/>
+            <prob index="6" value="1.202072E-03"/>
             <prob index="7" value="1.180932E-03"/>
-            <prob index="8" value="1.016727E-03"/>
-            <prob index="9" value="8.747337E-04"/>
-            <prob index="10" value="8.270785E-04"/>
-            <prob index="11" value="7.049191E-04"/>
-            <prob index="12" value="5.996286E-04"/>
-            <prob index="13" value="5.489105E-04"/>
-            <prob index="14" value="4.944986E-04"/>
+            <prob index="8" value="1.016728E-03"/>
+            <prob index="9" value="8.747341E-04"/>
+            <prob index="10" value="8.270788E-04"/>
+            <prob index="11" value="7.049195E-04"/>
+            <prob index="12" value="5.996290E-04"/>
+            <prob index="13" value="5.489108E-04"/>
+            <prob index="14" value="4.944988E-04"/>
         </disaggMatrix>
     </disaggMatrices>
 </nrml>

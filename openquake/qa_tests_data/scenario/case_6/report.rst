@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 2
 
 ============== ===================
 checksum32     2,135,006,889      
-date           2018-03-26T15:54:48
-engine_version 2.10.0-git543cfb0  
+date           2018-06-26T14:57:01
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -40,11 +40,11 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -56,8 +56,9 @@ Realizations per (TRT, GSIM)
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-reading site collection 4.411E-05 0.0       1     
-======================= ========= ========= ======
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+computing gmfs          0.02501  0.25000   1     
+reading site collection 0.00686  0.0       1     
+======================= ======== ========= ======

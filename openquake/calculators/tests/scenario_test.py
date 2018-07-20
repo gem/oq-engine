@@ -15,14 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import division
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
+from openquake.commonlib.readinput import LargeExposureGrid
 from openquake.qa_tests_data.scenario import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
+    case_9, case_10)
 
 from openquake.baselib.node import floatformat
 from openquake.calculators.export import export
@@ -74,7 +74,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='0.1', exports='csv')
+                            maximum_distance='5.0', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
@@ -150,3 +150,9 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(data1['PGA'].shape, (3, 10))
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)
+
+    @attr('qa', 'hazard', 'scenario')
+    def test_case_10(self):
+        # test importing an exposure with automatic gridding
+        with self.assertRaises(LargeExposureGrid):
+            self.run_calc(case_10.__file__, 'job.ini')

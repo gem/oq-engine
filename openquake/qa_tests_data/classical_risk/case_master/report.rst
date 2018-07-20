@@ -2,9 +2,9 @@ classical risk
 ==============
 
 ============== ===================
-checksum32     1,671,175,468      
-date           2018-03-26T15:54:46
-engine_version 2.10.0-git543cfb0  
+checksum32     2,559,514,760      
+date           2018-06-05T06:38:20
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 7, num_levels = 40
@@ -50,12 +50,12 @@ structural_vulnerability            `structural_vulnerability_model.xml <structu
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b1        0.250  complex(2,2)    4/4             
-b2        0.750  complex(2,2)    4/4             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b1        0.25000 complex(2,2)    4/4             
+b2        0.75000 complex(2,2)    4/4             
+========= ======= =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -89,9 +89,9 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 482          482         
-source_model_1.xml 1      Stable Shallow Crust 5.000        4           
+source_model_1.xml 1      Stable Shallow Crust 5            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
-source_model_2.xml 3      Stable Shallow Crust 5.000        1           
+source_model_2.xml 3      Stable Shallow Crust 5            1           
 ================== ====== ==================== ============ ============
 
 ============= =====
@@ -110,30 +110,30 @@ deductibile     absolute
 insurance_limit absolute
 =============== ========
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== ======= ====== === === ========= ==========
+taxonomy mean    stddev min max num_sites num_assets
+tax1     1.00000 0.0    1   1   4         4         
+tax2     1.00000 0.0    1   1   2         2         
+tax3     1.00000 NaN    1   1   1         1         
+*ALL*    1.00000 0.0    1   1   7         7         
+======== ======= ====== === === ========= ==========
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= =========
-source_id source_class              num_ruptures calc_time split_time num_sites num_split
-========= ========================= ============ ========= ========== ========= =========
-1         SimpleFaultSource         482          0.166     2.005E-04  210       30       
-2         CharacteristicFaultSource 1            0.007     3.099E-06  28        4        
-========= ========================= ============ ========= ========== ========= =========
+========= ========================= ============ ========= ========== ========= ========= ======
+source_id source_class              num_ruptures calc_time split_time num_sites num_split events
+========= ========================= ============ ========= ========== ========= ========= ======
+1         SimpleFaultSource         482          0.10702   1.457E-04  7.00000   30        0     
+2         CharacteristicFaultSource 1            0.00310   1.907E-06  7.00000   4         0     
+========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.007     1     
-SimpleFaultSource         0.166     1     
+CharacteristicFaultSource 0.00310   1     
+SimpleFaultSource         0.10702   1     
 ========================= ========= ======
 
 Duplicated sources
@@ -142,31 +142,59 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.009 0.004  0.003 0.022 23       
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.00607 0.00244 0.00273 0.01093 32       
+count_eff_ruptures 0.00605 0.00231 0.00257 0.00941 25       
+================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-============== ================================================================================ ========
-task           sent                                                                             received
-count_ruptures sources=35.65 KB srcfilter=23.56 KB param=20.91 KB monitor=7.41 KB gsims=4.94 KB 8.19 KB 
-============== ================================================================================ ========
+Fastest task
+------------
+taskno=19, weight=238, duration=0 s, sources="1"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   7.00000 NaN    7   7   1
+weight   238     NaN    238 238 1
+======== ======= ====== === === =
+
+Slowest task
+------------
+taskno=3, weight=238, duration=0 s, sources="1"
+
+======== ======= ====== === === =
+variable mean    stddev min max n
+======== ======= ====== === === =
+nsites   7.00000 0.0    7   7   3
+weight   79      15     63  95  3
+======== ======= ====== === === =
+
+Data transfer
+-------------
+================== =============================================================================== ========
+task               sent                                                                            received
+RtreeFilter        srcs=42.48 KB monitor=10.81 KB srcfilter=8.72 KB                                46.67 KB
+count_eff_ruptures sources=42.94 KB param=23.05 KB monitor=8.62 KB srcfilter=5.69 KB gsims=5.37 KB 8.75 KB 
+================== =============================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.216     3.875     23    
-managing sources               0.052     0.0       1     
-reading composite source model 0.028     0.0       1     
-reading exposure               0.008     0.0       1     
-store source_info              0.004     0.0       1     
-splitting sources              9.096E-04 0.0       1     
-unpickling count_ruptures      7.455E-04 0.0       23    
-aggregate curves               3.545E-04 0.0       23    
-reading site collection        3.242E-05 0.0       1     
-saving probability maps        2.432E-05 0.0       1     
+ClassicalCalculator.run        0.64298   0.02344   1     
+PSHACalculator.run             0.59526   0.02344   1     
+managing sources               0.28884   0.02344   1     
+total prefilter                0.19427   5.19141   32    
+total count_eff_ruptures       0.15135   5.75781   25    
+reading composite source model 0.02088   0.0       1     
+unpickling prefilter           0.01289   0.0       32    
+aggregate curves               0.00723   0.0       25    
+unpickling count_eff_ruptures  0.00641   0.0       25    
+store source_info              0.00620   0.0       1     
+reading site collection        0.00374   0.0       1     
+reading exposure               0.00263   0.0       1     
+splitting sources              7.074E-04 0.0       1     
+saving probability maps        1.941E-04 0.0       1     
 ============================== ========= ========= ======

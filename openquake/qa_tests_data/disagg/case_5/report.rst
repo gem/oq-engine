@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     3,691,355,175      
-date           2018-03-26T15:57:47
-engine_version 2.10.0-git543cfb0  
+date           2018-06-05T06:40:12
+engine_version 3.2.0-git65c4735   
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -43,20 +43,20 @@ source_model_logic_tree `source_model_lt_col18_full_model_S_test_slab.xml <sourc
 
 Composite source model
 ----------------------
-========= ====== ================ ================
-smlt_path weight gsim_logic_tree  num_realizations
-========= ====== ================ ================
-b1        1.000  trivial(1,0,0,0) 1/1             
-========= ====== ================ ================
+========= ======= ================ ================
+smlt_path weight  gsim_logic_tree  num_realizations
+========= ======= ================ ================
+b1        1.00000 trivial(0,1,0,0) 1/1             
+========= ======= ================ ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================= ========= ============ ==============
-grp_id gsims                   distances siteparams   ruptparams    
-====== ======================= ========= ============ ==============
-0      MontalvaEtAl2016SSlab() rhypo     backarc vs30 hypo_depth mag
-1      MontalvaEtAl2016SSlab() rhypo     backarc vs30 hypo_depth mag
-====== ======================= ========= ============ ==============
+====== ======================= ========== ============ ==============
+grp_id gsims                   distances  siteparams   ruptparams    
+====== ======================= ========== ============ ==============
+0      MontalvaEtAl2016SSlab() rhypo rrup backarc vs30 hypo_depth mag
+1      MontalvaEtAl2016SSlab() rhypo rrup backarc vs30 hypo_depth mag
+====== ======================= ========== ============ ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -69,14 +69,12 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-========================================================= ====== =============== ============ ============
-source_model                                              grp_id trt             eff_ruptures tot_ruptures
-========================================================= ====== =============== ============ ============
-slab_buc0/6.05.nrml
-                  slab_buc1/6.75.nrml 0      Deep Seismicity 15           7           
-slab_buc0/6.05.nrml
-                  slab_buc1/6.75.nrml 1      Deep Seismicity 15           8           
-========================================================= ====== =============== ============ ============
+======================================= ====== =============== ============ ============
+source_model                            grp_id trt             eff_ruptures tot_ruptures
+======================================= ====== =============== ============ ============
+slab_buc0/6.05.nrml slab_buc1/6.75.nrml 0      Deep Seismicity 15           7           
+slab_buc0/6.05.nrml slab_buc1/6.75.nrml 1      Deep Seismicity 15           8           
+======================================= ====== =============== ============ ============
 
 ============= ==
 #TRT models   2 
@@ -87,19 +85,19 @@ slab_buc0/6.05.nrml
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= =========
-source_id source_class               num_ruptures calc_time split_time num_sites num_split
-========= ========================== ============ ========= ========== ========= =========
-buc06pt05 NonParametricSeismicSource 7            0.022     4.387E-05  14        14       
-buc16pt75 NonParametricSeismicSource 8            0.020     3.743E-05  16        16       
-========= ========================== ============ ========= ========== ========= =========
+========= ========================== ============ ========= ========== ========= ========= ======
+source_id source_class               num_ruptures calc_time split_time num_sites num_split events
+========= ========================== ============ ========= ========== ========= ========= ======
+buc06pt05 NonParametricSeismicSource 7            0.00410   3.195E-05  1.00000   14        0     
+buc16pt75 NonParametricSeismicSource 8            8.416E-05 1.931E-05  1.00000   16        0     
+========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-NonParametricSeismicSource 0.041     2     
+NonParametricSeismicSource 0.00418   2     
 ========================== ========= ======
 
 Duplicated sources
@@ -108,30 +106,57 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_ruptures     0.044 NaN    0.044 0.044 1        
-================== ===== ====== ===== ===== =========
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+RtreeFilter        0.00395 0.00146 0.00133 0.00814 15       
+count_eff_ruptures 0.00638 NaN     0.00638 0.00638 1        
+================== ======= ======= ======= ======= =========
 
-Informational data
-------------------
-============== ====================================================================== ========
-task           sent                                                                   received
-count_ruptures sources=12.99 KB srcfilter=722 B param=548 B monitor=330 B gsims=129 B 457 B   
-============== ====================================================================== ========
+Fastest task
+------------
+taskno=1, weight=15, duration=0 s, sources="buc06pt05 buc16pt75"
+
+======== ======= ====== ======= ======= ==
+variable mean    stddev min     max     n 
+======== ======= ====== ======= ======= ==
+nsites   1.00000 0.0    1       1       15
+weight   1.00000 0.0    1.00000 1.00000 15
+======== ======= ====== ======= ======= ==
+
+Slowest task
+------------
+taskno=1, weight=15, duration=0 s, sources="buc06pt05 buc16pt75"
+
+======== ======= ====== ======= ======= ==
+variable mean    stddev min     max     n 
+======== ======= ====== ======= ======= ==
+nsites   1.00000 0.0    1       1       15
+weight   1.00000 0.0    1.00000 1.00000 15
+======== ======= ====== ======= ======= ==
+
+Data transfer
+-------------
+================== ====================================================================== ========
+task               sent                                                                   received
+RtreeFilter        srcs=22.65 KB monitor=5.07 KB srcfilter=4.09 KB                        23.25 KB
+count_eff_ruptures sources=15.12 KB param=561 B monitor=353 B srcfilter=233 B gsims=129 B 451 B   
+================== ====================================================================== ========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total count_ruptures           0.044     3.629     1     
-managing sources               0.026     0.0       1     
-reading composite source model 0.015     0.0       1     
-store source_info              0.004     0.0       1     
-splitting sources              5.741E-04 0.0       1     
-reading site collection        2.267E-04 0.0       1     
-unpickling count_ruptures      6.437E-05 0.0       1     
-aggregate curves               3.219E-05 0.0       1     
-saving probability maps        3.028E-05 0.0       1     
+PSHACalculator.run             0.35676   0.0       1     
+managing sources               0.15960   0.0       1     
+total prefilter                0.05928   3.60156   15    
+reading composite source model 0.01058   0.0       1     
+total count_eff_ruptures       0.00638   5.75781   1     
+store source_info              0.00533   0.0       1     
+unpickling prefilter           0.00461   0.0       15    
+reading site collection        8.748E-04 0.0       1     
+splitting sources              3.648E-04 0.0       1     
+unpickling count_eff_ruptures  1.986E-04 0.0       1     
+aggregate curves               1.941E-04 0.0       1     
+saving probability maps        1.600E-04 0.0       1     
 ============================== ========= ========= ======

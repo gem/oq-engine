@@ -10,7 +10,9 @@
               <h2>Outputs from calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>
               <div id="my-datastore">
-                  <a href="/v1/calc/{{ calc_id }}/datastore" class="btn btn-sm">Download hdf5 datastore</a>
+                <a href="/v1/calc/{{ calc_id }}/datastore"
+                   title="Size: {{ size_mb }} MB" class="btn btn-sm">
+                  Download hdf5 datastore</a>
               </div>
           </div>
         </div>
@@ -35,7 +37,7 @@
         <tr class="success">
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
-          <td><%= output.get('type') %></td>
+          <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
           <td>
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>

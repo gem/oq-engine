@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -j 8 # -n -W
-SPHINXBUILD   = /opt/openquake/bin/python3 /opt/openquake/bin/sphinx-build
+SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
 
