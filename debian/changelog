@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Forbbidden intensity measure levels starting from zero
+  * Forbbidden intensity measure levels starting from zero unless there
+    is a noDamageLimit in the fragility functions
   * Added command `oq plot_memory`
   * Introduced a MultiGMPE concept
   * Saved the size of the datastore in the database and used it in the WebUI
