@@ -1023,9 +1023,7 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if not fname:
-            continue
-        elif key in ('source', 'hazard_curves'):  # list of fnames
+        if isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
