@@ -936,6 +936,7 @@ def classical_damage(
     if spi and spi > 1:  # interpolate
         imls = numpy.array(fragility_functions.interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
+        assert min_val > 0, hazard_imls  # sanity check
         numpy.putmask(imls, imls < min_val, min_val)
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
