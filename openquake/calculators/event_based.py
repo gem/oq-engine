@@ -45,11 +45,7 @@ TWO32 = 2 ** 32
 
 def weight(src):
     # heuristic weight
-    try:
-        rate = sum(rate for mag, rate in src.get_annual_occurrence_rates())
-    except AttributeError:
-        rate = 1
-    return src.num_ruptures * src.ndists * rate * 1000
+    return src.num_ruptures * src.ndists
 
 
 def get_events(ebruptures):
