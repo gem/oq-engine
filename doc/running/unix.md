@@ -57,7 +57,7 @@ For a list of additional commands, type `oq engine --help`.
 
 ## Running via SSH
 
-When the OpenQuake Engine is driven via the `oq` command over an SSH connection an associated terminal must exist during all `oq` lifecycle.
+When the OpenQuake Engine is driven via the `oq` command over an SSH connection an associated terminal must exist throughout the `oq` calculation lifecycle.
 
 To avoid the `openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal` error you must make sure that a terminal is always associated with the `oq` process.
 
