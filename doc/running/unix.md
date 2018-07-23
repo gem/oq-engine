@@ -61,6 +61,8 @@ When the OpenQuake Engine is driven via the `oq` command over an SSH connection 
 
 To avoid the `openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal` error you must make sure that a terminal is always associated with the `oq` process.
 
+### Non-interactive use
+
 For non-interactive jobs run in batch we suggest the use of `nohup` which is part of every Unix like OS:
 
 ```bash
@@ -68,6 +70,8 @@ For non-interactive jobs run in batch we suggest the use of `nohup` which is par
 ```
 
 More info about `nohup`: [https://en.wikipedia.org/wiki/Nohup](https://en.wikipedia.org/wiki/Nohup).
+
+### Interactive use
 
 For an interactive use of `oq` we suggest to install [byobu](http://byobu.co/) on the target server and use it to run `oq`.
 
