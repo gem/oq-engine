@@ -122,7 +122,7 @@ The `openquake.engine.engine.MasterKilled: The openquake master lost its control
 has dropped or the controlling terminal has been closed having a running computation attached to it.
 
 To avoid this error please use `nohup`, `screen`, `tmux` or `byobu` when using `oq` via SSH.
-More information are available on [running/unix.md](running/unix.md).
+More information are available on [Running the OpenQuake Engine](running/unix.md).
 
 ******
 
