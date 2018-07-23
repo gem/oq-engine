@@ -4,13 +4,13 @@
 
 Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
 
-***
+******
 
 ### Different installation methods
 
 The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/overview.md)**.
 
-***
+******
 
 ### Supported operating systems
 
@@ -23,7 +23,7 @@ Binary packages are provided for the following 64bit operating systems:
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
 
-***
+******
 
 ### Unsupported operating systems
 
@@ -36,20 +36,20 @@ These configurations however are not tested by our [continuous integration syste
 
 Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
 
-***
+******
 
 ### 32bit support
 
 The OpenQuake Engine **requires a 64bit operating system**; 32bit systems are not officially supported and untested. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
 
-***
+******
 
 ### Celery support
 
 Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
 Celery must be enabled on a cluster / multi-node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
 
-***
+******
 
 ### MPI support
 
@@ -57,7 +57,7 @@ MPI is not supported by the OpenQuake Engine. Task distribution across network i
 
 MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 
-***
+******
 
 ### Python scripts that import openquake
 
@@ -69,7 +69,7 @@ $ . /path/to/myvenv/bin/activate
 $ pip3 install openquake.engine
 ```
 
-***
+******
 
 ### Errors upgrading from an old version on Ubuntu
 
@@ -89,7 +89,7 @@ $ sudo rm -Rf /opt/openquake
 $ sudo apt install python3-oq-engine
 ```
 
-***
+******
 
 ### OpenQuake Hazardlib errors
 
@@ -113,13 +113,24 @@ If you are using Ubuntu or RedHat packages no extra operations are needed, the p
 
 On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a proper upgrade of the OpenQuake packages.
 
-***
+******
+
+### 'The openquake master lost its controlling terminal' error
+
+When the OpenQuake Engine is driven via the `oq` command over an SSH connection an associated terminal must exist throughout the `oq` calculation lifecycle.
+The `openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal` error usually means that the SSH connection
+has dropped or the controlling terminal has been closed having a running computation attached to it.
+
+To avoid this error please use `nohup`, `screen`, `tmux` or `byobu` when using `oq` via SSH.
+More information is available on [Running the OpenQuake Engine](running/unix.md).
+
+******
 
 ### DbServer ports
 
 The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
 
-***
+******
 
 ### error: [Errno 111] Connection refused
 
@@ -153,7 +164,7 @@ $ sudo service rabbitmq-server start
 
 It may also mean that an incompatible version of Celery is used. Please check it with `/opt/openquake/bin/pip3 freeze`.
 
-***
+******
 
 ### error: [Errno 104] Connection reset by peer _or_ (403) ACCESS_REFUSED
 
@@ -198,13 +209,13 @@ amqp.exceptions.AccessRefused: (0, 0): (403) ACCESS_REFUSED - Login was refused 
 
 These errors mean that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
 
-***
+******
 
 ### Swap partitions
 
 Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
 
-***
+******
 
 ### System running out of disk space
 
@@ -214,7 +225,7 @@ The OpenQuake Engine may require lot of disk space for the raw results data (`hd
 - A `tmp` dir must be created in `/mnt/ext_volume`
 - `custom_tmp` must be set to `/mnt/ext_volume/tmp` (the directory must exist)
 
-***
+******
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
