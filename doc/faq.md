@@ -115,7 +115,7 @@ On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a
 
 ******
 
-### openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal
+### 'The openquake master lost its controlling terminal' error
 
 When the OpenQuake Engine is driven via the `oq` command over an SSH connection an associated terminal must exist during all `oq` lifecycle.
 The `openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal` error usually means that the SSH connection
