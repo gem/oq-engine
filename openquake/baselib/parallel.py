@@ -359,9 +359,8 @@ def safely_call(func, args):
     # Check is done anyway in other parts of the code
     # further investigation is needed
     # check_mem_usage(mon)  # check if too much memory is used
-    try:
-        backurl = mon.backurl
-    except AttributeError:
+    backurl = getattr(mon, 'backurl', None)
+    if backurl is None:
         return res
     with Socket(backurl, zmq.PUSH, 'connect') as zsocket:
         try:
