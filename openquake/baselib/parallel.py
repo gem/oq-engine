@@ -360,11 +360,16 @@ def safely_call(func, args):
     # further investigation is needed
     # check_mem_usage(mon)  # check if too much memory is used
     backurl = getattr(mon, 'backurl', None)
-    zsocket = (Socket(backurl, zmq.PUSH, 'connect') if backurl
-               else mock.MagicMock())  # do nothing
-    with zsocket:
-        zsocket.send(res)
-    return zsocket.num_sent if backurl else res
+    if backurl is None:
+        return res
+    with Socket(backurl, zmq.PUSH, 'connect') as zsocket:
+        try:
+            zsocket.send(res)
+        except Exception:  # like OverflowError
+            _etype, exc, tb = sys.exc_info()
+            err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+            zsocket.send(err)
+    return zsocket.num_sent
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
