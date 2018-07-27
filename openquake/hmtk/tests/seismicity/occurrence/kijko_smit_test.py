@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 """
 Unit tests for the Kijko and Smith (2012) algorithm which computes
 seismicity occurrence parameters.
