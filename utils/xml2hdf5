@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from openquake.baselib import hdf5, sap
 from openquake.hazardlib import nrml, sourceconverter
 
