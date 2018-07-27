@@ -45,7 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-
 from openquake.hmtk.seismicity.declusterer.dec_afteran import Afteran
 from openquake.hmtk.seismicity.declusterer.dec_gardner_knopoff import GardnerKnopoffType1
 from openquake.hmtk.seismicity.declusterer.base import DECLUSTERER_METHODS
