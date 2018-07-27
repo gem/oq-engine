@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 DISSIMILAR_COLOURLIST = [
     "#000000", "#FFFF00", "#1CE6FF", "#FF34FF", "#FF4A46",
     "#008941", "#006FA6", "#A30059", "#FFDBE5", "#7A4900",
