@@ -316,7 +316,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.warn') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
@@ -328,8 +328,8 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
             ).set_risk_imtls({})
-        self.assertIn("There is a single IMT, uniform_hazard_spectra cannot "
-                      "be True", str(ctx.exception))
+        self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
+                      "will contain a single point", w.call_args[0][0])
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
