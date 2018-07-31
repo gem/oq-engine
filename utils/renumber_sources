@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -59,6 +59,7 @@ def renumber_sources(smlt_file):
     logging.basicConfig(level=logging.INFO)
     for paths in readinput.gen_sm_paths(smlt_file):
         renumber(paths, number=1)
+
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
 
