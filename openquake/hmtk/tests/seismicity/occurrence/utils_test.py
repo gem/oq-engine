@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 import os
 import unittest
 import numpy as np

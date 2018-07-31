@@ -41,7 +41,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-# -*- coding: utf-8 -*-
+
 '''
 Test suite for smoothed seismicity class
 '''
