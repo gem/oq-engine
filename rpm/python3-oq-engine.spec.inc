@@ -121,7 +121,7 @@ getent passwd %{oquser} >/dev/null || \
 %install
 # Fix shebangs before installation
 for f in $(find . -type f -executable | xargs --no-run-if-empty grep -rlE '^#!/usr/bin/env python3$'); do \
-    sed -i 's|#!/usr/bin/env python3|#!/opt/openquake/bin/python3|' $f; \
+    sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' $f; \
 done
 # Fix version in python init
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
