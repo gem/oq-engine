@@ -15,3 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Package :mod:`openquake.hmtk.parsers.source_model` contains base classes and
+implementations of source model parsers.
+"""
+from openquake.hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
+
+#__all__ = [nrmlSourceModelParser]
