@@ -60,6 +60,7 @@ def renumber_sources(smlt_file):
     for paths in readinput.gen_sm_paths(smlt_file):
         renumber(paths, number=1)
 
+
 renumber_sources.arg('smlt_file', 'source model logic tree file')
 
 if __name__ == '__main__':
