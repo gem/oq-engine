@@ -99,6 +99,8 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
         expected_dists = [0] * 2
         self.assertTrue(numpy.allclose(dists, expected_dists, atol=1e-4))
 
+    # FIXME https://github.com/gem/oq-engine/issues/3891
+    @unittest.skip('See https://github.com/gem/oq-engine/issues/3891')
     def test_point_outside(self):
         corners = [[(0.1, -0.1, 1), (-0.1, -0.1, 1)],
                    [(0.1, 0.1, 2), (-0.1, 0.1, 2)]]

@@ -13,15 +13,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import sys
 import unittest
 import numpy
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo import Mesh, Point, PlanarSurface
-
-if sys.platform == 'win32':
-    raise unittest.SkipTest('temporarily skipped on Windows')
 
 
 class _BaseMultiTestCase(unittest.TestCase):
@@ -77,7 +73,6 @@ class _BaseMultiTestCase(unittest.TestCase):
             return Point(self.lons.flatten()[0], self.lats.flatten()[0],
                          self.depths.flatten()[0])
 
-
     def setUp(self):
         self.surfaces_mesh2D = [
             self.FakeSurface(numpy.array([[-1., 2., 3.], [4., 5., 6.]]),
@@ -124,6 +119,8 @@ class _BaseMultiTestCase(unittest.TestCase):
                            numpy.array([1., 2., 3.]))
 
 
+# FIXME https://github.com/gem/oq-engine/issues/3891
+@unittest.skip('See https://github.com/gem/oq-engine/issues/3891')
 class DistancesTestCase(_BaseMultiTestCase):
     def test_min_distance_mesh2D(self):
         surf = MultiSurface(self.surfaces_mesh2D)
@@ -193,6 +190,8 @@ class DistancesTestCase(_BaseMultiTestCase):
                           self.mesh1D)
 
 
+# FIXME https://github.com/gem/oq-engine/issues/3891
+@unittest.skip('See https://github.com/gem/oq-engine/issues/3891')
 class SurfacePropertiesTestCase(_BaseMultiTestCase):
     def test_top_edge_depth(self):
         surf = MultiSurface(self.surfaces_mesh2D)
