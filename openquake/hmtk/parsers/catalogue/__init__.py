@@ -15,3 +15,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+
+"""
+Package :mod:`openquake.hmtk.parsers.catalogue` contains base classes and
+implementations of catalogue parsers.
+"""
+from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
+
+#__all__ = [CsvCatalogueParser]
