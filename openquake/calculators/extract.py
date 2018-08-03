@@ -255,12 +255,11 @@ def extract_hmaps(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol)
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+    for kind in dstore['hmaps']:
+        hmap = dstore['hmaps/' + kind]
         dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
