@@ -53,6 +53,9 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+
+#### For scientists
+
 * [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/master/doc/implementing-new-gsim.md)
 
 ### Installation
