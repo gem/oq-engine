@@ -276,8 +276,9 @@ class ClassicalCalculator(base.HazardCalculator):
                             self.datastore['hcurves/' + stat],
                             oq.imtls, oq.poes)
                 else:  # single realization
+                    pg = getters.PmapGetter(self.datastore, self.rlzs_assoc)
                     self.datastore['hmaps/mean'] = calc.make_hmap(
-                        self.datastore['poes'], oq.imtls, oq.poes)
+                        pg.get_mean(), oq.imtls, oq.poes)
 
     def calc_stats(self, parent):
         oq = self.oqparam
