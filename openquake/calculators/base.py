@@ -339,7 +339,7 @@ class HazardCalculator(BaseCalculator):
             csm = self.csm.pfilter(prefilter, oq.concurrent_tasks, mon)
         else:  # prefilter_sources='no'
             logging.info('Not prefiltering the sources')
-            csm = self.csm.pfilter(SourceFilter(None, {}), 0, mon)
+            csm = self.csm
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 
