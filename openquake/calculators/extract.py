@@ -175,7 +175,9 @@ def extract_hazard(dstore, what):
                 arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
             logging.info('extracting %s', key)
             yield key, arr
-        if oq.poes:
+        try:
+            hmap = dstore['hmaps/' + kind]
+        except KeyError:
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, kind)
