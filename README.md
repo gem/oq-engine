@@ -48,7 +48,7 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 * [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
 * [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
 
-### For developers
+#### For developers
 
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
