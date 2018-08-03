@@ -27,6 +27,7 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
+from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -264,6 +265,19 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
+        # save hmaps
+        if oq.poes:
+            logging.info('Computing hazard maps for PoEs=%s', oq.poes)
+            with self.monitor('computing hazard maps',
+                              autoflush=True, measuremem=True):
+                if 'hcurves' in self.datastore:
+                    for stat in self.datastore['hcurves']:
+                        self.datastore['hmaps/' + stat] = calc.make_hmap(
+                            self.datastore['hcurves/' + stat],
+                            oq.imtls, oq.poes)
+                else:  # single realization
+                    self.datastore['hmaps/mean'] = calc.make_hmap(
+                        self.datastore['poes'], oq.imtls, oq.poes)
 
     def calc_stats(self, parent):
         oq = self.oqparam

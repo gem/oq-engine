@@ -385,7 +385,7 @@ def export_hcurves_csv(ekey, dstore):
                 comment=comment)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            hmap = dstore['hmaps/' + kind]
             fnames.extend(
                 export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':
