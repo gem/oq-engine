@@ -331,15 +331,15 @@ class HazardCalculator(BaseCalculator):
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
             logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.filter(src_filter, mon)
+            csm = self.csm.pfilter(src_filter, oq.concurrent_tasks, mon)
         elif oq.prefilter_sources == 'rtree':
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.filter(prefilter, mon)
+            csm = self.csm.pfilter(prefilter, oq.concurrent_tasks, mon)
         else:  # prefilter_sources='no'
             logging.info('Not prefiltering the sources')
-            csm = self.csm.filter(SourceFilter(None, {}), mon)
+            csm = self.csm.pfilter(SourceFilter(None, {}), 0, mon)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 
