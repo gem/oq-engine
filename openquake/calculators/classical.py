@@ -265,20 +265,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
-        # save hmaps
-        if oq.poes:
-            logging.info('Computing hazard maps for PoEs=%s', oq.poes)
-            with self.monitor('computing hazard maps',
-                              autoflush=True, measuremem=True):
-                if 'hcurves' in self.datastore:
-                    for stat in self.datastore['hcurves']:
-                        self.datastore['hmaps/' + stat] = calc.make_hmap(
-                            self.datastore['hcurves/' + stat],
-                            oq.imtls, oq.poes)
-                else:  # single realization
-                    pg = getters.PmapGetter(self.datastore, self.rlzs_assoc)
-                    self.datastore['hmaps/mean'] = calc.make_hmap(
-                        pg.get_mean(), oq.imtls, oq.poes)
+        self.save_hmaps()
 
     def calc_stats(self, parent):
         oq = self.oqparam
