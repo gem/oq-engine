@@ -647,6 +647,26 @@ class HazardCalculator(BaseCalculator):
                 has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
+    def save_hmaps(self):
+        """
+        Save hazard maps generated from the hazard curves
+        """
+        oq = self.oqparam
+        if oq.poes:
+            logging.info('Computing hazard maps for PoEs=%s', oq.poes)
+            with self.monitor('computing hazard maps',
+                              autoflush=True, measuremem=True):
+                if 'hcurves' in self.datastore:
+                    # TODO: we could parallelize this branch
+                    for kind in self.datastore['hcurves']:
+                        self.datastore['hmaps/' + kind] = calc.make_hmap(
+                            self.datastore['hcurves/' + kind],
+                            oq.imtls, oq.poes)
+                else:  # single realization
+                    pg = PmapGetter(self.datastore, self.rlzs_assoc)
+                    self.datastore['hmaps/mean'] = calc.make_hmap(
+                        pg.get_mean(), oq.imtls, oq.poes)
+
     def post_process(self):
         """For compatibility with the engine"""
 
