@@ -27,7 +27,6 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
-from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base
 
