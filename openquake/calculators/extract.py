@@ -177,7 +177,7 @@ def extract_hazard(dstore, what):
             yield key, arr
         try:
             hmap = dstore['hmaps/' + kind]
-        except KeyError:
+        except KeyError:  # for kind=rlz-XXX
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, kind)
