@@ -258,8 +258,11 @@ def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
     :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
-    curves = util.compose_arrays(
-        sitemesh, calc.convert_to_array(pmap, len(sitemesh), pdic))
+    if isinstance(pmap, dict):
+        array = calc.convert_to_array(pmap, len(sitemesh), pdic)
+    else:
+        array = pmap
+    curves = util.compose_arrays(sitemesh, array)
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 

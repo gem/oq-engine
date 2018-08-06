@@ -28,7 +28,7 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import DictArray, group_array
+from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -256,11 +256,7 @@ def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    dic = {}
-    for kind in dstore['hmaps']:
-        hmap = dstore['hmaps/' + kind]
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    dic = {kind: dstore['hmaps/' + kind] for kind in dstore['hmaps']}
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 

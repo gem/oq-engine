@@ -17,9 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
 import numpy
-import h5py
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
@@ -220,6 +219,15 @@ def make_hmap(pmap, imtls, poes):
             for j, val in enumerate(value):
                 array[i * P + j] = val
     return hmap
+
+
+def make_hmap_array(pmap, imtls, poes, nsites):
+    """
+    :returns: a compound array of hazard maps of shape nsites
+    """
+    hmap = make_hmap(pmap, imtls, poes)
+    pdic = general.DictArray({imt: poes for imt in imtls})
+    return convert_to_array(hmap, nsites, pdic)
 
 
 def make_uhs(pmap, imtls, poes, nsites):

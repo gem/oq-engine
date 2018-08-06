@@ -656,16 +656,17 @@ class HazardCalculator(BaseCalculator):
             logging.info('Computing hazard maps for PoEs=%s', oq.poes)
             with self.monitor('computing hazard maps',
                               autoflush=True, measuremem=True):
+                n = len(self.sitecol)
                 if 'hcurves' in self.datastore:
                     # TODO: we could parallelize this branch
                     for kind in self.datastore['hcurves']:
-                        self.datastore['hmaps/' + kind] = calc.make_hmap(
+                        self.datastore['hmaps/' + kind] = calc.make_hmap_array(
                             self.datastore['hcurves/' + kind],
-                            oq.imtls, oq.poes)
+                            oq.imtls, oq.poes, n)
                 else:  # single realization
                     pg = PmapGetter(self.datastore, self.rlzs_assoc)
-                    self.datastore['hmaps/mean'] = calc.make_hmap(
-                        pg.get_mean(), oq.imtls, oq.poes)
+                    self.datastore['hmaps/mean'] = calc.make_hmap_array(
+                        pg.get_mean(), oq.imtls, oq.poes, n)
 
     def post_process(self):
         """For compatibility with the engine"""
