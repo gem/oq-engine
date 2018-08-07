@@ -463,7 +463,7 @@ producing too small PoEs.'''
                 for g, grp_id in enumerate(grp_ids):
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
-                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        ys = pmap[sid].array[oq.imtls(imt), 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
