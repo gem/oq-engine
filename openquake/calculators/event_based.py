@@ -134,14 +134,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    imtls = dstore['oqparam'].imtls
-    nsites = len(dstore['sitecol'])
-    hcurves = dstore['hcurves']
-    if 'mean' in hcurves:
-        mean = dstore['hcurves/mean']
-    elif len(hcurves) == 1:  # there is a single realization
-        mean = dstore['hcurves/rlz-0000']
-    return mean.convert(imtls, nsites)
+    return dstore['hcurves/mean'].value
 
 # ########################################################################## #
 
@@ -443,9 +436,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.cl.run(close=False)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
-            for imt in eb_mean_curves.dtype.names:
-                rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves[imt], eb_mean_curves[imt])
-                logging.warn('Relative difference with the classical '
-                             'mean curves for IMT=%s: %d%% at site index %d',
-                             imt, rdiff * 100, index)
+            rdiff, index = util.max_rel_diff_index(
+                cl_mean_curves, eb_mean_curves)
+            logging.warn('Relative difference with the classical '
+                         'mean curves: %d%% at site index %d',
+                         rdiff * 100, index)
