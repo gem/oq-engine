@@ -94,7 +94,7 @@ class ProbabilityCurve(object):
         """
         curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
-            curve[imt] = self.array[imtls.slicedic[imt], idx]
+            curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
 
@@ -207,8 +207,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[
-                    imtls.slicedic[imt], idx]
+                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
     # used when exporting to npy
@@ -233,7 +232,7 @@ class ProbabilityMap(dict):
                 continue
             for imt in imtls:
                 imls = curves.dtype[imt].names
-                values = array[imtls.slicedic[imt], idx]
+                values = array[imtls(imt), idx]
                 for iml, val in zip(imls, values):
                     curves[s][imt][iml] = val
         return curves
@@ -260,7 +259,7 @@ class ProbabilityMap(dict):
                 except KeyError:
                     pass  # the poes will be zeros
                 else:
-                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
+                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
         return curves
 
     def filter(self, sids):
