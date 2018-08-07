@@ -654,24 +654,20 @@ def view_task_risk(token, dstore):
 @view.add('hmap')
 def view_hmap(token, dstore):
     """
-    Display the highest 20 points of the mean hazard map. Called as
+    Display the first 20 points of the mean hazard map. Called as
     $ oq show hmap:0.1  # 10% PoE
     """
     try:
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    try:
-        mean = dstore['hcurves/mean']
-    except KeyError:  # there is a single realization
-        mean = dstore['hcurves/rlz-000']
+    mean = dstore['hcurves/mean'].value
     oq = dstore['oqparam']
-    hmap = calc.make_hmap(mean, oq.imtls, [poe])
-    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(items), dt)
-    for i, (maxvalue, sid) in enumerate(reversed(items)):
-        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
+    array = numpy.zeros(len(hmap), dt)
+    for i, vals in enumerate(hmap[:20]):
+        array[i] = (i, ) + tuple(vals)
     return rst_table(array)
 
 
