@@ -461,6 +461,7 @@ class Location(object):
         self.x, self.y = tuple(xyz)[:2]
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
+
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
@@ -482,13 +483,13 @@ def export_hcurves_xml_json(ekey, dstore):
         else:
             smlt_path = ''
             gsimlt_path = ''
-        curves = hcurves.convert(oq.imtls, len(sitemesh))
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
+            slc = oq.imtls(imt)
             imtype, sa_period, sa_damping = from_string(imt)
             fname = name[:-len_ext] + '-' + imt + '.' + fmt
-            data = [HazardCurve(Location(site), poes[imt])
-                    for site, poes in zip(sitemesh, curves)]
+            data = [HazardCurve(Location(site), poes[slc])
+                    for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
                                imls=oq.imtls[imt], imt=imtype,
