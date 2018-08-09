@@ -23,9 +23,6 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.scalerel.point import PointMSR
-
-pointMSR = PointMSR()
 
 
 def get_distances(rupture, mesh, param):
@@ -163,7 +160,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, sites, rupture, reqv_point=False):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -175,6 +172,10 @@ class ContextMaker(object):
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
+        :param reqv_point:
+            True if reqv is set and source is a point source. If True, rjb and
+            rrup are replaced in the distances context by equivalent values.
+
         :returns:
             Tuple of two items: sites and distances context.
 
@@ -185,9 +186,14 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
-            if param == 'repi' and self.reqv:
-                distances = self.reqv.get(distances, rupture.mag)
             setattr(dctx, param, distances)
+        if self.reqv and reqv_point:
+            reqv = self.reqv.get(getattr(dctx, 'repi'), rupture.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                setattr(dctx, 'rjb', reqv)
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
+                setattr(dctx, 'rrup', reqv_rup)
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
@@ -208,8 +214,6 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
-            if self.reqv and hasattr(src, 'location'):  # point source
-                src.magnitude_scaling_relationship = pointMSR
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen
@@ -221,7 +225,11 @@ class ContextMaker(object):
             rup.weight = weight
             try:
                 with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
+                    if hasattr(src, 'location'):  # point source
+                        sctx, dctx = self.make_contexts(
+                            sites, rup, reqv_point=True)
+                    else:
+                        sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             eff_ruptures += 1
