@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Implements a fix of Montalva et al (2016) for new coefficients (now
+    Montalva et al. (2017))
+  
   [Michele Simionato]
   * Honored `concurrent_tasks` in the prefiltering phase too
   * It is now legal to compute uniform hazard spectra for a single period
