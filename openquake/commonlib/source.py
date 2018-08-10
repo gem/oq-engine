@@ -773,16 +773,19 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, monitor=performance.Monitor()):
+    def pfilter(self, src_filter, concurrent_tasks,
+                monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
+        :param concurrent_tasks: how many tasks to generate
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
+        sources_by_grp = src_filter.pfilter(
+            self.get_sources(), concurrent_tasks, monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []
