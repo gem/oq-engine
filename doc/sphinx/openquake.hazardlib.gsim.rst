@@ -579,6 +579,14 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+montalva_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.montalva_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 multi
 ------------------------------------------
 
