@@ -51,7 +51,7 @@ override_dh_auto_clean:
 override_dh_install:
 	/opt/openquake/bin/python3 -m compileall $(PWD)/debian/python3-oq-engine$(PREFIX) || true
 	dh_install
-	sed -i 's@#.*env python@#!/opt/openquake/bin/python3@g' \
+	sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' \
 	  $$(grep -l 'env python' $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/lib/python3/dist-packages/openquake -name '*.py') \
           $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/bin -type f) \
 	  $$(find $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/utils -type f))

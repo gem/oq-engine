@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Honored `concurrent_tasks` in the prefiltering phase too
+  * It is now legal to compute uniform hazard spectra for a single period
   * Added command `oq plot_memory`
   * Introduced a MultiGMPE concept
   * Saved the size of the datastore in the database and used it in the WebUI
