@@ -225,7 +225,9 @@ class ContextMaker(object):
             rup.weight = weight
             try:
                 with self.ctx_mon:
-                    if hasattr(src, 'location'):  # point source
+                    # if point or area source
+                    if (hasattr(src, 'location') or
+                      hasattr(src, 'area_discretization')):
                         sctx, dctx = self.make_contexts(
                             sites, rup, reqv_point=True)
                     else:
