@@ -461,10 +461,7 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         sm_node = node_from_xml(self.input_file)[0]
         if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
             node_sets = [sm_node]
-            if "name" in sm_node.attrib:
-                sm_name = sm_node["name"]
-            else:
-                sm_name = ""
+            sm_name = sm_node.get("name", "")
         else:  # format NRML 0.5+
             node_sets = sm_node
             sm_name = sm_node["name"]
