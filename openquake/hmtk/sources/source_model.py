@@ -84,7 +84,7 @@ class mtkSourceModel(object):
             yield source
 
     def __len__(self):
-        return len(sources)
+        return len(self.sources)
 
     def get_number_sources(self):
         '''
