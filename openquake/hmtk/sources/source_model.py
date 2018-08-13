@@ -80,7 +80,11 @@ class mtkSourceModel(object):
             self.sources = []
 
     def __iter__(self):
-        return iter(self.sources)
+        for source in self.sources:
+            yield source
+
+    def __len__(self):
+        return len(self.sources)
 
     def get_number_sources(self):
         '''
