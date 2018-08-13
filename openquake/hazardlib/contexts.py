@@ -173,8 +173,9 @@ class ContextMaker(object):
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
 
         :param reqv_point:
-            True if reqv is set and source is a point source. If True, rjb and
-            rrup are replaced in the distances context by equivalent values.
+            True if reqv is set and source is a point or area source.
+            If True, rjb and rrup are replaced in the distances context
+            by equivalent values.
 
         :returns:
             Tuple of two items: sites and distances context.
