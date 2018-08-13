@@ -264,6 +264,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
+        self.save_hmaps()
 
     def calc_stats(self, parent):
         oq = self.oqparam
