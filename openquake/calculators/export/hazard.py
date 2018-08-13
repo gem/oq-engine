@@ -258,8 +258,11 @@ def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
     :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
-    curves = util.compose_arrays(
-        sitemesh, calc.convert_to_array(pmap, len(sitemesh), pdic))
+    if isinstance(pmap, dict):  # old format
+        array = calc.convert_to_array(pmap, len(sitemesh), pdic)
+    else:  # new format for engine >= 3.2
+        array = pmap
+    curves = util.compose_arrays(sitemesh, array)
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -385,7 +388,7 @@ def export_hcurves_csv(ekey, dstore):
                 comment=comment)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            hmap = dstore['hmaps/' + kind]
             fnames.extend(
                 export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':

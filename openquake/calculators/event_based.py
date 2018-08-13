@@ -428,6 +428,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for kind, stat in hstats:
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     self.datastore['hcurves/' + kind] = pmap
+            self.save_hmaps()
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if 'gmf_data' in self.datastore:

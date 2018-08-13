@@ -28,7 +28,7 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import DictArray, group_array
+from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -175,7 +175,9 @@ def extract_hazard(dstore, what):
                 arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
             logging.info('extracting %s', key)
             yield key, arr
-        if oq.poes:
+        try:
+            hmap = dstore['hmaps/' + kind]
+        except KeyError:  # for kind=rlz-XXX
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, kind)
@@ -253,13 +255,8 @@ def extract_hmaps(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    dic = {kind: dstore['hmaps/' + kind] for kind in dstore['hmaps']}
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
