@@ -347,10 +347,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs
             ).submit_all()
         acc = ires.reduce(self.agg_dicts, acc)
-        calc.check_overflow(self)  # check the number of events
         if self.oqparam.hazard_calculation_id is None:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos, acc)
+        calc.check_overflow(self)  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
