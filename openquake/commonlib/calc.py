@@ -301,8 +301,11 @@ def check_overflow(calc):
     store the GMFs (gmv_dt). They could be relaxed in the future.
     """
     max_ = dict(sites=2**16, events=2**32, imts=2**8)
-    num_ = dict(sites=len(calc.sitecol),
-                events=len(calc.datastore['events']),
+    try:
+        events = len(calc.datastore['events'])
+    except KeyError:
+        events = 0
+    num_ = dict(sites=len(calc.sitecol), events=events,
                 imts=len(calc.oqparam.imtls))
     for var in max_:
         if num_[var] > max_[var]:
