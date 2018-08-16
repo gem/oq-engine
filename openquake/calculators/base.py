@@ -660,16 +660,29 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         if oq.poes:
+            mon = self.monitor('computing hazard maps')
             logging.info('Computing hazard maps for PoEs=%s', oq.poes)
-            with self.monitor('computing hazard maps',
-                              autoflush=True, measuremem=True):
+            with mon:
                 N = len(self.sitecol.complete)
+                ct = oq.concurrent_tasks
                 if 'hcurves' in self.datastore:
-                    # TODO: we could parallelize this branch
-                    for kind in self.datastore['hcurves']:
-                        self.datastore['hmaps/' + kind] = calc.make_hmap_array(
-                            self.datastore['hcurves/' + kind],
-                            oq.imtls, oq.poes, N)
+                    kinds = self.datastore['hcurves']
+                    hmaps_dt = numpy.dtype(
+                        [('%s-%s' % (imt, poe), float)
+                         for imt in oq.imtls for poe in oq.poes])
+                    for kind in kinds:
+                        self.datastore.create_dset(
+                            'hmaps/' + kind, hmaps_dt, (N,), fillvalue=None)
+                    allargs = []
+                    for slc in general.split_in_slices(N, ct):
+                        hcurves_by_kind = {
+                            kind: self.datastore['hcurves/' + kind][slc]
+                            for kind in kinds}
+                        allargs.append((hcurves_by_kind, slc,
+                                        oq.imtls, oq.poes, mon))
+                    for dic, slc in Starmap(build_hmaps, allargs):
+                        for kind, hmaps in dic.items():
+                            self.datastore['hmaps/' + kind][slc] = hmaps
                 else:  # single realization
                     pg = PmapGetter(self.datastore, self.rlzs_assoc)
                     self.datastore['hmaps/mean'] = calc.make_hmap_array(
@@ -677,6 +690,17 @@ class HazardCalculator(BaseCalculator):
 
     def post_process(self):
         """For compatibility with the engine"""
+
+
+def build_hmaps(hcurves_by_kind, slice_, imtls, poes, monitor):
+    """
+    Build hazard maps from a slice of hazard curves.
+    :returns: a pair ({kind: hmaps}, slice)
+    """
+    dic = {}
+    for kind, hcurves in hcurves_by_kind.items():
+        dic[kind] = calc.make_hmap_array(hcurves, imtls, poes, len(hcurves))
+    return dic, slice_
 
 
 class RiskCalculator(HazardCalculator):
