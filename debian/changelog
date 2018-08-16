@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Parallelized the reading of the source models
   * Optimized `oq info --report` by not splitting the sources in that case
   * Speedup the download of the hazard curves, maps and uhs
   * Honored `concurrent_tasks` in the prefiltering phase too
