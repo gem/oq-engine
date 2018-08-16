@@ -664,11 +664,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Computing hazard maps for PoEs=%s', oq.poes)
             with mon:
                 N = len(self.sitecol.complete)
-                ct = oq.concurrent_tasks
+                ct = oq.concurrent_tasks or 1
                 if 'hcurves' in self.datastore:
                     kinds = self.datastore['hcurves']
                     hmaps_dt = numpy.dtype(
-                        [('%s-%s' % (imt, poe), float)
+                        [('%s-%s' % (imt, poe), F32)
                          for imt in oq.imtls for poe in oq.poes])
                     for kind in kinds:
                         self.datastore.create_dset(
