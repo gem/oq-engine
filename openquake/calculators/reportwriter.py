@@ -141,6 +141,7 @@ def build_report(job_ini, output_dir=None):
     p = mock.patch.object
     with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
         calc.oqparam.ground_motion_fields = False
+        calc.read_inputs.__func__.__defaults__ = (False,)  # no split sources
         calc.pre_execute()
         calc.execute()
     rw = ReportWriter(calc.datastore)
