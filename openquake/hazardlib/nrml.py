@@ -72,9 +72,11 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
+import os
 import re
 import sys
 import copy
+import pickle
 import decimal
 import logging
 import operator
@@ -305,7 +307,7 @@ validators = {
 }
 
 
-def parse_src_groups(fname, converter, monitor):
+def cache_source_model(fname, converter):
     """
     :param fname:
         the full pathname of a source model file
@@ -314,13 +316,45 @@ def parse_src_groups(fname, converter, monitor):
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
     """
+    name, ext = os.path.splitext(fname)
+    pikname = name + '.pik'
+    if os.path.exists(pikname):  # already cached
+        with open(pikname, 'rb') as f:
+            return pickle.load(f)
     if fname.endswith(('.xml', '.nrml')):
         sm = to_python(fname, converter)
     elif fname.endswith('.hdf5'):
         sm = sourceconverter.to_python(fname, converter)
     else:
         raise ValueError('Unrecognized extension in %s' % fname)
-    return sm.src_groups
+    with open(pikname, 'wb') as f:
+        pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
+    return sm
+
+
+def check_nonparametric_sources(fname, smodel, investigation_time):
+    """
+    :param fname:
+        full path to a source model file
+    :param smodel:
+        source model object
+    :param investigation_time:
+        investigation_time to compare with in the case of
+        nonparametric sources
+    :returns:
+        the nonparametric sources in the model
+    :raises:
+        a ValueError if the investigation_time is different from the expected
+    """
+    # NonParametricSeismicSources
+    np = [src for sg in smodel.src_groups for src in sg
+          if hasattr(src, 'data')]
+    if np and smodel.investigation_time != investigation_time:
+        raise ValueError(
+            'The source model %s contains an investigation_time '
+            'of %s, while the job.ini has %s' % (
+                fname, smodel.investigation_time, investigation_time))
+    return np
 
 
 class SourceModelParser(object):
@@ -332,30 +366,21 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse_src_groups(self, fname, apply_uncertainties):
+    def parse_src_groups(self, fname, apply_uncertainties, investigation_time):
         """
         :param fname:
             the full pathname of the source model file
         :param apply_uncertainties:
             a function modifying the sources
+        :param investigation_time:
+            the investigation_time in the job.ini file
         """
-        try:
-            sm = self.sm[fname]
-        except KeyError:
-            if fname.endswith(('.xml', '.nrml')):
-                sm = to_python(fname, self.converter)
-            elif fname.endswith('.hdf5'):
-                sm = sourceconverter.to_python(fname, self.converter)
-            else:
-                raise ValueError('Unrecognized extension in %s' % fname)
-            self.sm[fname] = sm
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in sm]
-        for group in groups:
+        sm = cache_source_model(fname, self.converter)
+        check_nonparametric_sources(fname, sm, investigation_time)
+        for group in sm:
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
@@ -363,29 +388,7 @@ class SourceModelParser(object):
                     src.num_ruptures = src.count_ruptures()
                     self.changed_sources += 1
         self.fname_hits[fname] += 1
-        return groups
-
-    def check_nonparametric_sources(self, investigation_time):
-        """
-        :param investigation_time:
-            investigation_time to compare with in the case of
-            nonparametric sources
-        :returns:
-            list of nonparametric sources in the composite source model
-        """
-        npsources = []
-        for fname, sm in self.sm.items():
-            # NonParametricSeismicSources
-            np = [src for sg in sm.src_groups for src in sg
-                  if hasattr(src, 'data')]
-            if np:
-                npsources.extend(np)
-                if sm.investigation_time != investigation_time:
-                    raise ValueError(
-                        'The source model %s contains an investigation_time '
-                        'of %s, while the job.ini has %s' % (
-                            fname, sm.investigation_time, investigation_time))
-        return npsources
+        return sm.src_groups
 
 
 def read(source, chatty=True, stop=None):
