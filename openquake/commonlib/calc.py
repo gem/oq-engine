@@ -291,26 +291,6 @@ def fix_minimum_intensity(min_iml, imts):
     return F32([min_iml.get(imt, 0) for imt in imts])
 
 
-def check_overflow(calc):
-    """
-    :param calc: an event based calculator
-
-    Raise a ValueError if the number of sites is larger than 65,536 or the
-    number of IMTs is larger than 256 or the number of ruptures is larger
-    than 4,294,967,296. The limits are due to the numpy dtype used to
-    store the GMFs (gmv_dt). They could be relaxed in the future.
-    """
-    max_ = dict(sites=2**16, events=2**32, imts=2**8)
-    num_ = dict(sites=len(calc.sitecol),
-                events=len(calc.datastore['events']),
-                imts=len(calc.oqparam.imtls))
-    for var in max_:
-        if num_[var] > max_[var]:
-            raise ValueError(
-                'The event based calculator is restricted to '
-                '%d %s, got %d' % (max_[var], var, num_[var]))
-
-
 class RuptureData(object):
     """
     Container for information about the ruptures of a given
