@@ -313,6 +313,26 @@ class EventBasedCalculator(base.HazardCalculator):
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
+    def check_overflow(self):
+        """
+        Raise a ValueError if the number of sites is larger than 65,536 or the
+        number of IMTs is larger than 256 or the number of ruptures is larger
+        than 4,294,967,296. The limits are due to the numpy dtype used to
+        store the GMFs (gmv_dt). They could be relaxed in the future.
+        """
+        max_ = dict(sites=2**16, events=2**32, imts=2**8)
+        try:
+            events = len(self.datastore['events'])
+        except KeyError:
+            events = 0
+        num_ = dict(sites=len(self.sitecol), events=events,
+                    imts=len(self.oqparam.imtls))
+        for var in max_:
+            if num_[var] > max_[var]:
+                raise ValueError(
+                    'The event based calculator is restricted to '
+                    '%d %s, got %d' % (max_[var], var, num_[var]))
+
     def execute(self):
         if self.oqparam.hazard_calculation_id:
             def saving_sources_by_task(allargs, dstore):
@@ -342,7 +362,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.oqparam.hazard_calculation_id is None:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos, acc)
-        calc.check_overflow(self)
+        self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
