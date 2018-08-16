@@ -23,6 +23,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.surface import PlanarSurface
 
 
 def get_distances(rupture, mesh, param):
@@ -160,7 +161,7 @@ class ContextMaker(object):
                                  (type(self).__name__, param))
             setattr(rupture, param, value)
 
-    def make_contexts(self, sites, rupture, reqv_point=False):
+    def make_contexts(self, sites, rupture):
         """
         Filter the site collection with respect to the rupture and
         create context objects.
@@ -171,11 +172,6 @@ class ContextMaker(object):
         :param rupture:
             Instance of
             :class:`openquake.hazardlib.source.rupture.BaseRupture`
-
-        :param reqv_point:
-            True if reqv is set and source is a point or area source.
-            If True, rjb and rrup are replaced in the distances context
-            by equivalent values.
 
         :returns:
             Tuple of two items: sites and distances context.
@@ -188,13 +184,13 @@ class ContextMaker(object):
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        if self.reqv and reqv_point:
-            reqv = self.reqv.get(getattr(dctx, 'repi'), rupture.mag)
+        if self.reqv and isinstance(rupture.surface, PlanarSurface):
+            reqv = self.reqv.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
-                setattr(dctx, 'rjb', reqv)
+                dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
                 reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
-                setattr(dctx, 'rrup', reqv_rup)
+                dctx.rrup = reqv_rup
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
@@ -226,13 +222,7 @@ class ContextMaker(object):
             rup.weight = weight
             try:
                 with self.ctx_mon:
-                    # if point or area source
-                    if (hasattr(src, 'location') or
-                      hasattr(src, 'area_discretization')):
-                        sctx, dctx = self.make_contexts(
-                            sites, rup, reqv_point=True)
-                    else:
-                        sctx, dctx = self.make_contexts(sites, rup)
+                    sctx, dctx = self.make_contexts(sites, rup)
             except FarAwayRupture:
                 continue
             eff_ruptures += 1
