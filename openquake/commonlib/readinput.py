@@ -527,9 +527,14 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
+
     psr = nrml.SourceModelParser(converter)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
+    elif in_memory:
+        logging.info('Pickling the source model(s)')
+        pik = logictree.parallel_pickle_source_models(
+            gsim_lt, source_model_lt, converter)
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
@@ -544,8 +549,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 src_groups.append(sg)
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Reading %s', fname)
-                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
+                src_groups.extend(psr.parse(
+                    fname, pik[fname], apply_unc, oqparam.investigation_time))
             else:  # just collect the TRT models
                 src_groups.extend(read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
@@ -564,9 +569,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
-
-    # check investigation_time
-    psr.check_nonparametric_sources(oqparam.investigation_time)
 
     # log if some source file is being used more than once
     dupl = 0
