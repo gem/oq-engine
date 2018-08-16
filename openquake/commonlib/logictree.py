@@ -34,7 +34,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5, node, performance
+from openquake.baselib import hdf5, node, performance, parallel
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
@@ -1484,4 +1484,9 @@ def pickle_source_models(gsim_lt, source_model_lt, converter):
         for name in sm.names.split():
             fnames.append(os.path.join(smlt_dir, name))
     monitor = performance.Monitor('cache source models')
-    return nrml.pickle_source_models(fnames, converter, monitor)
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    dic = parallel.Starmap.apply(nrml.pickle_source_models,
+                                 (fnames, converter, monitor),
+                                 distribute=dist).reduce()
+    parallel.Starmap.shutdown()  # close the processpool
+    return dic
