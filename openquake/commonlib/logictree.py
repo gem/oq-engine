@@ -700,21 +700,6 @@ class SourceModelLogicTree(object):
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
 
-    def cache_source_models(self, gsim_lt, converter):
-        """
-        Convert the source model files listed in the logic tree
-        into picked files.
-
-        :returns: a dictionary file -> file.pik
-        """
-        smlt_dir = os.path.abspath(os.path.dirname(self.filename))
-        fnames = []
-        for sm in self.gen_source_models(gsim_lt):
-            for name in sm.names.split():
-                fnames.append(os.path.join(smlt_dir, name))
-        monitor = performance.Monitor('cache source models')
-        return nrml.cache_source_models(fnames, converter, monitor)
-
     def gen_source_models(self, gsim_lt):
         """
         Yield empty LtSourceModel instances (one per effective realization)
@@ -1485,3 +1470,18 @@ class GsimLogicTree(object):
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
+
+
+def pickle_source_models(gsim_lt, source_model_lt, converter):
+    """
+    Convert the source model files listed in the logic tree
+    into picked files.
+    :returns: a dictionary file -> file.pik
+    """
+    smlt_dir = os.path.abspath(os.path.dirname(source_model_lt.filename))
+    fnames = []
+    for sm in source_model_lt.gen_source_models(gsim_lt):
+        for name in sm.names.split():
+            fnames.append(os.path.join(smlt_dir, name))
+    monitor = performance.Monitor('cache source models')
+    return nrml.pickle_source_models(fnames, converter, monitor)
