@@ -1476,13 +1476,18 @@ def pickle_source_models(gsim_lt, source_model_lt, converter):
     """
     Convert the source model files listed in the logic tree
     into picked files.
+
+    :param gsim_lt: a :class:`GsimLogicTree` instance
+    :param source_model_lt: a :class:`SourceModelLogicTree` instance
+    :param converter:
+        a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
     :returns: a dictionary file -> file.pik
     """
-    smlt_dir = os.path.abspath(os.path.dirname(source_model_lt.filename))
+    smlt_dir = os.path.dirname(source_model_lt.filename)
     fnames = []
     for sm in source_model_lt.gen_source_models(gsim_lt):
         for name in sm.names.split():
-            fnames.append(os.path.join(smlt_dir, name))
+            fnames.append(os.path.abspath(os.path.join(smlt_dir, name)))
     monitor = performance.Monitor('cache source models')
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(nrml.pickle_source_models,
