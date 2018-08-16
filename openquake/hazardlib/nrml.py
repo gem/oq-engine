@@ -305,6 +305,24 @@ validators = {
 }
 
 
+def parse_src_groups(fname, converter, monitor):
+    """
+    :param fname:
+        the full pathname of a source model file
+    :param converter:
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    """
+    if fname.endswith(('.xml', '.nrml')):
+        sm = to_python(fname, converter)
+    elif fname.endswith('.hdf5'):
+        sm = sourceconverter.to_python(fname, converter)
+    else:
+        raise ValueError('Unrecognized extension in %s' % fname)
+    return sm.src_groups
+
+
 class SourceModelParser(object):
     """
     A source model parser featuring a cache.
