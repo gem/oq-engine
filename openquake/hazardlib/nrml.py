@@ -307,7 +307,7 @@ validators = {
 }
 
 
-def cache_source_models(fnames, converter,  monitor):
+def pickle_source_models(fnames, converter,  monitor):
     """
     :param fnames:
         list of source model files
@@ -370,8 +370,7 @@ class SourceModelParser(object):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse_src_groups(self, fname, pik, apply_uncertainties,
-                         investigation_time):
+    def parse(self, fname, pik, apply_uncertainties, investigation_time):
         """
         :param fname:
             the full pathname of a source model file
@@ -393,7 +392,7 @@ class SourceModelParser(object):
                     src.num_ruptures = src.count_ruptures()
                     self.changed_sources += 1
         self.fname_hits[fname] += 1
-        return sm.src_groups
+        return sm
 
 
 def read(source, chatty=True, stop=None):
