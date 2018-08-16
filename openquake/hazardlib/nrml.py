@@ -75,7 +75,6 @@ import io
 import os
 import re
 import sys
-import copy
 import pickle
 import decimal
 import logging
@@ -85,7 +84,8 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby, deprecated
+from openquake.baselib.general import (
+    CallableDict, groupby, deprecated, gettemp)
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -307,29 +307,30 @@ validators = {
 }
 
 
-def cache_source_model(fname, converter):
+def cache_source_models(fnames, converter,  monitor):
     """
-    :param fname:
-        the full pathname of a source model file
+    :param fnames:
+        list of source model files
     :param converter:
         a SourceConverter instance
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
+    :returns:
+        a dictionary fname -> fname.pik
     """
-    name, ext = os.path.splitext(fname)
-    pikname = name + '.pik'
-    if os.path.exists(pikname):  # already cached
-        with open(pikname, 'rb') as f:
-            return pickle.load(f)
-    if fname.endswith(('.xml', '.nrml')):
-        sm = to_python(fname, converter)
-    elif fname.endswith('.hdf5'):
-        sm = sourceconverter.to_python(fname, converter)
-    else:
-        raise ValueError('Unrecognized extension in %s' % fname)
-    with open(pikname, 'wb') as f:
-        pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
-    return sm
+    fname2pik = {}
+    for fname in fnames:
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        elif fname.endswith('.hdf5'):
+            sm = sourceconverter.to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        pikname = gettemp(suffix='.pik')
+        fname2pik[fname] = pikname
+        with open(pikname, 'wb') as f:
+            pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
+    return fname2pik
 
 
 def check_nonparametric_sources(fname, smodel, investigation_time):
@@ -369,16 +370,20 @@ class SourceModelParser(object):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse_src_groups(self, fname, apply_uncertainties, investigation_time):
+    def parse_src_groups(self, fname, pik, apply_uncertainties,
+                         investigation_time):
         """
         :param fname:
-            the full pathname of the source model file
+            the full pathname of a source model file
+        :param pik:
+            the pathname of the corresponding pickled file
         :param apply_uncertainties:
             a function modifying the sources
         :param investigation_time:
             the investigation_time in the job.ini file
         """
-        sm = cache_source_model(fname, self.converter)
+        with open(pik, 'rb') as f:
+            sm = pickle.load(f)
         check_nonparametric_sources(fname, sm, investigation_time)
         for group in sm:
             for src in group:
