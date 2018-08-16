@@ -533,7 +533,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
         logging.info('Pickling the source model(s)')
-        pik = logictree.pickle_source_models(
+        pik = logictree.parallel_pickle_source_models(
             gsim_lt, source_model_lt, converter)
 
     # consider only the effective realizations

@@ -1472,7 +1472,7 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-def pickle_source_models(gsim_lt, source_model_lt, converter):
+def parallel_pickle_source_models(gsim_lt, source_model_lt, converter):
     """
     Convert the source model files listed in the logic tree
     into picked files.
