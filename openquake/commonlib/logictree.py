@@ -1484,14 +1484,14 @@ def pickle_source_models(gsim_lt, source_model_lt, converter):
     :returns: a dictionary file -> file.pik
     """
     smlt_dir = os.path.dirname(source_model_lt.filename)
-    fnames = []
+    fnames = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         for name in sm.names.split():
-            fnames.append(os.path.abspath(os.path.join(smlt_dir, name)))
+            fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
     monitor = performance.Monitor('cache source models')
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(nrml.pickle_source_models,
-                                 (fnames, converter, monitor),
+                                 (sorted(fnames), converter, monitor),
                                  distribute=dist).reduce()
     parallel.Starmap.shutdown()  # close the processpool
     return dic
