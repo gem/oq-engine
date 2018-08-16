@@ -663,10 +663,10 @@ def view_hmap(token, dstore):
         poe = 0.1
     mean = dstore['hcurves/mean'].value
     oq = dstore['oqparam']
-    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
+    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))[:20]
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
     array = numpy.zeros(len(hmap), dt)
-    for i, vals in enumerate(hmap[:20]):
+    for i, vals in enumerate(hmap):
         array[i] = (i, ) + tuple(vals)
     return rst_table(array)
 
