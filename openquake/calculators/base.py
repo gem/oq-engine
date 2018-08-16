@@ -371,7 +371,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self._read_risk_data()
-        self.check_overflow()  # check is self.sitecol is too large
+        self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
