@@ -362,12 +362,16 @@ class HazardCalculator(BaseCalculator):
         logging.warn('With a parent calculation reading the hazard '
                      'would be much faster')
 
+    def check_overflow(self):
+        """Overridden in event based"""
+
     def read_inputs(self, split_sources=True):
         """
         Read risk data and sources if any
         """
         oq = self.oqparam
         self._read_risk_data()
+        self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
