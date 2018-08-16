@@ -96,10 +96,10 @@ class ClassicalTestCase(CalculatorTestCase):
         got = view('pmap:grp-00', self.calc.datastore)
         self.assertEqual(got, '''\
 {0: <ProbabilityCurve
-[[0.00103659 0.        ]
- [0.         0.        ]
- [0.         0.        ]
- [0.         0.        ]]>}''')
+[[2.26776679e-03 0.00000000e+00]
+ [1.67915423e-05 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]]>}''')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
