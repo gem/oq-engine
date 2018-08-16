@@ -527,6 +527,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
+
+    pik = source_model_lt.cache_source_models(gsim_lt, converter)
+
     psr = nrml.SourceModelParser(converter)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
@@ -545,7 +548,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 src_groups.extend(psr.parse_src_groups(
-                    fname, apply_unc, oqparam.investigation_time))
+                    fname, pik[fname], apply_unc, oqparam.investigation_time))
             else:  # just collect the TRT models
                 src_groups.extend(read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
