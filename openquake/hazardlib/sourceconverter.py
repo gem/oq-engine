@@ -59,8 +59,8 @@ class SourceGroup(collections.Sequence):
     :param max_mag:
         the maximum magnitude among the given sources
     :param id:
-        an optional numeric ID (default None) useful to associate
-        the model to a database object
+        an optional numeric ID (default 0) set by the engine and used
+        when serializing SourceModels to HDF5
     :param eff_ruptures:
         the number of ruptures contained in the group; if -1,
         the number is unknown and has to be computed by using

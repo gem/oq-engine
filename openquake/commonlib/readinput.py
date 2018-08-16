@@ -544,8 +544,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 src_groups.append(sg)
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Reading %s', fname)
-                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
+                src_groups.extend(psr.parse_src_groups(
+                    fname, apply_unc, oqparam.investigation_time))
             else:  # just collect the TRT models
                 src_groups.extend(read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
@@ -564,9 +564,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
-
-    # check investigation_time
-    psr.check_nonparametric_sources(oqparam.investigation_time)
 
     # log if some source file is being used more than once
     dupl = 0
