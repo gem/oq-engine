@@ -362,12 +362,16 @@ class HazardCalculator(BaseCalculator):
         logging.warn('With a parent calculation reading the hazard '
                      'would be much faster')
 
+    def check_overflow(self):
+        """Overridden in event based"""
+
     def read_inputs(self, split_sources=True):
         """
         Read risk data and sources if any
         """
         oq = self.oqparam
         self._read_risk_data()
+        self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             with self.monitor('reading composite source model', autoflush=1):
                 self.csm = readinput.get_composite_source_model(oq)
@@ -377,6 +381,9 @@ class HazardCalculator(BaseCalculator):
                 if split_sources:
                     logging.info('Splitting sources')
                     self.csm.split_all(oq.minimum_magnitude)
+                else:  # do not split sources, used in `oq info --report`
+                    for src_group in self.csm.src_groups:
+                        self.csm.add_infos(src_group)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
