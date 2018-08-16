@@ -34,11 +34,11 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5, node, performance
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
-from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
@@ -699,6 +699,21 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
+
+    def cache_source_models(self, gsim_lt, converter):
+        """
+        Convert the source model files listed in the logic tree
+        into picked files.
+
+        :returns: a dictionary file -> file.pik
+        """
+        smlt_dir = os.path.abspath(os.path.dirname(self.filename))
+        fnames = []
+        for sm in self.gen_source_models(gsim_lt):
+            for name in sm.names.split():
+                fnames.append(os.path.join(smlt_dir, name))
+        monitor = performance.Monitor('cache source models')
+        return nrml.cache_source_models(fnames, converter, monitor)
 
     def gen_source_models(self, gsim_lt):
         """
