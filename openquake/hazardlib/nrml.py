@@ -72,7 +72,6 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
-import os
 import re
 import sys
 import pickle
@@ -190,15 +189,13 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
