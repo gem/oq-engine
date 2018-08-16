@@ -159,7 +159,7 @@ def calc_hazard_curves(
     :param filter_distance:
         The distance used to filter the ruptures (default rjb)
     :param reqv:
-        If not None, an instance of RepiEquivalent
+        If not None, an instance of RjbEquivalent
     :returns:
         An array of size N, where N is the number of sites, which elements
         are records with fields given by the intensity measure types; the
