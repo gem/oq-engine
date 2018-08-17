@@ -264,7 +264,7 @@ def make_uhs(hcurves, imtls, poes, nsites):
     """
     imts, _ = get_imts_periods(imtls)
     array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
+    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
     for field in array.dtype.names:
