@@ -874,7 +874,7 @@ def get_pmap_from_csv(oqparam, fname):
             valid.decreasing_probabilities)
     array = numpy.zeros((len(mesh), sum(num_values)))
     for imt_ in hcurves:
-        array[:, oqparam.imtls.slicedic[imt_]] = hcurves[imt_]
+        array[:, oqparam.imtls(imt_)] = hcurves[imt_]
     return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
@@ -906,7 +906,7 @@ def get_pmap_from_nrml(oqparam, fname):
     array = numpy.zeros((len(mesh), num_levels))
     imtls = DictArray(imtls)
     for imt_ in hcurves_by_imt:
-        array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
+        array[:, imtls(imt_)] = hcurves_by_imt[imt_]
     return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 

@@ -748,6 +748,9 @@ class DictArray(collections.Mapping):
         arr.array = array
         return arr
 
+    def __call__(self, imt):
+        return self.slicedic[imt]
+
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
 
