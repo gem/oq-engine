@@ -166,10 +166,10 @@ class OqParam(valid.ParamSet):
 
     def get_reqv(self):
         """
-        :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
+        :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
         """
         if 'reqv' in self.inputs:
-            return valid.RepiEquivalent(self.inputs['reqv'])
+            return valid.RjbEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
