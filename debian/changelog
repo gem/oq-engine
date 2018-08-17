@@ -1,7 +1,11 @@
+  [Michele Simionato]
+  * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
+    hazard curves and to reduce by half the download time
+
   [Graeme Weatherill]
   * Implements a fix of Montalva et al (2016) for new coefficients (now
     Montalva et al. (2017))
-  
+
   [Michele Simionato]
   * Parallelized the reading of the source models
   * Optimized `oq info --report` by not splitting the sources in that case
