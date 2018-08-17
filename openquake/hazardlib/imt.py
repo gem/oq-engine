@@ -28,7 +28,8 @@ import functools
 # be thrown away when we will need to introduce a new IMT.
 
 __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI',
-           'PGDfLatSpread', 'PGDfSettle', 'PGDfSlope', 'PGDfRupture')
+           'PGDfLatSpread', 'PGDfSettle', 'PGDfSlope', 'PGDfRupture',
+           'SDI','SAAVG','FIV3')
 
 DEFAULT_SA_DAMPING = 5.0
 
@@ -49,6 +50,20 @@ def from_string(imt):
             match = re.match(r'^SA\(([^)]+?)\)$', imt)
             period = float(match.group(1))
             instance = SA(period, DEFAULT_SA_DAMPING)
+        elif imt.startswith('SDI'):
+            match = re.match(r'^SDI\(([^)]+?)\)$', imt)
+            aux = match.group(1).split(",")
+            period = float(aux[0])
+            Cy = float(aux[1])
+            instance = SDI(period, Cy, DEFAULT_SA_DAMPING)
+        elif imt.startswith('SAAVG'):
+            match = re.match(r'^SAAVG\(([^)]+?)\)$', imt)
+            period = float(match.group(1))
+            instance = SAAVG(period, DEFAULT_SA_DAMPING)
+        elif imt.startswith('FIV3'):
+            match = re.match(r'^FIV3\(([^)]+?)\)$', imt)
+            period = float(match.group(1))
+            instance = FIV3(period)
         else:
             try:
                 imt_class = globals()[imt]
@@ -80,8 +95,8 @@ class _IMT(tuple, metaclass=IMTMeta):
     """
     _fields = ()
 
-    def __new__(cls, sa_period=None, sa_damping=None):
-        return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
+    def __new__(cls, sa_period=None, sa_damping=None, Cy=None):
+        return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping, Cy))
 
     def __getnewargs__(self):
         return tuple(getattr(self, field) for field in self._fields)
@@ -89,7 +104,14 @@ class _IMT(tuple, metaclass=IMTMeta):
     def __str__(self):
         if self[0] == 'SA':
             return 'SA(%s)' % self[1]
-        return self[0]
+        elif self[0] == 'SDI':
+            return 'SDI(%s,%s)' % (self[1], self[3])
+        elif self[0] == 'SAAVG':
+            return 'SAAVG(%s)' % self[1]
+        elif self[0] == 'FIV3':
+            return 'FIV3(%s)' % self[1]
+        else:
+    	    return self[0]
 
     def __lt__(self, other):
         return (self[0], self[1] or 0, self[2] or 0) < (
@@ -212,3 +234,89 @@ class PGDfRupture(_IMT):
     """
     Permanent ground deformation (m) from co-seismic rupture
     """
+
+class SDI(_IMT):
+    """
+    Spectral inelastic displacement, defined as the maximum displacement of
+    a single-degree-of-freedom system with bilinear behavior (3% postelastic
+	stiffness ratio).
+    Units are ``cm``.
+
+    :param period:
+        The natural period of the oscillator in seconds.
+	:param Cy:
+		The yield strengh coefficient, defined as Fy/W, where 
+		Fy is the lateral yield strengh of the system, and W 
+		is the weight of the system.
+    :param damping:
+        The degree of damping for the oscillator in percents.
+  
+    :raises ValueError:
+        if period or damping is not positive.
+		if Cy is out of the bounds of Cy_min - Cy_max for the given period
+    """
+    _fields = ('period', 'damping', 'Cy')
+
+    def __new__(cls, period, Cy, damping=DEFAULT_SA_DAMPING):
+        Cy_max = round(min(1.5, 1.5*0.6/period),4)
+        Cy_min = round(Cy_max/15,4)
+        if not period > 0:
+            raise ValueError('period must be positive')
+        if not damping > 0:
+            raise ValueError('damping must be positive')
+        if not Cy > 0:
+            raise ValueError('Cy must be positive')
+        if not Cy_min <= Cy <= Cy_max:
+            raise ValueError('Cy should be between {0:.4f} and {1:.4f}.  \
+                             Used Cy = {2:.5f}'.format(Cy_min, Cy_max, Cy))
+        return _IMT.__new__(cls, sa_period=period, Cy=Cy, sa_damping=damping)
+
+
+class SAAVG(_IMT):
+    """
+    Sa_avg, defined as the geometric mean of 10 equally spaced spectral 
+    accelerations between one fifth and three times the input period, 
+    Units are ``g``, times of gravitational acceleration.
+
+    :param period:
+        Input period in seconds.
+    :param damping:
+        The degree of damping for the spectral accelerations.
+
+    :raises ValueError:
+        if period or damping is not positive.
+    """
+    _fields = ('period', 'damping')
+
+    def __new__(cls, period, damping=DEFAULT_SA_DAMPING):
+        if not period > 0:
+            raise ValueError('period must be positive')
+        if not damping > 0:
+            raise ValueError('damping must be positive')
+        return _IMT.__new__(cls, period, damping)
+
+
+class FIV3(_IMT):
+    """
+    Filtered Incremental Velocity (3), defined as the absolute sum of either
+	the three local maximum or three local minimum period-dependent 
+	accumulated acceleration areas, in a period range of 70% of the input
+	period, computed at all instants t, from a low-pass filtered acceleration
+	time series using a 2nd order Butterworth filter and a 1Hz cut-off 
+	frequency.
+    Units are ``cm/s``.
+
+    :param period:
+        Input period.
+
+    :raises ValueError:
+        if period or damping is not positive.
+    """
+    _fields = ('period',)
+
+    def __new__(cls, period):
+        if not period > 0:
+            raise ValueError('period must be positive')
+        return _IMT.__new__(cls, period)
+
+
