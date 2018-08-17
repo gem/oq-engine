@@ -661,18 +661,15 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    try:
-        mean = dstore['hcurves/mean']
-    except KeyError:  # there is a single realization
-        mean = dstore['hcurves/rlz-000']
+    mean = dstore['hcurves/mean'].value
     oq = dstore['oqparam']
-    hmap = calc.make_hmap(mean, oq.imtls, [poe])
-    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(items), dt)
-    for i, (maxvalue, sid) in enumerate(reversed(items)):
-        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
-    return rst_table(array)
+    array = numpy.zeros(len(hmap), dt)
+    for i, vals in enumerate(hmap):
+        array[i] = (i, ) + tuple(vals)
+    array.sort(order=list(oq.imtls)[0])
+    return rst_table(array[:20])
 
 
 @view.add('flat_hcurves')

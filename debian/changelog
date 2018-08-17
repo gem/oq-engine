@@ -5,7 +5,7 @@
   [Michele Simionato]
   * Parallelized the reading of the source models
   * Optimized `oq info --report` by not splitting the sources in that case
-  * Speedup the download of the hazard maps
+  * Speedup the download of the hazard curves, maps and uhs
   * Honored `concurrent_tasks` in the prefiltering phase too
   * It is now legal to compute uniform hazard spectra for a single period
   * Added command `oq plot_memory`

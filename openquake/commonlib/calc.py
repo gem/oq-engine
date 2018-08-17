@@ -211,9 +211,9 @@ def make_hmap(pmap, imtls, poes):
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
-        curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
+        curves = numpy.array([pmap[sid].array[imtls(imt), 0]
                               for sid in pmap.sids])
-        data = compute_hazard_maps(curves, imtls[imt], poes)  # array N x P
+        data = compute_hazard_maps(curves, imtls[imt], poes)  # array (N, P)
         for sid, value in zip(pmap.sids, data):
             array = hmap[sid].array
             for j, val in enumerate(value):
@@ -225,12 +225,28 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     """
     :returns: a compound array of hazard maps of shape nsites
     """
-    hmap = make_hmap(pmap, imtls, poes)
-    pdic = general.DictArray({imt: poes for imt in imtls})
-    return convert_to_array(hmap, nsites, pdic)
+    if isinstance(pmap, probability_map.ProbabilityMap):
+        # this is here for compatibility with the
+        # past, it could be removed in the future
+        hmap = make_hmap(pmap, imtls, poes)
+        pdic = general.DictArray({imt: poes for imt in imtls})
+        return convert_to_array(hmap, nsites, pdic)
+    try:
+        hcurves = pmap.value
+    except AttributeError:
+        hcurves = pmap
+    dtlist = [('%s-%s' % (imt, poe), F64)
+              for imt in imtls for poe in poes]
+    array = numpy.zeros(len(pmap), dtlist)
+    for imt, imls in imtls.items():
+        curves = hcurves[:, imtls(imt)]
+        for poe in poes:
+            array['%s-%s' % (imt, poe)] = compute_hazard_maps(
+                curves, imls, poe).flat
+    return array  # array of shape N
 
 
-def make_uhs(pmap, imtls, poes, nsites):
+def make_uhs(hcurves, imtls, poes, nsites):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -238,7 +254,7 @@ def make_uhs(pmap, imtls, poes, nsites):
     uniform.
 
     :param pmap:
-        a probability map of hazard curves
+        a composite array of hazard curves
     :param imtls:
         a dictionary of intensity measure types and levels
     :param poes:
@@ -246,19 +262,15 @@ def make_uhs(pmap, imtls, poes, nsites):
     :returns:
         an composite array containing nsites uniform hazard maps
     """
-    P = len(poes)
     imts, _ = get_imts_periods(imtls)
-    hmap = make_hmap(pmap, imtls, poes)
-    for sid in range(nsites):  # fill empty positions if any
-        hmap.setdefault(sid, 0)
-    array = hmap.array
+    array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
-    for j, poe in enumerate(map(str, poes)):
-        for i, imt in enumerate(imtls):
-            if imt in imts:
-                uhs[poe][imt] = array[:, i * P + j, 0]
+    for field in array.dtype.names:
+        imt, poe = field.split('-')
+        if imt in imts:
+            uhs[poe][imt] = array[field]
     return uhs
 
 
