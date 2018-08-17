@@ -277,7 +277,8 @@ def add_imt(fname, imt):
     return os.path.join(os.path.dirname(fname), newname)
 
 
-def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
+def export_hcurves_by_imt_csv(
+        key, kind, rlzs_assoc, fname, sitecol, array, oq):
     """
     Export the curves of the given realization into CSV.
 
@@ -286,13 +287,13 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
     :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param pmap: a probability map
+    :param array: an array of shape (N, L) and dtype numpy.float32
     :param oq: job.ini parameters
     """
     nsites = len(sitecol)
     fnames = []
-    slicedic = oq.imtls.slicedic
     for imt, imls in oq.imtls.items():
+        slc = oq.imtls(imt)
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
@@ -300,7 +301,10 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-            poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
+            if isinstance(array, dict):  # is a pmap, for old versions
+                poes = array.setdefault(sid, 0).array[slc]
+            else:  # is an array for recent versions of the engine
+                poes = array[sid, slc]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ', imt="%s"' % imt,
@@ -457,6 +461,7 @@ class Location(object):
         self.x, self.y = tuple(xyz)[:2]
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
+
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
@@ -478,13 +483,13 @@ def export_hcurves_xml_json(ekey, dstore):
         else:
             smlt_path = ''
             gsimlt_path = ''
-        curves = hcurves.convert(oq.imtls, len(sitemesh))
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
+            slc = oq.imtls(imt)
             imtype, sa_period, sa_damping = from_string(imt)
             fname = name[:-len_ext] + '-' + imt + '.' + fmt
-            data = [HazardCurve(Location(site), poes[imt])
-                    for site, poes in zip(sitemesh, curves)]
+            data = [HazardCurve(Location(site), poes[slc])
+                    for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
                                imls=oq.imtls[imt], imt=imtype,
@@ -504,11 +509,9 @@ def export_hmaps_xml_json(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     fnames = []
     writercls = hazard_writers.HazardMapXMLWriter
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     nsites = len(sitemesh)
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items():
-        hmaps = calc.make_hmap(
-            hcurves, oq.imtls, oq.poes).convert(pdic, nsites)
+        hmaps = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, nsites)
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -517,11 +520,11 @@ def export_hmaps_xml_json(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         for imt in oq.imtls:
-            for j, poe in enumerate(oq.poes):
+            for poe in oq.poes:
                 suffix = '-%s-%s' % (poe, imt)
                 fname = hazard_curve_name(
                     dstore, ekey, kind + suffix, rlzs_assoc)
-                data = [HazardMap(site[0], site[1], _extract(hmap, imt, j))
+                data = [HazardMap(site[0], site[1], hmap['%s-%s' % (imt, poe)])
                         for site, hmap in zip(sitemesh, hmaps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
