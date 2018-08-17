@@ -172,7 +172,7 @@ def extract_hazard(dstore, what):
             key = 'hcurves/%s/%s' % (imt, kind)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
             for sid in pmap:
-                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
         try:
@@ -237,13 +237,18 @@ def extract_hcurves(dstore, what):
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
+    if 'hcurves' not in dstore:
+        return []
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol, complete=False)
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[kind] = hcurves.convert_npy(oq.imtls, sitecol.sids)
+    dtlist = []
+    for imt, imls in oq.imtls.items():
+        dt = numpy.dtype([(str(iml), F32) for iml in imls])
+        dtlist.append((imt, dt))
+    for kind, hcurves in dstore['hcurves'].items():
+        dic[kind] = hcurves.value.view(dtlist).flatten()
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -541,4 +546,4 @@ def extract_mean_std_curves(dstore, what):
     arr = getter.get_mean().array
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls.slicedic[imt]]
+        yield 'poes/' + imt, arr[:, getter.imtls(imt)]
