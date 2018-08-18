@@ -390,9 +390,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         prefixes = set(f.__name__
                        for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-        if imt.prefix not in prefixes:
+        if imt.name not in prefixes:
             raise ValueError('imt %s is not supported by %s' %
-                             (imt.prefix, type(self).__name__))
+                             (imt.name, type(self).__name__))
 
     def __lt__(self, other):
         """
@@ -667,7 +667,7 @@ class CoeffsTable(object):
             self._setup_table_from_str(table, sa_damping)
         elif isinstance(table, dict):
             for imt in table:
-                if imt.prefix == 'SA':
+                if imt.name == 'SA':
                     self.sa_coeffs[imt] = table[imt]
                 else:
                     self.non_sa_coeffs[imt] = table[imt]
@@ -717,7 +717,7 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if imt.prefix != 'SA':
+        if imt.name != 'SA':
             return self.non_sa_coeffs[imt]
 
         try:

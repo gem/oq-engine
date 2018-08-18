@@ -81,7 +81,7 @@ class _IMT(tuple, metaclass=IMTMeta):
     _fields = ()
 
     @property
-    def prefix(self):
+    def name(self):
         return self[0]
 
     def __new__(cls, sa_period=None, sa_damping=None):
@@ -100,7 +100,7 @@ class _IMT(tuple, metaclass=IMTMeta):
             other[0], other[1] or 0, other[2] or 0)
 
     def __repr__(self):
-        if not self._fields:  # return the prefix
+        if not self._fields:  # return the name
             return self[0]
         return '%s(%s)' % (type(self).__name__,
                            ', '.join(str(getattr(self, field))
