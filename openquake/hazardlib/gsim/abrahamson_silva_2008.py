@@ -478,6 +478,8 @@ class AbrahamsonSilva2008(GMPE):
         """
         Compute and return the a22 factor, equation 20, page 80.
         """
+        if imt.prefix == 'PGV':
+            return 0.0
         period = imt.period
         if period < 2.0:
             return 0.0
