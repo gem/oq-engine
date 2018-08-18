@@ -148,7 +148,7 @@ class Kanno2006Shallow(GMPE):
         ln_stddevs = np.array(log_stddevs)*LOG10
 
         # convert accelerations from cm/s^2 to g
-        if not isinstance(imt, PGV):
+        if not imt.prefix == "PGV":
             ln_mean -= np.log(100*g)
 
         return ln_mean, ln_stddevs
