@@ -650,14 +650,8 @@ class Starmap(object):
         """
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
-        elif self.distribute in ('processpool', 'threadpool'):
-            it = self._iter_pool()
-        elif self.distribute == 'celery':
-            it = self._iter_celery()
-        elif self.distribute == 'zmq':
-            it = self._iter_zmq()
-        elif self.distribute == 'dask':
-            it = self._iter_dask()
+        else:
+            it = getattr(self, '_iter_' + self.distribute)()
         num_tasks = next(it)
         return IterResult(it, self.name, self.argnames, num_tasks,
                           self.sent, progress, self.hdf5)
@@ -677,12 +671,14 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args)
 
-    def _iter_pool(self):
+    def _iter_processpool(self):
         safefunc = functools.partial(safely_call, self.task_func)
         allargs = list(self._genargs())
         yield len(allargs)
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
+
+    _iter_threadpool = _iter_processpool
 
     def iter_native(self, results):
         for task_id, result_dict in ResultSet(results).iter_native():
