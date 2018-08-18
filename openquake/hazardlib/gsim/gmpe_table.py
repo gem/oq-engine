@@ -409,7 +409,7 @@ class GMPETable(GMPE):
                 continue
             else:
                 try:
-                    factory = getattr(imt_module.imt, key)
+                    factory = getattr(imt_module, key)
                 except Exception:
                     continue
                 imt_list.append(factory)

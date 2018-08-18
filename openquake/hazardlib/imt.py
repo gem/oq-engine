@@ -100,9 +100,11 @@ class _IMT(tuple, metaclass=IMTMeta):
             other[0], other[1] or 0, other[2] or 0)
 
     def __repr__(self):
+        if not self._fields:  # return the prefix
+            return self[0]
         return '%s(%s)' % (type(self).__name__,
-                           ', '.join('%s=%s' % (field, getattr(self, field))
-                                     for field in type(self)._fields))
+                           ', '.join(str(getattr(self, field))
+                                     for field in self._fields))
 
 
 class PGA(_IMT):
