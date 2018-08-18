@@ -713,10 +713,10 @@ class Starmap(object):
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
                 num_results = 0
                 for args in self._genargs(backurl):
                     sender.send((self.task_func, args))
