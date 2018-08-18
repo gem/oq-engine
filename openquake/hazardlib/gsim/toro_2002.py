@@ -55,8 +55,8 @@ class ToroEtAl2002(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: two : horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
@@ -89,11 +89,10 @@ class ToroEtAl2002(GMPE):
 
         # apply decay factor for 3 and 4 seconds (not originally supported
         # by the equations)
-        if isinstance(imt, SA):
-            if imt.period == 3.0:
-                mean /= 0.612
-            if imt.period == 4.0:
-                mean /= 0.559
+        if imt.period == 3.0:
+            mean /= 0.612
+        if imt.period == 4.0:
+            mean /= 0.559
 
         return mean, stddevs
 
@@ -139,7 +138,7 @@ class ToroEtAl2002(GMPE):
         sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
 
         # epistemic uncertainty
-        if isinstance(imt, PGA) or (isinstance(imt, SA) and imt.period < 1):
+        if imt.period < 1:
             sigma_epi = 0.36 + 0.07 * (mag - 6)
         else:
             sigma_epi = 0.34 + 0.06 * (mag - 6)

@@ -80,6 +80,10 @@ class _IMT(tuple, metaclass=IMTMeta):
     """
     _fields = ()
 
+    @property
+    def prefix(self):
+        return self[0]
+
     def __new__(cls, sa_period=None, sa_damping=None):
         return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
 
