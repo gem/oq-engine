@@ -82,7 +82,7 @@ class Atkinson2015(GMPE):
         imean = (self._get_magnitude_term(C, rup.mag) +
                  self._get_distance_term(C, dists.rhypo, rup.mag))
         # Convert mean from cm/s and cm/s/s
-        if imt.prefix in "SA PGA":
+        if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log(10.0 ** imean)

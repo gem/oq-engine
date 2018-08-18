@@ -417,7 +417,7 @@ class AbrahamsonSilva2008(GMPE):
         """
         Compute and return v1 factor, equation 6, page 77.
         """
-        if imt.prefix == "SA":
+        if imt.name == "SA":
             t = imt.period
             if t <= 0.50:
                 v1 = 1500.0
@@ -427,7 +427,7 @@ class AbrahamsonSilva2008(GMPE):
                 v1 = np.exp(6.76 - 0.297 * np.log(t))
             else:
                 v1 = 700.0
-        elif imt.prefix == "PGA":
+        elif imt.name == "PGA":
             v1 = 1500.0
         else:
             # this is for PGV
@@ -441,9 +441,9 @@ class AbrahamsonSilva2008(GMPE):
         """
         e2 = np.zeros_like(vs30)
 
-        if imt.prefix == "PGV":
+        if imt.name == "PGV":
             period = 1
-        elif imt.prefix == "PGA":
+        elif imt.name == "PGA":
             period = 0
         else:
             period = imt.period
@@ -478,7 +478,7 @@ class AbrahamsonSilva2008(GMPE):
         """
         Compute and return the a22 factor, equation 20, page 80.
         """
-        if imt.prefix == 'PGV':
+        if imt.name == 'PGV':
             return 0.0
         period = imt.period
         if period < 2.0:
