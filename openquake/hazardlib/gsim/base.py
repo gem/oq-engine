@@ -388,9 +388,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
         """
-        prefixes = set(f.__name__
-                       for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-        if imt.name not in prefixes:
+        names = set(f.__name__
+                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+        if imt.name not in names:
             raise ValueError('imt %s is not supported by %s' %
                              (imt.name, type(self).__name__))
 
