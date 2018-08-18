@@ -82,6 +82,7 @@ class _IMT(tuple, metaclass=IMTMeta):
 
     @property
     def name(self):
+        """The name of the Intensity Measure Type (ex. "PGA", "SA", ...)"""
         return self[0]
 
     def __new__(cls, sa_period=None, sa_damping=None):
