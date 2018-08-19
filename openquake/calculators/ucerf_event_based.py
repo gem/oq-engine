@@ -396,7 +396,9 @@ class UCERFRiskCalculator(EbrCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm_info.grp_by("trt")
-        res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
+        res = parallel.Starmap(
+            compute_losses, self.gen_args(),
+            self.monitor()).submit_all()
         self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
