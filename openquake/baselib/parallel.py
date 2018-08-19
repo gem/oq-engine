@@ -364,10 +364,9 @@ def safely_call(func, args, monitor=dummy_mon):
     # Check is done anyway in other parts of the code
     # further investigation is needed
     # check_mem_usage(mon)  # check if too much memory is used
-    backurl = getattr(mon, 'backurl', None)
-    if backurl is None:
+    if monitor.backurl is None:
         return res
-    with Socket(backurl, zmq.PUSH, 'connect') as zsocket:
+    with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         try:
             zsocket.send(res)
         except Exception:  # like OverflowError
@@ -617,7 +616,7 @@ class Starmap(object):
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
-        self.backurl = None  # overridden later
+        self.monitor.backurl = None  # overridden later
         h5 = self.monitor.hdf5
         task_info = 'task_info/' + self.name
         if h5 and task_info not in h5:  # first time
@@ -653,7 +652,6 @@ class Starmap(object):
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
-            mon.backurl = self.backurl
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
@@ -710,7 +708,8 @@ class Starmap(object):
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
             results = []
             for piks in self._genargs():
                 res = safetask.delay(self.task_func, piks, self.monitor)
@@ -722,7 +721,8 @@ class Starmap(object):
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
