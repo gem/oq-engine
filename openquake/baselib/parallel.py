@@ -627,10 +627,6 @@ class Starmap(object):
             hdf5.create(h5, 'performance_data', perf_dt)
 
     @property
-    def hdf5(self):
-        return self.monitor.hdf5
-
-    @property
     def num_tasks(self):
         """
         The number of tasks, if known, or the empty string otherwise.
@@ -669,7 +665,7 @@ class Starmap(object):
             it = getattr(self, '_iter_' + self.distribute)()
         num_tasks = next(it)
         return IterResult(it, self.name, self.argnames, num_tasks,
-                          self.sent, progress, self.hdf5)
+                          self.sent, progress, self.monitor.hdf5)
 
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         """
