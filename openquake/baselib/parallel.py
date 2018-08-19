@@ -334,7 +334,10 @@ class Result(object):
         return val
 
 
-def safely_call(func, args):
+dummy_mon = Monitor()
+
+
+def safely_call(func, args, monitor=dummy_mon):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -345,17 +348,18 @@ def safely_call(func, args):
     :param func: the function to call
     :param args: the arguments
     """
-    newmon = Monitor('total ' + func.__name__, measuremem=True)
-    with newmon:
+    monitor.operation = 'total ' + func.__name__
+    monitor.measuremem = True
+    with monitor:
         if args and hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
             mon.operation = func.__name__
-            mon.children.append(newmon)  # newmon is a child of mon
+            mon.children.append(monitor)  # monitor is a child of mon
         else:  # in the DbServer
-            mon = newmon
+            mon = monitor
         try:
             res = Result(func(*args), mon)
         except Exception:
@@ -567,7 +571,7 @@ class Starmap(object):
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
               maxweight=None, weight=lambda item: 1,
-              key=lambda item: 'Unspecified', name=None,
+              key=lambda item: 'Unspecified', monitor=dummy_mon,
               distribute=None, progress=logging.info):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
@@ -581,7 +585,7 @@ class Starmap(object):
         :param maxweight: if not None, used to split the tasks
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
-        :param name: name of the task to be used in the log
+        :param monitor: Monitor instance (default dummy_mon)
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :returns: an :class:`IterResult` object
@@ -593,12 +597,14 @@ class Starmap(object):
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         task_args = [(ch,) + args for ch in chunks]
-        return cls(task, task_args, name, distribute).submit_all(progress)
+        return cls(task, task_args, monitor, distribute).submit_all(progress)
 
-    def __init__(self, task_func, task_args, name=None, distribute=None):
+    def __init__(self, task_func, task_args, monitor=dummy_mon,
+                 distribute=None):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
-        self.name = name or task_func.__name__
+        self.monitor = monitor
+        self.name = monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         # a task can be a function, a class or an instance with a __call__
