@@ -190,6 +190,13 @@ task_data_dt = numpy.dtype(
      ('mem_gb', numpy.float32)])
 
 
+# helper for celery distribution
+def _iter_native(task_ids, results):
+    for task_id, result_dict in ResultSet(results).iter_native():
+        task_ids.remove(task_id)
+        yield result_dict['result']
+
+
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or 'processpool'
@@ -681,11 +688,6 @@ class Starmap(object):
 
     _iter_threadpool = _iter_processpool
 
-    def iter_native(self, results):
-        for task_id, result_dict in ResultSet(results).iter_native():
-            self.task_ids.remove(task_id)
-            yield result_dict['result']
-
     def loop(self, ierr, isocket):
         for err, res in zip(ierr, isocket):
             if isinstance(err, Exception):  # TaskRevokedError
@@ -699,7 +701,6 @@ class Starmap(object):
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
-            logging.debug('Using receiver %s', self.backurl)
             results = []
             for piks in self._genargs():
                 res = safetask.delay(self.task_func, piks)
@@ -708,7 +709,8 @@ class Starmap(object):
                 results.append(res)
             num_results = len(results)
             yield num_results
-            yield from self.loop(self.iter_native(results), iter(socket))
+            yield from self.loop(_iter_native(self.task_ids, results),
+                                 iter(socket))
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
