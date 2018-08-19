@@ -381,12 +381,12 @@ if OQ_DISTRIBUTE.startswith('celery'):
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
+
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
-    # helper
-    def _iter_native(task_ids, results):
+    def _iter_native(task_ids, results):  # helper
         for task_id, result_dict in ResultSet(results).iter_native():
             task_ids.remove(task_id)
             yield result_dict['result']
