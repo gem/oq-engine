@@ -685,6 +685,16 @@ class Starmap(object):
             self.task_ids.remove(task_id)
             yield result_dict['result']
 
+    def loop(self, ierr, isocket):
+        for err, res in zip(ierr, isocket):
+            if isinstance(err, Exception):  # TaskRevokedError
+                raise err
+            elif self.calc_id and self.calc_id != res.mon.calc_id:
+                logging.warn('Discarding a result from job %d, since this '
+                             'is job %d', res.mon.calc_id, self.calc_id)
+                continue
+            yield res
+
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
@@ -697,17 +707,7 @@ class Starmap(object):
                 results.append(res)
             num_results = len(results)
             yield num_results
-            isocket = iter(socket)
-            for err in self.iter_native(results):
-                res = next(isocket)
-                if self.calc_id and self.calc_id != res.mon.calc_id:
-                    logging.warn('Discarding a result from job %d, since this '
-                                 'is job %d', res.mon.calc_id, self.calc_id)
-                    continue
-                if isinstance(err, Exception):  # TaskRevokedError
-                    raise err
-                num_results -= 1
-                yield res
+            yield from self.loop(self.iter_native(results), iter(socket))
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
@@ -720,14 +720,7 @@ class Starmap(object):
                     sender.send((self.task_func, args))
                     num_results += 1
             yield num_results
-            isocket = iter(socket)
-            for _ in range(num_results):
-                res = next(isocket)
-                if self.calc_id and self.calc_id != res.mon.calc_id:
-                    logging.warn('Discarding a result from job %d, since this '
-                                 'is job %d', res.mon.calc_id, self.calc_id)
-                    continue
-                yield res
+            yield from self.loop(range(num_results), iter(socket))
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func)
