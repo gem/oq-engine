@@ -604,6 +604,7 @@ class Starmap(object):
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
+        self.backurl = None  # overridden later
 
     @property
     def num_tasks(self):
@@ -617,7 +618,7 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def _genargs(self, backurl=None, pickle=True):
+    def _genargs(self, pickle=True):
         """
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
@@ -637,7 +638,7 @@ class Starmap(object):
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
-            mon.backurl = backurl
+            mon.backurl = self.backurl
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
@@ -697,10 +698,10 @@ class Starmap(object):
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
-            logging.debug('Using receiver %s', backurl)
+            self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
+            logging.debug('Using receiver %s', self.backurl)
             results = []
-            for piks in self._genargs(backurl):
+            for piks in self._genargs():
                 res = safetask.delay(self.task_func, piks)
                 # populating Starmap.task_ids, used in celery_cleanup
                 self.task_ids.append(res.task_id)
@@ -711,12 +712,12 @@ class Starmap(object):
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
+            self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
                 num_results = 0
-                for args in self._genargs(backurl):
+                for args in self._genargs():
                     sender.send((self.task_func, args))
                     num_results += 1
             yield num_results
