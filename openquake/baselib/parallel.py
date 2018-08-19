@@ -345,16 +345,17 @@ def safely_call(func, args):
     :param func: the function to call
     :param args: the arguments
     """
-    with Monitor('total ' + func.__name__, measuremem=True) as child:
+    newmon = Monitor('total ' + func.__name__, measuremem=True)
+    with newmon:
         if args and hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if args and isinstance(args[-1], Monitor):
             mon = args[-1]
             mon.operation = func.__name__
-            mon.children.append(child)  # child is a child of mon
+            mon.children.append(newmon)  # newmon is a child of mon
         else:  # in the DbServer
-            mon = child
+            mon = newmon
         try:
             res = Result(func(*args), mon)
         except Exception:
