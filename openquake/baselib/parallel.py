@@ -328,6 +328,7 @@ class Result(object):
 
 
 dummy_mon = Monitor()
+dummy_mon.backurl = None
 
 
 def safely_call(func, args, monitor=dummy_mon):
