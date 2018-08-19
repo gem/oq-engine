@@ -145,7 +145,6 @@ fast sources.
 """
 import os
 import sys
-import mock
 import time
 import socket
 import signal
