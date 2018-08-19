@@ -697,7 +697,8 @@ class Starmap(object):
 
     _iter_threadpool = _iter_processpool
 
-    def loop(self, ierr, isocket):
+    def _loop(self, ierr, isocket, num_results):
+        yield num_results
         for err, res in zip(ierr, isocket):
             if isinstance(err, Exception):  # TaskRevokedError
                 raise err
@@ -716,10 +717,8 @@ class Starmap(object):
                 # populating Starmap.task_ids, used in celery_cleanup
                 self.task_ids.append(res.task_id)
                 results.append(res)
-            num_results = len(results)
-            yield num_results
-            yield from self.loop(_iter_native(self.task_ids, results),
-                                 iter(socket))
+            yield from self._loop(_iter_native(self.task_ids, results),
+                                  iter(socket), len(results))
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
@@ -729,10 +728,10 @@ class Starmap(object):
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
                 num_results = 0
                 for args in self._genargs():
-                    sender.send((self.task_func, args))
+                    sender.send((self.task_func, args, self.monitor))
                     num_results += 1
-            yield num_results
-            yield from self.loop(range(num_results), iter(socket))
+            yield from self._loop(range(num_results), iter(socket),
+                                  num_results)
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func,
