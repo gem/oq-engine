@@ -123,7 +123,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
 
-    def monitor(self, operation='dummy', **kw):
+    def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
