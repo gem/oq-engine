@@ -356,7 +356,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if self.oqparam.ground_motion_fields is False:
                 logging.info('Generating ruptures only')
             ires = parallel.Starmap(
-                self.core_task.__func__, iterargs
+                self.core_task.__func__, iterargs, self.monitor()
             ).submit_all()
         acc = ires.reduce(self.agg_dicts, acc)
         if self.oqparam.hazard_calculation_id is None:

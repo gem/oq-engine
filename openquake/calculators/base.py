@@ -123,7 +123,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
 
-    def monitor(self, operation, **kw):
+    def monitor(self, operation='dummy', **kw):
         """
         :returns: a new Monitor instance
         """
@@ -680,7 +680,7 @@ class HazardCalculator(BaseCalculator):
                             for kind in kinds}
                         allargs.append((hcurves_by_kind, slc,
                                         oq.imtls, oq.poes, mon))
-                    for dic, slc in Starmap(build_hmaps, allargs):
+                    for dic, slc in Starmap(build_hmaps, allargs, mon):
                         for kind, hmaps in dic.items():
                             self.datastore['hmaps/' + kind][slc] = hmaps
                 else:  # single realization
@@ -841,7 +841,9 @@ class RiskCalculator(HazardCalculator):
         mon = self.monitor('risk')
         all_args = [(riskinput, self.riskmodel, self.param, mon)
                     for riskinput in self.riskinputs]
-        res = Starmap(self.core_task.__func__, all_args).reduce(self.combine)
+        res = Starmap(
+            self.core_task.__func__, all_args, mon
+        ).reduce(self.combine)
         return res
 
     def combine(self, acc, res):
