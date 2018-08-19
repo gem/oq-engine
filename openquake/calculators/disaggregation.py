@@ -297,8 +297,9 @@ producing too small PoEs.'''
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
-        results = parallel.Starmap(compute_disagg, all_args).reduce(
-            self.agg_result, AccumDict(accum={}))
+        results = parallel.Starmap(
+            compute_disagg, all_args, self.monitor()
+        ).reduce(self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
         trti = csm.info.trt2i()

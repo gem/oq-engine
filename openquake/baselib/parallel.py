@@ -189,13 +189,6 @@ task_data_dt = numpy.dtype(
      ('mem_gb', numpy.float32)])
 
 
-# helper for celery distribution
-def _iter_native(task_ids, results):
-    for task_id, result_dict in ResultSet(results).iter_native():
-        task_ids.remove(task_id)
-        yield result_dict['result']
-
-
 def oq_distribute(task=None):
     """
     :returns: the value of OQ_DISTRIBUTE or 'processpool'
@@ -354,12 +347,13 @@ def safely_call(func, args, monitor=dummy_mon):
         if args and hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
-        if args and isinstance(args[-1], Monitor):
+        if monitor is dummy_mon:  # in the DbServer
+            mon = monitor
+        else:
             mon = args[-1]
             mon.operation = func.__name__
-            mon.children.append(monitor)  # monitor is a child of mon
-        else:  # in the DbServer
-            mon = monitor
+            if mon is not monitor:
+                mon.children.append(monitor)  # monitor is a child of mon
         try:
             res = Result(func(*args), mon)
         except Exception:
@@ -390,6 +384,13 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
+
+    # helper
+    def _iter_native(task_ids, results):
+        for task_id, result_dict in ResultSet(results).iter_native():
+            task_ids.remove(task_id)
+            yield result_dict['result']
+
 elif OQ_DISTRIBUTE == 'dask':
     from dask.distributed import Client, as_completed
 
@@ -571,7 +572,7 @@ class Starmap(object):
     @classmethod
     def apply(cls, task, args, concurrent_tasks=cpu_count * 3,
               maxweight=None, weight=lambda item: 1,
-              key=lambda item: 'Unspecified', monitor=dummy_mon,
+              key=lambda item: 'Unspecified',
               distribute=None, progress=logging.info):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
@@ -585,26 +586,25 @@ class Starmap(object):
         :param maxweight: if not None, used to split the tasks
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
-        :param monitor: Monitor instance (default dummy_mon)
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
         args = args[1:]
+        mon = args[-1]
         if maxweight:
             chunks = block_splitter(arg0, maxweight, weight, key)
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         task_args = [(ch,) + args for ch in chunks]
-        return cls(task, task_args, monitor, distribute).submit_all(progress)
+        return cls(task, task_args, mon, distribute).submit_all(progress)
 
-    def __init__(self, task_func, task_args, monitor=dummy_mon,
-                 distribute=None):
+    def __init__(self, task_func, task_args, monitor=None, distribute=None):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
-        self.monitor = monitor
-        self.name = monitor.operation or task_func.__name__
+        self.monitor = monitor or Monitor(task_func.__name__)
+        self.name = self.monitor.operation
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         # a task can be a function, a class or an instance with a __call__
@@ -618,6 +618,17 @@ class Starmap(object):
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
         self.backurl = None  # overridden later
+        h5 = self.monitor.hdf5
+        task_info = 'task_info/' + self.name
+        if h5 and task_info not in h5:  # first time
+            # task_info and performance_data should be generated in advance
+            hdf5.create(h5, task_info, task_data_dt)
+        if h5 and 'performance_data' not in h5:
+            hdf5.create(h5, 'performance_data', perf_dt)
+
+    @property
+    def hdf5(self):
+        return self.monitor.hdf5
 
     @property
     def num_tasks(self):
@@ -636,18 +647,9 @@ class Starmap(object):
         Add .task_no and .weight to the monitor and yield back
         the arguments by pickling them.
         """
-        task_info = 'task_info/' + self.name
         for task_no, args in enumerate(self.task_args, 1):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
-            if mon.hdf5 and task_no == 1:
-                self.hdf5 = mon.hdf5
-                if task_info not in self.hdf5:  # first time
-                    # task_info performance_data should be generated in advance
-                    hdf5.create(mon.hdf5, task_info, task_data_dt)
-                if 'performance_data' not in self.hdf5:
-                    hdf5.create(mon.hdf5, 'performance_data', perf_dt)
-
             # add incremental task number and task weight
             mon.task_no = task_no
             mon.weight = getattr(args[0], 'weight', 1.)
@@ -683,10 +685,11 @@ class Starmap(object):
         allargs = list(self._genargs(pickle=False))
         yield len(allargs)
         for args in allargs:
-            yield safely_call(self.task_func, args)
+            yield safely_call(self.task_func, args, self.monitor)
 
     def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func)
+        safefunc = functools.partial(safely_call, self.task_func,
+                                     monitor=self.monitor)
         allargs = list(self._genargs())
         yield len(allargs)
         for res in self.pool.imap_unordered(safefunc, allargs):
@@ -709,7 +712,7 @@ class Starmap(object):
             self.backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
             results = []
             for piks in self._genargs():
-                res = safetask.delay(self.task_func, piks)
+                res = safetask.delay(self.task_func, piks, self.monitor)
                 # populating Starmap.task_ids, used in celery_cleanup
                 self.task_ids.append(res.task_id)
                 results.append(res)
@@ -732,7 +735,8 @@ class Starmap(object):
             yield from self.loop(range(num_results), iter(socket))
 
     def _iter_dask(self):
-        safefunc = functools.partial(safely_call, self.task_func)
+        safefunc = functools.partial(safely_call, self.task_func,
+                                     monitor=self.monitor)
         allargs = list(self._genargs())
         yield len(allargs)
         cl = self.dask_client

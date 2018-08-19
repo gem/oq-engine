@@ -138,7 +138,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
             ires = parallel.Starmap(
-                self.core_task.__func__, iterargs).submit_all()
+                self.core_task.__func__, iterargs, self.monitor()
+            ).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         if not self.nsites:
@@ -290,7 +291,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.flush()
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
             ires = parallel.Starmap(
-                build_hcurves_and_stats, self.gen_getters(parent)
+                build_hcurves_and_stats, self.gen_getters(parent),
+                self.monitor()
             ).submit_all()
         for kind, nbytes in ires.reduce(self.save_hcurves).items():
             self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
