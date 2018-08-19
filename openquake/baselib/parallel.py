@@ -698,7 +698,7 @@ class Starmap(object):
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             backurl = 'tcp://%s:%s' % (config.dbserver.host, socket.port)
-            logging.info('Using receiver %s', backurl)
+            logging.debug('Using receiver %s', backurl)
             results = []
             for piks in self._genargs(backurl):
                 res = safetask.delay(self.task_func, piks)

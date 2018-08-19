@@ -360,7 +360,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
         logging.warn('With a parent calculation reading the hazard '
-                     'would be much faster')
+                     'would be faster')
 
     def check_overflow(self):
         """Overridden in event based"""
