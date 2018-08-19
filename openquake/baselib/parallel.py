@@ -604,7 +604,7 @@ class Starmap(object):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
-        self.name = self.monitor.operation
+        self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         # a task can be a function, a class or an instance with a __call__
