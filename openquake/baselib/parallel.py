@@ -697,15 +697,13 @@ class Starmap(object):
                 results.append(res)
             num_results = len(results)
             yield num_results
-            it = self.iter_native(results)
             isocket = iter(socket)
-            while num_results:
+            for err in self.iter_native(results):
                 res = next(isocket)
                 if self.calc_id and self.calc_id != res.mon.calc_id:
                     logging.warn('Discarding a result from job %d, since this '
                                  'is job %d', res.mon.calc_id, self.calc_id)
                     continue
-                err = next(it)
                 if isinstance(err, Exception):  # TaskRevokedError
                     raise err
                 num_results -= 1
@@ -723,13 +721,12 @@ class Starmap(object):
                     num_results += 1
             yield num_results
             isocket = iter(socket)
-            while num_results:
+            for _ in range(num_results):
                 res = next(isocket)
                 if self.calc_id and self.calc_id != res.mon.calc_id:
                     logging.warn('Discarding a result from job %d, since this '
                                  'is job %d', res.mon.calc_id, self.calc_id)
                     continue
-                num_results -= 1
                 yield res
 
     def _iter_dask(self):
