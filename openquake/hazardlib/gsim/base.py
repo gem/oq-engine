@@ -643,7 +643,7 @@ class CoeffsTable(object):
     >>> ct[imt.SA(period=0.01, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(0.01, 5)
+    KeyError: SA(0.01)
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
