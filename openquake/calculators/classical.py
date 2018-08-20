@@ -74,6 +74,20 @@ def saving_sources_by_task(iterargs, dstore):
     dstore.extend('source_data', numpy.array(data, source_data_dt))
 
 
+def decreasing(poes, imtls, sid):
+    """
+    Check that the poes are decreasing for each IMT. Log a warning if not.
+    """
+    for imt in imtls:
+        asc = poes[imtls(imt)][::-1]  # ascending PoEs
+        print(sid, imt, asc)
+        if (numpy.sort(asc) != asc).any():
+            logging.warn(
+                'Found non-decreasing hazard curve for IMT=%s, sid=%d',
+                imt, sid)
+    return poes
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -211,6 +225,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
+        imtls = self.oqparam.imtls
         with self.monitor('saving statistical hcurves', autoflush=True):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
@@ -218,7 +233,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     key = 'hcurves/%s' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
-                        dset[sid] = pmap[sid].array[:, 0]
+                        dset[sid] = decreasing(
+                            pmap[sid].array[:, 0], imtls, sid)
                     # in the datastore we save 4 byte floats, thus we
                     # divide the memory consumption by 2: pmap.nbytes / 2
                     acc += {kind: pmap.nbytes // 2}
