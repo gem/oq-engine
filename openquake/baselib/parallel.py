@@ -183,7 +183,7 @@ if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 # data type for storing the performance information
-task_data_dt = numpy.dtype(
+task_info_dt = numpy.dtype(
     [('taskno', numpy.uint32), ('weight', numpy.float32),
      ('duration', numpy.float32), ('received', numpy.int64),
      ('mem_gb', numpy.float32)])
@@ -315,8 +315,7 @@ class Result(object):
         """
         Returns the underlying value or raise the underlying exception
         """
-        with self.mon('unpickling %s' % self.mon.operation):
-            val = self.pik.unpickle()
+        val = self.pik.unpickle()
         if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
@@ -325,6 +324,23 @@ class Result(object):
             else:
                 raise etype(msg)
         return val
+
+    @classmethod
+    def new(cls, func, args, mon):
+        """
+        :returns: a new Result instance
+        """
+        try:
+            with mon:
+                val = func(*args)
+        except StopIteration:
+            res = None
+        except Exception:
+            _etype, exc, tb = sys.exc_info()
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+        else:
+            res = Result(val, mon)
+        return res
 
 
 dummy_mon = Monitor()
@@ -343,28 +359,19 @@ def safely_call(func, args, monitor=dummy_mon):
     :param args: the arguments
     """
     monitor.operation = 'total ' + func.__name__
-    monitor.measuremem = True
-    with monitor:
-        if args and hasattr(args[0], 'unpickle'):
-            # args is a list of Pickled objects
-            args = [a.unpickle() for a in args]
-        if monitor is dummy_mon:  # in the DbServer
-            mon = monitor
-        else:
-            mon = args[-1]
-            mon.operation = func.__name__
-            if mon is not monitor:
-                mon.children.append(monitor)  # monitor is a child of mon
-        try:
-            res = Result(func(*args), mon)
-        except Exception:
-            _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-    # FIXME: check_mem_usage is disabled here because it's causing
-    # dead locks in threads when log messages are raised.
-    # Check is done anyway in other parts of the code
-    # further investigation is needed
-    # check_mem_usage(mon)  # check if too much memory is used
+    if hasattr(args[0], 'unpickle'):
+        # args is a list of Pickled objects
+        args = [a.unpickle() for a in args]
+    if monitor is dummy_mon:  # in the DbServer
+        return Result.new(func, args, monitor)
+
+    mon = args[-1]
+    mon.operation = 'total ' + func.__name__
+    mon.measuremem = True
+    if mon is not monitor:
+        mon.children.append(monitor)  # monitor is a child of mon
+    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    res = Result.new(func, args, mon)
     if monitor.backurl is None:
         return res
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
@@ -478,9 +485,9 @@ class IterResult(object):
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
             mon.hdf5 = self.hdf5
-            duration = mon.children[0].duration  # the task is the first child
+            duration = mon.duration
             t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
-            data = numpy.array([t], task_data_dt)
+            data = numpy.array([t], task_info_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
                         argnames=self.argnames, sent=self.sent)
         mon.flush()
@@ -622,7 +629,7 @@ class Starmap(object):
         task_info = 'task_info/' + self.name
         if h5 and task_info not in h5:  # first time
             # task_info and performance_data should be generated in advance
-            hdf5.create(h5, task_info, task_data_dt)
+            hdf5.create(h5, task_info, task_info_dt)
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
 
@@ -648,7 +655,6 @@ class Starmap(object):
             assert isinstance(mon, Monitor), mon
             # add incremental task number and task weight
             mon.task_no = task_no
-            mon.weight = getattr(args[0], 'weight', 1.)
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
