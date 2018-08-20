@@ -20,13 +20,9 @@ spatially-distributed ground-shaking intensities.
 import abc
 import numpy
 
-from nose.tools import set_trace
-
 from openquake.hazardlib.imt import SA, PGA
-from openquake.baselib.python3compat import with_metaclass
 
-
-class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
+class BaseCorrelationModel(metaclass=abc.ABCMeta):
     """
     Base class for correlation models for spatially-distributed ground-shaking
     intensities.
@@ -94,7 +90,7 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
             if stddev_intra_shape[0] > stddev_intra_shape[1]:
                 stddev_intra = numpy.transpose(stddev_intra)
                 stddev_intra = stddev_intra[0]
-        except:
+        except IndexError:
             stddev_intra = stddev_intra
 
         # residuals were sampled from a normal distribution with stddev_intra
@@ -102,7 +98,7 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
         # sampled from a standard normal distribution.
         # For this, every row of 'residuals' (every site) is divided by its
         # corresponding standard deviation element.
-        residuals_norm = residuals / stddev_intra[:,None]
+        residuals_norm = residuals / stddev_intra[:, None]
 
         try:
             corma = self.cache[imt]
@@ -190,7 +186,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
             if stddev_intra_shape[0] > stddev_intra_shape[1]:
                 stddev_intra = numpy.transpose(stddev_intra)
                 stddev_intra = stddev_intra[0]
-        except:
+        except IndexError:
             stddev_intra = stddev_intra
 
         COV = numpy.diag(stddev_intra) * \
@@ -230,8 +226,10 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         self.distance_matrix = sites.mesh.get_distance_matrix()
 
     def get_lower_triangle_correlation_matrix(self, sites, imt):
+        """
+        Method defined by parent class
+        """
         pass
-
 
     def _get_correlation_matrix(self, sites, imt):
         """
@@ -243,7 +241,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         :param imt:
             Intensity measure type object, see :mod:`openquake.hazardlib.imt`.
         """
-        if not isinstance(self.distance_matrix,list):
+        if not isinstance(self.distance_matrix, list):
             self.set_distance_matrix(sites)
 
         if isinstance(imt, SA):
@@ -269,7 +267,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
                 * self.uncertainty_multiplier)
         
         # Eq. (8)
-        return numpy.exp(- numpy.power( (self.distance_matrix/beta),0.55 ))
+        return numpy.exp(-numpy.power((self.distance_matrix/beta), 0.55))
 
     def apply_correlation(self, sites, imt, residuals, stddev_intra):
         """
@@ -284,7 +282,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             if stddev_intra_shape[0] > stddev_intra_shape[1]:
                 stddev_intra = numpy.transpose(stddev_intra)
                 stddev_intra = stddev_intra[0]
-        except:
+        except IndexError:
             stddev_intra = stddev_intra
 
         if self.uncertainty_multiplier == 0:   # No uncertainty
@@ -294,7 +292,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             # sampled from a standard normal distribution.
             # For this, every row of 'residuals' (every site) is divided by its
             # corresponding standard deviation element.
-            residuals_norm = residuals / stddev_intra[:,None]
+            residuals_norm = residuals / stddev_intra[:, None]
 
             # Lower diagonal of the Cholesky decomposition from/to cache
             try:
@@ -322,11 +320,12 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             
             # Re-sample all the residuals
             residuals_correlated = residuals*0
-            for isim in range(0,Nsim):
+            for isim in range(0, Nsim):
                 corma = self._get_correlation_matrix(sites.complete, imt)
-                COV = numpy.diag(stddev_intra)*corma*numpy.diag(stddev_intra)
-                residuals_correlated[0:,isim] = \
-                   numpy.random.multivariate_normal(numpy.zeros(Nsites),COV,1)
+                COV = numpy.diag(stddev_intra) * corma*numpy.diag(stddev_intra)
+                residuals_correlated[0:, isim] = \
+		    numpy.random.multivariate_normal(numpy.zeros(Nsites), \
+                    COV, 1)
 
             return residuals_correlated
 
