@@ -345,7 +345,7 @@ def safely_call(func, args, monitor=dummy_mon):
     monitor.operation = 'total ' + func.__name__
     monitor.measuremem = True
     with monitor:
-        if args and hasattr(args[0], 'unpickle'):
+        if hasattr(args[0], 'unpickle'):
             # args is a list of Pickled objects
             args = [a.unpickle() for a in args]
         if monitor is dummy_mon:  # in the DbServer
@@ -355,6 +355,7 @@ def safely_call(func, args, monitor=dummy_mon):
             mon.operation = func.__name__
             if mon is not monitor:
                 mon.children.append(monitor)  # monitor is a child of mon
+        mon.weight = getattr(args[0], 'weight', 1.)
         try:
             res = Result(func(*args), mon)
         except Exception:
@@ -648,7 +649,6 @@ class Starmap(object):
             assert isinstance(mon, Monitor), mon
             # add incremental task number and task weight
             mon.task_no = task_no
-            mon.weight = getattr(args[0], 'weight', 1.)
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
