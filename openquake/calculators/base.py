@@ -373,10 +373,9 @@ class HazardCalculator(BaseCalculator):
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
-            with self.monitor('reading composite source model', autoflush=1):
-                self.csm = readinput.get_composite_source_model(oq)
-                if oq.disagg_by_src:
-                    self.csm = self.csm.grp_by_src()
+            self.csm = readinput.get_composite_source_model(oq, self.monitor())
+            if oq.disagg_by_src:
+                self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 if split_sources:
                     logging.info('Splitting sources')
