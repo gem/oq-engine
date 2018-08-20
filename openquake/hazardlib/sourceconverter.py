@@ -197,7 +197,8 @@ def get_set_num_ruptures(src):
         clsname = src.__class__.__name__
         if dt > 10:
             # NB: I am not using logging.warn because it hangs when called
-            # from a worker with processpool distribution
+            # from a worker with processpool distribution; see
+            # https://github.com/gem/oq-engine/pull/3923
             if 'Area' in clsname:
                 warn('%s.count_ruptures took %d seconds, perhaps the '
                      'area discretization is too small', src, dt)
