@@ -167,11 +167,11 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = []
+        inputs['source'] = set()
         for paths in gen_sm_paths(smlt):
-            inputs['source'].extend(paths)
+            inputs['source'].update(paths)
     elif 'source_model' in inputs:
-        inputs['source'] = [inputs['source_model']]
+        inputs['source'] = {inputs['source_model']}
     return params
 
 
@@ -471,7 +471,7 @@ def get_source_ids(oqparam):
     :returns:
         the complete set of source IDs found in all the source models
     """
-    fnames = oqparam.inputs['source']
+    fnames = sorted(oqparam.inputs['source'])
     source_ids = set()
     logging.info('Reading source IDs from %d model file(s)', len(fnames))
     for fname in fnames:
