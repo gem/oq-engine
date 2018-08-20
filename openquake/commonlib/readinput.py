@@ -471,8 +471,10 @@ def get_source_ids(oqparam):
     :returns:
         the complete set of source IDs found in all the source models
     """
+    fnames = oqparam.inputs['source']
     source_ids = set()
-    for fname in oqparam.inputs['source']:
+    logging.info('Reading source IDs from %d model file(s)', len(fnames))
+    for fname in fnames:
         if fname.endswith('.hdf5'):
             with hdf5.File(fname, 'r') as f:
                 for sg in f['/']:
