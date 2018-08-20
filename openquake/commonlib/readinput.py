@@ -472,7 +472,7 @@ def get_source_ids(oqparam):
     :returns:
         the complete set of source IDs found in all the source models
     """
-    fnames = sorted(oqparam.inputs['source'])
+    fnames = oqparam.inputs['source']
     source_ids = set()
     logging.info('Reading source IDs from %d model file(s)', len(fnames))
     for fname in fnames:
