@@ -24,8 +24,8 @@ import ast
 import operator
 import functools
 
-# NB: (MS) the management of the IMTs implemented here is ugly, it would be
-# better to have a single IMT class, but it is as it is for legacy reasons
+# NB: (MS) the management of the IMTs implemented here is complex, it would
+# be better to have a single IMT class, but it is as it is for legacy reasons
 
 registry = {}  # IMT string -> IMT class
 
