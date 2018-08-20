@@ -693,8 +693,7 @@ class Starmap(object):
                                      monitor=self.monitor)
         allargs = list(self._genargs())
         yield len(allargs)
-        for res in self.pool.imap_unordered(safefunc, allargs):
-            yield res
+        yield from self.pool.imap_unordered(safefunc, allargs)
 
     _iter_threadpool = _iter_processpool
 
