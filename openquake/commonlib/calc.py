@@ -191,10 +191,13 @@ def get_imts_periods(imtls):
     :param imtls: a set of intensity measure type strings
     :returns: a list of IMT strings and a list of periods
     """
-    imts = sorted(
-        (from_string(imt) for imt in imtls if hasattr(imt, 'period')),
-        key=operator.attrgetter('period'))
-    return [str(imt) for imt in imts], [imt.period for imt in imts]
+    imts = []
+    for im in imtls:
+        imt = from_string(im)
+        if hasattr(imt, 'period'):
+            imts.append(imt)
+    imts.sort(key=operator.attrgetter('period'))
+    return imts, [imt.period for imt in imts]
 
 
 def make_hmap(pmap, imtls, poes):
@@ -269,7 +272,7 @@ def make_uhs(hcurves, imtls, poes, nsites):
     uhs = numpy.zeros(nsites, uhs_dt)
     for field in array.dtype.names:
         imt, poe = field.split('-')
-        if imt in imts:
+        if any(imt == str(i) for i in imts):
             uhs[poe][imt] = array[field]
     return uhs
 
