@@ -191,9 +191,9 @@ def get_imts_periods(imtls):
     :param imtls: a set of intensity measure type strings
     :returns: a list of IMT strings and a list of periods
     """
-    period = operator.attrgetter('period')
-    imts = sorted((from_string(imt) for imt in imtls
-                   if imt.startswith('SA') or imt == 'PGA'), key=period)
+    imts = sorted(
+        (from_string(imt) for imt in imtls if hasattr(imt, 'period')),
+        key=operator.attrgetter('period'))
     return [str(imt) for imt in imts], [imt.period for imt in imts]
 
 
