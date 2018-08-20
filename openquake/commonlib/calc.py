@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
+import operator
 import numpy
 
 from openquake.baselib import hdf5, general
@@ -190,11 +191,13 @@ def get_imts_periods(imtls):
     :param imtls: a set of intensity measure type strings
     :returns: a list of IMT strings and a list of periods
     """
-    def getperiod(imt):
-        return imt[1] or 0
-    imts = sorted((from_string(imt) for imt in imtls
-                   if imt.startswith('SA') or imt == 'PGA'), key=getperiod)
-    return [str(imt) for imt in imts], [imt[1] or 0.0 for imt in imts]
+    imts = []
+    for im in imtls:
+        imt = from_string(im)
+        if hasattr(imt, 'period'):
+            imts.append(imt)
+    imts.sort(key=operator.attrgetter('period'))
+    return imts, [imt.period for imt in imts]
 
 
 def make_hmap(pmap, imtls, poes):
@@ -269,7 +272,7 @@ def make_uhs(hcurves, imtls, poes, nsites):
     uhs = numpy.zeros(nsites, uhs_dt)
     for field in array.dtype.names:
         imt, poe = field.split('-')
-        if imt in imts:
+        if any(imt == str(i) for i in imts):
             uhs[poe][imt] = array[field]
     return uhs
 
