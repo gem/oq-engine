@@ -1048,3 +1048,13 @@ def debug(templ, *args):
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
         f.write(msg + '\n')
+
+
+def warn(msg, *args):
+    """
+    Print a warning on stderr
+    """
+    if not args:
+        sys.stderr.write('WARNING: ' + msg)
+    else:
+        sys.stderr.write('WARNING: ' + msg % args)
