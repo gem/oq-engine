@@ -112,13 +112,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             discrepancies.extend(discrep_percentage)
             errors += (discrep_percentage > max_discrep_percentage).sum()
 
-            
-            if max(discrep_percentage) > 3.5:
-                print(imt)
-                print(result)
-                print(expected_result)
-
-
             if errors and debug:
                 msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                       '(delta %.4f%%)' % (
