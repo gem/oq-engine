@@ -34,6 +34,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
+registry = {}  # GSIM name -> GSIM class
+
+
 class NotVerifiedWarning(UserWarning):
     """
     Raised when a non verified GSIM is instantiated
@@ -63,6 +66,9 @@ class MetaGSIM(abc.ABCMeta):
     """
     deprecated = False
     non_verified = False
+
+    def __init__(cls, name, bases, dct):
+        registry[name] = cls
 
     def __call__(cls, **kwargs):
         if cls.deprecated:
