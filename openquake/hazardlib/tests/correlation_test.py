@@ -109,7 +109,7 @@ class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
     def test(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         lt = cormo.get_lower_triangle_correlation_matrix(self.SITECOL, PGA(),
-              numpy.array((1,1,1)))
+              numpy.array((1, 1, 1)))
         aaae(lt, [[1.0,            0.0,            0.0],
                   [1.97514806e-02, 9.99804920e-01, 0.0],
                   [1.97514806e-02, 5.42206860e-20, 9.99804920e-01]])
@@ -125,7 +125,8 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         stddev_intra = numpy.array([0.5, 0.6, 0.7])
         intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3),numpy.diag(stddev_intra**2),100000).transpose(1,0)
+            numpy.zeros(3), numpy.diag(stddev_intra**2), 100000).\
+            transpose(1, 0)
 
         intra_residuals_correlated = cormo.apply_correlation(
             self.SITECOL, PGA(), intra_residuals_sampled, stddev_intra)
@@ -200,10 +201,10 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         imt = SA(period=1.5, damping=5)
 
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
-        corma = cormo._get_correlation_matrix(self.SITECOL,imt)
+        corma = cormo._get_correlation_matrix(self.SITECOL, imt)
 
         cormo2 = HM2018CorrelationModel(uncertainty_multiplier=1E-30)
-        corma2 = cormo2._get_correlation_matrix(self.SITECOL,imt)
+        corma2 = cormo2._get_correlation_matrix(self.SITECOL, imt)
         self.assertTrue((corma == corma2).all())
 
     def test_pga_no_uncertainty(self):
@@ -224,23 +225,23 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
         corma_3d = numpy.zeros((len(self.SITECOL), len(self.SITECOL), Nsim))
 
         # For each simulation, construct a new correlation matrix
-        for isim in range(0,Nsim):
-            corma_3d[0:,0:,isim] = \
-                cormo._get_correlation_matrix(self.SITECOL,imt)
+        for isim in range(0, Nsim):
+            corma_3d[0:, 0:, isim] = \
+                cormo._get_correlation_matrix(self.SITECOL, imt)
 
         # Mean and Coefficient of Variation (COV) of correlation matrix
         MEANcorMa = corma_3d.mean(2)
-        COVcorma = numpy.divide(corma_3d.std(2),MEANcorMa)
+        COVcorma = numpy.divide(corma_3d.std(2), MEANcorMa)
 
         aaae(MEANcorMa,[[1.0000000,    0.3766436,    1.0000000,    0.3766436,],
                      [0.3766436,    1.0000000,    0.3766436,    0.2534904,],
                      [1.0000000,    0.3766436,    1.0000000,    0.3766436,],
-                     [0.3766436,    0.2534904,    0.3766436,    1.0000000,]],2)
+                     [0.3766436,    0.2534904,    0.3766436,    1.00000,]], 2)
 
         aaae(COVcorma,[[0.0000000,    0.4102512,    0.0000000,    0.4102512,],
                      [0.4102512,    0.0000000,    0.4102512,    0.5636907,],
                      [0.0000000,    0.4102512,    0.0000000,    0.4102512,],
-                     [0.4102512,    0.5636907,    0.4102512,    0.0000000,]],2)
+                     [0.4102512,    0.5636907,    0.4102512,    0.00000,]], 2)
 
 
 class HM2018ApplyCorrelationTestCase(unittest.TestCase):
@@ -251,12 +252,13 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
     def test_no_uncertainty(self):
         numpy.random.seed() # 13
         Nsim = 10000
-        imt = SA(2,5)
+        imt = SA(period=2.0, damping=5)
         stddev_intra = numpy.array([0.5, 0.6, 0.7])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
 
         intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3),numpy.diag(stddev_intra**2),Nsim).transpose(1,0)
+            numpy.zeros(3), numpy.diag(stddev_intra**2), Nsim).\
+            transpose(1, 0)
 
         intra_residuals_correlated = cormo.apply_correlation(
             self.SITECOL, imt, intra_residuals_sampled, stddev_intra)
@@ -265,8 +267,8 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
         mean = intra_residuals_correlated.mean(1)
         std = intra_residuals_correlated.std(1)
 
-        aaae(numpy.squeeze(numpy.asarray(mean)),numpy.zeros(3), 2)
-        aaae(numpy.squeeze(numpy.asarray(std)),stddev_intra, 2)
+        aaae(numpy.squeeze(numpy.asarray(mean)), numpy.zeros(3), 2)
+        aaae(numpy.squeeze(numpy.asarray(std)), stddev_intra, 2)
 
         actual_corrcoef = cormo._get_correlation_matrix(self.SITECOL, imt)
         aaae(inferred_corrcoef, actual_corrcoef, 2)
@@ -275,12 +277,13 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
     def test_with_uncertainty(self):
         numpy.random.seed() # 13
         Nsim = 50000
-        imt = SA(3,5)
+        imt = SA(period=3.0, damping=5) 
         stddev_intra = numpy.array([0.3, 0.6, 0.9])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
 
         intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3),numpy.diag(stddev_intra**2),Nsim).transpose(1,0)
+            numpy.zeros(3), numpy.diag(stddev_intra**2), Nsim).\
+            transpose(1, 0)
 
         intra_residuals_correlated = cormo.apply_correlation(
             self.SITECOL, imt, intra_residuals_sampled, stddev_intra)
@@ -289,8 +292,8 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
         mean = intra_residuals_correlated.mean(1)
         std = intra_residuals_correlated.std(1)
 
-        aaae(numpy.squeeze(numpy.asarray(mean)),numpy.zeros(3), 2)
-        aaae(numpy.squeeze(numpy.asarray(std)),stddev_intra, 2)
+        aaae(numpy.squeeze(numpy.asarray(mean)), numpy.zeros(3), 2)
+        aaae(numpy.squeeze(numpy.asarray(std)), stddev_intra, 2)
 
         aaae(inferred_corrcoef, [[1.0000000,    0.3758721,    0.5034898,],
                      [0.3758721,    1.0000000,    0.3049717,],
