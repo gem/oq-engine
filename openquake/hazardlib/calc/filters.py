@@ -296,17 +296,19 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, monitor):
+    def pfilter(self, sources, concurrent_tasks, monitor):
         """
         Filter the sources in parallel by using Starmap.apply
 
         :param sources: a sequence of sources
+        :param concurrent_tasks: how many tasks to generate
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor), distribute=self.distribute,
-            name=self.__class__.__name__, progress=logging.debug).reduce()
+            prefilter, (sources, self, monitor),
+            concurrent_tasks=concurrent_tasks, distribute=self.distribute,
+            progress=logging.debug).reduce()
         Starmap.shutdown()  # close the processpool
         Starmap.init()  # reopen it when necessary
         # avoid task ordering issues

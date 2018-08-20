@@ -78,7 +78,7 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='dummy', hdf5=None,
+    def __init__(self, operation='', hdf5=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
         self.hdf5 = hdf5

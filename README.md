@@ -42,14 +42,21 @@ Current stable version is the **OpenQuake Engine 3.1** 'Lehmann'. The documentat
 * [FAQ](https://github.com/gem/oq-engine/blob/master/doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
 * [OQ Commands](https://github.com/gem/oq-engine/blob/master/doc/oq-commands.md)
-* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
 * [Architecture](https://github.com/gem/oq-engine/blob/master/doc/sphinx/architecture.rst)
 * [Calculation Workflow](https://github.com/gem/oq-engine/blob/master/doc/calculation-workflow.md)
 * [Hardware Suggestions](https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md)
 * [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
 * [Glossary of Terms](https://github.com/gem/oq-engine/blob/master/doc/glossary.md)
+
+#### For developers
+
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
+* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+
+#### For scientists
+
+* [Implementing a new GSIM](https://github.com/gem/oq-engine/blob/master/doc/implementing-new-gsim.md)
 
 ### Installation
 

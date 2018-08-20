@@ -748,6 +748,9 @@ class DictArray(collections.Mapping):
         arr.array = array
         return arr
 
+    def __call__(self, imt):
+        return self.slicedic[imt]
+
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
 
@@ -1045,3 +1048,13 @@ def debug(templ, *args):
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
         f.write(msg + '\n')
+
+
+def warn(msg, *args):
+    """
+    Print a warning on stderr
+    """
+    if not args:
+        sys.stderr.write('WARNING: ' + msg)
+    else:
+        sys.stderr.write('WARNING: ' + msg % args)

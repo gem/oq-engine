@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#
 # LICENSE
 #
 # Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
@@ -39,6 +42,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no liability for
 # use of the software.
+
 '''
 Module :class: openquake.hmtk.seismicity.max_magnitude.cumulative_moment.CumulativeMoment
 implements cumulative moment estimator of maximum magnitude from instrumental

@@ -388,11 +388,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
         """
-        if not issubclass(type(imt), imt_module._IMT):
-            raise ValueError('imt must be an instance of IMT subclass')
-        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+        names = set(f.__name__
+                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+        if imt.name not in names:
             raise ValueError('imt %s is not supported by %s' %
-                             (type(imt).__name__, type(self).__name__))
+                             (imt.name, type(self).__name__))
 
     def __lt__(self, other):
         """
@@ -614,11 +614,11 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    KeyError: PGV()
+    KeyError: PGV
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=1.0, damping=4)
+    KeyError: SA(1.0, 4)
 
     Table of coefficients for spectral acceleration could be indexed
     by instances of :class:`openquake.hazardlib.imt.SA` with period
@@ -636,14 +636,14 @@ class CoeffsTable(object):
     >>> ct[imt.SA(period=0.9, damping=15)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.9, damping=15)
+    KeyError: SA(0.9, 15)
 
     Extrapolation is not possible:
 
     >>> ct[imt.SA(period=0.01, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.01, damping=5)
+    KeyError: SA(0.01)
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -666,11 +666,11 @@ class CoeffsTable(object):
         if isinstance(table, str):
             self._setup_table_from_str(table, sa_damping)
         elif isinstance(table, dict):
-            for key in table:
-                if isinstance(key, imt_module.SA):
-                    self.sa_coeffs[key] = table[key]
+            for imt in table:
+                if imt.name == 'SA':
+                    self.sa_coeffs[imt] = table[imt]
                 else:
-                    self.non_sa_coeffs[key] = table[key]
+                    self.non_sa_coeffs[imt] = table[imt]
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
@@ -694,9 +694,9 @@ class CoeffsTable(object):
             try:
                 sa_period = float(imt_name)
             except Exception:
-                if not hasattr(imt_module, imt_name):
+                if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
-                imt = getattr(imt_module, imt_name)()
+                imt = imt_module.registry[imt_name]()
                 self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
@@ -717,7 +717,7 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if not isinstance(imt, imt_module.SA):
+        if imt.name != 'SA':
             return self.non_sa_coeffs[imt]
 
         try:

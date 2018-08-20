@@ -94,7 +94,7 @@ class ProbabilityCurve(object):
         """
         curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
-            curve[imt] = self.array[imtls.slicedic[imt], idx]
+            curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
 
@@ -207,35 +207,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[
-                    imtls.slicedic[imt], idx]
-        return curves
-
-    # used when exporting to npy
-    def convert_npy(self, imtls, sids, idx=0):
-        """
-        Convert a probability map into a composite array of dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            array of site IDs containing all the sites in the ProbabilityMap
-        :param idx:
-            index on the z-axis (default 0)
-        """
-        dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
-                  for imt in imtls]
-        curves = numpy.zeros(len(sids), dtlist)
-        for s, sid in enumerate(sids):
-            try:
-                array = self[sid].array
-            except KeyError:
-                continue
-            for imt in imtls:
-                imls = curves.dtype[imt].names
-                values = array[imtls.slicedic[imt], idx]
-                for iml, val in zip(imls, values):
-                    curves[s][imt][iml] = val
+                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
     def convert2(self, imtls, sids):
@@ -260,7 +232,7 @@ class ProbabilityMap(dict):
                 except KeyError:
                     pass  # the poes will be zeros
                 else:
-                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
+                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
         return curves
 
     def filter(self, sids):

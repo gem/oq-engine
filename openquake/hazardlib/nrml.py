@@ -74,7 +74,7 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
-import copy
+import pickle
 import decimal
 import logging
 import operator
@@ -83,7 +83,8 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, groupby, deprecated
+from openquake.baselib.general import (
+    CallableDict, groupby, deprecated, gettemp)
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -188,15 +189,13 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
@@ -305,6 +304,57 @@ validators = {
 }
 
 
+def read_source_models(fnames, converter,  monitor):
+    """
+    :param fnames:
+        list of source model files
+    :param converter:
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    :returns:
+        a dictionary fname -> fname.pik
+    """
+    fname2pik = {}
+    for fname in fnames:
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        elif fname.endswith('.hdf5'):
+            sm = sourceconverter.to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        pikname = gettemp(suffix='.pik')
+        fname2pik[fname] = pikname
+        with open(pikname, 'wb') as f:
+            pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
+    return fname2pik
+
+
+def check_nonparametric_sources(fname, smodel, investigation_time):
+    """
+    :param fname:
+        full path to a source model file
+    :param smodel:
+        source model object
+    :param investigation_time:
+        investigation_time to compare with in the case of
+        nonparametric sources
+    :returns:
+        the nonparametric sources in the model
+    :raises:
+        a ValueError if the investigation_time is different from the expected
+    """
+    # NonParametricSeismicSources
+    np = [src for sg in smodel.src_groups for src in sg
+          if hasattr(src, 'data')]
+    if np and smodel.investigation_time != investigation_time:
+        raise ValueError(
+            'The source model %s contains an investigation_time '
+            'of %s, while the job.ini has %s' % (
+                fname, smodel.investigation_time, investigation_time))
+    return np
+
+
 class SourceModelParser(object):
     """
     A source model parser featuring a cache.
@@ -314,30 +364,24 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse_src_groups(self, fname, apply_uncertainties):
+    def parse(self, fname, pik, apply_uncertainties, investigation_time):
         """
         :param fname:
-            the full pathname of the source model file
+            the full pathname of a source model file
+        :param pik:
+            the pathname of the corresponding pickled file
         :param apply_uncertainties:
             a function modifying the sources
+        :param investigation_time:
+            the investigation_time in the job.ini file
         """
-        try:
-            sm = self.sm[fname]
-        except KeyError:
-            if fname.endswith(('.xml', '.nrml')):
-                sm = to_python(fname, self.converter)
-            elif fname.endswith('.hdf5'):
-                sm = sourceconverter.to_python(fname, self.converter)
-            else:
-                raise ValueError('Unrecognized extension in %s' % fname)
-            self.sm[fname] = sm
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in sm]
-        for group in groups:
+        with open(pik, 'rb') as f:
+            sm = pickle.load(f)
+        check_nonparametric_sources(fname, sm, investigation_time)
+        for group in sm:
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
@@ -345,29 +389,7 @@ class SourceModelParser(object):
                     src.num_ruptures = src.count_ruptures()
                     self.changed_sources += 1
         self.fname_hits[fname] += 1
-        return groups
-
-    def check_nonparametric_sources(self, investigation_time):
-        """
-        :param investigation_time:
-            investigation_time to compare with in the case of
-            nonparametric sources
-        :returns:
-            list of nonparametric sources in the composite source model
-        """
-        npsources = []
-        for fname, sm in self.sm.items():
-            # NonParametricSeismicSources
-            np = [src for sg in sm.src_groups for src in sg
-                  if hasattr(src, 'data')]
-            if np:
-                npsources.extend(np)
-                if sm.investigation_time != investigation_time:
-                    raise ValueError(
-                        'The source model %s contains an investigation_time '
-                        'of %s, while the job.ini has %s' % (
-                            fname, sm.investigation_time, investigation_time))
-        return npsources
+        return sm
 
 
 def read(source, chatty=True, stop=None):
