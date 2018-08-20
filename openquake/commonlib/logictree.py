@@ -34,7 +34,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5, node, performance, parallel
+from openquake.baselib import hdf5, node, parallel
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
@@ -1472,7 +1472,8 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-def parallel_pickle_source_models(gsim_lt, source_model_lt, converter):
+def parallel_pickle_source_models(gsim_lt, source_model_lt,
+                                  converter, monitor):
     """
     Convert the source model files listed in the logic tree
     into picked files.
@@ -1481,6 +1482,7 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt, converter):
     :param source_model_lt: a :class:`SourceModelLogicTree` instance
     :param converter:
         a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
+    :param monitor: a `openquake.baselib.performance.Monitor` instance
     :returns: a dictionary file -> file.pik
     """
     smlt_dir = os.path.dirname(source_model_lt.filename)
@@ -1491,7 +1493,7 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt, converter):
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(
         nrml.pickle_source_models,
-        (sorted(fnames), converter, performance.Monitor()),
+        (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
     parallel.Starmap.shutdown()  # close the processpool
     return dic
