@@ -1472,7 +1472,7 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-def parallel_pickle_source_models(gsim_lt, source_model_lt,
+def parallel_read_source_models(gsim_lt, source_model_lt,
                                   converter, monitor):
     """
     Convert the source model files listed in the logic tree
@@ -1492,7 +1492,7 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(
-        nrml.pickle_source_models,
+        nrml.read_source_models,
         (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
     parallel.Starmap.shutdown()  # close the processpool
