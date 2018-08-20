@@ -359,17 +359,17 @@ def safely_call(func, args, monitor=dummy_mon):
     :param args: the arguments
     """
     monitor.operation = 'total ' + func.__name__
-    monitor.measuremem = True
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
     if monitor is dummy_mon:  # in the DbServer
-        mon = monitor
-    else:
-        mon = args[-1]
-        mon.operation = func.__name__
-        if mon is not monitor:
-            mon.children.append(monitor)  # monitor is a child of mon
+        return Result.new(func, args, monitor)
+
+    mon = args[-1]
+    mon.operation = 'total ' + func.__name__
+    mon.measuremem = True
+    if mon is not monitor:
+        mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     res = Result.new(func, args, mon)
     if monitor.backurl is None:
@@ -485,7 +485,7 @@ class IterResult(object):
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
             mon.hdf5 = self.hdf5
-            duration = mon.children[0].duration  # the task is the first child
+            duration = mon.duration
             t = (mon.task_no, mon.weight, duration, self.received[-1], mem_gb)
             data = numpy.array([t], task_info_dt)
             hdf5.extend(self.hdf5['task_info/' + self.name], data,
