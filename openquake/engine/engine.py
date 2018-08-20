@@ -263,7 +263,7 @@ def zip(job_ini, archive_zip, oq=None, log=logging.info):
     # collect all other files
     for key in oq.inputs:
         fname = oq.inputs[key]
-        if isinstance(fname, set):
+        if isinstance(fname, list):
             for f in fname:
                 files.add(os.path.normpath(f))
         else:
