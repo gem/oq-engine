@@ -127,6 +127,13 @@ class HeresiEtAl2018(GMPE):
 
         #: imt_aux is for searching inside the coefficient table C, where Cy's
         #: are stored as T's
+
+        Cy_max = round(min(1.5, 1.5 * 0.6/imt_per), 4)
+        Cy_min = round(Cy_max / 15, 4)
+        if not Cy_min <= imt.Cy <= Cy_max:
+            raise ValueError('Cy should be between {0:.4f} and {1:.4f}.  \
+                           Used Cy = {2:.5f}'.format(Cy_min, Cy_max, imt.Cy))
+
         imt_aux = imt_module.SA(damping=5, period=imt.Cy)
 
         C = CoeffsTable_thisT[imt_aux]
@@ -137,7 +144,7 @@ class HeresiEtAl2018(GMPE):
         return mean, stddevs
 
     def _get_Mh(self, period):
-        return min(5.5 + 0.8/0.9 * period, 6.3)
+        return min(5.5 + 0.8 / 0.9 * period, 6.3)
 
     def _get_magnitude_scaling_term(self, C, mag, period):
         """
@@ -146,7 +153,7 @@ class HeresiEtAl2018(GMPE):
         Mh = self._get_Mh(period)
         dmag = mag - Mh
         if mag < Mh:
-            mag_term = C['e2'] * dmag + C['e3'] * dmag**2
+            mag_term = C['e2'] * dmag + C['e3'] * dmag ** 2
         else:
             mag_term = C["e4"] * dmag
         return C['e1'] + mag_term

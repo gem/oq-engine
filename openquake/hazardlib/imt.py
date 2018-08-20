@@ -27,13 +27,7 @@ import functools
 # NB: (MS) the management of the IMTs implemented here is complex, it would
 # be better to have a single IMT class, but it is as it is for legacy reasons
 
-<<<<<<< HEAD
-__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI',
-           'PGDfLatSpread', 'PGDfSettle', 'PGDfSlope', 'PGDfRupture',
-           'SDI','SAAVG','FIV3')
-=======
 registry = {}  # IMT string -> IMT class
->>>>>>> 205bbd3136d39bf391f7df70cf3eaafde8244606
 
 
 def positivefloat(val):
@@ -66,40 +60,8 @@ def from_string(imt):
     :param str imt:
         Intensity Measure Type.
     """
-<<<<<<< HEAD
-    try:
-        return imt_cache[imt]
-    except KeyError:
-        if imt.startswith('SA'):
-            match = re.match(r'^SA\(([^)]+?)\)$', imt)
-            period = float(match.group(1))
-            instance = SA(period, DEFAULT_SA_DAMPING)
-        elif imt.startswith('SDI'):
-            match = re.match(r'^SDI\(([^)]+?)\)$', imt)
-            aux = match.group(1).split(",")
-            period = float(aux[0])
-            Cy = float(aux[1])
-            instance = SDI(period, Cy, DEFAULT_SA_DAMPING)
-        elif imt.startswith('SAAVG'):
-            match = re.match(r'^SAAVG\(([^)]+?)\)$', imt)
-            period = float(match.group(1))
-            instance = SAAVG(period, DEFAULT_SA_DAMPING)
-        elif imt.startswith('FIV3'):
-            match = re.match(r'^FIV3\(([^)]+?)\)$', imt)
-            period = float(match.group(1))
-            instance = FIV3(period)
-        else:
-            try:
-                imt_class = globals()[imt]
-            except KeyError:
-                raise ValueError('Unknown IMT: ' + repr(imt))
-            instance = imt_class(None, None)
-        imt_cache[imt] = instance
-        return instance
-=======
     tup = imt2tup(imt)
     return registry[tup[0]](*tup[1:])
->>>>>>> 205bbd3136d39bf391f7df70cf3eaafde8244606
 
 
 class IMTMeta(type):
@@ -277,7 +239,11 @@ class PGDfRupture(IMT):
     Permanent ground deformation (m) from co-seismic rupture
     """
 
-class SDI(_IMT):
+
+# Other IMTs
+
+
+class SDI(IMT):
     """
     Spectral inelastic displacement, defined as the maximum displacement of
     a single-degree-of-freedom system with bilinear behavior (3% postelastic
@@ -297,24 +263,11 @@ class SDI(_IMT):
         if period or damping is not positive.
 		if Cy is out of the bounds of Cy_min - Cy_max for the given period
     """
-    _fields = ('period', 'damping', 'Cy')
+    _fields =  [('period', positivefloat),  ('Cy',positivefloat), \
+                ('damping', positivefloat)]
+    _defaults=(5.,)   # damping
 
-    def __new__(cls, period, Cy, damping=DEFAULT_SA_DAMPING):
-        Cy_max = round(min(1.5, 1.5*0.6/period),4)
-        Cy_min = round(Cy_max/15,4)
-        if not period > 0:
-            raise ValueError('period must be positive')
-        if not damping > 0:
-            raise ValueError('damping must be positive')
-        if not Cy > 0:
-            raise ValueError('Cy must be positive')
-        if not Cy_min <= Cy <= Cy_max:
-            raise ValueError('Cy should be between {0:.4f} and {1:.4f}.  \
-                             Used Cy = {2:.5f}'.format(Cy_min, Cy_max, Cy))
-        return _IMT.__new__(cls, sa_period=period, Cy=Cy, sa_damping=damping)
-
-
-class SAAVG(_IMT):
+class SAAVG(IMT):
     """
     Sa_avg, defined as the geometric mean of 10 equally spaced spectral 
     accelerations between one fifth and three times the input period, 
@@ -328,17 +281,11 @@ class SAAVG(_IMT):
     :raises ValueError:
         if period or damping is not positive.
     """
-    _fields = ('period', 'damping')
-
-    def __new__(cls, period, damping=DEFAULT_SA_DAMPING):
-        if not period > 0:
-            raise ValueError('period must be positive')
-        if not damping > 0:
-            raise ValueError('damping must be positive')
-        return _IMT.__new__(cls, period, damping)
+    _fields =  [('period', positivefloat), ('damping', positivefloat)]
+    _defaults=(5.,)   # damping
 
 
-class FIV3(_IMT):
+class FIV3(IMT):
     """
     Filtered Incremental Velocity (3), defined as the absolute sum of either
 	the three local maximum or three local minimum period-dependent 
@@ -354,11 +301,6 @@ class FIV3(_IMT):
     :raises ValueError:
         if period or damping is not positive.
     """
-    _fields = ('period',)
-
-    def __new__(cls, period):
-        if not period > 0:
-            raise ValueError('period must be positive')
-        return _IMT.__new__(cls, period)
+    _fields = [('period', positivefloat)]
 
 
