@@ -164,7 +164,7 @@ class GroundMotionField(object):
     """
     def __init__(self, imt, rupture_id, gmf_nodes):
         self.imt = imt.name
-        self.sa_period = imt.period
+        self.sa_period = getattr(imt, 'period', None) or None
         self.sa_damping = getattr(imt, 'damping', None)
         self.rupture_id = rupture_id
         self.gmf_nodes = gmf_nodes
@@ -436,7 +436,7 @@ def export_uhs_xml(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
+    periods = [imt for imt in oq.imtls if hasattr(imt, 'period')]
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
@@ -757,7 +757,7 @@ def export_disagg_xml(ekey, dstore):
             fname, investigation_time=oq.investigation_time,
             imt=imt.name, smlt_path='_'.join(rlz.sm_lt_path),
             gsimlt_path=rlz.gsim_rlz.uid, lon=lon, lat=lat,
-            sa_period=imt.period or None,
+            sa_period=getattr(imt, 'period', None),
             sa_damping=getattr(imt, 'damping', None),
             mag_bin_edges=attrs['mag_bin_edges'],
             dist_bin_edges=attrs['dist_bin_edges'],
