@@ -77,14 +77,11 @@ class DrouetBrazil2015(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        #assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        #           for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup, dists.rjb)
-        if isinstance(imt, (SA, PGA)): # Convert from m/s**2 to g
+        if imt.name in "SA PGA":  # Convert from m/s**2 to g
             mean -= np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
+        elif imt.name == "PGV":  # Convert from m/s to cm/s
             mean += np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rjb.shape)
