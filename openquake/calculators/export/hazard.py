@@ -492,7 +492,7 @@ def export_hcurves_xml(ekey, dstore):
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
                                imls=oq.imtls[imt.name], imt=imt.name,
-                               sa_period=imt.period or None,
+                               sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
             writer.serialize(data)
@@ -757,7 +757,7 @@ def export_disagg_xml(ekey, dstore):
             fname, investigation_time=oq.investigation_time,
             imt=imt.name, smlt_path='_'.join(rlz.sm_lt_path),
             gsimlt_path=rlz.gsim_rlz.uid, lon=lon, lat=lat,
-            sa_period=getattr(imt, 'period', None),
+            sa_period=getattr(imt, 'period', None) or None,
             sa_damping=getattr(imt, 'damping', None),
             mag_bin_edges=attrs['mag_bin_edges'],
             dist_bin_edges=attrs['dist_bin_edges'],
