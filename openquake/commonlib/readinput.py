@@ -167,11 +167,12 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = set()
+        s = set()
         for paths in gen_sm_paths(smlt):
-            inputs['source'].update(paths)
+            s.update(paths)
+        inputs['source'] = sorted(s)
     elif 'source_model' in inputs:
-        inputs['source'] = {inputs['source_model']}
+        inputs['source'] = [inputs['source_model']]
     return params
 
 
