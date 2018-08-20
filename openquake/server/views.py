@@ -743,8 +743,6 @@ def get_oqparam(request, job_id):
 
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         oq = ds['oqparam']
-        # convert oq.inputs['source'] into a list because json hates sets
-        oq.inputs['source'] = sorted(oq.inputs['source'])
     return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
 
 
