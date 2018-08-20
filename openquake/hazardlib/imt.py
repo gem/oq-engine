@@ -159,7 +159,10 @@ class SA(IMT):
     _defaults = (5.0,)  # damping
 
     def __repr__(self):
-        return '%s(%s)' % (self.name, self.period)
+        if self.damping != 5.0:
+            return '%s(%s, %s)' % (self.name, self.period, self.damping)
+        else:
+            return '%s(%s)' % (self.name, self.period)
 
 
 class IA(IMT):
