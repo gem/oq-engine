@@ -178,11 +178,12 @@ class HeresiEtAl2018(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
+                stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)) + 
+                                                             dists.rjb * 0)
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
+                stddevs.append(phi + dists.rjb * 0)
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
+                stddevs.append(tau + dists.rjb * 0)
         return stddevs
 
     CONSTS = {
