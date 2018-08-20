@@ -694,9 +694,9 @@ class CoeffsTable(object):
             try:
                 sa_period = float(imt_name)
             except Exception:
-                if not hasattr(imt_module, imt_name):
+                if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
-                imt = getattr(imt_module, imt_name)()
+                imt = imt_module.registry[imt_name]()
                 self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
