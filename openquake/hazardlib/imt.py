@@ -260,8 +260,7 @@ class SDI(IMT):
         The degree of damping for the oscillator in percents.
   
     :raises ValueError:
-        if period or damping is not positive.
-		if Cy is out of the bounds of Cy_min - Cy_max for the given period
+        if period, Cy, or damping is not positive.
     """
     _fields =  [('period', positivefloat),  ('Cy',positivefloat), \
                 ('damping', positivefloat)]
