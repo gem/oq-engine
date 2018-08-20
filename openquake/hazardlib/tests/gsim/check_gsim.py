@@ -294,6 +294,8 @@ def _parse_csv_line(headers, values, req_site_params):
         else:
             # value is the expected result (of result_type type)
             value = float(value)
+            if param == 'arias':  # ugly legacy corner case
+                param = 'ia'
             imtclass = registry.get(param.upper(), None)
             if imtclass:
                 imt = imtclass()
