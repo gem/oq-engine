@@ -1488,10 +1488,10 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt, converter):
     for sm in source_model_lt.gen_source_models(gsim_lt):
         for name in sm.names.split():
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
-    monitor = performance.Monitor('cache source models')
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    dic = parallel.Starmap.apply(nrml.pickle_source_models,
-                                 (sorted(fnames), converter, monitor),
-                                 distribute=dist).reduce()
+    dic = parallel.Starmap.apply(
+        nrml.pickle_source_models,
+        (sorted(fnames), converter, performance.Monitor()),
+        distribute=dist).reduce()
     parallel.Starmap.shutdown()  # close the processpool
     return dic
