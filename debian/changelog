@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the parsing of the logic tree when there is no "applyToSources"
   * Made the IMT classes extensible in client code
   * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
     hazard curves and to reduce by half the download time
