@@ -602,8 +602,6 @@ class SourceModelLogicTree(object):
 
     def get_source_ids(self):
         """
-        :param oqparam:
-            an :class:`openquake.commonlib.oqvalidation.OqParam` instance
         :returns:
             the complete set of source IDs found in all the source models
         """
