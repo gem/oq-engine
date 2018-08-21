@@ -28,6 +28,7 @@ import os
 import re
 import sys
 import copy
+import logging
 import itertools
 import collections
 import operator
@@ -44,7 +45,7 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, valid, nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import (
-    split_coords_2d, split_coords_3d)
+    split_coords_2d, split_coords_3d, SourceGroup)
 
 from openquake.baselib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
@@ -491,7 +492,7 @@ class FakeSmlt(object):
             yield Realization(name, 1.0, smlt_path, 0, smlt_path)
 
 
-Info = collections.namedtuple('Info', 'smpaths, applyToSources')
+Info = collections.namedtuple('Info', 'smpaths, applytosources')
 
 
 def collect_info(smlt):
@@ -533,6 +534,23 @@ def get_paths(smlt, fnames):
     return paths
 
 
+def read_source_groups(fname):
+    """
+    :param fname: a path to a source model XML file
+    :return: a list of SourceGroup objects containing source nodes
+    """
+    smodel = nrml.read(fname).sourceModel
+    src_groups = []
+    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
+        for sg_node in smodel:
+            sg = SourceGroup(sg_node['tectonicRegion'])
+            sg.sources = sg_node.nodes
+            src_groups.append(sg)
+    else:  # NRML 0.4 format: smodel is a list of source nodes
+        src_groups.extend(SourceGroup.collect(smodel))
+    return src_groups
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -557,15 +575,16 @@ class SourceModelLogicTree(object):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
                     'characteristicFault')
 
-    def __init__(self, filename, validate=True, seed=0, num_samples=0,
-                 source_ids=()):
+    def __init__(self, filename, validate=True, seed=0, num_samples=0):
+        self.info = collect_info(filename)
+        if self.info.applytosources:
+            self.source_ids = self.get_source_ids()
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}  # branch_id -> branch
         self.open_ends = set()
-        self.source_ids = set(source_ids)
         self.tectonic_region_types = set()
         self.source_types = set()
         self.root_branchset = None
@@ -575,14 +594,36 @@ class SourceModelLogicTree(object):
         except AttributeError:
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
-        self.apply_to_sources = set()
         self.parse_tree(tree, validate)
 
     def on_each_source(self):
         """
         :returns: True if the logic tree is defined on each source
         """
-        return self.apply_to_sources == self.source_ids
+        return (self.info.applytosources and
+                self.info.applytosources == self.source_ids)
+
+    def get_source_ids(self):
+        """
+        :param oqparam:
+            an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :returns:
+            the complete set of source IDs found in all the source models
+        """
+        fnames = self.info.smpaths
+        source_ids = set()
+        logging.info('Reading source IDs from %d model file(s)', len(fnames))
+        for fname in fnames:
+            if fname.endswith('.hdf5'):
+                with hdf5.File(fname, 'r') as f:
+                    for sg in f['/']:
+                        for src in sg:
+                            source_ids.add(src.source_id)
+            else:
+                for sg in read_source_groups(fname):
+                    for src_node in sg:
+                        source_ids.add(src_node['id'])
+        return source_ids
 
     def parse_tree(self, tree_node, validate):
         """
@@ -1000,7 +1041,6 @@ class SourceModelLogicTree(object):
         """
         if 'applyToSources' in filters:
             filters['applyToSources'] = ss = filters['applyToSources'].split()
-            self.apply_to_sources.update(ss)
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
