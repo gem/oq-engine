@@ -317,7 +317,7 @@ def pickle_source_models(fnames, converter,  monitor):
         a dictionary fname -> fname.pik
     """
     fname2pik = {}
-    dtemp = tempfile.mkdtemp(prefix='calc_%d' % monitor.calc_id)
+    dtemp = tempfile.mkdtemp(prefix='calc_%s' % monitor.calc_id)
     for i, fname in enumerate(fnames, 1):
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
