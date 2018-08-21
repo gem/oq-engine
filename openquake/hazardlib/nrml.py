@@ -72,19 +72,20 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
+import os
 import re
 import sys
 import pickle
 import decimal
 import logging
 import operator
+import tempfile
 import collections
 
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import (
-    CallableDict, groupby, deprecated, gettemp)
+from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter, InvalidFile
@@ -304,7 +305,7 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter,  monitor):
+def pickle_source_models(fnames, converter,  monitor):
     """
     :param fnames:
         list of source model files
@@ -316,14 +317,16 @@ def read_source_models(fnames, converter,  monitor):
         a dictionary fname -> fname.pik
     """
     fname2pik = {}
-    for fname in fnames:
+    dtemp = tempfile.mkdtemp(prefix='calc_%d' % monitor.calc_id)
+    for i, fname in enumerate(fnames, 1):
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
         elif fname.endswith('.hdf5'):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        pikname = gettemp(suffix='.pik')
+        pikname = os.path.join(dtemp, '%s-%d.pik' %
+                               (os.path.basename(fname), i))
         fname2pik[fname] = pikname
         with open(pikname, 'wb') as f:
             pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
