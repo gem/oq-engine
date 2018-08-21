@@ -87,7 +87,7 @@ class GhofraniAtkinson2014(GMPE):
                  self._get_scaling_term(C, dists.rrup))
         # Convert mean from cm/s and cm/s/s and from common logarithm to
         # natural logarithm
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log((10.0 ** (imean)))

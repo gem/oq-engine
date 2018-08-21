@@ -139,8 +139,8 @@ class WorkerPool(object):
         """
         setproctitle('oq-zworker')
         with sock:
-            for cmd, args in sock:
-                parallel.safely_call(cmd, args)
+            for cmd, args, mon in sock:
+                parallel.safely_call(cmd, args, mon)
 
     def start(self):
         """
