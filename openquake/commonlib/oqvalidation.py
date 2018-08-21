@@ -166,10 +166,10 @@ class OqParam(valid.ParamSet):
 
     def get_reqv(self):
         """
-        :returns: an instance of class:`RepiEquivalent` if reqv_hdf5 is set
+        :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
         """
         if 'reqv' in self.inputs:
-            return valid.RepiEquivalent(self.inputs['reqv'])
+            return valid.RjbEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
@@ -293,7 +293,7 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        imts = set('SA' if imt.startswith('SA') else imt for imt in self.imtls)
+        imts = set(from_string(imt).name for imt in self.imtls)
         for gsim in gsims:
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
