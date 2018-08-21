@@ -607,8 +607,8 @@ class DisaggXMLWriter(object):
 
         The following are optional, depending on the `imt`:
 
-        * sa_period: Only used with imt = 'SA'.
-        * sa_damping: Only used with imt = 'SA'.
+        * sa_period
+        * sa_damping
     """
 
     #: Maps metadata keywords to XML attribute names for bin edge information
