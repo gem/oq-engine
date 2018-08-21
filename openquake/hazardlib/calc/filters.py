@@ -226,7 +226,7 @@ class SourceFilter(object):
         if os.environ.get('OQ_DISTRIBUTE') == 'no':
             self.distribute = 'no'
         else:
-            self.distribute = 'subprocess'
+            self.distribute = 'processpool'
 
     @property
     def sitecol(self):
