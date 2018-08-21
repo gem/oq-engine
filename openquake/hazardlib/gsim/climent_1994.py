@@ -164,11 +164,11 @@ class ClimentEtAl1994(GMPE):
 
         # convert from m/s**2 to g for PGA and from m/s to g for PSV
         # and divided this value for the ratio(SA_larger/SA_geo_mean)
-        if isinstance(imt, PGA):
-            mean = (np.exp(mean) /g) / C['r_SA']
+        if imt.name == "PGA":
+            mean = (np.exp(mean) / g) / C['r_SA']
         else:
             W = (2. * np.pi)/imt.period
-            mean = ((np.exp(mean) * W) /g) / C['r_SA']
+            mean = ((np.exp(mean) * W) / g) / C['r_SA']
         return np.log(mean)
 
     #: Equation coefficients, described in Table 4.1 on pp. 22
