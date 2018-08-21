@@ -576,9 +576,6 @@ class SourceModelLogicTree(object):
                     'characteristicFault')
 
     def __init__(self, filename, validate=True, seed=0, num_samples=0):
-        self.info = collect_info(filename)
-        if self.info.applytosources:
-            self.source_ids = self.get_source_ids()
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
@@ -630,6 +627,11 @@ class SourceModelLogicTree(object):
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root.
         """
+        self.info = collect_info(self.filename)
+        if self.info.applytosources:
+            self.source_ids = self.get_source_ids()
+        else:
+            self.source_ids = set()
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
 
