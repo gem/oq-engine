@@ -212,7 +212,8 @@ class SourceFilter(object):
             raise ValueError('%s is not complete!' % sitecol)
         self.hdf5path = hdf5path
         if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.distribution.oq_distribute in
+                ('no', 'subprocess', 'processpool') or
                 config.directory.shared_dir):  # store the sitecol
             with hdf5.File(hdf5path, 'w') as h5:
                 h5['sitecol'] = sitecol
@@ -225,7 +226,7 @@ class SourceFilter(object):
         if os.environ.get('OQ_DISTRIBUTE') == 'no':
             self.distribute = 'no'
         else:
-            self.distribute = 'processpool'
+            self.distribute = 'subprocess'
 
     @property
     def sitecol(self):

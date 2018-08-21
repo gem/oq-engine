@@ -155,6 +155,7 @@ import operator
 import functools
 import itertools
 import traceback
+import subprocess
 import collections
 import multiprocessing.dummy
 import psutil
@@ -170,7 +171,7 @@ from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize)
+    split_in_blocks, block_splitter, AccumDict, humansize, gettemp)
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
@@ -178,8 +179,8 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
+if OQ_DISTRIBUTE not in ('no', 'subprocess', 'processpool', 'threadpool',
+                         'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 # data type for storing the performance information
@@ -542,6 +543,14 @@ def _wakeup(sec, mon):
     return os.getpid()
 
 
+SAFELY_CALL = '''\
+import sys, pickle
+from openquake.baselib.parallel import safely_call
+with open(sys.argv[1], 'rb') as f:
+    func_args_mon = pickle.load(f)
+safely_call(*func_args_mon)'''
+
+
 class Starmap(object):
     task_ids = []
     pids = []
@@ -654,7 +663,7 @@ class Starmap(object):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
             # add incremental task number and task weight
-            mon.task_no = task_no
+            mon.task_no = self.monitor.task_no = task_no
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
@@ -687,6 +696,20 @@ class Starmap(object):
         yield len(allargs)
         for args in allargs:
             yield safely_call(self.task_func, args, self.monitor)
+
+    def _iter_subprocess(self):
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
+            popens = []
+            for args in self._genargs(pickle=False):
+                pik = pickle.dumps((self.task_func, args, self.monitor),
+                                   pickle.HIGHEST_PROTOCOL)
+                pikfile = gettemp(pik, suffix='.pik')
+                popens.append(subprocess.Popen(
+                    [sys.executable, '-c', SAFELY_CALL, pikfile]))
+            yield from self._loop((p.wait() for p in popens),
+                                  iter(socket), len(popens))
 
     def _iter_processpool(self):
         safefunc = functools.partial(safely_call, self.task_func,
