@@ -140,7 +140,7 @@ class HeresiEtAl2018(GMPE):
 
         mean = (self._get_magnitude_scaling_term(C, rup.mag, imt_per) +
                 self._get_path_scaling(C, dists, rup.mag))
-        stddevs = self._get_stddevs(C, stddev_types)
+        stddevs = self._get_stddevs(C, stddev_types, dists)
         return mean, stddevs
 
     def _get_Mh(self, period):
@@ -167,7 +167,7 @@ class HeresiEtAl2018(GMPE):
             np.log(Rm / self.CONSTS["Rref"])
         return scaling
 
-    def _get_stddevs(self, C, stddev_types):
+    def _get_stddevs(self, C, stddev_types, dists):
         """
         Returns the aleatory uncertainty terms described in equations (4) and
         (5)
