@@ -491,7 +491,10 @@ class FakeSmlt(object):
             yield Realization(name, 1.0, smlt_path, 0, smlt_path)
 
 
-def collect_source_model_paths(smlt):
+Info = collections.namedtuple('Info', 'smpaths, applyToSources')
+
+
+def collect_info(smlt):
     """
     Given a path to a source model logic tree or a file-like, collect all of
     the soft-linked path names to the source models it contains and return them
@@ -506,14 +509,28 @@ def collect_source_model_paths(smlt):
         raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
     paths = set()
+    applytosources = set()
     for blevel in blevels:
         with node.context(smlt, blevel):
             for bset in blevel:
+                if 'applyToSources' in bset.attrib:
+                    applytosources.add(bset['applyToSources'])
                 for br in bset:
-                    smfname = ' '.join(br.uncertaintyModel.text.split())
-                    if smfname:
-                        paths.add(smfname)
-    return sorted(paths)
+                    fnames = br.uncertaintyModel.text.split()
+                    paths.update(get_paths(smlt, fnames))
+    return Info(sorted(paths), applytosources)
+
+
+def get_paths(smlt, fnames):
+    base_path = os.path.dirname(smlt)
+    paths = []
+    for fname in fnames:
+        if os.path.isabs(fname):
+            raise InvalidFile('%s: %s must be a relative path' % (smlt, fname))
+        fname = os.path.abspath(os.path.join(base_path, fname))
+        if os.path.exists(fname):  # consider only real paths
+            paths.append(fname)
+    return paths
 
 
 class SourceModelLogicTree(object):
