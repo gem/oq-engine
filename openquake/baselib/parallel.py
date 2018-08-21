@@ -433,7 +433,7 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        self.progress('Sent %s of data in %s task(s)',
+        self.progress('Pickled %s of data in %s task(s)',
                       humansize(sent.sum()), num_tasks)
 
     def _log_percent(self):
@@ -702,7 +702,7 @@ class Starmap(object):
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
             popens = []
-            for args in self._genargs(pickle=False):
+            for args in self._genargs():
                 pik = pickle.dumps((self.task_func, args, self.monitor),
                                    pickle.HIGHEST_PROTOCOL)
                 pikfile = gettemp(pik, suffix='.pik')
