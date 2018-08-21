@@ -167,31 +167,10 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        s = set()
-        for paths in gen_sm_paths(smlt):
-            s.update(paths)
-        inputs['source'] = sorted(s)
+        inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
-
-
-def gen_sm_paths(smlt):
-    """
-    Yields the path names for the source models listed in the smlt file,
-    a block at the time.
-    """
-    base_path = os.path.dirname(smlt)
-    for model in logictree.collect_source_model_paths(smlt):
-        paths = []
-        for name in model.split():
-            if os.path.isabs(name):
-                raise InvalidFile('%s: %s must be a relative path' %
-                                  (smlt, name))
-            fname = os.path.abspath(os.path.join(base_path, name))
-            if os.path.exists(fname):  # consider only real paths
-                paths.append(fname)
-        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
@@ -1033,29 +1012,28 @@ def reduce_source_model(smlt_file, source_ids):
     """
     Extract sources from the composite source model
     """
-    for paths in gen_sm_paths(smlt_file):
-        for path in paths:
-            root = nrml.read(path)
-            model = Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
+    for path in logictree.collect_info(smlt_file).smpaths:
+        root = nrml.read(path)
+        model = Node('sourceModel', root[0].attrib)
+        origmodel = root[0]
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            for src_node in origmodel:
+                if src_node['id'] in source_ids:
+                    model.nodes.append(src_node)
+        else:  # nrml/0.5
+            for src_group in origmodel:
+                sg = copy.copy(src_group)
+                sg.nodes = []
+                for src_node in src_group:
                     if src_node['id'] in source_ids:
-                        model.nodes.append(src_node)
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    sg = copy.copy(src_group)
-                    sg.nodes = []
-                    for src_node in src_group:
-                        if src_node['id'] in source_ids:
-                            sg.nodes.append(src_node)
-                    if sg.nodes:
-                        model.nodes.append(sg)
-            if model:
-                shutil.copy(path, path + '.bak')
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-                    logging.warn('Reduced %s' % path)
+                        sg.nodes.append(src_node)
+                if sg.nodes:
+                    model.nodes.append(sg)
+        if model:
+            shutil.copy(path, path + '.bak')
+            with open(path, 'wb') as f:
+                nrml.write([model], f, xmlns=root['xmlns'])
+                logging.warn('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):
