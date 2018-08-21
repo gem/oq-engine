@@ -535,11 +535,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         oqparam.area_source_discretization)
 
     psr = nrml.SourceModelParser(converter)
+    pik = {}
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
         logging.info('Pickling the source model(s)')
-        pik = logictree.parallel_read_source_models(
+        pik = logictree.parallel_pickle_source_models(
             gsim_lt, source_model_lt, converter, monitor)
 
     # consider only the effective realizations
@@ -587,6 +588,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
+    # file cleanup
+    for pikfile in pik.values():
+        os.remove(pikfile)
 
 
 def getid(src):
