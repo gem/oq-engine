@@ -551,6 +551,19 @@ with open(sys.argv[1], 'rb') as f:
 safely_call(*func_args_mon)'''
 
 
+def completed(popen_args, free_cpus=cpu_count):
+    to_send = collections.deque(popen_args)
+    to_recv = collections.deque()
+    while to_send or to_recv:
+        for _ in range(min(len(to_send), free_cpus)):
+            popen_args = to_send.popleft()
+            to_recv.append(subprocess.Popen(popen_args))
+        popen = to_recv.popleft()
+        popen.wait()
+        yield popen
+        free_cpus = 1
+
+
 class Starmap(object):
     task_ids = []
     pids = []
@@ -706,10 +719,8 @@ class Starmap(object):
                 pik = pickle.dumps((self.task_func, args, self.monitor),
                                    pickle.HIGHEST_PROTOCOL)
                 pikfile = gettemp(pik, suffix='.pik')
-                popens.append(subprocess.Popen(
-                    [sys.executable, '-c', SAFELY_CALL, pikfile]))
-            yield from self._loop((p.wait() for p in popens),
-                                  iter(socket), len(popens))
+                popens.append([sys.executable, '-c', SAFELY_CALL, pikfile])
+            yield from self._loop(completed(popens), iter(socket), len(popens))
 
     def _iter_processpool(self):
         safefunc = functools.partial(safely_call, self.task_func,
