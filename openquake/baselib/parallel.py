@@ -23,7 +23,7 @@ There are several good libraries to manage parallel programming, both
 in the standard library and in third party packages. Since we are not
 interested in reinventing the wheel, OpenQuake does not offer any new
 parallel library; however, it does offer some glue code so that you
-can use your library of choice. Currently threading, multiprocessing,
+can use your library of choice. Currently threading, subprocess,
 zmq and celery are supported. Moreover,
 :mod:`openquake.baselib.parallel` offers some additional facilities
 that make it easier to parallelize scientific computations,
@@ -78,7 +78,7 @@ environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
 `OQ_DISTRIBUTE` not set or set to "processpool":
-  use multiprocessing
+  use subprocesses
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
@@ -147,7 +147,6 @@ import os
 import sys
 import time
 import socket
-import signal
 import pickle
 import inspect
 import logging
@@ -157,7 +156,6 @@ import itertools
 import traceback
 import subprocess
 import collections
-import multiprocessing.dummy
 import psutil
 import numpy
 try:
@@ -173,7 +171,7 @@ from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, gettemp)
 
-cpu_count = multiprocessing.cpu_count()
+cpu_count = os.cpu_count()
 GB = 1024 ** 3
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
