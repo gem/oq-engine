@@ -179,7 +179,7 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'subprocess', 'processpool', 'threadpool',
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool',
                          'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
@@ -519,30 +519,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
-    return os.getpid()
-
-
-def _wakeup(sec, mon):
-    """Waiting function, used to wake up the process pool"""
-    time.sleep(sec)
-    return os.getpid()
-
-
 SAFELY_CALL = '''\
 import sys, pickle
 from openquake.baselib.parallel import safely_call
@@ -551,17 +527,26 @@ with open(sys.argv[1], 'rb') as f:
 safely_call(*func_args_mon)'''
 
 
-def completed(popen_args, free_cpus=cpu_count):
+def wait(popens, delta=.25):
+    while popens:
+        time.sleep(delta)
+        ready = [po for po in popens if po.poll() is not None]
+        if ready:
+            for po in ready:
+                popens.remove(po)
+            return ready
+
+
+def start(popen_args, free_cpus=cpu_count):
     to_send = collections.deque(popen_args)
-    to_recv = collections.deque()
+    to_recv = []  # popen objects
     while to_send or to_recv:
         for _ in range(min(len(to_send), free_cpus)):
             popen_args = to_send.popleft()
             to_recv.append(subprocess.Popen(popen_args))
-        popen = to_recv.popleft()
-        popen.wait()
-        yield popen
-        free_cpus = 1
+        ready = wait(to_recv)
+        yield from ready
+        free_cpus = len(ready)
 
 
 class Starmap(object):
@@ -571,30 +556,14 @@ class Starmap(object):
     hdf5 = None
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            m = Monitor('wakeup')
-            ires = cls(
-                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
-            ).submit_all(logging.debug)
-            cls.pids = list(ires)
-            cls.task_ids = []
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
-        elif distribute == 'dask':
+    def init(cls, distribute=OQ_DISTRIBUTE):
+        cls.pids = []  # TODO: see if we can remove this
+        cls.task_ids = []  # TODO: see if we can remove this
+        if distribute == 'dask':
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
-        if hasattr(cls, 'pool'):
-            cls.pool.close()
-            cls.pool.terminate()
-            cls.pool.join()
-            del cls.pool
-            cls.pids = []
+    def shutdown(cls):
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -710,7 +679,7 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args, self.monitor)
 
-    def _iter_subprocess(self):
+    def _iter_processpool(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
@@ -720,26 +689,20 @@ class Starmap(object):
                                    pickle.HIGHEST_PROTOCOL)
                 pikfile = gettemp(pik, suffix='.pik')
                 popens.append([sys.executable, '-c', SAFELY_CALL, pikfile])
-            yield from self._loop(completed(popens), iter(socket), len(popens))
-
-    def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        yield from self.pool.imap_unordered(safefunc, allargs)
-
-    _iter_threadpool = _iter_processpool
+            yield from self._loop(start(popens), iter(socket), len(popens))
 
     def _loop(self, ierr, isocket, num_results):
         yield num_results
-        for err, res in zip(ierr, isocket):
+        for err in ierr:
             if isinstance(err, Exception):  # TaskRevokedError
                 raise err
-            elif self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %d, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
-                continue
+            while True:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                else:
+                    break
             yield res
 
     def _iter_celery(self):
