@@ -23,7 +23,7 @@ There are several good libraries to manage parallel programming, both
 in the standard library and in third party packages. Since we are not
 interested in reinventing the wheel, OpenQuake does not offer any new
 parallel library; however, it does offer some glue code so that you
-can use your library of choice. Currently threading, multiprocessing,
+can use your library of choice. Currently threading, subprocess,
 zmq and celery are supported. Moreover,
 :mod:`openquake.baselib.parallel` offers some additional facilities
 that make it easier to parallelize scientific computations,
@@ -78,7 +78,7 @@ environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
 `OQ_DISTRIBUTE` not set or set to "processpool":
-  use multiprocessing
+  use subprocesses
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
 `OQ_DISTRIBUTE` set to "celery":
@@ -147,7 +147,6 @@ import os
 import sys
 import time
 import socket
-import signal
 import pickle
 import inspect
 import logging
@@ -155,8 +154,8 @@ import operator
 import functools
 import itertools
 import traceback
+import subprocess
 import collections
-import multiprocessing.dummy
 import psutil
 import numpy
 try:
@@ -170,16 +169,16 @@ from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
 from openquake.baselib.general import (
-    split_in_blocks, block_splitter, AccumDict, humansize)
+    split_in_blocks, block_splitter, AccumDict, humansize, gettemp)
 
-cpu_count = multiprocessing.cpu_count()
+cpu_count = os.cpu_count()
 GB = 1024 ** 3
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
+if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool',
+                         'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 # data type for storing the performance information
@@ -432,7 +431,7 @@ class IterResult(object):
             next(self.log_percent)
         else:
             self.progress('No %s tasks were submitted', self.name)
-        self.progress('Sent %s of data in %s task(s)',
+        self.progress('Pickled %s of data in %s task(s)',
                       humansize(sent.sum()), num_tasks)
 
     def _log_percent(self):
@@ -518,28 +517,42 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
-    return os.getpid()
+SAFELY_CALL = '''\
+import sys, pickle, setproctitle
+from openquake.baselib.parallel import safely_call
+setproctitle.setproctitle('oq-subprocess')
+with open(sys.argv[1], 'rb') as f:
+    func_args_mon = pickle.load(f)
+safely_call(*func_args_mon)'''
 
 
-def _wakeup(sec, mon):
-    """Waiting function, used to wake up the process pool"""
-    time.sleep(sec)
-    return os.getpid()
+def wait(popens, delta=.25):
+    """
+    Wait on the given list of Popen object and return the ready
+    objects by removing them from the list.
+    """
+    while popens:
+        time.sleep(delta)
+        ready = [po for po in popens if po.poll() is not None]
+        if ready:
+            for po in ready:
+                popens.remove(po)
+            return ready
+
+
+def start(popen_args, free_cpus=cpu_count):
+    """
+    Generator of Popen objects from an iterable of Popen arguments
+    """
+    to_send = collections.deque(popen_args)
+    to_recv = []  # popen objects
+    while to_send or to_recv:
+        for _ in range(min(len(to_send), free_cpus)):
+            popen_args = to_send.popleft()
+            to_recv.append(subprocess.Popen(popen_args))
+        ready = wait(to_recv)
+        yield from ready
+        free_cpus = len(ready)
 
 
 class Starmap(object):
@@ -549,30 +562,14 @@ class Starmap(object):
     hdf5 = None
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            m = Monitor('wakeup')
-            ires = cls(
-                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
-            ).submit_all(logging.debug)
-            cls.pids = list(ires)
-            cls.task_ids = []
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(poolsize)
-        elif distribute == 'no' and hasattr(cls, 'pool'):
-            cls.shutdown()
-        elif distribute == 'dask':
+    def init(cls, distribute=OQ_DISTRIBUTE):
+        cls.pids = []  # TODO: see if we can remove this
+        cls.task_ids = []  # TODO: see if we can remove this
+        if distribute == 'dask':
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
-        if hasattr(cls, 'pool'):
-            cls.pool.close()
-            cls.pool.terminate()
-            cls.pool.join()
-            del cls.pool
-            cls.pids = []
+    def shutdown(cls):
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -654,7 +651,7 @@ class Starmap(object):
             mon = args[-1]
             assert isinstance(mon, Monitor), mon
             # add incremental task number and task weight
-            mon.task_no = task_no
+            mon.task_no = self.monitor.task_no = task_no
             self.calc_id = getattr(mon, 'calc_id', None)
             if pickle:
                 args = pickle_sequence(args)
@@ -689,23 +686,34 @@ class Starmap(object):
             yield safely_call(self.task_func, args, self.monitor)
 
     def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        yield from self.pool.imap_unordered(safefunc, allargs)
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
+            it = self._gen_popen_args()
+            yield from self._loop(start(it), iter(socket), next(it))
 
-    _iter_threadpool = _iter_processpool
+    def _gen_popen_args(self):
+        with self.monitor('getting %s arguments' % self.name):
+            allargs = list(self._genargs())
+        yield len(allargs)
+        for args in allargs:
+            pik = pickle.dumps((self.task_func, args, self.monitor),
+                               pickle.HIGHEST_PROTOCOL)
+            pikfile = gettemp(pik, suffix='.pik')
+            yield [sys.executable, '-c', SAFELY_CALL, pikfile]
 
     def _loop(self, ierr, isocket, num_results):
         yield num_results
-        for err, res in zip(ierr, isocket):
+        for err in ierr:
             if isinstance(err, Exception):  # TaskRevokedError
                 raise err
-            elif self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %d, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
-                continue
+            while True:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                else:
+                    break
             yield res
 
     def _iter_celery(self):
