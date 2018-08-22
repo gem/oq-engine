@@ -693,7 +693,8 @@ class Starmap(object):
             yield from self._loop(start(it), iter(socket), next(it))
 
     def _gen_popen_args(self):
-        allargs = list(self._genargs())
+        with self.monitor('getting %s arguments' % self.name):
+            allargs = list(self._genargs())
         yield len(allargs)
         for args in allargs:
             pik = pickle.dumps((self.task_func, args, self.monitor),
