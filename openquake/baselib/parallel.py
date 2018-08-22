@@ -527,6 +527,10 @@ safely_call(*func_args_mon)'''
 
 
 def wait(popens, delta=.25):
+    """
+    Wait on the given list of Popen object and return the ready
+    objects by removing them from the list.
+    """
     while popens:
         time.sleep(delta)
         ready = [po for po in popens if po.poll() is not None]
@@ -537,6 +541,9 @@ def wait(popens, delta=.25):
 
 
 def start(popen_args, free_cpus=cpu_count):
+    """
+    Generator of Popen objects from an iterable of Popen arguments
+    """
     to_send = collections.deque(popen_args)
     to_recv = []  # popen objects
     while to_send or to_recv:
@@ -682,13 +689,17 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
-            popens = []
-            for args in self._genargs():
-                pik = pickle.dumps((self.task_func, args, self.monitor),
-                                   pickle.HIGHEST_PROTOCOL)
-                pikfile = gettemp(pik, suffix='.pik')
-                popens.append([sys.executable, '-c', SAFELY_CALL, pikfile])
-            yield from self._loop(start(popens), iter(socket), len(popens))
+            it = self._gen_popen_args()
+            yield from self._loop(start(it), iter(socket), next(it))
+
+    def _gen_popen_args(self):
+        allargs = list(self._genargs())
+        yield len(allargs)
+        for args in allargs:
+            pik = pickle.dumps((self.task_func, args, self.monitor),
+                               pickle.HIGHEST_PROTOCOL)
+            pikfile = gettemp(pik, suffix='.pik')
+            yield [sys.executable, '-c', SAFELY_CALL, pikfile]
 
     def _loop(self, ierr, isocket, num_results):
         yield num_results
