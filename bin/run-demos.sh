@@ -27,6 +27,7 @@ oq engine --lhc
 MPLBACKEND=Agg oq plot -1
 MPLBACKEND=Agg oq plot_uhs -1
 MPLBACKEND=Agg oq plot_sites -1
+MPLBACKEND=Agg oq plot_memory
 
 # fake a failed/executing calculation to check that it is not exported
 oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini

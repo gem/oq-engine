@@ -109,8 +109,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        parent = self.calc.datastore.parent
-        crm = sorted(parent.getitem('composite_risk_model'))
+        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -208,7 +207,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract curves by tag
         tags = 'taxonomy=tax1&state=01&cresta=0.11'
-        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
+        a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -269,7 +268,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 36)  # 2 IMT x 2 poes + 32 files
+        self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

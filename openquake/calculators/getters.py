@@ -166,9 +166,9 @@ class PmapGetter(object):
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k]
+                    yield k, self.dstore['hcurves/' + k].value
             elif num_rlzs == 1:
-                yield 'rlz-000', self.get(0)
+                yield 'mean', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlzi in range(num_rlzs):
@@ -178,7 +178,7 @@ class PmapGetter(object):
             yield kind, self.get(int(kind[4:]))
         if 'hcurves' in self.dstore and kind in ('stats', 'all'):
             for k in sorted(self.dstore['hcurves']):
-                yield k, self.dstore['hcurves/' + k]
+                yield k, self.dstore['hcurves/' + k].value
 
     def get_mean(self, grp=None):
         """
@@ -208,11 +208,10 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
+    def __init__(self, dstore, sids, num_rlzs, imtls):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.E = num_events
         self.imtls = imtls
 
     def init(self):

@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine for development using Python 3.5
+# Installing the OpenQuake Engine for development using Python 3.6
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 
@@ -6,10 +6,8 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 ### Linux
 
-- Ubuntu 16.04 LTS (Xenial)
-- RedHat Enterprise Linux 7
-- CentOS 7
-- Scientific Linux 7
+- Ubuntu 18.04 LTS (Bionic)
+- RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
 - Fedora 27/28
 
 This guide may work also on other Linux releases/distributions.
@@ -24,17 +22,17 @@ This guide may work also on other Linux releases/distributions.
 
 Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some software prerequisites are needed to build the development environment. Python 3.5 is used in this guide.
+Some software prerequisites are needed to build the development environment. Python 3.6 or greater is required.
 
 ### Ubuntu
 
 ```bash
-sudo apt install git python3.5 python3.5-venv python3-pip
+sudo apt install git python3.6 python3.6-venv python3-pip
 ```
 
 ### RedHat and clones
 
-On RedHat and its clones (CentOS/SL) Python 3.5 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
+On RedHat and its clones (CentOS/SL) Python 3.6 isn't available in the standard repositories, but it can be installed via [RedHat Software Collections](https://access.redhat.com/documentation/en-US/Red_Hat_Developer_Toolset/1/html-single/Software_Collections_Guide/).
 
 ```bash
 ## RedHat
@@ -43,8 +41,8 @@ sudo yum install git scl-utils scl-utils-build
 ## CentOS/SL
 sudo yum install git centos-release-scl
 
-sudo yum install rh-python35
-scl enable rh-python35 bash
+sudo yum install rh-python36
+scl enable rh-python36 bash
 ```
 
 ### Fedora
@@ -68,7 +66,7 @@ If Xcode is already installed on your machine, then there is no need to install 
 
 #### Python
 
-You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg
 
 #### Encoding
 
@@ -90,7 +88,7 @@ mkdir $HOME/openquake && cd $HOME/openquake
 then build a development environment using python *virtualenv*
 
 ```bash
-python3.5 -m venv oqenv
+python3.6 -m venv oqenv
 source oqenv/bin/activate
 ```
 
@@ -115,12 +113,12 @@ It's strongly recommended to install Python dependencies using our Python wheels
 
 ```bash
 # For Linux
-pip install -r oq-engine/requirements-py35-linux64.txt
+pip install -r oq-engine/requirements-py36-linux64.txt
 ```
 
 ```bash
 # For macOS
-pip install -r oq-engine/requirements-py35-macos.txt
+pip install -r oq-engine/requirements-py36-macos.txt
 ```
 
 ```bash
