@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 #
 # LICENSE
 #
@@ -43,7 +46,6 @@
 # liability for use of the software.
 
 import unittest
-import numpy as np
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface import complex_fault, simple_fault

@@ -155,9 +155,9 @@ class EbrCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         super().pre_execute('event_based')
-        parent = self.dynamic_parent
+        parent = self.datastore.parent
         if not self.oqparam.ground_motion_fields:
-            return  # this happens in the reportwrite
+            return  # this happens in the reportwriter
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
@@ -341,7 +341,8 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
         self.datastore['agg_curves-rlzs'] = array
-        units = self.assetcol.units(loss_types=array.dtype.names)
+        units = self.assetcol.cost_calculator.get_units(
+            loss_types=array.dtype.names)
         self.datastore.set_attrs(
             'agg_curves-rlzs', return_periods=b.return_periods, units=units)
         if arr_stats is not None:
