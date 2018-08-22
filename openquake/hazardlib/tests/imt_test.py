@@ -18,18 +18,23 @@ import pickle
 from openquake.hazardlib import imt as imt_module
 
 
+def check(val):
+    if not isinstance(val, (int, str, float)):
+        raise ValueError(val)
+
+
 class BaseIMTTestCase(unittest.TestCase):
-    class TestIMT(imt_module._IMT):
-        _fields = ('foo', 'bar')
+    class TestIMT(imt_module.IMT):
+        _fields = (('foo', check), ('bar', check))
 
         def __new__(cls, foo, bar):
-            return imt_module._IMT.__new__(cls, foo, bar)
+            return imt_module.IMT.__new__(cls, foo, bar)
 
     def test_base(self):
         self.assertEqual(getattr(self.TestIMT, '__slots__'), ())
         self.assertFalse(hasattr(self.TestIMT(1, 2), '__dict__'))
         imt = self.TestIMT(bar=2, foo=1)
-        self.assertEqual(str(imt), 'TestIMT')
+        self.assertEqual(str(imt), 'TestIMT(1, 2)')
 
     def test_equality(self):
         self.assertTrue(self.TestIMT(1, 1) == self.TestIMT(1, 1))
@@ -83,8 +88,8 @@ class BaseIMTTestCase(unittest.TestCase):
         sa = imt_module.from_string('SA(0.1)')
         self.assertEqual(sa, ('SA', 0.1, 5.0))
         pga = imt_module.from_string('PGA')
-        self.assertEqual(pga, ('PGA', None, None))
-        with self.assertRaises(ValueError):
+        self.assertEqual(pga, ('PGA',))
+        with self.assertRaises(KeyError):
             imt_module.from_string('XXX')
 
 

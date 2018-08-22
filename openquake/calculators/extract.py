@@ -28,9 +28,10 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import DictArray, group_array
+from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
+from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
 
 F32 = numpy.float32
@@ -171,10 +172,12 @@ def extract_hazard(dstore, what):
             key = 'hcurves/%s/%s' % (imt, kind)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
             for sid in pmap:
-                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
-        if oq.poes:
+        try:
+            hmap = dstore['hmaps/' + kind]
+        except KeyError:  # for kind=rlz-XXX
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
             key = 'hmaps/poe-%s/%s' % (poe, kind)
@@ -234,13 +237,18 @@ def extract_hcurves(dstore, what):
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
+    if 'hcurves' not in dstore:
+        return []
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol, complete=False)
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[kind] = hcurves.convert_npy(oq.imtls, sitecol.sids)
+    dtlist = []
+    for imt, imls in oq.imtls.items():
+        dt = numpy.dtype([(str(iml), F32) for iml in imls])
+        dtlist.append((imt, dt))
+    for kind, hcurves in dstore['hcurves'].items():
+        dic[kind] = hcurves.value.view(dtlist).flatten()
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -252,13 +260,8 @@ def extract_hmaps(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    dic = {kind: dstore['hmaps/' + kind] for kind in dstore['hmaps']}
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -327,12 +330,12 @@ def get_loss_type_tags(what):
     return loss_type, tags
 
 
-@extract.add('agglosses')
-def extract_agglosses(dstore, what):
+@extract.add('agg_losses')
+def extract_agg_losses(dstore, what):
     """
     Aggregate losses of the given loss type and tags. Use it as
-    /extract/agglosses/structural?taxonomy=RC&zipcode=20126
-    /extract/agglosses/structural?taxonomy=RC&zipcode=*
+    /extract/agg_losses/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_losses/structural?taxonomy=RC&zipcode=*
 
     :returns:
         an array of shape (T, R) if one of the tag names has a `*` value
@@ -341,7 +344,7 @@ def extract_agglosses(dstore, what):
     """
     loss_type, tags = get_loss_type_tags(what)
     if not loss_type:
-        raise ValueError('loss_type not passed in agglosses/<loss_type>')
+        raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     l = dstore['oqparam'].lti[loss_type]
     if 'losses_by_asset' in dstore:  # scenario_risk
         stats = None
@@ -357,11 +360,11 @@ def extract_agglosses(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags, stats)
 
 
-@extract.add('aggdamages')
-def extract_aggdamages(dstore, what):
+@extract.add('agg_damages')
+def extract_agg_damages(dstore, what):
     """
     Aggregate damages of the given loss type and tags. Use it as
-    /extract/aggdamages/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_damages/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (R, D), being R the number of realizations and D
@@ -376,12 +379,12 @@ def extract_aggdamages(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags)
 
 
-@extract.add('aggcurves')
-def extract_aggcurves(dstore, what):
+@extract.add('agg_curves')
+def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves of the given loss type and tags for
     event based risk calculations. Use it as
-    /extract/aggcurves/structural?taxonomy=RC&zipcode=20126
+    /extract/agg_curves/structural?taxonomy=RC&zipcode=20126
 
     :returns:
         array of shape (S, P), being P the number of return periods
@@ -390,10 +393,18 @@ def extract_aggcurves(dstore, what):
     loss_type, tags = get_loss_type_tags(what)
     if 'curves-stats' in dstore:  # event_based_risk
         losses = dstore['curves-stats'][loss_type]
+        stats = dstore['curves-stats'].attrs['stats']
+    elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
+        losses = dstore['curves-rlzs'][loss_type]
+        assert losses.shape[1] == 1, 'There must be a single realization'
+        stats = [b'mean']  # suitable to be stored as hdf5 attribute
     else:
         raise KeyError('No curves found in %s' % dstore)
-    stats = dstore['curves-stats'].attrs['stats']
-    return _filter_agg(dstore['assetcol'], losses, tags, stats)
+    res = _filter_agg(dstore['assetcol'], losses, tags, stats)
+    cc = dstore['assetcol/cost_calculator']
+    res.units = cc.get_units(loss_types=[loss_type])
+    res.return_periods = get_loss_builder(dstore).return_periods
+    return res
 
 
 @extract.add('losses_by_asset')
@@ -535,4 +546,4 @@ def extract_mean_std_curves(dstore, what):
     arr = getter.get_mean().array
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls.slicedic[imt]]
+        yield 'poes/' + imt, arr[:, getter.imtls(imt)]

@@ -96,10 +96,10 @@ class ClassicalTestCase(CalculatorTestCase):
         got = view('pmap:grp-00', self.calc.datastore)
         self.assertEqual(got, '''\
 {0: <ProbabilityCurve
-[[0.00103659 0.        ]
- [0.         0.        ]
- [0.         0.        ]
- [0.         0.        ]]>}''')
+[[2.26776679e-03 0.00000000e+00]
+ [1.67915423e-05 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]]>}''')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
@@ -408,7 +408,7 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 1554747528)
+        self.assertEqual(checksum, 3294662884)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT

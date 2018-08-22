@@ -323,14 +323,13 @@ def view_job_info(token, dstore):
     """
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
-        if task not in ('task_sources', 'source_data'):
-            dset = dstore['task_info/' + task]
-            argnames = dset.attrs['argnames'].split()
-            totsent = dset.attrs['sent']
-            sent = ['%s=%s' % (a, humansize(s))
-                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
-            recv = dset['received'].sum()
-            data.append((task, ' '.join(sent), humansize(recv)))
+        dset = dstore['task_info/' + task]
+        argnames = dset.attrs['argnames'].split()
+        totsent = dset.attrs['sent']
+        sent = ['%s=%s' % (a, humansize(s))
+                for s, a in sorted(zip(totsent, argnames), reverse=True)]
+        recv = dset['received'].sum()
+        data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 
@@ -586,9 +585,8 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        if task not in ('task_sources', 'source_data'):  # this is special
-            val = dstore['task_info/' + task]['duration']
-            data.append(stats(task, val))
+        val = dstore['task_info/' + task]['duration']
+        data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -615,7 +613,7 @@ def view_task_hazard(token, dstore):
      $ oq show task_hazard:-1  # the slowest task
     """
     tasks = set(dstore['task_info'])
-    if 'task_info/source_data' not in dstore:
+    if 'source_data' not in dstore:
         return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
@@ -626,9 +624,9 @@ def view_task_hazard(token, dstore):
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
-    arr = get_array(dstore['task_info/source_data'].value, taskno=taskno)
+    arr = get_array(dstore['source_data'].value, taskno=taskno)
     st = [stats('nsites', arr['nsites']), stats('weight', arr['weight'])]
-    sources = dstore['task_info/task_sources'][taskno - 1].split()
+    sources = dstore['task_sources'][taskno - 1].split()
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     res = 'taskno=%d, weight=%d, duration=%d s, sources="%s"\n\n' % (
         taskno, rec['weight'], rec['duration'], ' '.join(sorted(srcs)))
@@ -663,18 +661,15 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    try:
-        mean = dstore['hcurves/mean']
-    except KeyError:  # there is a single realization
-        mean = dstore['hcurves/rlz-000']
+    mean = dstore['hcurves/mean'].value
     oq = dstore['oqparam']
-    hmap = calc.make_hmap(mean, oq.imtls, [poe])
-    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(items), dt)
-    for i, (maxvalue, sid) in enumerate(reversed(items)):
-        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
-    return rst_table(array)
+    array = numpy.zeros(len(hmap), dt)
+    for i, vals in enumerate(hmap):
+        array[i] = (i, ) + tuple(vals)
+    array.sort(order=list(oq.imtls)[0])
+    return rst_table(array[:20])
 
 
 @view.add('flat_hcurves')

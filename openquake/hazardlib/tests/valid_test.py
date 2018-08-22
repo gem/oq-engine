@@ -111,8 +111,8 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(imt.from_string('SA(1)'), ('SA', 1, 5))
         self.assertEqual(imt.from_string('SA(1.)'), ('SA', 1, 5))
         self.assertEqual(imt.from_string('SA(0.5)'), ('SA', 0.5, 5))
-        self.assertEqual(imt.from_string('PGV'), ('PGV', None, None))
-        with self.assertRaises(ValueError):
+        self.assertEqual(imt.from_string('PGV'), ('PGV',))
+        with self.assertRaises(KeyError):
             imt.from_string('S(1)')
 
     def test_choice(self):

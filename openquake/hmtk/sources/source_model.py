@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -45,7 +44,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
 '''
 Module implements :class: openquake.hmtk.sources.source_model.mtkSourceModel, the
 general class to describe a set of seismogenic sources
@@ -82,7 +80,11 @@ class mtkSourceModel(object):
             self.sources = []
 
     def __iter__(self):
-        return iter(self.sources)
+        for source in self.sources:
+            yield source
+
+    def __len__(self):
+        return len(self.sources)
 
     def get_number_sources(self):
         '''
