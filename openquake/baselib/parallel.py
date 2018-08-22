@@ -518,8 +518,9 @@ class IterResult(object):
 
 
 SAFELY_CALL = '''\
-import sys, pickle
+import sys, pickle, setproctitle
 from openquake.baselib.parallel import safely_call
+setproctitle.setproctitle('oq-subprocess')
 with open(sys.argv[1], 'rb') as f:
     func_args_mon = pickle.load(f)
 safely_call(*func_args_mon)'''
