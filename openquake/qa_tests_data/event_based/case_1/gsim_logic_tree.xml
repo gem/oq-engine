@@ -8,8 +8,11 @@
                     applyToTectonicRegionType="active shallow crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  <uncertaintyModel>
+                    <gsimByImt imt="PGA" gsim="SadighEtAl1997" />
+                    <gsimByImt imt="SA(0.1)" gsim="SadighEtAl1997" />
+                  </uncertaintyModel>
+                  <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
             </logicTreeBranchSet>

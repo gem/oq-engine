@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -462,9 +461,11 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         sm_node = node_from_xml(self.input_file)[0]
         if sm_node[0].tag.startswith('{http://openquake.org/xmlns/nrml/0.4}'):
             node_sets = [sm_node]
+            sm_name = sm_node.get("name", "")
         else:  # format NRML 0.5+
             node_sets = sm_node
-        source_model = mtkSourceModel(identifier, name=sm_node["name"])
+            sm_name = sm_node["name"]
+        source_model = mtkSourceModel(identifier, name=sm_name)
         for node_set in node_sets:
             for node in node_set:
                 if "pointSource" in node.tag:
