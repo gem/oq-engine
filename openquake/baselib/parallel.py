@@ -699,13 +699,17 @@ class Starmap(object):
 
     def _loop(self, ierr, isocket, num_results):
         yield num_results
-        for err, res in zip(ierr, isocket):
+        for err in ierr:
             if isinstance(err, Exception):  # TaskRevokedError
                 raise err
-            elif self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %d, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
-                continue
+            while True:
+                res = next(isocket)
+                if self.calc_id and self.calc_id != res.mon.calc_id:
+                    logging.warn('Discarding a result from job %d, since this '
+                                 'is job %d', res.mon.calc_id, self.calc_id)
+                    continue
+                else:
+                    break
             yield res
 
     def _iter_celery(self):
