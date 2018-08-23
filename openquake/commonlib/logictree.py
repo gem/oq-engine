@@ -1552,5 +1552,5 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
         nrml.pickle_source_models,
         (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
-    parallel.Starmap.shutdown()  # close the processpool
+    #parallel.Starmap.shutdown()  # close the processpool
     return dic

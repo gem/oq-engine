@@ -165,7 +165,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
@@ -468,7 +468,7 @@ class IterResult(object):
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool':
                 mem_gb = memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids) / GB
+                    memory_rss(pid) for pid in Starmap.pool.pids) / GB
             else:
                 mem_gb = numpy.nan
             next(self.log_percent)
@@ -518,30 +518,6 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
-    return os.getpid()
-
-
-def _wakeup(sec, mon):
-    """Waiting function, used to wake up the process pool"""
-    time.sleep(sec)
-    return os.getpid()
-
-
 class Starmap(object):
     task_ids = []
     pids = []
@@ -551,12 +527,8 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            m = Monitor('wakeup')
-            ires = cls(
-                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
-            ).submit_all(logging.debug)
-            cls.pids = list(ires)
+            cls.pool = workerpool.WorkerMaster('127.0.0.1', **config.zworkers)
+            cls.pool.start(streamer=True)
             cls.task_ids = []
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
@@ -568,11 +540,8 @@ class Starmap(object):
     @classmethod
     def shutdown(cls, poolsize=None):
         if hasattr(cls, 'pool'):
-            cls.pool.close()
-            cls.pool.terminate()
-            cls.pool.join()
+            cls.pool.stop()
             del cls.pool
-            cls.pids = []
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -688,15 +657,6 @@ class Starmap(object):
         for args in allargs:
             yield safely_call(self.task_func, args, self.monitor)
 
-    def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        yield from self.pool.imap_unordered(safefunc, allargs)
-
-    _iter_threadpool = _iter_processpool
-
     def _loop(self, ierr, isocket, num_results):
         yield num_results
         for err, res in zip(ierr, isocket):
@@ -734,6 +694,8 @@ class Starmap(object):
                     num_results += 1
             yield from self._loop(range(num_results), iter(socket),
                                   num_results)
+
+    _iter_processpool = _iter_zmq
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func,

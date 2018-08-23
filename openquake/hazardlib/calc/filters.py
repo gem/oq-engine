@@ -309,8 +309,8 @@ class SourceFilter(object):
             prefilter, (sources, self, monitor),
             concurrent_tasks=concurrent_tasks, distribute=self.distribute,
             progress=logging.debug).reduce()
-        Starmap.shutdown()  # close the processpool
-        Starmap.init()  # reopen it when necessary
+        #Starmap.shutdown()  # close the processpool
+        #Starmap.init()  # reopen it when necessary
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))
