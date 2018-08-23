@@ -38,7 +38,9 @@ class WorkerMaster(object):
     def __init__(self, master_host, task_in_port, task_out_port, ctrl_port,
                  host_cores, remote_python=None, receiver_ports=None):
         # receiver_ports is not used
+        self.master_host = master_host
         self.task_in_port = task_in_port
+        self.task_out_port = task_out_port
         self.task_out_url = 'tcp://%s:%s' % (master_host, task_out_port)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
@@ -58,10 +60,16 @@ class WorkerMaster(object):
             lst.append((host, 'running' if ready else 'not-running'))
         return lst
 
-    def start(self):
+    def start(self, cls=None):
         """
         Start multiple workerpools, possibly on remote servers via ssh
         """
+        self.streamer = cls(
+            target=streamer,
+            args=(self.master_host, self.task_in_port, self.task_out_port)
+        ) if cls else None
+        if self.streamer:
+            self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
@@ -91,6 +99,8 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
+        if hasattr(self.streamer, 'terminate'):
+            self.streamer.terminate()
         return 'stopped %s' % stopped
 
     def kill(self):
@@ -106,6 +116,8 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
+        if hasattr(self.streamer, 'terminate'):
+            self.streamer.terminate()
         return 'killed %s' % killed
 
     def restart(self):
