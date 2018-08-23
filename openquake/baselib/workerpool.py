@@ -72,7 +72,6 @@ class WorkerMaster(object):
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
-                print('%s:%s already running' % (host, self.ctrl_port))
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost

@@ -49,7 +49,7 @@ how you can solve the problem sequentially:
 Here is how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> res2 = Starmap(count, arglist).reduce()
+>>> res2 = Starmap(count, arglist, mon).reduce()
 >>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
@@ -65,7 +65,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
+>>> res3 = Starmap(count, arglist, mon).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -95,7 +95,7 @@ respect to the time to perform the task), so it is not recommended.
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
->>> Starmap.shutdown()
+>> Starmap.shutdown()
 
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
@@ -466,7 +466,7 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool':
+            if hasattr(Starmap.pool, 'pids'):
                 mem_gb = memory_rss(os.getpid()) + sum(
                     memory_rss(pid) for pid in Starmap.pool.pids) / GB
             else:
@@ -520,13 +520,13 @@ class IterResult(object):
 
 class Starmap(object):
     task_ids = []
-    pids = []
     calc_id = None
     hdf5 = None
+    pool = None
 
     @classmethod
     def init(cls, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
+        if distribute == 'processpool' and not cls.pool:
             cls.pool = workerpool.WorkerMaster('127.0.0.1', **config.zworkers)
             cls.pool.start(streamer=True)
             cls.task_ids = []
@@ -537,9 +537,9 @@ class Starmap(object):
 
     @classmethod
     def shutdown(cls):
-        if hasattr(cls, 'pool'):
+        if cls.pool:
             cls.pool.stop()
-            del cls.pool
+            cls.pool = None
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
