@@ -44,11 +44,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cls.master = WorkerMaster(
             dic['master_host'], dic['task_in_port'], dic['task_out_port'],
             ctrl_port, host_cores)
-        cls.proc = multiprocessing.Process(
-            target=streamer, args=(dic['master_host'], dic['task_in_port'],
-                                   dic['task_out_port']))
-        cls.proc.start()
-        cls.master.start()
+        cls.master.start(multiprocessing.Process)
 
     def test(self):
         mon = Monitor()
@@ -64,5 +60,4 @@ class WorkerPoolTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.master.stop()
-        cls.proc.terminate()
         config.zworkers = cls.z
