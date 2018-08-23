@@ -20,7 +20,7 @@ import time
 import unittest
 import multiprocessing
 from openquake.baselib import config
-from openquake.baselib.workerpool import WorkerMaster, streamer
+from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import _get_free_port
 from openquake.baselib.performance import Monitor
@@ -44,7 +44,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cls.master = WorkerMaster(
             dic['master_host'], dic['task_in_port'], dic['task_out_port'],
             ctrl_port, host_cores)
-        cls.master.start(multiprocessing.Process)
+        cls.master.start(streamer=True)
 
     def test(self):
         mon = Monitor()
