@@ -805,6 +805,7 @@ class RiskCalculator(HazardCalculator):
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
             ri = riskinput.RiskInput(getter, [assets], reduced_eps)
+            ri.weight = len(assets)
             yield ri
 
     def execute(self):
