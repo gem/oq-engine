@@ -11,14 +11,8 @@ except ImportError:
         "Do nothing"
 
 
-def streamer(host, task_in_port, task_out_port):
-    """
-    A streamer for zmq workers.
-
-    :param host: name or IP of the controller node
-    :param task_in_port: port where to send the tasks
-    :param task_out_port: port from where to receive the tasks
-    """
+def _streamer(host, task_in_port, task_out_port):
+    # streamer for zmq workers
     try:
         z.zmq.proxy(z.bind('tcp://%s:%s' % (host, task_in_port), z.zmq.PULL),
                     z.bind('tcp://%s:%s' % (host, task_out_port), z.zmq.PUSH))
@@ -61,24 +55,23 @@ class WorkerMaster(object):
             lst.append((host, 'running' if ready else 'not-running'))
         return lst
 
-    def start(self, streamercls=None):
+    def start(self, streamer=False):
         """
         Start multiple workerpools, possibly on remote servers via ssh,
         and possibly a streamer, depending on the `streamercls`.
 
-        :param streamercls:
-            can be None, threading.Thread or multiprocessing.Process
+        :param streamer:
+            if True, starts a streamer with multiprocessing.Process
         """
-        if streamercls:
+        if streamer:
             if general.socket_ready(self.task_in_url):  # already started
                 self.streamer = None
             else:
-                self.streamer = streamercls(
-                    target=streamer,
+                self.streamer = multiprocessing.Process(
+                    target=_streamer,
                     args=(self.master_host, self.task_in_port,
                           self.task_out_port))
-        if self.streamer:
-            self.streamer.start()
+                self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
@@ -108,7 +101,7 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
-        if hasattr(self.streamer, 'terminate'):
+        if hasattr(self, 'streamer'):
             self.streamer.terminate()
         return 'stopped %s' % stopped
 
@@ -125,7 +118,7 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
-        if hasattr(self.streamer, 'terminate'):
+        if hasattr(self, 'streamer'):
             self.streamer.terminate()
         return 'killed %s' % killed
 
