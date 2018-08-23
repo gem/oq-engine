@@ -21,7 +21,7 @@ import logging
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap, datastore
+from openquake.baselib import performance, general, sap, datastore, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators import base, views

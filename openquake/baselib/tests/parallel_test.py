@@ -82,6 +82,7 @@ class StarmapTestCase(unittest.TestCase):
 
 class ThreadPoolTestCase(unittest.TestCase):
     def test(self):
+        raise unittest.SkipTest('not used')
         monitor = parallel.Monitor()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
             parallel.Starmap.init()

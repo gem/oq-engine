@@ -64,7 +64,7 @@ class WorkerMaster(object):
         :param streamer:
             if True, starts a streamer with multiprocessing.Process
         """
-        if streamer and not general.socket_ready(self.task_in_url):  # started
+        if streamer and not general.socket_ready(self.task_out_url):  # started
             self.streamer = multiprocessing.Process(
                 target=_streamer,
                 args=(self.master_host, self.task_in_port, self.task_out_port))
@@ -90,6 +90,8 @@ class WorkerMaster(object):
         """
         Send a "stop" command to all worker pools
         """
+        if hasattr(self, 'streamer'):
+            self.streamer.join()
         stopped = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
@@ -99,14 +101,14 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
-        if hasattr(self, 'streamer'):
-            self.streamer.terminate()
         return 'stopped %s' % stopped
 
     def kill(self):
         """
         Send a "kill" command to all worker pools
         """
+        if hasattr(self, 'streamer'):
+            self.streamer.terminate()
         killed = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
@@ -116,8 +118,6 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
-        if hasattr(self, 'streamer'):
-            self.streamer.terminate()
         return 'killed %s' % killed
 
     def restart(self):

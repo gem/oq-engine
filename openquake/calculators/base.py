@@ -207,7 +207,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
-                Starmap.shutdown()
+                # Starmap.shutdown()
                 self._monitor.flush()
 
                 if close:  # in the engine we close later

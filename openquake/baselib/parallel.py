@@ -525,20 +525,18 @@ class Starmap(object):
     hdf5 = None
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
+    def init(cls, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = workerpool.WorkerMaster('127.0.0.1', **config.zworkers)
             cls.pool.start(streamer=True)
             cls.task_ids = []
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(poolsize)
         elif distribute == 'no' and hasattr(cls, 'pool'):
             cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
+    def shutdown(cls):
         if hasattr(cls, 'pool'):
             cls.pool.stop()
             del cls.pool
