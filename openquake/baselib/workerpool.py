@@ -41,6 +41,7 @@ class WorkerMaster(object):
         self.master_host = master_host
         self.task_in_port = task_in_port
         self.task_out_port = task_out_port
+        self.task_in_url = 'tcp://%s:%s' % (master_host, task_in_port)
         self.task_out_url = 'tcp://%s:%s' % (master_host, task_out_port)
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
@@ -60,14 +61,22 @@ class WorkerMaster(object):
             lst.append((host, 'running' if ready else 'not-running'))
         return lst
 
-    def start(self, cls=None):
+    def start(self, streamercls=None):
         """
-        Start multiple workerpools, possibly on remote servers via ssh
+        Start multiple workerpools, possibly on remote servers via ssh,
+        and possibly a streamer, depending on the `streamercls`.
+
+        :param streamercls:
+            can be None, threading.Thread or multiprocessing.Process
         """
-        self.streamer = cls(
-            target=streamer,
-            args=(self.master_host, self.task_in_port, self.task_out_port)
-        ) if cls else None
+        if streamercls:
+            if general.socket_ready(self.task_in_url):  # already started
+                self.streamer = None
+            else:
+                self.streamer = streamercls(
+                    target=streamer,
+                    args=(self.master_host, self.task_in_port,
+                          self.task_out_port))
         if self.streamer:
             self.streamer.start()
         starting = []
@@ -198,5 +207,6 @@ class WorkerPool(object):
 
 
 if __name__ == '__main__':
+    # start a workerpool without a streamer
     ctrl_url, task_out_port, num_workers = sys.argv[1:]
     WorkerPool(ctrl_url, task_out_port, num_workers).start()
