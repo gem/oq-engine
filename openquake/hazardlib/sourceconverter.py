@@ -19,10 +19,11 @@ import operator
 import collections
 import time
 import os
+import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, warn
+from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -196,21 +197,22 @@ def get_set_num_ruptures(src):
         dt = time.time() - t0
         clsname = src.__class__.__name__
         if dt > 10:
-            # NB: I am not using logging.warn because it hangs when called
+            # NB: logging.warn hangs when called
             # from a worker with processpool distribution; see
             # https://github.com/gem/oq-engine/pull/3923
+            # pickle_source_model is called with the subprocess distribution
             if 'Area' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the '
-                     'area discretization is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'area discretization is too small', src, dt)
             elif 'ComplexFault' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the c'
-                     'omplex_fault_mesh_spacing is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
+                             'omplex_fault_mesh_spacing is too small', src, dt)
             elif 'SimpleFault' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the '
-                     'rupture_mesh_spacing is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'rupture_mesh_spacing is too small', src, dt)
             else:
                 # multiPointSource
-                warn('count_ruptures %s took %d seconds', src, dt)
+                logging.warn('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 
