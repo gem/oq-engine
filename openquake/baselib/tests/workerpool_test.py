@@ -18,7 +18,6 @@
 
 import time
 import unittest
-import multiprocessing
 from openquake.baselib import config
 from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap

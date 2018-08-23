@@ -71,9 +71,9 @@ class WorkerMaster(object):
             self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
-            if self.status(host)[0][1] == 'running':
-                continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            if self.status(host)[0][1] == 'running':
+                continue  # already running
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
@@ -89,8 +89,6 @@ class WorkerMaster(object):
         """
         Send a "stop" command to all worker pools
         """
-        if hasattr(self, 'streamer'):
-            self.streamer.join()
         stopped = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
@@ -100,14 +98,14 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('stop')
                 stopped.append(host)
+        if hasattr(self, 'streamer'):
+            self.streamer.terminate()
         return 'stopped %s' % stopped
 
     def kill(self):
         """
         Send a "kill" command to all worker pools
         """
-        if hasattr(self, 'streamer'):
-            self.streamer.terminate()
         killed = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
@@ -117,6 +115,8 @@ class WorkerMaster(object):
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 sock.send('kill')
                 killed.append(host)
+        if hasattr(self, 'streamer'):
+            self.streamer.terminate()
         return 'killed %s' % killed
 
     def restart(self):
@@ -167,7 +167,7 @@ class WorkerPool(object):
             sock.pid = proc.pid
             self.workers.append(sock)
 
-        # start control loop accepting the commands stop and kill
+        # start control loop accepting stop/kill/getpid/get_num_workers
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
                 if cmd in ('stop', 'kill'):
@@ -197,6 +197,6 @@ class WorkerPool(object):
 
 
 if __name__ == '__main__':
-    # start a workerpool without a streamer
+    # start a workerpool
     ctrl_url, task_out_port, num_workers = sys.argv[1:]
     WorkerPool(ctrl_url, task_out_port, num_workers).start()
