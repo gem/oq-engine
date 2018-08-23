@@ -17,7 +17,7 @@ jobs:
     env: HAZARDLIB
     script:
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip hazardlib\]' || test "$BRANCH" == "master"; then
-          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib openquake.hmtk
+          nosetests --with-doctest -xvs -a'!slow' openquake.baselib openquake.hazardlib openquake.hmtk;
           fi
   - stage: tests
     env: ENGINE
