@@ -40,6 +40,7 @@ class WorkerMaster(object):
         self.ctrl_port = int(ctrl_port)
         self.host_cores = [hc.split() for hc in host_cores.split(',')]
         self.remote_python = remote_python or sys.executable
+        self.pids = []
 
     def status(self, host=None):
         """
@@ -63,15 +64,11 @@ class WorkerMaster(object):
         :param streamer:
             if True, starts a streamer with multiprocessing.Process
         """
-        if streamer:
-            if general.socket_ready(self.task_in_url):  # already started
-                self.streamer = None
-            else:
-                self.streamer = multiprocessing.Process(
-                    target=_streamer,
-                    args=(self.master_host, self.task_in_port,
-                          self.task_out_port))
-                self.streamer.start()
+        if streamer and not general.socket_ready(self.task_in_url):  # started
+            self.streamer = multiprocessing.Process(
+                target=_streamer,
+                args=(self.master_host, self.task_in_port, self.task_out_port))
+            self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
             if self.status(host)[0][1] == 'running':
@@ -85,7 +82,8 @@ class WorkerMaster(object):
             args += ['-m', 'openquake.baselib.workerpool',
                      ctrl_url, self.task_out_url, cores]
             starting.append(' '.join(args))
-            subprocess.Popen(args)
+            po = subprocess.Popen(args)
+            self.pids.append(po.pid)
         return 'starting %s' % starting
 
     def stop(self):
