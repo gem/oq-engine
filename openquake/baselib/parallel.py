@@ -95,7 +95,7 @@ respect to the time to perform the task), so it is not recommended.
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
->>> Starmap.shutdown()
+>> Starmap.shutdown()
 
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
@@ -175,8 +175,9 @@ from openquake.baselib.general import (
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'zmq').lower()
-if OQ_DISTRIBUTE == 'futures':  # legacy name
-    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
+if OQ_DISTRIBUTE in ('processpool', 'futures'):  # legacy names
+    print('Warning: OQ_DISTRIBUTE=%s is deprecated' % OQ_DISTRIBUTE,
+          file=sys.stderr)
     OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'zmq'
 if OQ_DISTRIBUTE not in ('no', 'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)

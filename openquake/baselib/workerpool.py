@@ -71,9 +71,9 @@ class WorkerMaster(object):
             self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if self.status(host)[0][1] == 'running':
                 continue  # already running
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
