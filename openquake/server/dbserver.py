@@ -174,6 +174,11 @@ def ensure_on():
             time.sleep(1)
             waiting_seconds -= 1
 
+    # check if we are talking to the right server
+    err = check_foreign()
+    if err:
+        sys.exit(err)
+
 
 @sap.Script
 def run_server(dbpath=os.path.expanduser(config.dbserver.file),
