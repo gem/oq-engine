@@ -51,7 +51,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         iterargs = ((i, mon) for i in range(10))
         smap = Starmap(double, iterargs, mon, distribute='zmq')
         self.assertEqual(sum(res for res in smap), 90)
-        # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+        sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
 
     def test_status(self):
         time.sleep(1)  # wait a bit for the workerpool to start
