@@ -64,16 +64,16 @@ class WorkerMaster(object):
         :param streamer:
             if True, starts a streamer with multiprocessing.Process
         """
-        if streamer and not general.socket_ready(self.task_out_url):  # started
+        if streamer and not general.socket_ready(self.task_in_url):  # started
             self.streamer = multiprocessing.Process(
                 target=_streamer,
                 args=(self.master_host, self.task_in_port, self.task_out_port))
             self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if self.status(host)[0][1] == 'running':
                 continue  # already running
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:

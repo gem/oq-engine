@@ -181,7 +181,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
             self.save_params(**kw)
-            Starmap.init(distribute=os.environ['OQ_DISTRIBUTE'])
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -207,7 +206,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
-                # Starmap.shutdown()
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
@@ -350,7 +348,7 @@ class HazardCalculator(BaseCalculator):
             workers, None otherwise
         """
         read_access = (
-            config.distribution.oq_distribute in ('no', 'processpool') or
+            config.distribution.oq_distribute in ('no', 'zmq') or
             config.directory.shared_dir)
         hdf5cache = getattr(self, 'hdf5cache', None)
         if hdf5cache and read_access:

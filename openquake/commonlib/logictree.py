@@ -1547,10 +1547,9 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
     for sm in source_model_lt.gen_source_models(gsim_lt):
         for name in sm.names.split():
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'zmq'
     dic = parallel.Starmap.apply(
         nrml.pickle_source_models,
         (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
-    #parallel.Starmap.shutdown()  # close the processpool
     return dic

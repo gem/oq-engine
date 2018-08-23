@@ -573,7 +573,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/g' /etc/openquake/openquake.cfg
+        sudo sed -i 's/oq_distribute = zmq/oq_distribute = celery/g' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 # FIXME: the big sleep below is a temporary workaround to avoid races.

@@ -49,7 +49,7 @@ how you can solve the problem sequentially:
 Here is how you can solve the problem in parallel by using
 :class:`openquake.baselib.parallel.Starmap`:
 
->>> res2 = Starmap(count, arglist, mon).reduce()
+>>> res2 = Starmap(count, arglist).reduce()
 >>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
@@ -65,7 +65,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(count, arglist, mon).reduce(acc=collections.Counter())
+>>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -77,7 +77,7 @@ The parallelization algorithm used by `Starmap` will depend on the
 environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
-`OQ_DISTRIBUTE` not set or set to "processpool":
+`OQ_DISTRIBUTE` not set or set to "zmq":
   use multiprocessing
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
@@ -95,7 +95,7 @@ respect to the time to perform the task), so it is not recommended.
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
->> Starmap.shutdown()
+>>> Starmap.shutdown()
 
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
@@ -174,12 +174,11 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'zmq').lower()
 if OQ_DISTRIBUTE == 'futures':  # legacy name
     print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
-    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
+    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'zmq'
+if OQ_DISTRIBUTE not in ('no', 'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 # data type for storing the performance information
@@ -191,9 +190,9 @@ task_info_dt = numpy.dtype(
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'processpool'
+    :returns: the value of OQ_DISTRIBUTE or 'zmq'
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'zmq').lower()
     read_access = getattr(task, 'read_access', True)
     if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
@@ -526,7 +525,7 @@ class Starmap(object):
 
     @classmethod
     def init(cls, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not cls.pool:
+        if distribute == 'zmq' and not cls.pool:
             cls.pool = workerpool.WorkerMaster('127.0.0.1', **config.zworkers)
             cls.pool.start(streamer=True)
             cls.task_ids = []
@@ -696,8 +695,6 @@ class Starmap(object):
                     num_results += 1
             yield from self._loop(range(num_results), iter(socket),
                                   num_results)
-
-    _iter_processpool = _iter_zmq
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func,
