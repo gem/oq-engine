@@ -155,6 +155,9 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
+        if general.socket_ready(self.ctrl_url):  # already running
+            return
+
         setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
