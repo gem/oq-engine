@@ -25,12 +25,12 @@ import operator
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5, node
+from openquake.baselib import performance, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, random_filter)
+    groupby, group_array, gettemp, AccumDict, random_filter, cached_property)
 from openquake.hazardlib import (
-    nrml, source, sourceconverter, InvalidFile, probability_map, stats)
+    source, sourceconverter, probability_map, stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 
@@ -77,10 +77,14 @@ def split_sources(srcs, min_mag):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
                 split.ngsims = src.ngsims
+                split.ndists = src.ndists
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
+        elif splits:  # single source
+            splits[0].ngsims = src.ngsims
+            splits[0].ndists = src.ndists
     return sources, split_time
 
 
@@ -710,14 +714,10 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        ngsims = {trt: len(gs) for trt, gs in self.gsim_lt.values.items()}
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                for src in src_group:
-                    split_time[src.source_id] = 0
-                    src.ngsims = ngsims[src.tectonic_region_type]
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group, min_mag)
@@ -767,16 +767,19 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, src_filter, monitor=performance.Monitor()):
+    def pfilter(self, src_filter, concurrent_tasks,
+                monitor=performance.Monitor()):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param src_filter: a SourceFilter instance
+        :param concurrent_tasks: how many tasks to generate
         :param monitor: a Monitor instance
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(self.get_sources(), monitor)
+        sources_by_grp = src_filter.pfilter(
+            self.get_sources(), concurrent_tasks, monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []
@@ -799,7 +802,7 @@ class CompositeSourceModel(collections.Sequence):
         :returns: total weight of the source model
         """
         tot_weight = 0
-        for srcs in self.get_sources_by_trt().values():
+        for srcs in self.sources_by_trt.values():
             tot_weight += sum(map(weight, srcs))
         for grp in self.gen_mutex_groups():
             tot_weight += sum(map(weight, grp))
@@ -864,7 +867,8 @@ class CompositeSourceModel(collections.Sequence):
             raise RuntimeError('All sources were filtered away!')
         return sources
 
-    def get_sources_by_trt(self):
+    @cached_property
+    def sources_by_trt(self):
         """
         Build a dictionary TRT string -> sources. Sources of kind "mutex"
         (if any) are silently discarded.
@@ -930,9 +934,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         Populate the .infos dictionary src_id -> <SourceInfo>
         """
+        gsims = self.gsim_lt.values
         for src in sources:
             info = SourceInfo(src)
             self.infos[info.source_id] = info
+            trt = src.tectonic_region_type
+            src.ngsims = len(gsims[trt])
+            src.ndists = contexts.get_num_distances(gsims[trt])
 
     def get_floating_spinning_factors(self):
         """
@@ -968,29 +976,6 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-def collect_source_model_paths(smlt):
-    """
-    Given a path to a source model logic tree or a file-like, collect all of
-    the soft-linked path names to the source models it contains and return them
-    as a uniquified list (no duplicates).
-
-    :param smlt: source model logic tree file
-    """
-    n = nrml.read(smlt)
-    try:
-        blevels = n.logicTree
-    except Exception:
-        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
-                          % smlt)
-    for blevel in blevels:
-        with node.context(smlt, blevel):
-            for bset in blevel:
-                for br in bset:
-                    smfname = ' '.join(br.uncertaintyModel.text.split())
-                    if smfname:
-                        yield smfname
 
 
 # ########################## SourceManager ########################### #

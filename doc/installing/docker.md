@@ -11,7 +11,7 @@ For more information about operating system support (which includes Linux, macOS
 
 Each container includes:
 
-- Python 3.5
+- Python 3.6
 - Python dependencies (numpy, scipy, h5py...)
 - OpenQuake Engine and Hazardlib
 - The `oq` command line tool

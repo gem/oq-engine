@@ -23,12 +23,11 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
-import collections
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf
+from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -167,6 +166,7 @@ class ChoiceCI(object):
                              value, self.choices))
         return value
 
+
 category = ChoiceCI('population', 'buildings')
 
 
@@ -185,6 +185,7 @@ class Choices(Choice):
                 raise ValueError("'%s' is not a valid choice in %s" % (
                     val, self.choices))
         return tuple(values)
+
 
 export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
@@ -210,7 +211,7 @@ def hazard_id(value):
         return ()
     try:
         return tuple(map(int, value.split(',')))
-    except:
+    except Exception:
         raise ValueError('Invalid hazard_id %r' % value)
 
 
@@ -259,6 +260,7 @@ class SimpleId(object):
         raise ValueError(
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
+
 MAX_ID_LENGTH = 60
 ASSET_ID_LENGTH = 100
 
@@ -286,6 +288,7 @@ class FloatRange(object):
                              (self.name, f, self.minrange))
         return f
 
+
 magnitude = FloatRange(0, 11, 'magnitude')
 
 
@@ -310,7 +313,7 @@ def utf8(value):
             return value.decode('utf-8')
         else:
             return value
-    except:
+    except Exception:
         raise ValueError('Not UTF-8: %r' % value)
 
 
@@ -351,7 +354,7 @@ def float_(value):
     """
     try:
         return float(value)
-    except:
+    except Exception:
         raise ValueError("'%s' is not a float" % value)
 
 
@@ -634,7 +637,7 @@ def intensity_measure_type(value):
     """
     try:
         return str(imt.from_string(value))
-    except:
+    except Exception:
         raise ValueError("Invalid IMT: '%s'" % value)
 
 
@@ -768,12 +771,12 @@ def dictionary(value):
     value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
-    except:
+    except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
-        except:  # no val[0]
+        except Exception:  # no val[0]
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
@@ -970,7 +973,7 @@ def integers(value):
         raise ValueError('Not a list of integers: %r' % value)
     try:
         ints = [int(float(v)) for v in values]
-    except:
+    except Exception:
         raise ValueError('Not a list of integers: %r' % value)
     return ints
 
@@ -1002,39 +1005,34 @@ def simple_slice(value):
         stop = ast.literal_eval(stop)
         if start is not None and stop is not None:
             assert start < stop
-    except:
+    except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
 
-# ############################## site model ################################ #
 
-vs30_type = ChoiceCI('measured', 'inferred')
-
-SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
-
-
-def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
-               depth=0, backarc="false"):
-    """
-    Used to convert a node like
-
-       <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
-       z1pt0="100" z2pt5="5" backarc="False"/>
-
-    into a 7-tuple (z1pt0, z2pt5, vs30measured, vs30, backarc, lon, lat)
-    """
-    return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
-                     vs30measured=vs30_type(vs30Type) == 'measured',
-                     vs30=positivefloat(vs30), lon=longitude(lon),
-                     lat=latitude(lat), depth=float_(depth),
-                     backarc=boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
 
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
+
+
+def site_param(dic):
+    """
+    Convert a dictionary site_model_param -> string into a dictionary
+    of valid casted site parameters.
+    """
+    new = {}
+    for name, val in dic.items():
+        if name == 'vs30Type':
+            # avoid "Unrecognized parameter vs30Type"
+            new['vs30measured'] = val == 'measured'
+        elif name not in site.site_param_dt:
+            raise ValueError('Unrecognized parameter %s' % name)
+        else:
+            new[name] = val
+    return new
 
 
 ###########################################################################
@@ -1198,3 +1196,30 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+
+class RjbEquivalent(object):
+    """
+    A class to compute the equivalent Rjb distance. Usage:
+
+    >> reqv = RjbEquivalent('lookup.hdf5')
+    >> reqv.get(repi_distances, mag)
+    """
+    def __init__(self, hdf5path):
+        with hdf5.File(hdf5path, 'r') as f:
+            self.repi = f['default/repi'].value  # shape D
+            self.mags = f['default/mags'].value  # shape M
+            self.reqv = f['default/reqv'].value  # shape D x M
+
+    def get(self, repi, mag):
+        """
+        :param repi: an array of epicentral distances in the range self.repi
+        :param mag: a magnitude in the range self.mags
+        :returns: an array of equivalent distances
+        """
+        mag_idx = numpy.abs(mag - self.mags).argmin()
+        dists = []
+        for dist in repi:
+            repi_idx = numpy.abs(dist - self.repi).argmin()
+            dists.append(self.reqv[repi_idx, mag_idx])
+        return numpy.array(dists)

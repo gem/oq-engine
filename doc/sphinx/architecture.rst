@@ -1,4 +1,4 @@
-Architecture of the OpenQuake Engine v2
+Architecture of the OpenQuake Engine v2+
 =========================================
 
 The OpenQuake Engine version 2 is a complete rewrite of version

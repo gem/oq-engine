@@ -312,7 +312,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id) in calc_data:
+         parent_id, size_mb) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
@@ -325,7 +325,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -754,8 +754,10 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict([('calc_id', calc_id)]))
+                  dict(calc_id=calc_id, size_mb=size_mb))
 
 
 @csrf_exempt
