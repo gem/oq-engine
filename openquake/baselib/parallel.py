@@ -742,14 +742,14 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
-            results = []
+            tasks = []
             for piks in self._genargs():
-                res = safetask.delay(self.task_func, piks, self.monitor)
+                task = safetask.delay(self.task_func, piks, self.monitor)
                 # populating Starmap.task_ids, used in celery_cleanup
-                self.task_ids.append(res.task_id)
-                results.append(res)
-            yield from self._loop(_iter_native(self.task_ids, results),
-                                  iter(socket), len(results))
+                self.task_ids.append(task.task_id)
+                tasks.append(task)
+            yield from self._loop(_iter_native(self.task_ids, tasks),
+                                  iter(socket), len(tasks))
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
@@ -762,7 +762,8 @@ class Starmap(object):
                 for args in self._genargs():
                     sender.send((self.task_func, args, self.monitor))
                     num_tasks += 1
-            yield from self._loop(range(num_tasks), iter(socket), num_tasks)
+            yield from self._loop(iter(range(num_tasks)), iter(socket),
+                                  num_tasks)
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func,
