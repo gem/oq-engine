@@ -110,6 +110,11 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
             discrep_percentage = numpy.abs(
                 result / expected_result * 100 - 100)
             discrepancies.extend(discrep_percentage)
+            print(imt, rctx.mag)
+            comps = numpy.column_stack([dctx.rrup, sctx.vs30, result,
+                                        expected_result, discrep_percentage])
+            for row in comps:
+                print("%.1f %.1f %.6e %.6e %.4f" % tuple(row))
             errors += (discrep_percentage > max_discrep_percentage).sum()
 
             if errors and debug:
