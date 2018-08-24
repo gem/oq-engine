@@ -316,7 +316,7 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         val = self.pik.unpickle()
-        if self.tb_str:
+        if self.tb_str and self.tb_str != 'TASK_ENDED':
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
             if issubclass(etype, KeyError):
@@ -723,7 +723,8 @@ class Starmap(object):
                     continue
                 elif res.tb_str == 'TASK_ENDED':
                     break
-            yield res
+                else:
+                    yield res
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
