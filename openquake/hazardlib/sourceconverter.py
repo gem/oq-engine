@@ -17,11 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
 import collections
-import logging
 import time
+import os
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib import hdf5
+from openquake.baselib.general import groupby, warn
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -57,8 +58,8 @@ class SourceGroup(collections.Sequence):
     :param max_mag:
         the maximum magnitude among the given sources
     :param id:
-        an optional numeric ID (default None) useful to associate
-        the model to a database object
+        an optional numeric ID (default 0) set by the engine and used
+        when serializing SourceModels to HDF5
     :param eff_ruptures:
         the number of ruptures contained in the group; if -1,
         the number is unknown and has to be computed by using
@@ -195,18 +196,21 @@ def get_set_num_ruptures(src):
         dt = time.time() - t0
         clsname = src.__class__.__name__
         if dt > 10:
+            # NB: I am not using logging.warn because it hangs when called
+            # from a worker with processpool distribution; see
+            # https://github.com/gem/oq-engine/pull/3923
             if 'Area' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
-                             'area discretization is too small', src, dt)
+                warn('%s.count_ruptures took %d seconds, perhaps the '
+                     'area discretization is too small', src, dt)
             elif 'ComplexFault' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
-                             'omplex_fault_mesh_spacing is too small', src, dt)
+                warn('%s.count_ruptures took %d seconds, perhaps the c'
+                     'omplex_fault_mesh_spacing is too small', src, dt)
             elif 'SimpleFault' in clsname:
-                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
-                             'rupture_mesh_spacing is too small', src, dt)
+                warn('%s.count_ruptures took %d seconds, perhaps the '
+                     'rupture_mesh_spacing is too small', src, dt)
             else:
                 # multiPointSource
-                logging.warn('count_ruptures %s took %d seconds', src, dt)
+                warn('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 
@@ -535,6 +539,8 @@ class SourceConverter(RuptureConverter):
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
+            if os.environ.get('OQ_SPINNING') == 'no':
+                npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hpdist(self, node):
@@ -546,8 +552,11 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            return pmf.PMF([(hd['probability'], hd['depth'])
-                            for hd in node.hypoDepthDist])
+            hcdist = [(hd['probability'], hd['depth'])
+                      for hd in node.hypoDepthDist]
+            if os.environ.get('OQ_FLOATING') == 'no':
+                hcdist = [(1, hcdist[0][1])]
+            return pmf.PMF(hcdist)
 
     def convert_areaSource(self, node):
         """
@@ -623,15 +632,15 @@ class SourceConverter(RuptureConverter):
             name=node['name'],
             tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
-            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=~node.ruptAspectRatio,
             upper_seismogenic_depth=~geom.upperSeismoDepth,
             lower_seismogenic_depth=~geom.lowerSeismoDepth,
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
+            mesh=geo.Mesh(F32(lons), F32(lats)),
             temporal_occurrence_model=self.tom,
-            mesh=geo.Mesh(F32(lons), F32(lats)))
+        )
 
     def convert_simpleFaultSource(self, node):
         """
@@ -906,3 +915,20 @@ def update_source_model(sm_node):
         others.sort(key=lambda src: (src.tag, src['id']))
         i, sources = _pointsources2multipoints(psrcs, i)
         group.nodes = sources + others
+
+
+def to_python(fname, converter):
+    """
+    Convert a source model .hdf5 file into a :class:`SourceModel` object
+    """
+    with hdf5.File(fname, 'r') as f:
+        source_model = f['/']
+    for sg in source_model:
+        for src in sg:
+            if hasattr(src, 'mfd'):
+                # multipoint source
+                src.tom = converter.tom
+                kwargs = getattr(src.mfd, 'kwargs', {})
+                if 'bin_width' not in kwargs:
+                    kwargs['bin_width'] = [converter.width_of_mfd_bin]
+    return source_model

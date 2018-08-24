@@ -185,7 +185,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             mag, rake, tectonic_region_type, hypocenter, surface,
             rupture_slip_direction)
         # an array of probabilities with sum 1
-        self.pmf = numpy.array(
+        self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
@@ -209,10 +209,9 @@ class NonParametricProbabilisticRupture(BaseRupture):
         # Converting from 1d to 2d
         if len(poes.shape) == 1:
             poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.pmf
+        p_kT = self.probs_occur
         prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
-        )
+            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
         prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
         prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
@@ -227,7 +226,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         Uses 'Inverse Transform Sampling' method.
         """
         # compute cdf from pmf
-        cdf = numpy.cumsum(self.pmf)
+        cdf = numpy.cumsum(self.probs_occur)
 
         rn = numpy.random.random()
         [n_occ] = numpy.digitize([rn], cdf)

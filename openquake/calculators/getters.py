@@ -49,7 +49,7 @@ class PmapGetter(object):
     """
     def __init__(self, dstore, rlzs_assoc=None, sids=None):
         self.dstore = dstore
-        self.sids = sids
+        self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
         self.eids = None
         self.nbytes = 0
@@ -140,12 +140,14 @@ class PmapGetter(object):
         """
         return self.rlzs_assoc.combine_pmaps(self.pmap_by_grp)
 
-    def get_hcurves(self, imtls):
+    def get_hcurves(self, imtls=None):
         """
         :param imtls: intensity measure types and levels
         :returns: an array of (R, N) hazard curves
         """
-        assert self.sids is not None, 'PmapGetter not bound to sids'
+        self.init()
+        if imtls is None:
+            imtls = self.imtls
         pmaps = [pmap.convert2(imtls, self.sids)
                  for pmap in self.get_pmaps(self.sids)]
         return numpy.array(pmaps)
@@ -164,9 +166,9 @@ class PmapGetter(object):
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k]
+                    yield k, self.dstore['hcurves/' + k].value
             elif num_rlzs == 1:
-                yield 'rlz-000', self.get(0)
+                yield 'mean', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlzi in range(num_rlzs):
@@ -176,7 +178,7 @@ class PmapGetter(object):
             yield kind, self.get(int(kind[4:]))
         if 'hcurves' in self.dstore and kind in ('stats', 'all'):
             for k in sorted(self.dstore['hcurves']):
-                yield k, self.dstore['hcurves/' + k]
+                yield k, self.dstore['hcurves/' + k].value
 
     def get_mean(self, grp=None):
         """
@@ -187,25 +189,29 @@ class PmapGetter(object):
             returns the mean considering only the contribution for group XX
         """
         self.init()
-        if self.sids is None:
-            self.sids = self.dstore['sitecol'].complete.sids
         if len(self.weights) == 1:  # one realization
-            return self.get(0, grp)
+            # the standard deviation is zero
+            pmap = self.get(0, grp)
+            for sid, pcurve in pmap.items():
+                array = numpy.zeros(pcurve.array.shape[:-1] + (2,))
+                array[:, 0] = pcurve.array[:, 0]
+                pcurve.array = array
+            return pmap
         else:  # multiple realizations, assume hcurves/mean is there
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            return self.rlzs_assoc.compute_pmap_stats(dic, [stats.mean_curve])
+            return self.rlzs_assoc.compute_pmap_stats(
+                dic, [stats.mean_curve, stats.std_curve])
 
 
 class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
+    def __init__(self, dstore, sids, num_rlzs, imtls):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.E = num_events
         self.imtls = imtls
 
     def init(self):
@@ -237,10 +243,14 @@ class GmfDataGetter(collections.Mapping):
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
-        if len(idxs) == 0:  # site ID with no data
+        if idxs.dtype.name == 'uint32':  # scenario
+            idxs = [idxs]
+        elif not idxs.dtype.names:  # engine >= 3.2
+            idxs = zip(*idxs)
+        data = [dset[start:stop] for start, stop in idxs]
+        if len(data) == 0:  # site ID with no data
             return {}
-        array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
-        return group_array(array, 'rlzi')
+        return group_array(numpy.concatenate(data), 'rlzi')
 
     def __iter__(self):
         return iter(self.sids)
@@ -274,7 +284,7 @@ class GmfGetter(object):
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
-            oqparam.filter_distance)
+            {'filter_distance': oqparam.filter_distance})
         self.correl_model = oqparam.correl_model
         self.samples = samples
 
@@ -505,17 +515,22 @@ class RuptureGetter(object):
             if key.startswith('code_'):
                 code2cls[int(key[5:])] = [classes[v] for v in val.split()]
         grp_trt = self.dstore['csm_info'].grp_by("trt")
+        events = self.dstore['events']
         ruptures = self.dstore['ruptures'][self.mask]
+        rupgeoms = self.dstore['rupgeoms'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
         # this is way I am sorting with Python and not with numpy below
-        data = sorted((ser, idx) for idx, ser in enumerate(ruptures['serial']))
+        data = sorted((serial, ridx) for ridx, serial in enumerate(
+            ruptures['serial']))
         for serial, ridx in data:
             rec = ruptures[ridx]
-            evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
+            evs = events[rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+            mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
+            for i, arr in enumerate(rupgeoms[ridx]):  # i = 0, 1, 2
+                mesh[i] = arr.reshape(rec['sy'], rec['sz'])
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
             rupture.serial = serial
@@ -530,20 +545,20 @@ class RuptureGetter(object):
             if pmfx != -1:
                 rupture.pmf = self.dstore['pmfs'][pmfx]
             if surface_cls is geo.PlanarSurface:
-                rupture.surface = geo.PlanarSurface.from_array(rec['points'])
+                rupture.surface = geo.PlanarSurface.from_array(mesh[:, 0, :])
             elif surface_cls is geo.MultiSurface:
+                # mesh has shape (3, n, 4)
                 rupture.surface.__init__([
-                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
+                    geo.PlanarSurface.from_array(mesh[:, i, :])
+                    for i in range(mesh.shape[1])])
             elif surface_cls is geo.GriddedSurface:
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.mesh = Mesh(m['lon'], m['lat'], m['depth'])
-            else:  # fault surface, strike and dip will be computed
+                rupture.surface.mesh = Mesh(*mesh)
+            else:
+                # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.__init__(
-                    RectangularMesh(m['lon'], m['lat'], m['depth']))
+                rupture.surface.__init__(RectangularMesh(*mesh))
             ebr = EBRupture(rupture, (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']

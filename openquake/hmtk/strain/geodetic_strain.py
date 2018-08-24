@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 '''
 :class:`openquake.hmtk.strain.geodectic_strain.GeodeticStain` is a
 core class for storage and implementation of a geodetic strain rate

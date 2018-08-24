@@ -27,7 +27,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.risklib.riskinput import str2rsi, indices_dt
+from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
@@ -44,8 +44,8 @@ TWO32 = 2 ** 32
 
 
 def weight(src):
-    # a poor man weight
-    return src.num_ruptures * src.ngsims
+    # heuristic weight
+    return src.num_ruptures * src.ndists
 
 
 def get_events(ebruptures):
@@ -134,14 +134,7 @@ def get_mean_curves(dstore):
     Extract the mean hazard curves from the datastore, as a composite
     array of length nsites.
     """
-    imtls = dstore['oqparam'].imtls
-    nsites = len(dstore['sitecol'])
-    hcurves = dstore['hcurves']
-    if 'mean' in hcurves:
-        mean = dstore['hcurves/mean']
-    elif len(hcurves) == 1:  # there is a single realization
-        mean = dstore['hcurves/rlz-0000']
-    return mean.convert(imtls, nsites)
+    return dstore['hcurves/mean'].value
 
 # ########################################################################## #
 
@@ -201,7 +194,7 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             seed=oq.ses_seed, maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        concurrent_tasks = oq.concurrent_tasks * 3.33
+        concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
             logging.info('Found %d ruptures', U)
@@ -232,7 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for block in block_splitter(sg.sources, maxweight, weight):
                     yield block, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
-                    num_sources += 1
+                    num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
@@ -279,27 +272,26 @@ class EventBasedCalculator(base.HazardCalculator):
         self.save_ruptures(result['ruptures'])
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        hdf5path = self.datastore.hdf5path
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
             data = result['gmfdata']
             with sav_mon:
-                hdf5.extend3(hdf5path, 'gmf_data/data', data)
+                self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
                 update_nbytes(self.datastore, 'gmf_data/data', data)
                 for sid, start, stop in result['indices']:
-                    self.indices[sid].append(
-                        (start + self.offset, stop + self.offset))
+                    self.indices[sid, 0].append(start + self.offset)
+                    self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
                 if self.offset >= TWO32:
                     raise RuntimeError(
                         'The gmf_data table has more than %d rows' % TWO32)
-        slicedic = self.oqparam.imtls.slicedic
+        imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
                 r, sid, imt = str2rsi(key)
-                array = acc[r].setdefault(sid, 0).array[slicedic[imt], 0]
+                array = acc[r].setdefault(sid, 0).array[imtls(imt), 0]
                 array[:] = 1. - (1. - array) * (1. - poes)
         sav_mon.flush()
         agg_mon.flush()
@@ -321,6 +313,26 @@ class EventBasedCalculator(base.HazardCalculator):
                     if self.oqparam.save_ruptures:
                         self.rupser.save(ebrs, eidx=len(dset)-len(events))
 
+    def check_overflow(self):
+        """
+        Raise a ValueError if the number of sites is larger than 65,536 or the
+        number of IMTs is larger than 256 or the number of ruptures is larger
+        than 4,294,967,296. The limits are due to the numpy dtype used to
+        store the GMFs (gmv_dt). They could be relaxed in the future.
+        """
+        max_ = dict(sites=2**16, events=2**32, imts=2**8)
+        try:
+            events = len(self.datastore['events'])
+        except KeyError:
+            events = 0
+        num_ = dict(sites=len(self.sitecol), events=events,
+                    imts=len(self.oqparam.imtls))
+        for var in max_:
+            if num_[var] > max_[var]:
+                raise ValueError(
+                    'The event based calculator is restricted to '
+                    '%d %s, got %d' % (max_[var], var, num_[var]))
+
     def execute(self):
         if self.oqparam.hazard_calculation_id:
             def saving_sources_by_task(allargs, dstore):
@@ -330,7 +342,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.gmf_size = 0
-        self.indices = collections.defaultdict(list)  # sid -> indices
+        self.indices = collections.defaultdict(list)  # sid, idx -> indices
         acc = self.zerodict()
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.monitor('classical'))
@@ -343,21 +355,26 @@ class EventBasedCalculator(base.HazardCalculator):
                 iterargs = list(iterargs)
             if self.oqparam.ground_motion_fields is False:
                 logging.info('Generating ruptures only')
-            acc = parallel.Starmap(self.core_task.__func__, iterargs).reduce(
-                self.agg_dicts, acc)
+            ires = parallel.Starmap(
+                self.core_task.__func__, iterargs, self.monitor()
+            ).submit_all()
+        acc = ires.reduce(self.agg_dicts, acc)
         if self.oqparam.hazard_calculation_id is None:
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos, acc)
-        calc.check_overflow(self)
+        self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
+            N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
-                self.datastore.save_vlen(
-                    'gmf_data/indices',
-                    [numpy.array(self.indices[sid], indices_dt)
-                     for sid in self.sitecol.complete.sids])
+                dset = self.datastore.create_dset(
+                    'gmf_data/indices', hdf5.vuint32,
+                    shape=(N, 2), fillvalue=None)
+                for sid in self.sitecol.complete.sids:
+                    dset[sid, 0] = self.indices[sid, 0]
+                    dset[sid, 1] = self.indices[sid, 1]
         elif (self.oqparam.ground_motion_fields and
               'ucerf' not in self.oqparam.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
@@ -383,6 +400,8 @@ class EventBasedCalculator(base.HazardCalculator):
         Save the SES collection
         """
         oq = self.oqparam
+        N = len(self.sitecol.complete)
+        L = len(oq.imtls.array)
         if oq.hazard_calculation_id is None:
             self.rupser.close()
             num_events = sum(set_counts(self.datastore, 'events').values())
@@ -390,8 +409,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            logging.info('Setting %d event years on %d ruptures',
-                         num_events, self.rupser.nruptures)
+            if oq.save_ruptures:
+                logging.info('Setting %d event years on %d ruptures',
+                             num_events, self.rupser.nruptures)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 numpy.random.seed(self.oqparam.ses_seed)
@@ -420,11 +440,15 @@ class EventBasedCalculator(base.HazardCalculator):
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
             hstats = self.oqparam.hazard_stats()
-            if len(hstats) and len(rlzs) > 1:
+            if len(hstats):
                 logging.info('Computing statistical hazard curves')
                 for kind, stat in hstats:
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
-                    self.datastore['hcurves/' + kind] = pmap
+                    arr = numpy.zeros((N, L), F32)
+                    for sid in pmap:
+                        arr[sid] = pmap[sid].array[:, 0]
+                    self.datastore['hcurves/' + kind] = arr
+            self.save_hmaps()
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if 'gmf_data' in self.datastore:
@@ -442,9 +466,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.cl.run(close=False)
             cl_mean_curves = get_mean_curves(self.cl.datastore)
             eb_mean_curves = get_mean_curves(self.datastore)
-            for imt in eb_mean_curves.dtype.names:
-                rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves[imt], eb_mean_curves[imt])
-                logging.warn('Relative difference with the classical '
-                             'mean curves for IMT=%s: %d%% at site index %d',
-                             imt, rdiff * 100, index)
+            rdiff, index = util.max_rel_diff_index(
+                cl_mean_curves, eb_mean_curves)
+            logging.warn('Relative difference with the classical '
+                         'mean curves: %d%% at site index %d',
+                         rdiff * 100, index)
