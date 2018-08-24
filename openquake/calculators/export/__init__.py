@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib.general import import_all, CallableDict
+from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
 
@@ -62,8 +62,6 @@ def keyfunc(ekey):
 export = CallableDict(keyfunc)
 
 export.from_db = False  # overridden when exporting from db
-
-import_all('openquake.calculators.export')
 
 
 @export.add(('input_zip', 'zip'))

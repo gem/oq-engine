@@ -147,7 +147,7 @@ def global_tau(imt, mag, params):
     'Global' model of inter-event variability, as presented in equation 5.6
     (p103)
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]
@@ -167,7 +167,7 @@ def cena_constant_tau(imt, mag, params):
     """
     Returns the inter-event tau for the constant tau case
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         return params["PGV"]["tau"]
     else:
         return params["SA"]["tau"]
@@ -177,7 +177,7 @@ def cena_tau(imt, mag, params):
     """
     Returns the inter-event standard deviation, tau, for the CENA case
     """
-    if isinstance(imt, PGV):
+    if imt.name == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -18,7 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import logging
 from openquake.baselib import sap
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 from openquake.hazardlib import nrml
 
 
@@ -57,8 +57,9 @@ def renumber_sources(smlt_file):
     XML files in place, without making a backup, so be careful.
     """
     logging.basicConfig(level=logging.INFO)
-    for paths in readinput.gen_sm_paths(smlt_file):
-        renumber(paths, number=1)
+    for info in logictree.collect_info(smlt_file):
+        renumber(info.smpaths, number=1)
+
 
 renumber_sources.arg('smlt_file', 'source model logic tree file')
 
