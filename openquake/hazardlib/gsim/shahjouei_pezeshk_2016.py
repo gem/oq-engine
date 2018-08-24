@@ -167,7 +167,7 @@ class ShahjoueiPezeshk2016(GMPE):
         described on page 744, eq. 4
         """
         sigma_mean = 0.
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             psi = -6.898E-3
         else:
             psi = -3.054E-5

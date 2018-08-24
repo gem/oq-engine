@@ -90,7 +90,7 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
                  self._get_distance_scaling_term(C, dists.rjb, rup.mag))
         # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log(10 ** imean)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 #
 # LICENSE
 #
@@ -42,8 +43,6 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-# -*- coding: utf-8 -*-
 
 """
 Python tools for calculating activity rates on a grid from a source model

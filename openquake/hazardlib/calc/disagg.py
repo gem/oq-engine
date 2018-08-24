@@ -293,7 +293,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance,
-                          filter_distance)
+                          {'filter_distance': filter_distance})
     iml4 = make_iml4(1, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}

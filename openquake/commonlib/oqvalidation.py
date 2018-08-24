@@ -101,6 +101,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
     mean_hazard_curves = valid.Param(valid.boolean, True)
+    std_hazard_curves = valid.Param(valid.boolean, False)
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -142,6 +143,8 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
+    spinning_distance = valid.Param(valid.positivefloat, None)
+    floating_distance = valid.Param(valid.positivefloat, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -163,6 +166,13 @@ class OqParam(valid.ParamSet):
         except AttributeError:
             self._file_type, self._risk_files = get_risk_files(self.inputs)
             return self._file_type
+
+    def get_reqv(self):
+        """
+        :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
+        """
+        if 'reqv' in self.inputs:
+            return valid.RjbEquivalent(self.inputs['reqv'])
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
@@ -286,7 +296,7 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        imts = set('SA' if imt.startswith('SA') else imt for imt in self.imtls)
+        imts = set(from_string(imt).name for imt in self.imtls)
         for gsim in gsims:
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
@@ -459,6 +469,9 @@ class OqParam(valid.ParamSet):
         if self.mean_hazard_curves:
             names.append('mean')
             funcs.append(stats.mean_curve)
+        if self.std_hazard_curves:
+            names.append('std')
+            funcs.append(stats.std_curve)
         for q in self.quantile_hazard_curves:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))
@@ -680,8 +693,9 @@ class OqParam(valid.ParamSet):
                              'if the IMT set contains SA(...) or PGA, got %s'
                              % list(self.imtls))
         elif len(ok_imts) == 1:
-            raise ValueError(
-                'There is a single IMT, uniform_hazard_spectra cannot be True')
+            logging.warn(
+                'There is a single IMT, the uniform_hazard_spectra plot will '
+                'contain a single point')
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or

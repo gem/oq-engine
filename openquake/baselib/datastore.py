@@ -180,7 +180,10 @@ class DataStore(collections.MutableMapping):
         Open the underlying .hdf5 file and the parent, if any
         """
         if self.hdf5 == ():  # not already open
-            self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
+            kw = dict(mode=mode, libver='latest')
+            if mode == 'r':
+                kw['swmr'] = True
+            self.hdf5 = hdf5.File(self.hdf5path, **kw)
 
     @property
     def export_dir(self):
@@ -219,9 +222,7 @@ class DataStore(collections.MutableMapping):
         """
         Set the HDF5 attributes of the given key
         """
-        attrs = h5py.File.__getitem__(self.hdf5, key).attrs
-        for k, v in kw.items():
-            attrs[k] = v
+        self.hdf5.save_attrs(key, kw)
 
     def get_attr(self, key, name, default=None):
         """
@@ -271,25 +272,6 @@ class DataStore(collections.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
-
-    def save_vlen(self, key, data):
-        """
-        Save a sequence of variable-length arrays
-
-        :param key: name of the dataset
-        :param data: data to store as vlen arrays
-        """
-        dt = data[0].dtype
-        dset = self.create_dset(
-            key, h5py.special_dtype(vlen=dt), (len(data),), fillvalue=None)
-        nbytes = 0
-        totlen = 0
-        for i, val in enumerate(data):
-            dset[i] = val
-            nbytes += val.nbytes
-            totlen += len(val)
-        self.set_attrs(key, nbytes=nbytes, avg_len=totlen / len(data))
-        self.flush()
 
     def extend(self, key, array, **attrs):
         """

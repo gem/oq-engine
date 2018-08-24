@@ -72,16 +72,19 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
+import os
 import re
 import sys
-import copy
+import pickle
 import decimal
 import logging
 import operator
+import tempfile
 import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby, deprecated
 from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
@@ -101,8 +104,11 @@ class DuplicatedID(Exception):
 
 class SourceModel(collections.Sequence):
     """
-    A container of source groups with attributes name, investigation_time,
-    start_time.
+    A container of source groups with attributes name, investigation_time
+    and start_time. It is serialize on hdf5 as follows:
+
+    >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
+    ..    f['/'] = source_model
     """
     def __init__(self, src_groups, name=None, investigation_time=None,
                  start_time=None):
@@ -116,6 +122,34 @@ class SourceModel(collections.Sequence):
 
     def __len__(self):
         return len(self.src_groups)
+
+    def __toh5__(self):
+        dic = {}
+        for i, grp in enumerate(self.src_groups):
+            grpname = grp.name or 'group-%d' % i
+            srcs = [(src.source_id, src) for src in grp
+                    if hasattr(src, '__toh5__')]
+            if srcs:
+                dic[grpname] = hdf5.Group(srcs, {'trt': grp.trt})
+        attrs = dict(name=self.name,
+                     investigation_time=self.investigation_time or 'NA',
+                     start_time=self.start_time or 'NA')
+        if not dic:
+            raise ValueError('There are no serializable sources in %s' % self)
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for src_id in sorted(grp):
+                src = grp[src_id]
+                src.num_ruptures = src.count_ruptures()
+                srcs.append(src)
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):
@@ -156,15 +190,13 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
@@ -193,6 +225,7 @@ def get_source_model_05(node, fname, converter=default):
 
 
 validators = {
+    'backarc': valid.boolean,
     'strike': valid.strike_range,
     'dip': valid.dip_range,
     'rake': valid.rake_range,
@@ -272,6 +305,59 @@ validators = {
 }
 
 
+def pickle_source_models(fnames, converter,  monitor):
+    """
+    :param fnames:
+        list of source model files
+    :param converter:
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    :returns:
+        a dictionary fname -> fname.pik
+    """
+    fname2pik = {}
+    dtemp = tempfile.mkdtemp(prefix='calc_%s' % monitor.calc_id)
+    for i, fname in enumerate(fnames, 1):
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        elif fname.endswith('.hdf5'):
+            sm = sourceconverter.to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        pikname = os.path.join(dtemp, '%s-%d.pik' %
+                               (os.path.basename(fname), i))
+        fname2pik[fname] = pikname
+        with open(pikname, 'wb') as f:
+            pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
+    return fname2pik
+
+
+def check_nonparametric_sources(fname, smodel, investigation_time):
+    """
+    :param fname:
+        full path to a source model file
+    :param smodel:
+        source model object
+    :param investigation_time:
+        investigation_time to compare with in the case of
+        nonparametric sources
+    :returns:
+        the nonparametric sources in the model
+    :raises:
+        a ValueError if the investigation_time is different from the expected
+    """
+    # NonParametricSeismicSources
+    np = [src for sg in smodel.src_groups for src in sg
+          if hasattr(src, 'data')]
+    if np and smodel.investigation_time != investigation_time:
+        raise ValueError(
+            'The source model %s contains an investigation_time '
+            'of %s, while the job.ini has %s' % (
+                fname, smodel.investigation_time, investigation_time))
+    return np
+
+
 class SourceModelParser(object):
     """
     A source model parser featuring a cache.
@@ -281,24 +367,24 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sm = {}  # cache fname -> source model
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse_src_groups(self, fname, apply_uncertainties):
+    def parse(self, fname, pik, apply_uncertainties, investigation_time):
         """
         :param fname:
-            the full pathname of the source model file
+            the full pathname of a source model file
+        :param pik:
+            the pathname of the corresponding pickled file
         :param apply_uncertainties:
             a function modifying the sources
+        :param investigation_time:
+            the investigation_time in the job.ini file
         """
-        try:
-            groups = self.sm[fname]
-        except KeyError:
-            groups = self.sm[fname] = to_python(fname, self.converter)
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in groups]
-        for group in groups:
+        with open(pik, 'rb') as f:
+            sm = pickle.load(f)
+        check_nonparametric_sources(fname, sm, investigation_time)
+        for group in sm:
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
@@ -306,29 +392,7 @@ class SourceModelParser(object):
                     src.num_ruptures = src.count_ruptures()
                     self.changed_sources += 1
         self.fname_hits[fname] += 1
-        return groups
-
-    def check_nonparametric_sources(self, investigation_time):
-        """
-        :param investigation_time:
-            investigation_time to compare with in the case of
-            nonparametric sources
-        :returns:
-            list of nonparametric sources in the composite source model
-        """
-        npsources = []
-        for fname, sm in self.sm.items():
-            # NonParametricSeismicSources
-            np = [src for sg in sm.src_groups for src in sg
-                  if hasattr(src, 'data')]
-            if np:
-                npsources.extend(np)
-                if sm.investigation_time != investigation_time:
-                    raise ValueError(
-                        'The source model %s contains an investigation_time '
-                        'of %s, while the job.ini has %s' % (
-                            fname, sm.investigation_time, investigation_time))
-        return npsources
+        return sm
 
 
 def read(source, chatty=True, stop=None):
