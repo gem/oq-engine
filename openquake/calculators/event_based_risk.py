@@ -135,9 +135,13 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
         clp = param['conditional_loss_poes']
         result['curves-rlzs'], result['curves-stats'] = builder.pair(
             all_curves, param['stats'])
+        if R > 1 and param['individual_curves'] is False:
+            del result['curves-rlzs']
         if clp:
             result['loss_maps-rlzs'], result['loss_maps-stats'] = (
                 builder.build_maps(all_curves, clp, param['stats']))
+            if R > 1 and param['individual_curves'] is False:
+                del result['loss_maps-rlzs']
 
     # store info about the GMFs, must be done at the end
     result['gmdata'] = riskinput.gmdata
@@ -213,8 +217,11 @@ class EbrCalculator(base.RiskCalculator):
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = oq.loss_dt((F32, (C,)))
-        self.datastore.create_dset(
-            'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+        if oq.individual_curves:
+            self.datastore.create_dset(
+                'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+            self.datastore.set_attrs(
+                'curves-rlzs', return_periods=builder.return_periods)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
@@ -340,11 +347,13 @@ class EbrCalculator(base.RiskCalculator):
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
-        self.datastore['agg_curves-rlzs'] = array
         units = self.assetcol.cost_calculator.get_units(
             loss_types=array.dtype.names)
-        self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=b.return_periods, units=units)
+        if oq.individual_curves:
+            self.datastore['agg_curves-rlzs'] = array
+            self.datastore.set_attrs(
+                'agg_curves-rlzs',
+                return_periods=b.return_periods, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(
