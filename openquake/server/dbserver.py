@@ -40,6 +40,9 @@ db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
+ZMQ = os.environ.get(
+    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
+
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
@@ -86,20 +89,20 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warn('DB server started with %s on %s, pid %d',
                      sys.executable, self.frontend, self.pid)
+        if ZMQ:
+            # start task_in->task_out streamer thread
+            c = config.zworkers
+            threading.Thread(
+                target=w._streamer,
+                args=(self.master_host, c.task_in_port, c.task_out_port)
+            ).start()
+            logging.warn('Task streamer started from %s -> %s',
+                         c.task_in_port, c.task_out_port)
 
-        # start task_in->task_out streamer thread
-        c = config.zworkers
-        threading.Thread(
-            target=w._streamer,
-            args=(self.master_host, c.task_in_port, c.task_out_port)
-        ).start()
-        logging.warn('Task streamer started from %s -> %s',
-                     c.task_in_port, c.task_out_port)
-
-        # start zworkers and wait a bit for them
-        msg = self.master.start()
-        logging.warn(msg)
-        time.sleep(1)
+            # start zworkers and wait a bit for them
+            msg = self.master.start()
+            logging.warn(msg)
+            time.sleep(1)
 
         # start frontend->backend proxy for the database workers
         try:
@@ -114,8 +117,9 @@ class DbServer(object):
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
-        logging.warn(self.master.stop())
-        z.context.term()
+        if ZMQ:
+            logging.warn(self.master.stop())
+            z.context.term()
         self.db.close()
 
 
@@ -173,11 +177,6 @@ def ensure_on():
                          'Please check the configuration')
             time.sleep(1)
             waiting_seconds -= 1
-
-    # check if we are talking to the right server
-    err = check_foreign()
-    if err:
-        sys.exit(err)
 
 
 @sap.Script
