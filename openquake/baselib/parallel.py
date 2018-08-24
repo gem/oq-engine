@@ -631,7 +631,7 @@ class Starmap(object):
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         if inspect.isgeneratorfunction(task_func) and self.distribute not in (
-                'zmq', 'celery'):
+                'no', 'zmq', 'celery'):
             raise ValueError('Cannot used generator task %s with %s' %
                              (self.task_func.__name__, self.distribute))
         self.receiver = 'tcp://%s:%s' % (
@@ -696,10 +696,13 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _iter_sequential(self):
-        allargs = list(self._genargs(pickle=False))
-        yield len(allargs)
-        for args in allargs:
-            yield safely_call(self.task_func, args, self.monitor)
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
+            allargs = list(self._genargs(pickle=False))
+            results = (safely_call(self.task_func, args, self.monitor)
+                       for args in allargs)
+            yield from self._loop(results, iter(socket), len(allargs))
 
     def _iter_processpool(self):
         safefunc = functools.partial(safely_call, self.task_func,
