@@ -334,7 +334,7 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
-            res = None
+            res = Result(None, mon, 'TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
@@ -371,16 +371,25 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    res = Result.new(func, args, mon)
     if monitor.backurl is None:
-        return res
+        return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
-        try:
-            zsocket.send(res)
-        except Exception:  # like OverflowError
-            _etype, exc, tb = sys.exc_info()
-            err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-            zsocket.send(err)
+        if inspect.isgeneratorfunction(func):
+            gfunc = func
+        else:
+            def gfunc(*args):
+                yield func(*args)
+        genobj = gfunc(*args)
+        while True:
+            res = Result.new(next, (genobj,), mon)
+            try:
+                zsocket.send(res)
+            except Exception:  # like OverflowError
+                _etype, exc, tb = sys.exc_info()
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+                zsocket.send(err)
+            if res.tb_str == 'TASK_ENDED':
+                break
     return zsocket.num_sent
 
 
@@ -621,6 +630,10 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
+        if inspect.isgeneratorfunction(task_func) and self.distribute not in (
+                'zmq', 'celery'):
+            raise ValueError('Cannot used generator task %s with %s' %
+                             (self.task_func.__name__, self.distribute))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
@@ -708,7 +721,7 @@ class Starmap(object):
                     logging.warn('Discarding a result from job %d, since this '
                                  'is job %d', res.mon.calc_id, self.calc_id)
                     continue
-                else:
+                elif res.tb_str == 'TASK_ENDED':
                     break
             yield res
 
