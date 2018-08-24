@@ -81,3 +81,11 @@ class PMF(object):
         probs = np.cumsum([val[0] for val in self.data])
         sampler = np.random.uniform(0., 1., number_samples)
         return [self.data[ival] for ival in np.searchsorted(probs, sampler)]
+
+    def reduce(self, bin=0):
+        """
+        Reduce the original PMF to a single bin distribution.
+
+        :param bin: the bin to keep (default the first)
+        """
+        self.data = [(1, self.data[0][1])]
