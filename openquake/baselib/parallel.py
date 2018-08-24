@@ -379,9 +379,9 @@ def safely_call(func, args, monitor=dummy_mon):
         else:
             def gfunc(*args):
                 yield func(*args)
-        genobj = gfunc(*args)
+        gobj = gfunc(*args)
         while True:
-            res = Result.new(next, (genobj,), mon)
+            res = Result.new(next, (gobj,), mon)  # StopIteration -> TASK_ENDED
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
