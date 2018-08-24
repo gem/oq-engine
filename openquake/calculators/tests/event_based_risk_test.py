@@ -169,6 +169,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # check that individual_curves = false is honored
+        self.assertFalse('curves-rlzs' in self.calc.datastore)
+        self.assertTrue('curves-stats' in self.calc.datastore)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
