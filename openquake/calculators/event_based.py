@@ -429,7 +429,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
-            hstats = self.oqparam.hazard_stats()
+
+            # NB: in the future we may want to save to individual hazard
+            # curves if oq.individual_curves is set; for the moment we
+            # save the statistical curves only
+            hstats = oq.hazard_stats()
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
                 for kind, stat in hstats:
