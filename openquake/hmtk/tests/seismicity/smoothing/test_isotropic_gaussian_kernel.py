@@ -41,7 +41,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-# -*- coding: utf-8 -*-
+
 '''
 Tests for the module :mod:
 openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian.IsotropicGaussian, which

@@ -57,7 +57,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: oq-python3 python3-oq-libs >= 1.6.0
+Requires: oq-python3 python3-oq-libs >= 2.2.0
 Requires: sudo systemd
 
 BuildRequires: oq-python3 sed systemd zip
@@ -119,6 +119,11 @@ getent passwd %{oquser} >/dev/null || \
     -c "The OpenQuake user" %{oquser}
 
 %install
+# Fix shebangs before installation
+for f in $(find . -type f -executable | xargs --no-run-if-empty grep -rlE '^#!/usr/bin/env python3$'); do \
+    sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' $f; \
+done
+# Fix version in python init
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/baselib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -d %{buildroot}%{_oqbindir}

@@ -3,11 +3,11 @@ Scenario Damage
 
 ============== ===================
 checksum32     2,048,857,716      
-date           2018-06-05T06:38:21
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:56:58
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
-num_sites = 1, num_levels = 26
+num_sites = 7, num_levels = 26
 
 Parameters
 ----------
@@ -71,15 +71,28 @@ taxonomy mean    stddev min max num_sites num_assets
 Wood     1.00000 NaN    1   1   1         1         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+================== ======= ====== ======= ======= =========
+operation-duration mean    stddev min     max     num_tasks
+scenario_damage    0.01062 NaN    0.01062 0.01062 1        
+================== ======= ====== ======= ======= =========
+
+Data transfer
+-------------
+=============== ================================================= ========
+task            sent                                              received
+scenario_damage riskmodel=0 B riskinput=0 B param=0 B monitor=0 B 5.27 KB 
+=============== ================================================= ========
+
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-ScenarioCalculator.run  0.16233   0.32812   1     
-reading site collection 0.00911   0.0       1     
-building riskinputs     0.00691   0.0       1     
-saving gmfs             0.00411   0.0       1     
-computing gmfs          0.00283   0.08984   1     
-reading exposure        7.317E-04 0.0       1     
-======================= ========= ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+total scenario_damage      0.01062   0.0       1     
+getting hazard             0.00721   0.0       2     
+building riskinputs        0.00258   0.0       1     
+computing risk             0.00213   0.0       1     
+unpickling scenario_damage 3.414E-04 0.0       1     
+========================== ========= ========= ======

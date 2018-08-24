@@ -50,6 +50,7 @@ OQ_API = 'https://api.openquake.org'
 TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
+MB = 1024 ** 2
 _PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
@@ -70,7 +71,7 @@ if OQ_DISTRIBUTE == 'zmq':
                     continue
                 num_workers += sock.send('get_num_workers')
         OqParam.concurrent_tasks.default = num_workers * 3
-        print('Using %d zmq workers' % num_workers)  # the log is not set yet
+        logs.LOG.warn('Using %d zmq workers', num_workers)
 
 elif OQ_DISTRIBUTE.startswith('celery'):
     import celery.task.control
@@ -85,10 +86,9 @@ elif OQ_DISTRIBUTE.startswith('celery'):
             logs.LOG.critical("No live compute nodes, aborting calculation")
             logs.dbcmd('finish', job_id, 'failed')
             sys.exit(1)
-        num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 3
-        print('Using %s, %d cores' % (', '.join(sorted(stats)), num_cores))
-        # the log is not set yet, so I am using a print
+        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = ncores * 3
+        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
     def celery_cleanup(terminate, task_ids=()):
         """
@@ -124,11 +124,6 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     rlzs = dstore['csm_info'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
-    # expose gmf_data only if < 10 MB
-    if calcmode == 'event_based':
-        nbytes = dstore['gmf_data'].attrs['nbytes']
-        if nbytes < 10 * 1024 ** 2:  # expose only small GMFs
-            dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
@@ -141,8 +136,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if 'avg_losses-stats' in dstore or (
             'avg_losses-rlzs' in dstore and len(rlzs)):
         dskeys.add('avg_losses-stats')
-    if 'curves-stats' in dstore:
-        logs.LOG.warn('loss curves are exportable with oq export')
+    if 'curves-rlzs' in dstore and len(rlzs) == 1:
+        dskeys.add('loss_curves-rlzs')
+    if 'curves-stats' in dstore and len(rlzs) > 1:
+        dskeys.add('loss_curves-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
@@ -157,7 +154,15 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
                    oq.description + ' [parent]', owner, status,
                    oq.hazard_calculation_id, dstore.datadir)
-    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
+    keysize = []
+    for key in sorted(dskeys & exportable):
+        try:
+            size_mb = dstore.get_attr(key, 'nbytes') / MB
+        except KeyError:
+            size_mb = None
+        keysize.append((key, size_mb))
+    ds_size = os.path.getsize(dstore.hdf5path) / MB
+    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -308,13 +313,13 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     setproctitle('oq-job-%d' % job_id)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
-        msg = check_obsolete_version(oqparam.calculation_mode)
         calc = base.calculators(oqparam, calc_id=job_id)
-        calc.set_log_format()
+        calc.set_log_format()  # set the log format first of all
+        msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
+        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+            set_concurrent_tasks_default(job_id)
         calc.from_engine = True
         input_zip = oqparam.inputs.get('input_zip')
         tb = 'None\n'
@@ -336,8 +341,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                      hazard_calculation_id=hazard_calculation_id,
                      close=False, **kw)  # don't close the datastore too soon
             logs.LOG.info('Exposing the outputs to the database')
-            if calc.dynamic_parent:
-                expose_outputs(calc.dynamic_parent)
             expose_outputs(calc.datastore)
             duration = time.time() - t0
             calc._monitor.flush()

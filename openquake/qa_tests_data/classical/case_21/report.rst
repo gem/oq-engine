@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-06-05T06:38:52
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:57:29
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -188,8 +188,8 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-SFLT2     SimpleFaultSource 89           0.18555   2.384E-05  1.00000   61        0     
-SFLT1     SimpleFaultSource 132          0.10828   3.815E-06  1.00000   32        0     
+SFLT2     SimpleFaultSource 89           0.16200   1.884E-05  1.00000   61        0     
+SFLT1     SimpleFaultSource 132          0.08860   2.861E-06  1.00000   32        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -197,7 +197,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.29382   2     
+SimpleFaultSource 0.25060   2     
 ================= ========= ======
 
 Duplicated sources
@@ -208,38 +208,38 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00891 0.00438 0.00436 0.02836 41       
-count_eff_ruptures 0.00597 0.00248 0.00292 0.01254 65       
+RtreeFilter        0.00748 0.00364 0.00257 0.01876 41       
+count_eff_ruptures 0.00514 0.00219 0.00220 0.01021 65       
 ================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=31, weight=174, duration=0 s, sources="SFLT2"
+taskno=63, weight=58, duration=0 s, sources="SFLT2"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   1.00000 NaN    1   1   1
-weight   174     NaN    174 174 1
+weight   58      NaN    58  58  1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=19, weight=90, duration=0 s, sources="SFLT1"
+taskno=27, weight=83, duration=0 s, sources="SFLT1 SFLT2"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   90      NaN    90  90  1
+nsites   1.00000 0.0    1   1   2
+weight   41      23     25  58  2
 ======== ======= ====== === === =
 
 Data transfer
 -------------
 ================== ================================================================================= ========
 task               sent                                                                              received
-RtreeFilter        srcs=55.52 KB monitor=13.85 KB srcfilter=11.17 KB                                 61.48 KB
-count_eff_ruptures sources=83.28 KB param=27.87 KB monitor=22.41 KB srcfilter=14.79 KB gsims=7.62 KB 23.51 KB
+RtreeFilter        srcs=55.52 KB monitor=12.89 KB srcfilter=11.17 KB                                 61.48 KB
+count_eff_ruptures sources=83.28 KB param=27.87 KB monitor=20.88 KB srcfilter=15.62 KB gsims=7.62 KB 23.51 KB
 ================== ================================================================================= ========
 
 Slowest operations
@@ -247,16 +247,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             1.49819   0.0       1     
-reading composite source model 0.62313   0.0       1     
-total count_eff_ruptures       0.38786   5.75781   65    
-total prefilter                0.36534   4.03125   41    
-managing sources               0.35657   0.0       1     
-aggregate curves               0.02136   0.0       65    
-unpickling count_eff_ruptures  0.01684   0.0       65    
-unpickling prefilter           0.01483   0.0       41    
-store source_info              0.00896   0.0       1     
-splitting sources              0.00166   0.0       1     
-reading site collection        0.00105   0.0       1     
-saving probability maps        1.998E-04 0.0       1     
+reading composite source model 0.63428   0.0       1     
+total count_eff_ruptures       0.33386   6.50391   65    
+total prefilter                0.30656   4.23828   41    
+managing sources               0.30462   0.0       1     
+aggregate curves               0.02380   0.0       65    
+unpickling prefilter           0.01666   0.0       41    
+unpickling count_eff_ruptures  0.01623   0.0       65    
+store source_info              0.00966   0.0       1     
+splitting sources              0.00123   0.0       1     
+reading site collection        3.638E-04 0.0       1     
 ============================== ========= ========= ======

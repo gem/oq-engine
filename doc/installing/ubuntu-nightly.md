@@ -15,13 +15,13 @@ The following commands add the nightly builds package repository:
 ```bash
 sudo add-apt-repository -ry ppa:openquake/ppa
 sudo add-apt-repository -y ppa:openquake-automatic-team/latest-master
-sudo apt-get update
+sudo apt update
 ```
 
 Then to install the OpenQuake Engine and its libraries first remove stable packages and then install nightly build packages
 ```bash
-sudo apt-get remove --purge python-oq-.* python3-oq-.*
-sudo apt-get install python3-oq-engine
+sudo apt remove --purge python-oq-.* python3-oq-.*
+sudo apt install python3-oq-engine
 ```
 
 Now you can follow the [standard installing procedures](./ubuntu.md#configure-the-system-services)

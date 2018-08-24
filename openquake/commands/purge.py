@@ -70,4 +70,5 @@ def purge(calc_id):
             return
     purge_one(calc_id, getpass.getuser())
 
+
 purge.arg('calc_id', 'calculation ID', type=int)

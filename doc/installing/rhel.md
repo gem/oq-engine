@@ -30,20 +30,6 @@ Then to install the OpenQuake Engine and its libraries run
 sudo yum install python3-oq-engine
 ```
 
-### Upgrade from a previous release
-
-As soon as a new version of the OpenQuake Engine and libraries are released you can upgrade it using `yum` or a graphical package manager:
-
-```bash
-sudo yum upgrade python3-oq-engine
-```
-
-If a full upgrade is performed on the system, the OpenQuake software is upgraded to the latest version too:
-
-```bash
-sudo yum upgrade
-```
-
 ## Configure the system services
 
 The package installs three [systemd](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/chap-Managing_Services_with_systemd.html) services:

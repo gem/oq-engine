@@ -60,6 +60,14 @@ strasser2010
     :undoc-members:
     :show-inheritance:
 
+thingbaijam2017
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.scalerel.thingbaijam2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 wc1994
 ------------------------------------------
 

@@ -3,8 +3,8 @@ oq-test03, depth=15km
 
 ============== ===================
 checksum32     3,074,586,051      
-date           2018-06-05T06:38:21
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:56:59
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -80,6 +80,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading site collection 0.00236   0.0       1     
-reading exposure        7.088E-04 0.0       1     
+computing gmfs          0.00282   0.04297   1     
+reading site collection 0.00251   0.0       1     
+reading exposure        7.353E-04 0.0       1     
 ======================= ========= ========= ======

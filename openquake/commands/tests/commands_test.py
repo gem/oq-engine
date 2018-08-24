@@ -38,6 +38,7 @@ from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
+from openquake.commands.check_input import check_input
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.calculators.views import view
@@ -48,6 +49,7 @@ from openquake.qa_tests_data.event_based import case_5
 from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
+from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -199,7 +201,7 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
-            calc.datastore.open()  # if closed
+            calc.datastore.open('r')  # if closed
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -223,7 +225,7 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show_attrs.func('sitecol', self.calc_id)
         self.assertEqual(
-            '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 54',
+            '__pyclass__ openquake.hazardlib.site.SiteCollection\nnbytes 37',
             str(p))
 
     def test_export_calc(self):
@@ -408,3 +410,11 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
+
+
+class CheckInputTestCase(unittest.TestCase):
+    def test_invalid(self):
+        job_zip = os.path.join(list(test_data.__path__)[0],
+                               'archive_err_1.zip')
+        with self.assertRaises(ValueError):
+            check_input.func(job_zip)

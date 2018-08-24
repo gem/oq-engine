@@ -85,7 +85,7 @@ class MultiMFD(BaseMFD):
             _reshape(kwargs, lengths)
         return cls(kind, size, width_of_mfd_bin, **kwargs)
 
-    def __init__(self, kind, size, width_of_mfd_bin=None, **kwargs):
+    def __init__(self, kind, size, width_of_mfd_bin=numpy.nan, **kwargs):
         self.kind = kind
         self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin

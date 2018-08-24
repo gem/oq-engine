@@ -26,7 +26,8 @@ import sys
 import mock
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import PSHACalculator, count_eff_ruptures
+from openquake.calculators.classical import (
+    ClassicalCalculator, count_eff_ruptures)
 from openquake.calculators import views
 
 
@@ -53,8 +54,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'short_source_info': 'Slowest sources',
-        'task_classical:0': 'Fastest task',
-        'task_classical:-1': 'Slowest task',
+        'task_hazard:0': 'Fastest task',
+        'task_hazard:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -106,8 +107,8 @@ class ReportWriter(object):
             self.add('task_info')
             tasks = set(ds['task_info'])
             if 'classical' in tasks or 'count_eff_ruptures' in tasks:
-                self.add('task_classical:0')
-                self.add('task_classical:-1')
+                self.add('task_hazard:0')
+                self.add('task_hazard:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')
@@ -138,14 +139,11 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     p = mock.patch.object
-    with p(PSHACalculator, 'core_task', count_eff_ruptures):
-        calc.prefilter = False
-        if calc.pre_calculator == 'event_based_risk':
-            # compute the ruptures only, not the risk
-            calc.pre_calculator = 'event_based_rupture'
+    with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
+        calc.oqparam.ground_motion_fields = False
+        calc.read_inputs.__func__.__defaults__ = (False,)  # no split sources
         calc.pre_execute()
-    if hasattr(calc, 'csm'):
-        calc.datastore['csm_info'] = calc.csm.info
+        calc.execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

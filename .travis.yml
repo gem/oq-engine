@@ -3,7 +3,7 @@ sudo: false
 language: python
 
 python:
- - "3.5"
+ - "3.6"
 
 # FIXME temporarily disable cache
 # cache:
@@ -31,7 +31,7 @@ jobs:
         - nosetests --with-doctest -xvs -a'!slow' openquake.commonlib
         - nosetests --with-doctest -xvs -a'!slow' openquake.commands
         - oq webui migrate
-    after_success:  # old sphinx does not work well with Python 3.5.4
+    after_success:  # old sphinx does not work well with Python 3.5.4+
         - pip install sphinx==1.6.5 && cd doc/sphinx && make html
     after_script:
         - oq dbserver stop
@@ -42,7 +42,7 @@ jobs:
         # the commit message includes a [demos] tag at the end or branch is master
         - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -q '\[demos\]' || test "$BRANCH" == "master"; then
             OQ_DISTRIBUTE=zmq time bin/run-demos.sh $TRAVIS_BUILD_DIR/demos &&
-            bin/check_demos && oq dbserver stop &&
+            oq dbserver stop &&
             oq dump /tmp/oqdata.zip &&
             oq restore /tmp/oqdata.zip /tmp/oqdata &&
             helpers/zipdemos.sh $(pwd)/demos &&
@@ -65,7 +65,7 @@ install:
   # to download the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip -q download -r requirements-py35-linux64.txt -d wheels &&
+      pip -q download -r requirements-py36-linux64.txt -d wheels &&
       pip -q install wheels/* ;
     fi
   - pip -q install -e .

@@ -20,7 +20,7 @@ import operator
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
 from openquake.calculators import base
@@ -33,7 +33,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def build_loss_tables(dstore):
@@ -136,9 +135,13 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
         clp = param['conditional_loss_poes']
         result['curves-rlzs'], result['curves-stats'] = builder.pair(
             all_curves, param['stats'])
+        if R > 1 and param['individual_curves'] is False:
+            del result['curves-rlzs']
         if clp:
             result['loss_maps-rlzs'], result['loss_maps-stats'] = (
                 builder.build_maps(all_curves, clp, param['stats']))
+            if R > 1 and param['individual_curves'] is False:
+                del result['loss_maps-rlzs']
 
     # store info about the GMFs, must be done at the end
     result['gmdata'] = riskinput.gmdata
@@ -151,41 +154,14 @@ class EbrCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the total losses by taxonomy
     """
     core_task = event_based_risk
-    pre_calculator = 'event_based'
     is_stochastic = True
 
     def pre_execute(self):
         oq = self.oqparam
-        if 'gmfs' in oq.inputs:
-            assert not oq.hazard_calculation_id, (
-                'You cannot use --hc together with gmfs_file')
-            self.pre_calculator = None
-            super().pre_execute()
-            parent = ()
-        elif oq.hazard_calculation_id:
-            super().pre_execute()
-            parent = self.datastore.parent
-            oqp = parent['oqparam']
-            if oqp.investigation_time != oq.investigation_time:
-                raise ValueError(
-                    'The parent calculation was using investigation_time=%s'
-                    ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if oqp.minimum_intensity != oq.minimum_intensity:
-                raise ValueError(
-                    'The parent calculation was using minimum_intensity=%s'
-                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
-        else:
-            ebcalc = base.calculators[self.pre_calculator](self.oqparam)
-            ebcalc.run(close=False)
-            self.set_log_format()
-            parent = self.dynamic_parent = self.datastore.parent = (
-                ebcalc.datastore)
-            oq.hazard_calculation_id = parent.calc_id
-            self.datastore['oqparam'] = oq
-            self.param = ebcalc.param
-            self.sitecol = ebcalc.sitecol
-            self.assetcol = ebcalc.datastore['assetcol']
-            self.riskmodel = ebcalc.riskmodel
+        super().pre_execute('event_based')
+        parent = self.datastore.parent
+        if not self.oqparam.ground_motion_fields:
+            return  # this happens in the reportwriter
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
@@ -193,18 +169,26 @@ class EbrCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.rlzs_assoc = parent['csm_info'].get_rlzs_assoc()
-            if oq.return_periods != [0]:
-                # setting return_periods = 0 disable loss curves and maps
-                self.param['builder'] = get_loss_builder(
-                    parent, oq.return_periods, oq.loss_dt())
             self.eids = sorted(parent['events']['eid'])
         else:
             self.eids = sorted(self.datastore['events']['eid'])
+        if oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves and maps
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warn('eff_time=%s is too small to compute loss curves',
+                             eff_time)
+            else:
+                self.param['builder'] = get_loss_builder(
+                    parent if parent else self.datastore,
+                    oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
+        if not oq.ignore_covs:
+            logging.info('Generating %s of epsilons',
+                         humansize(self.A * self.E * 4))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -227,15 +211,17 @@ class EbrCalculator(base.RiskCalculator):
     def build_datasets(self, builder):
         oq = self.oqparam
         R = len(builder.weights)
-        assetcol = self.datastore['assetcol']
         stats = oq.risk_stats()
-        A = len(assetcol)
+        A = self.A
         S = len(stats)
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = oq.loss_dt((F32, (C,)))
-        self.datastore.create_dset(
-            'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+        if oq.individual_curves:
+            self.datastore.create_dset(
+                'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+            self.datastore.set_attrs(
+                'curves-rlzs', return_periods=builder.return_periods)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
@@ -335,21 +321,21 @@ class EbrCalculator(base.RiskCalculator):
 
     def postproc(self):
         """
-        Build aggregate loss curves
+        Build aggregate loss curves in process
         """
         dstore = self.datastore
         self.before_export()  # set 'realizations'
         oq = self.oqparam
-        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-        if eff_time < 2:
-            logging.warn('eff_time=%s is too small to compute agg_curves',
-                         eff_time)
-            return
         stats = oq. risk_stats()
         # store avg_losses-stats
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses')
-        b = get_loss_builder(self.datastore)
+        try:
+            b = self.param['builder']
+        except KeyError:  # don't build auxiliary tables
+            return
+        if dstore.parent:
+            dstore.parent.open('r')  # to read the ruptures
         if 'ruptures' in dstore:
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
@@ -361,10 +347,13 @@ class EbrCalculator(base.RiskCalculator):
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
-        self.datastore['agg_curves-rlzs'] = array
-        units = self.assetcol.units(loss_types=array.dtype.names)
-        self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=b.return_periods, units=units)
+        units = self.assetcol.cost_calculator.get_units(
+            loss_types=array.dtype.names)
+        if oq.individual_curves:
+            self.datastore['agg_curves-rlzs'] = array
+            self.datastore.set_attrs(
+                'agg_curves-rlzs',
+                return_periods=b.return_periods, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(

@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-#/usr/bin/env/python
-
 '''Tests set of seismicity utility functions including:
 i) decimal_year
 ii) decimal_time
@@ -92,9 +90,9 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.year = np.array([1990., 1995., 2000.])
         self.month = np.array([1., 6., 12.])
         self.day = np.array([1., 30., 31.])
-        self.assertTrue(np.allclose(
+        np.testing.assert_allclose(
             utils.decimal_year(self.year, self.month, self.day),
-            np.array([1990., 1995.49315068, 2000.99726027])))
+            np.array([1990., 1995.49315068, 2000.99726027]))
 
     def test_decimal_time(self):
         '''Tests the function utils.decimal_time'''
@@ -104,10 +102,10 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.hour = np.array([0, 12, 23])
         self.minute = np.array([0, 30, 59])
         self.second = np.array([0.0, 30.0, 59.0])
-        self.assertTrue(np.allclose(
+        np.testing.assert_allclose(
             utils.decimal_time(self.year, self.month, self.day, self.hour,
                                self.minute, self.second),
-            np.array([1990., 1995.49457858, 2000.99999997])))
+            np.array([1990., 1995.49457858, 2000.99999997]))
 
     def test_decimal_time1(self):
         '''Tests the function utils.decimal_time'''
@@ -117,17 +115,18 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.hour = np.array([0])
         self.minute = np.array([0])
         self.second = np.array([0.0, 30.0, 59.0])
-        self.assertTrue(np.allclose(
+        np.testing.assert_allclose(
             utils.decimal_time(self.year, self.month, self.day, self.hour,
                                self.minute, self.second),
-            np.array([1990.])))
+            np.array([1990., 1990.000001, 1990.000002]))
 
     def test_decimal_time2(self):
         '''Tests the function utils.decimal_time'''
         self.year = np.array([1990])
-        self.assertTrue(np.allclose(
-            utils.decimal_time(self.year, [], [], [], [], []),
-            np.array([1990.])))
+        np.testing.assert_allclose(
+            utils.decimal_time(self.year, np.array([]), np.array([]),
+                               np.array([]), np.array([]), np.array([])),
+            np.array([1990.]))
 
     def test_haversine(self):
         '''Tests the function utils.haversine
@@ -152,7 +151,7 @@ class TestSeismicityUtilities(unittest.TestCase):
                                       [286.04831311],
                                       [427.95959077],
                                       [569.09922383]])
-        self.assertTrue(np.allclose(distance, expected_distance))
+        np.testing.assert_allclose(distance, expected_distance)
 
         # 2-D test
         self.longitude = np.array([30., 35., 40.])
@@ -170,7 +169,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         expected_distance = np.array([[31.45176332],
                                       [7.86294832],
                                       [47.1775851]])
-        self.assertTrue(np.allclose(distance, expected_distance))
+        np.testing.assert_allclose(distance, expected_distance)
 
     def test_piecewise_linear_function(self):
         '''Test the piecewise linear calculator'''

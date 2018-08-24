@@ -17,10 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import mock
 import unittest
 import numpy
-import h5py
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
@@ -111,8 +109,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # test the composite_risk_model keys (i.e. slash escaping)
-        parent = self.calc.datastore.parent
-        crm = sorted(parent.getitem('composite_risk_model'))
+        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # test the case when all GMFs are filtered out
@@ -149,7 +146,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1404)
+        self.assertEqual(nbytes, 1911)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -171,6 +168,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # check that individual_curves = false is honored
+        self.assertFalse('curves-rlzs' in self.calc.datastore)
+        self.assertTrue('curves-stats' in self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
@@ -210,7 +211,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # extract curves by tag
         tags = 'taxonomy=tax1&state=01&cresta=0.11'
-        a = extract(self.calc.datastore, 'aggcurves/structural?' + tags)
+        a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -221,11 +222,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
-
-        # check max_gmf_size
-        exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
-        got = self.calc.datastore['gmf_data/data'].value.nbytes
-        self.assertGreater(exp, got)  # there is minimum_intensity
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
@@ -276,7 +272,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 36)  # 2 IMT x 2 poes + 32 files
+        self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

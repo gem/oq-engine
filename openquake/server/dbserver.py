@@ -57,7 +57,8 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        self.master = w.WorkerMaster(**config.zworkers)
+        self.master = w.WorkerMaster(config.dbserver.host,
+                                     **config.zworkers)
 
     def dworker(self, sock):
         # a database worker responding to commands
@@ -92,7 +93,7 @@ class DbServer(object):
             # start task_in->task_out streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w.streamer,
+                target=w._streamer,
                 args=(self.master_host, c.task_in_port, c.task_out_port)
             ).start()
             logging.warn('Task streamer started from %s -> %s',
@@ -190,7 +191,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         dbhost, port = dbhostport.split(':')
         addr = (dbhost, int(port))
     else:
-        addr = (config.dbserver.host, DBSERVER_PORT)
+        addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
     dirname = os.path.dirname(dbpath)

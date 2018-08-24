@@ -111,11 +111,10 @@ producing too small PoEs.'''
     def pre_execute(self):
         oq = self.oqparam
         if oq.iml_disagg and not oq.disagg_by_src:
-            # no need to run a PSHACalculator
             base.HazardCalculator.pre_execute(self)
         else:
-            # we need to run a PSHACalculator
-            cl = classical.PSHACalculator(oq, self.datastore.calc_id)
+            # we need to run a ClassicalCalculator
+            cl = classical.ClassicalCalculator(oq, self.datastore.calc_id)
             cl.run()
             self.csm = cl.csm
             self.rlzs_assoc = cl.rlzs_assoc  # often reduced logic tree
@@ -290,7 +289,7 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance,
-                    oq.filter_distance)
+                    {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
                         (src_filter, block, cmaker, iml4, trti, self.bin_edges,
@@ -298,8 +297,9 @@ producing too small PoEs.'''
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
-        results = parallel.Starmap(compute_disagg, all_args).reduce(
-            self.agg_result, AccumDict(accum={}))
+        results = parallel.Starmap(
+            compute_disagg, all_args, self.monitor()
+        ).reduce(self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
         trti = csm.info.trt2i()
@@ -464,7 +464,7 @@ producing too small PoEs.'''
                 for g, grp_id in enumerate(grp_ids):
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
-                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        ys = pmap[sid].array[oq.imtls(imt), 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None

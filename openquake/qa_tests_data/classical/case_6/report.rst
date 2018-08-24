@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 6
 
 ============== ===================
 checksum32     3,056,992,103      
-date           2018-06-05T06:38:46
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:57:24
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -77,8 +77,8 @@ Slowest sources
 ========= ================== ============ ========= ========== ========= ========= ======
 source_id source_class       num_ruptures calc_time split_time num_sites num_split events
 ========= ================== ============ ========= ========== ========= ========= ======
-2         ComplexFaultSource 49           0.00512   3.099E-06  1.00000   1         0     
-1         SimpleFaultSource  91           0.00417   1.907E-05  1.00000   1         0     
+2         ComplexFaultSource 49           0.00558   2.861E-06  1.00000   1         0     
+1         SimpleFaultSource  91           0.00476   1.955E-05  1.00000   1         0     
 ========= ================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -86,8 +86,8 @@ Computation times by source typology
 ================== ========= ======
 source_class       calc_time counts
 ================== ========= ======
-ComplexFaultSource 0.00512   1     
-SimpleFaultSource  0.00417   1     
+ComplexFaultSource 0.00558   1     
+SimpleFaultSource  0.00476   1     
 ================== ========= ======
 
 Duplicated sources
@@ -98,8 +98,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00678 6.786E-04 0.00630 0.00726 2        
-count_eff_ruptures 0.00620 8.650E-04 0.00559 0.00681 2        
+RtreeFilter        0.00437 2.586E-04 0.00419 0.00456 2        
+count_eff_ruptures 0.00688 8.013E-04 0.00631 0.00744 2        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
@@ -128,8 +128,8 @@ Data transfer
 -------------
 ================== ===================================================================== ========
 task               sent                                                                  received
-RtreeFilter        srcs=2.18 KB monitor=692 B srcfilter=558 B                            2.4 KB  
-count_eff_ruptures sources=2.49 KB param=862 B monitor=706 B srcfilter=466 B gsims=240 B 716 B   
+RtreeFilter        srcs=2.18 KB monitor=644 B srcfilter=558 B                            2.4 KB  
+count_eff_ruptures sources=2.49 KB param=862 B monitor=658 B srcfilter=492 B gsims=240 B 716 B   
 ================== ===================================================================== ========
 
 Slowest operations
@@ -137,16 +137,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             0.44931   0.0       1     
-reading composite source model 0.16973   0.0       1     
-managing sources               0.10392   0.0       1     
-total prefilter                0.01355   4.32422   2     
-total count_eff_ruptures       0.01240   5.60547   2     
-store source_info              0.00557   0.0       1     
-reading site collection        9.391E-04 0.0       1     
-aggregate curves               6.089E-04 0.0       2     
-unpickling prefilter           5.536E-04 0.0       2     
-unpickling count_eff_ruptures  4.945E-04 0.0       2     
-splitting sources              3.333E-04 0.0       1     
-saving probability maps        1.936E-04 0.0       1     
+managing sources               0.16557   0.0       1     
+reading composite source model 0.16554   0.0       1     
+total count_eff_ruptures       0.01375   6.50391   2     
+total prefilter                0.00874   4.17969   2     
+store source_info              0.00752   0.0       1     
+aggregate curves               7.484E-04 0.0       2     
+unpickling count_eff_ruptures  5.968E-04 0.0       2     
+unpickling prefilter           5.524E-04 0.0       2     
+reading site collection        3.524E-04 0.0       1     
+splitting sources              3.157E-04 0.0       1     
 ============================== ========= ========= ======

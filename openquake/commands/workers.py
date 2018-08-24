@@ -28,7 +28,9 @@ def workers(cmd):
     if config.dbserver.multi_user and getpass.getuser() != 'openquake':
         sys.exit('oq workers only works in single user mode')
 
-    master = workerpool.WorkerMaster(**config.zworkers)
+    master = workerpool.WorkerMaster(config.dbserver.host,
+                                     **config.zworkers)
     print(getattr(master, cmd)())
+
 
 workers.arg('cmd', 'command', choices='start stop status restart'.split())

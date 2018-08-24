@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
@@ -63,7 +63,7 @@ def get_src_ids(sources):
 
 def saving_sources_by_task(iterargs, dstore):
     """
-    Yield the iterargs again by populating 'task_info/source_data'
+    Yield the iterargs again by populating 'source_data'
     """
     source_ids = []
     data = []
@@ -72,12 +72,12 @@ def saving_sources_by_task(iterargs, dstore):
         for src in args[0]:  # collect source data
             data.append((i, src.nsites, src.num_ruptures, src.weight))
         yield args
-    dstore['task_info/task_sources'] = encode(source_ids)
-    dstore.extend('task_info/source_data', numpy.array(data, source_data_dt))
+    dstore['task_sources'] = encode(source_ids)
+    dstore.extend('source_data', numpy.array(data, source_data_dt))
 
 
-@base.calculators.add('psha')
-class PSHACalculator(base.HazardCalculator):
+@base.calculators.add('classical')
+class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
@@ -123,11 +123,13 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        try:
-            self.csm
-        except AttributeError:
-            raise RuntimeError('No CompositeSourceModel, did you forget to '
-                               'run the hazard or the --hc option?')
+        if self.oqparam.hazard_calculation_id:
+            parent = datastore.read(self.oqparam.hazard_calculation_id)
+            self.csm_info = parent['csm_info']
+            parent.close()
+            self.calc_stats(parent)  # post-processing
+            return {}
+        self.csm_info = self.datastore['csm_info']
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -138,7 +140,8 @@ class PSHACalculator(base.HazardCalculator):
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
             ires = parallel.Starmap(
-                self.core_task.__func__, iterargs).submit_all()
+                self.core_task.__func__, iterargs, self.monitor()
+            ).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         if not self.nsites:
@@ -166,11 +169,13 @@ class PSHACalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
-                     filter_distance=oq.filter_distance)
+                     filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
+                     floating_distance=oq.floating_distance,
+                     spinning_distance=oq.spinning_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
-        csm, src_filter = self.filter_csm()
+        src_filter, csm = self.filter_csm()
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
@@ -188,7 +193,7 @@ class PSHACalculator(base.HazardCalculator):
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.get_sources_by_trt().items():
+        for trt, sources in csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in block_splitter(sources, maxweight, weight):
                 yield block, src_filter, gsims, param, monitor
@@ -196,6 +201,41 @@ class PSHACalculator(base.HazardCalculator):
                 num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
         self.csm.info.tot_weight = csm.info.tot_weight
+
+    def gen_getters(self, parent):
+        """
+        :yields: pgetter, hstats, monitor
+        """
+        monitor = self.monitor('build_hcurves_and_stats')
+        hstats = self.oqparam.hazard_stats()
+        for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
+            if parent is self.datastore:  # read now, not in the workers
+                logging.info('Reading PoEs on %d sites', len(t))
+                pgetter.init()
+            yield pgetter, hstats, monitor
+
+    def save_hcurves(self, acc, pmap_by_kind):
+        """
+        Works by side effect by saving statistical hcurves on the
+        datastore; the accumulator stores the number of bytes saved.
+
+        :param acc: dictionary kind -> nbytes
+        :param pmap_by_kind: a dictionary of ProbabilityMaps
+        """
+        with self.monitor('saving statistical hcurves', autoflush=True):
+            for kind in pmap_by_kind:
+                pmap = pmap_by_kind[kind]
+                if pmap:
+                    key = 'hcurves/%s' % kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        dset[sid] = pmap[sid].array[:, 0]
+                    # in the datastore we save 4 byte floats, thus we
+                    # divide the memory consumption by 2: pmap.nbytes / 2
+                    acc += {kind: pmap.nbytes // 2}
+            self.datastore.flush()
+            return acc
 
     def post_execute(self, pmap_by_grp_id):
         """
@@ -205,8 +245,8 @@ class PSHACalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        grp_trt = self.csm.info.grp_by("trt")
-        grp_source = self.csm.info.grp_by("name")
+        grp_trt = self.csm_info.grp_by("trt")
+        grp_source = self.csm_info.grp_by("name")
         if oq.disagg_by_src:
             src_name = {src.src_group_id: src.name
                         for src in self.csm.get_sources()}
@@ -221,9 +261,9 @@ class PSHACalculator(base.HazardCalculator):
                     if oq.disagg_by_src:
                         data.append(
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
-        if 'poes' in self.datastore:
+        if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src and self.csm.info.get_num_rlzs() == 1:
+            if oq.disagg_by_src and self.csm_info.get_num_rlzs() == 1:
                 # this is useful for disaggregation, which is implemented
                 # only for the case of a single realization
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
@@ -234,6 +274,40 @@ class PSHACalculator(base.HazardCalculator):
                 with hdf5.File(self.hdf5cache) as cache:
                     cache['oqparam'] = oq
                     self.datastore.hdf5.copy('poes', cache)
+                self.calc_stats(self.hdf5cache)
+            else:
+                self.calc_stats(self.datastore)
+        self.datastore.open('r+')
+        self.save_hmaps()
+
+    def calc_stats(self, parent):
+        oq = self.oqparam
+        if not oq.hazard_stats():
+            if oq.hazard_maps or oq.uniform_hazard_spectra:
+                logging.warn('mean_hazard_curves was false in the job.ini, '
+                             'so no outputs were generated.\nYou can compute '
+                             'the statistics without repeating the calculation'
+                             ' with the --hc option')
+            return {}
+        # initialize datasets
+        N = len(self.sitecol.complete)
+        L = len(oq.imtls.array)
+        nbytes = N * L * 4  # bytes per realization (32 bit floats)
+        totbytes = 0
+        for name, stat in oq.hazard_stats():
+            self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
+            self.datastore.set_attrs('hcurves/%s' % name)
+            totbytes += nbytes
+        if 'hcurves' in self.datastore:
+            self.datastore.set_attrs('hcurves', nbytes=totbytes)
+        self.datastore.flush()
+        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
+            ires = parallel.Starmap(
+                build_hcurves_and_stats, self.gen_getters(parent),
+                self.monitor()
+            ).submit_all()
+        for kind, nbytes in ires.reduce(self.save_hcurves).items():
+            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
 
 
 # used in PreClassicalCalculator
@@ -264,7 +338,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
 
 
 @base.calculators.add('preclassical')
-class PreCalculator(PSHACalculator):
+class PreCalculator(ClassicalCalculator):
     """
     Calculator to filter the sources and compute the number of effective
     ruptures
@@ -312,96 +386,3 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
             pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
         pmap_by_kind[kind] = pmap
     return pmap_by_kind
-
-
-@base.calculators.add('classical')
-class ClassicalCalculator(PSHACalculator):
-    """
-    Classical PSHA calculator
-    """
-    pre_calculator = 'psha'
-    core_task = build_hcurves_and_stats
-
-    def execute(self):
-        """
-        Build statistical hazard curves from the stored PoEs
-        """
-        if 'poes' not in self.datastore:  # for short report
-            return
-        oq = self.oqparam
-        num_rlzs = self.datastore['csm_info'].get_num_rlzs()
-        if num_rlzs == 1:  # no stats to compute
-            return {}
-        elif not oq.hazard_stats():
-            if oq.hazard_maps or oq.uniform_hazard_spectra:
-                logging.warn('mean_hazard_curves was false in the job.ini, '
-                             'so no outputs were generated.\nYou can compute '
-                             'the statistics without repeating the calculation'
-                             ' with the --hc option')
-            return {}
-        # initialize datasets
-        N = len(self.sitecol.complete)
-        L = len(oq.imtls.array)
-        pyclass = 'openquake.hazardlib.probability_map.ProbabilityMap'
-        all_sids = self.sitecol.complete.sids
-        nbytes = N * L * 4  # bytes per realization (32 bit floats)
-        totbytes = 0
-        if num_rlzs > 1:
-            for name, stat in oq.hazard_stats():
-                self.datastore.create_dset(
-                    'hcurves/%s/array' % name, F32, (N, L, 1))
-                self.datastore['hcurves/%s/sids' % name] = all_sids
-                self.datastore.set_attrs(
-                    'hcurves/%s' % name, __pyclass__=pyclass)
-                totbytes += nbytes
-        if 'hcurves' in self.datastore:
-            self.datastore.set_attrs('hcurves', nbytes=totbytes)
-        self.datastore.flush()
-        # self.datastore.hdf5.swmr = True  # start reading
-        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            ires = parallel.Starmap(
-                self.core_task.__func__, self.gen_args()
-            ).submit_all()
-        nbytes = ires.reduce(self.save_hcurves)
-        return nbytes
-
-    def gen_args(self):
-        """
-        :yields: pgetter, hstats, monitor
-        """
-        monitor = self.monitor('build_hcurves_and_stats')
-        hstats = self.oqparam.hazard_stats()
-        parent = self.can_read_parent() or self.datastore
-        for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
-            if parent is self.datastore:  # read now, not in the workers
-                logging.info('Reading PoEs on %d sites', len(t))
-                pgetter.init()
-            yield pgetter, hstats, monitor
-
-    def save_hcurves(self, acc, pmap_by_kind):
-        """
-        Works by side effect by saving hcurves and statistics on the
-        datastore; the accumulator stores the number of bytes saved.
-
-        :param acc: dictionary kind -> nbytes
-        :param pmap_by_kind: a dictionary of ProbabilityMaps
-        """
-        with self.monitor('saving statistical hcurves', autoflush=True):
-            for kind in pmap_by_kind:
-                pmap = pmap_by_kind[kind]
-                if pmap:
-                    key = 'hcurves/%s/array' % kind
-                    dset = self.datastore.getitem(key)
-                    for sid in pmap:
-                        dset[sid] = pmap[sid].array
-                    # in the datastore we save 4 byte floats, thus we
-                    # divide the memory consumption by 2: pmap.nbytes / 2
-                    acc += {kind: pmap.nbytes // 2}
-            self.datastore.flush()
-            return acc
-
-    def post_execute(self, acc):
-        """Save the number of bytes per each dataset"""
-        for kind, nbytes in acc.items():
-            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes

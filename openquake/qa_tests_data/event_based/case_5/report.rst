@@ -2,9 +2,9 @@ Germany_SHARE Combined Model event_based
 ========================================
 
 ============== ===================
-checksum32     3,360,147,003      
-date           2018-06-05T06:40:05
-engine_version 3.2.0-git65c4735   
+checksum32     3,726,424,986      
+date           2018-06-26T14:58:35
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 100, num_levels = 1
@@ -91,7 +91,7 @@ source_models/ss_model_final_250km_Buffer.xml 4      Volcanic             640   
 #TRT models   3    
 #eff_ruptures 2,347
 #tot_ruptures 5,039
-#tot_weight   0    
+#tot_weight   9,119
 ============= =====
 
 Slowest sources
@@ -99,26 +99,26 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-19        SimpleFaultSource 349          0.21696   1.974E-04  9.00000   12        0     
-1339      AreaSource        168          0.11187   0.00385    7.75000   12        0     
-246       AreaSource        156          0.07724   0.00453    4.46154   13        2     
-247       AreaSource        156          0.07357   0.00439    4.46154   13        0     
-264       AreaSource        1,022        0.05288   0.02338    1.22222   9         9     
-263       AreaSource        1,022        0.05278   0.02313    1.22222   9         9     
-257       AreaSource        96           0.04780   0.00413    5.87500   8         5     
-258       AreaSource        96           0.04240   0.00328    5.87500   8         8     
-249       AreaSource        384          0.04129   0.01214    2.00000   7         0     
-248       AreaSource        384          0.04072   0.01222    2.00000   7         0     
-250       AreaSource        384          0.04040   0.01230    1.85714   7         0     
-259       AreaSource        96           0.03999   0.00314    5.87500   8         8     
-20        SimpleFaultSource 31           0.02698   7.963E-05  9.00000   6         0     
-330045    PointSource       22           0.02336   1.907E-06  7.00000   1         0     
-22        SimpleFaultSource 34           0.02284   7.367E-05  1.00000   6         0     
-330046    PointSource       20           0.01831   1.192E-06  5.00000   1         0     
-330047    PointSource       26           0.01781   1.192E-06  8.00000   1         0     
-330051    PointSource       34           0.01676   1.431E-06  16        1         0     
-330048    PointSource       28           0.01477   1.431E-06  8.00000   1         0     
-330054    PointSource       30           0.01467   1.431E-06  8.00000   1         0     
+19        SimpleFaultSource 16           0.40192   0.0        9.00000   12        0     
+1339      PointSource       14           0.20183   0.0        7.75000   12        0     
+264       PointSource       14           0.12124   0.0        1.22222   9         0     
+258       PointSource       12           0.11832   0.0        5.87500   8         3     
+246       PointSource       12           0.11829   0.0        4.46154   13        6     
+257       PointSource       12           0.10986   0.0        5.87500   8         5     
+247       PointSource       12           0.10517   0.0        4.46154   13        0     
+263       PointSource       14           0.10493   0.0        1.22222   9         0     
+249       PointSource       12           0.09161   0.0        2.00000   7         0     
+248       PointSource       12           0.08654   0.0        2.00000   7         0     
+259       PointSource       12           0.08376   0.0        5.87500   8         0     
+250       PointSource       12           0.06939   0.0        1.85714   7         0     
+22        SimpleFaultSource 2            0.05401   0.0        1.00000   6         0     
+20        SimpleFaultSource 2            0.04281   0.0        9.00000   6         0     
+330045    PointSource       22           0.03732   0.0        7.00000   1         0     
+330076    PointSource       18           0.03663   0.0        5.00000   1         0     
+330077    PointSource       20           0.02000   0.0        5.00000   1         0     
+330046    PointSource       20           0.01868   0.0        5.00000   1         0     
+330047    PointSource       26           0.01699   0.0        8.00000   1         0     
+21        SimpleFaultSource 1            0.01653   0.0        9.00000   4         0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -126,9 +126,8 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-AreaSource        0.63780   13    
-PointSource       0.32695   51    
-SimpleFaultSource 0.27674   4     
+PointSource       1.61568   49    
+SimpleFaultSource 0.51528   4     
 ================= ========= ======
 
 Duplicated sources
@@ -139,34 +138,35 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00735 0.01286 0.00163 0.07611 55       
-compute_ruptures   0.16470 0.15707 0.02663 0.46662 8        
+RtreeFilter        0.00777 0.01509 0.00167 0.08656 55       
+compute_hazard     0.11961 0.05401 0.03092 0.31442 20       
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-================ =============================================================================== =========
-task             sent                                                                            received 
-RtreeFilter      srcs=188.61 KB monitor=18.58 KB srcfilter=14.99 KB                              118.06 KB
-compute_ruptures sources=108.21 KB param=4.5 KB gsims=3.04 KB monitor=2.76 KB src_filter=1.82 KB 16.61 KB 
-================ =============================================================================== =========
+============== =================================================================================================== =========
+task           sent                                                                                                received 
+RtreeFilter    srcs=188.61 KB monitor=17.29 KB srcfilter=14.99 KB                                                  118.06 KB
+compute_hazard sources_or_ruptures=116.44 KB param=62.4 KB rlzs_by_gsim=13.74 KB monitor=6.31 KB src_filter=4.8 KB 19.69 KB 
+============== =================================================================================================== =========
 
 Slowest operations
 ------------------
-=============================== ======== ========= ======
-operation                       time_sec memory_mb counts
-=============================== ======== ========= ======
-EventBasedRuptureCalculator.run 1.39537  0.0       1     
-total compute_ruptures          1.31761  8.29297   8     
-managing sources                0.87829  0.0       1     
-total prefilter                 0.40405  4.14062   55    
-reading composite source model  0.19622  0.0       1     
-splitting sources               0.11000  0.0       1     
-unpickling prefilter            0.02270  0.0       55    
-store source_info               0.01371  0.0       1     
-saving ruptures                 0.01201  0.0       8     
-making contexts                 0.00355  0.0       3     
-unpickling compute_ruptures     0.00275  0.0       8     
-setting event years             0.00222  0.0       1     
-reading site collection         0.00193  0.0       1     
-=============================== ======== ========= ======
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+total compute_hazard           2.39221  8.62891   20    
+building ruptures              2.31520  7.96094   20    
+total prefilter                0.42756  4.23828   55    
+managing sources               0.38657  0.0       1     
+reading composite source model 0.18598  0.0       1     
+splitting sources              0.10374  0.0       1     
+unpickling prefilter           0.01845  0.0       55    
+saving ruptures                0.01770  0.0       20    
+making contexts                0.01598  0.0       3     
+store source_info              0.01518  0.0       1     
+GmfGetter.init                 0.00655  0.05859   20    
+unpickling compute_hazard      0.00591  0.0       20    
+aggregating hcurves            0.00455  0.0       20    
+reading site collection        0.00105  0.0       1     
+============================== ======== ========= ======

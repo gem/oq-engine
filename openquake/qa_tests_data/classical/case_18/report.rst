@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-06-05T06:39:13
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:57:48
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -80,7 +80,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-VICM      AreaSource   2,430        0.05229   0.01070    3.00000   30        0     
+VICM      AreaSource   2,430        0.05959   0.01042    3.00000   30        0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -88,7 +88,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.05229   1     
+AreaSource   0.05959   1     
 ============ ========= ======
 
 Duplicated sources
@@ -99,13 +99,13 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00361 0.00212   0.00113 0.01096 30       
-count_eff_ruptures 0.00967 8.317E-04 0.00838 0.01051 8        
+RtreeFilter        0.00308 0.00154   0.00104 0.00585 30       
+count_eff_ruptures 0.01101 4.281E-04 0.01029 0.01158 8        
 ================== ======= ========= ======= ======= =========
 
 Fastest task
 ------------
-taskno=6, weight=168, duration=0 s, sources="VICM"
+taskno=4, weight=168, duration=0 s, sources="VICM"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
@@ -116,7 +116,7 @@ weight   42      0.0    42  42  4
 
 Slowest task
 ------------
-taskno=2, weight=168, duration=0 s, sources="VICM"
+taskno=3, weight=168, duration=0 s, sources="VICM"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
@@ -129,8 +129,8 @@ Data transfer
 -------------
 ================== ============================================================================== ========
 task               sent                                                                           received
-RtreeFilter        srcs=39.54 KB monitor=10.14 KB srcfilter=8.17 KB                               42.09 KB
-count_eff_ruptures gsims=1.23 MB sources=23.51 KB param=6.56 KB monitor=2.76 KB srcfilter=1.82 KB 2.83 KB 
+RtreeFilter        srcs=39.54 KB monitor=9.43 KB srcfilter=8.17 KB                                42.09 KB
+count_eff_ruptures gsims=1.23 MB sources=23.51 KB param=6.56 KB monitor=2.57 KB srcfilter=1.92 KB 2.83 KB 
 ================== ============================================================================== ========
 
 Slowest operations
@@ -138,16 +138,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-PSHACalculator.run             0.47386   0.19141   1     
-managing sources               0.22836   0.0       1     
-total prefilter                0.10832   3.46875   30    
-total count_eff_ruptures       0.07738   5.65234   8     
-reading composite source model 0.02884   0.0       1     
-splitting sources              0.01107   0.0       1     
-unpickling prefilter           0.00981   0.0       30    
-store source_info              0.00608   0.0       1     
-aggregate curves               0.00233   0.0       8     
-unpickling count_eff_ruptures  0.00182   0.0       8     
-reading site collection        0.00100   0.0       1     
-saving probability maps        1.972E-04 0.0       1     
+managing sources               0.33439   0.0       1     
+total prefilter                0.09232   3.15625   30    
+total count_eff_ruptures       0.08810   6.33594   8     
+reading composite source model 0.02691   0.0       1     
+splitting sources              0.01076   0.0       1     
+unpickling prefilter           0.01018   0.0       30    
+store source_info              0.00706   0.0       1     
+aggregate curves               0.00259   0.0       8     
+unpickling count_eff_ruptures  0.00209   0.0       8     
+reading site collection        4.916E-04 0.0       1     
 ============================== ========= ========= ======

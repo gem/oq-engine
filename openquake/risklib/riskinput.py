@@ -34,7 +34,6 @@ class ValidationError(Exception):
 U32 = numpy.uint32
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def read_composite_risk_model(dstore):
@@ -139,6 +138,19 @@ class CompositeRiskModel(collections.Mapping):
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
 
+    def get_extra_imts(self, imts):
+        """
+        Returns the extra IMTs in the risk functions, i.e. the ones not in
+        the `imts` set (the set of IMTs for which there is hazard).
+        """
+        extra_imts = set()
+        for taxonomy in self.taxonomies:
+            for lt in self.loss_types:
+                imt = self[taxonomy].risk_functions[lt].imt
+                if imt not in imts:
+                    extra_imts.add(imt)
+        return extra_imts
+
     def get_min_iml(self):
         iml = collections.defaultdict(list)
         for taxo, rm in self._riskmodels.items():
@@ -228,8 +240,8 @@ class CompositeRiskModel(collections.Mapping):
         for sid, assets in zip(sids, riskinput.assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter
-                dic[taxonomy].append((sid, group[taxonomy], epsgetter))
+                dic[taxonomy].append(
+                    (sid, group[taxonomy], riskinput.epsilon_getter))
         yield from self._gen_outputs(hazard_getter, dic)
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
@@ -242,8 +254,12 @@ class CompositeRiskModel(collections.Mapping):
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
                 riskmodel = self[taxonomy]
-                imt_lt = [riskmodel.risk_functions[lt].imt
-                          for lt in self.loss_types]  # imt for each loss type
+                imts = [riskmodel.risk_functions[lt].imt
+                        for lt in self.loss_types]  # imt for each loss type
+                # discard IMTs without hazard
+                imt_lt = [imt for imt in imts if imt in imti]
+                if not imt_lt:  # a warning is printed in riskmodel.check_imts
+                    continue
                 for sid, assets, epsgetter in dic[taxonomy]:
                     for rlzi, haz in sorted(hazard[sid].items()):
                         if isinstance(haz, numpy.ndarray):
@@ -262,7 +278,7 @@ class CompositeRiskModel(collections.Mapping):
                                     for imt in imt_lt]
                         elif not haz:  # no hazard for this site
                             eids = []
-                            data = [(numpy.zeros(hazard_getter.E),
+                            data = [(numpy.zeros(len(hazard_getter.eids)),
                                      hazard_getter.eids) for imt in imt_lt]
                         else:  # classical
                             eids = hazard_getter.eids
@@ -353,7 +369,7 @@ class EpsilonMatrix0(object):
 
     def make_eps(self):
         """
-        Builds a matrix of N x E epsilons
+        Builds a matrix of A x E epsilons
         """
         eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
         for i, seed in enumerate(self.seeds):
@@ -372,7 +388,7 @@ class EpsilonMatrix0(object):
 
 class EpsilonMatrix1(object):
     """
-    Mock-up for a matrix of epsilons of size N x E,
+    Mock-up for a matrix of epsilons of size A x E,
     used when asset_correlation=1.
 
     :param num_assets: number of assets

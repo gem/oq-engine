@@ -4,8 +4,8 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <siteModel>
-        <site lat="0.0000000E+00" lon="0.0000000E+00" vs30="1.2000000E+03" vs30Type="inferred" z1pt0="1.0000000E+02" z2pt5="2.0000000E+00"/>
-        <site lat="1.0000000E-01" lon="0.0000000E+00" vs30="6.0000000E+02" vs30Type="inferred" z1pt0="1.0000000E+02" z2pt5="2.0000000E+00"/>
-        <site lat="2.0000000E-01" lon="0.0000000E+00" vs30="2.0000000E+02" vs30Type="inferred" z1pt0="1.0000000E+02" z2pt5="2.0000000E+00"/>
+        <site lat="0.0000000E+00" lon="0.0000000E+00" vs30="1.2000000E+03" vs30Type="inferred"/>
+        <site lat="1.0000000E-01" lon="0.0000000E+00" vs30="6.0000000E+02" vs30Type="inferred"/>
+        <site lat="2.0000000E-01" lon="0.0000000E+00" vs30="2.0000000E+02" vs30Type="inferred"/>
     </siteModel>
 </nrml>

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -45,11 +44,13 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 '''
 Utility functions for seismicity calculations
 '''
 import numpy as np
 from shapely import geometry
+from openquake.hazardlib.pmf import PRECISION
 try:
     from scipy.stats._continuous_distns import (truncnorm_gen,
                                                 _norm_cdf, _norm_sf,
@@ -87,7 +88,7 @@ try:
             return output
 
     hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
-except:
+except Exception:
     print("Continuous distributions not available on Scipy version < 0.15\n")
     print("Bootstrap sampling of the depth distribution will raise an error")
     hmtk_truncnorm = None
@@ -157,7 +158,20 @@ def decimal_time(year, month, day, hour, minute, second):
     tho = np.zeros_like(year, dtype=int)
     tmi = np.zeros_like(year, dtype=int)
     tse = np.zeros_like(year, dtype=float)
-
+    #
+    # Checking inputs
+    if any(month < 1) or any(month > 12):
+        raise ValueError('Month must be in [1, 12]')
+    if any(day < 1) or any(day > 31):
+        raise ValueError('Day must be in [1, 31]')
+    if any(hour < 0) or any(hour > 24):
+        raise ValueError('Hour must be in [0, 24]')
+    if any(minute < 0) or any(minute > 60):
+        raise ValueError('Minute must be in [0, 60]')
+    if any(second < 0) or any(second > 60):
+        raise ValueError('Second must be in [0, 60]')
+    #
+    # Initialising values
     if any(month):
         tmo = month
     if any(day):
@@ -168,14 +182,15 @@ def decimal_time(year, month, day, hour, minute, second):
         tmi = minute
     if any(second):
         tse = second
-
+    #
+    # Computing decimal
     tmonth = tmo - 1
     day_count = MARKER_NORMAL[tmonth] + tda - 1
     id_leap = leap_check(year)
     leap_loc = np.where(id_leap)[0]
     day_count[leap_loc] = MARKER_LEAP[tmonth[leap_loc]] + tda[leap_loc] - 1
-    year_secs = (day_count.astype(float) * SECONDS_PER_DAY) + tse + \
-        (60. * tmi.astype(float)) + (3600. * tho.astype(float))
+    year_secs = ((day_count.astype(float) * SECONDS_PER_DAY) + tse +
+                 (60. * tmi.astype(float)) + (3600. * tho.astype(float)))
     dtime = year.astype(float) + (year_secs / (365. * 24. * 3600.))
     dtime[leap_loc] = year[leap_loc].astype(float) + \
         (year_secs[leap_loc] / (366. * 24. * 3600.))
@@ -330,13 +345,13 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     '''
     nvals = len(data)
     if bounds:
-        # if bounds[0] or (fabs(bounds[0]) < 1E-12):
+        # if bounds[0] or (fabs(bounds[0]) < PRECISION):
         if bounds[0] is not None:
             lower_bound = (bounds[0] - data) / uncertainties
         else:
             lower_bound = -np.inf * np.ones_like(data)
 
-        # if bounds[1] or (fabs(bounds[1]) < 1E-12):
+        # if bounds[1] or (fabs(bounds[1]) < PRECISION):
         if bounds[1] is not None:
             upper_bound = (bounds[1] - data) / uncertainties
         else:
@@ -440,7 +455,7 @@ def bootstrap_histogram_1D(
         1-D histogram of data
 
     '''
-    if not number_bootstraps or np.all(np.fabs(uncertainties < 1E-12)):
+    if not number_bootstraps or np.all(np.fabs(uncertainties < PRECISION)):
         # No bootstraps or all uncertaintes are zero - return ordinary
         # histogram
         #output = np.histogram(values, intervals)[0]

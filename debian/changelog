@@ -1,7 +1,81 @@
   [Michele Simionato]
   * Added to the classical calculator a Magnitude Frequency Distribution output
+  * Restored the `individual_curves` flag that for the moment is used for the
+    risk curves
+  * Introduced two experimental new parameters `floating_distance` and
+    `spinning_distance` to reduce hypocenter distributions and nodal plane
+    distributions of ruptures over the corresponding distances
+  * Optimized the parsing of the logic tree when there is no "applyToSources"
+  * Made the IMT classes extensible in client code
+  * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
+    hazard curves and to reduce by half the download time
+
+  [Graeme Weatherill]
+  * Implements a fix of Montalva et al (2016) for new coefficients (now
+    Montalva et al. (2017))
+
+  [Michele Simionato]
+  * Parallelized the reading of the source models
+  * Optimized `oq info --report` by not splitting the sources in that case
+  * Speedup the download of the hazard curves, maps and uhs
+  * Honored `concurrent_tasks` in the prefiltering phase too
+  * It is now legal to compute uniform hazard spectra for a single period
+  * Added command `oq plot_memory`
+  * Introduced a MultiGMPE concept
+  * Saved the size of the datastore in the database and used it in the WebUI
+
+  [Graeme Weatherill]
+  * Adds geotechnical related IMTs
+
+  [Michele Simionato]
+  * Renamed /extract/agglosses -> /extract/agg_losses and same for aggdamages
+  * Supported equivalent epicentral distance with a `reqv_hdf5` file
+  * Fixed the risk from ShakeMap feature in the case of missing IMTs
+  * Changed the way gmf_data/indices and ruptures are stored
+  * Added experimental support for dask
+  * Added 11 new site parameters for geotechnic hazard
+  * Changed the SiteCollection to store only the parameters required by the
+    GSIMs
+
+  [Robin Gee]
+  * The number of sites is now an argument in the method _get_stddevs()
+    in the GMPE of Kanno, 2006
+
+  [Michele Simionato]
+  * Changed the serialization of ruptures to HDF5: the geometries are now
+    stored in a different dataset
+  * Bug fix: the asset->site association was performed even when not needed
+  * Made it possible to serialize to .hdf5 multipoint sources and
+    nonparametric gridded sources
+  * Added a check on source model logic tree files: the uncertaintyModel
+    values cannot be repeated in the same branchset
+  * Added a flag `std_hazard_curves`; by setting it to `true` the user can
+    compute the standard deviation of the hazard curves across realizations
+
+  [Marco Pagani]
+  * Added Thingbaijam et al. (2017) magnitude-scaling relationship
+
+  [Michele Simionato]
+  * Added an /extract/ API for event_based_mfd
+  * Fixed a bug in the classical_damage calculators: multiple loss types
+    were not treated correctly
+
+  [Marco Pagani]
+  * Adding tests to the method computing decimal time
+
+  [Michele Simionato]
+  * Removed the event_based_rupture calculator and three others
+  * Added a field `size_mb` to the `output` table in the database and made
+    it visible in the WebUI as a tooltip
+  * Added a command `oq check_input job.ini` to check the input files
+  * Made the loss curves and maps outputs from an event based risk calculation
+    visible to the engine and the WebUI (only the stats)
+  * Added a check on duplicated branchIDs in GMPE logic trees
 
   [Daniele Viganò]
+  * Fixed a bug when reading exposure with utf8 names on systems with non-utf8
+    terminals (Windows)
+  * Changed the openquake.cfg file and added a dbserver.listen parameter
   * Added the hostname in the WebUI page. It can be customize by the user
     via the `local_settings.py` file
 
@@ -13,7 +87,7 @@
   * Added a check on exposures with missing loss types
   * Added a LargeExposureGrid error to protect the user by tricky exposures
     (i.e. France with assets in the Antilles)
-  * Changed the event_based_risk calculator to computed the loss curves and
+  * Changed the event_based_risk calculator to compute the loss curves and
     maps directly; removed the asset_loss_table
   * Changed the event_based_risk calculator to distribute by GMFs always
   * Optimized the memory consumption in the UCERF classical calculator

@@ -60,6 +60,7 @@ def cached_property(method):
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
+    newmethod.__doc__ = method.__doc__
     return property(newmethod)
 
 
@@ -369,7 +370,10 @@ def removetmp():
     """
     for path in _tmp_paths:
         if os.path.exists(path):  # not removed yet
-            os.remove(path)
+            try:
+                os.remove(path)
+            except PermissionError:
+                pass
 
 
 def git_suffix(fname):
@@ -744,6 +748,9 @@ class DictArray(collections.Mapping):
         arr.array = array
         return arr
 
+    def __call__(self, imt):
+        return self.slicedic[imt]
+
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
 
@@ -771,6 +778,15 @@ class DictArray(collections.Mapping):
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]
+
+    def __eq__(self, other):
+        arr = self.array == other.array
+        if isinstance(arr, bool):
+            return arr
+        return arr.all()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]
@@ -1032,3 +1048,13 @@ def debug(templ, *args):
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
         f.write(msg + '\n')
+
+
+def warn(msg, *args):
+    """
+    Print a warning on stderr
+    """
+    if not args:
+        sys.stderr.write('WARNING: ' + msg)
+    else:
+        sys.stderr.write('WARNING: ' + msg % args)

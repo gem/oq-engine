@@ -1,0 +1,6 @@
+eventID,Identifier,year,month,day,hour,minute,second,latitude,longitude,depth,SemiMajor90,SemiMinor90,ErrorStrike,timeError,depthError,Agency,LocId,magnitude,sigmaMagnitude,magnitudeType,MagId
+AAA,BBB,2015,1,1,,,,-5.69,-36.24,0,,,,,,BSB_PI,BSB104,3.3,0,Mwp,BSB104
+BSB104,BSB_PI|BSB,1963,8,27,,,,-5.69,-36.24,0,,,,,,BSB_PI,BSB104,3.3,0,Mwp,BSB104
+BSB104,BSB_PI|BSB,1963,8,27,1,1,1.,-5.69,-36.24,0,,,,,,BSB_PI,BSB104,3.3,0,Mwp,BSB104
+BSB104,BSB_PI|BSB,1963,8,,,,,-5.69,-36.24,0,,,,,,BSB_PI,BSB104,3.3,0,Mwp,BSB104
+BSB740,BSB_I|BSB,1999,8,18,4,43,58,-13.3,-49.2,0,,,,,,BSB_I,BSB740,3.2,0,Mwp,BSB740

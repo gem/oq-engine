@@ -3,11 +3,11 @@ Scenario Risk Maule Mw 8.8 reduced
 
 ============== ===================
 checksum32     3,260,969,674      
-date           2018-06-05T06:40:08
-engine_version 3.2.0-git65c4735   
+date           2018-06-26T14:58:38
+engine_version 3.2.0-gitb0cd949   
 ============== ===================
 
-num_sites = 29, num_levels = 78
+num_sites = 258, num_levels = 78
 
 Parameters
 ----------
@@ -103,13 +103,31 @@ W+WLI_H2      1.00000 NaN     1   1   1         1
 *ALL*         0.21705 0.74292 0   6   258       56        
 ============= ======= ======= === === ========= ==========
 
+Information about the tasks
+---------------------------
+================== ======= ======= ======= ======= =========
+operation-duration mean    stddev  min     max     num_tasks
+scenario_risk      0.03933 0.01170 0.01808 0.07027 29       
+================== ======= ======= ======= ======= =========
+
+Data transfer
+-------------
+============= =================================================================== ========
+task          sent                                                                received
+scenario_risk riskmodel=2.59 MB riskinput=94.97 KB monitor=11.92 KB param=2.52 KB 16.1 KB 
+============= =================================================================== ========
+
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-building riskinputs     0.08404  0.0       1     
-reading site collection 0.06329  0.0       1     
-reading exposure        0.00914  0.0       1     
-building epsilons       0.00251  0.0       1     
-======================= ======== ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total scenario_risk      1.14071  1.96484   29    
+computing risk           0.13090  0.12500   29    
+reading site collection  0.09884  0.0       1     
+building riskinputs      0.04951  0.0       1     
+getting hazard           0.01968  0.0       58    
+unpickling scenario_risk 0.01001  0.0       29    
+reading exposure         0.00955  0.0       1     
+building epsilons        0.00244  0.0       1     
+======================== ======== ========= ======

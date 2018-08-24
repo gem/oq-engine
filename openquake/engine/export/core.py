@@ -86,6 +86,7 @@ def export_from_db(output_key, calc_id, datadir, target):
         else:  # single file
             return exported[0]
 
+
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
 
