@@ -27,7 +27,7 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28, case_29, case_30)
+    case_26, case_27, case_28, case_29, case_30, case_31)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -90,9 +90,16 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        self.assert_curves_ok(
-            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_2.__file__)
+        self.run_calc(case_2.__file__, 'job.ini')
+
+        # check view_pmap for a single realization
+        got = view('pmap:grp-00', self.calc.datastore)
+        self.assertEqual(got, '''\
+{0: <ProbabilityCurve
+[[2.26776679e-03 0.00000000e+00]
+ [1.67915423e-05 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]]>}''')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
@@ -125,6 +132,9 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__, kind='all')
+
+        # exercising extract/mean_std_curves
+        dict(extract(self.calc.datastore, 'mean_std_curves'))
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
@@ -398,7 +408,7 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 1554747528)
+        self.assertEqual(checksum, 3294662884)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
@@ -445,3 +455,9 @@ hazard_uhs-mean.csv
     def test_case_30(self):  # point on the international data line
         if NOT_DARWIN:  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_31(self):
+        # source specific logic tree
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
+                               'hazard_curve-std-PGA.csv'], case_31.__file__)

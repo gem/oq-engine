@@ -188,7 +188,7 @@ class AbrahamsonEtAl2014(GMPE):
         This computes equations 8 and 9 at page 1034
         """
         # compute the v1 value (see eq. 9, page 1034)
-        if isinstance(imt, SA):
+        if imt.name == "SA":
             t = imt.period
             if t <= 0.50:
                 v1 = 1500.0
@@ -196,7 +196,7 @@ class AbrahamsonEtAl2014(GMPE):
                 v1 = np.exp(-0.35 * np.log(t / 0.5) + np.log(1500.))
             else:
                 v1 = 800.0
-        elif isinstance(imt, PGA):
+        elif imt.name == "PGA":
             v1 = 1500.0
         else:
             # This covers the PGV case

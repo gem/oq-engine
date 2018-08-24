@@ -144,7 +144,7 @@ class Idriss2014(GMPE):
         else:
             stddev_mag = mag
 
-        if isinstance(imt, PGA) or (imt.period < 0.05):
+        if imt.name == "PGA" or imt.period < 0.05:
             total_sigma = 1.18 + 0.035 * np.log(0.05) - 0.06 * stddev_mag
         elif imt.period > 3.0:
             total_sigma = 1.18 + 0.035 * np.log(3.0) - 0.06 * stddev_mag

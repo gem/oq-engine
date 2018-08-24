@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # LICENSE
 #
 # Copyright (C) 2010-2018 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli

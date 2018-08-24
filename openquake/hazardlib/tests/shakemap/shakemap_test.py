@@ -29,7 +29,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
         array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array)
+        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap)

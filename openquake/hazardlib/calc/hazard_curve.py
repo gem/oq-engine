@@ -93,7 +93,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     maxdist = src_filter.integration_distance
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
-    cmaker = ContextMaker(gsims, maxdist, param['filter_distance'], monitor)
+    cmaker = ContextMaker(gsims, maxdist, param, monitor)
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
@@ -129,7 +129,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 
 def calc_hazard_curves(
         groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
-        apply=sequential_apply, filter_distance='rjb'):
+        apply=sequential_apply, filter_distance='rjb', reqv=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -154,8 +154,12 @@ def calc_hazard_curves(
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
-    :param maximum_distance:
-        The integration distance, if any
+    :param apply:
+        apply function to use (default sequential_apply)
+    :param filter_distance:
+        The distance used to filter the ruptures (default rjb)
+    :param reqv:
+        If not None, an instance of RjbEquivalent
     :returns:
         An array of size N, where N is the number of sites, which elements
         are records with fields given by the intensity measure types; the
@@ -179,7 +183,7 @@ def calc_hazard_curves(
 
     imtls = DictArray(imtls)
     param = dict(imtls=imtls, truncation_level=truncation_level,
-                 filter_distance=filter_distance)
+                 filter_distance=filter_distance, reqv=reqv)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     gsim = gsim_by_trt[groups[0][0].tectonic_region_type]

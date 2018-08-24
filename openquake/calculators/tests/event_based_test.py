@@ -169,11 +169,8 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
-        ltr = out['hcurves', 'csv']
-        self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
-        self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
+        [fname] = out['hcurves', 'csv']
+        self.assertEqualFiles('expected/hc-mean.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
@@ -231,10 +228,9 @@ class EventBasedTestCase(CalculatorTestCase):
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
         mean_cl = get_mean_curves(self.calc.cl.datastore)
-        for imt in mean_cl.dtype.fields:
-            reldiff, _index = max_rel_diff_index(
-                mean_cl[imt], mean_eb[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.20)
+        reldiff, _index = max_rel_diff_index(
+            mean_cl, mean_eb, min_value=0.1)
+        self.assertLess(reldiff, 0.20)
 
         exp = self.calc.datastore.get_attr('events', 'max_gmf_size')
         self.assertEqual(exp, 375496)
@@ -297,7 +293,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
@@ -321,7 +317,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          for period in numpy.arange(0.1,  1, 0.001)}
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_1.__file__, 'job.ini',
+                case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
                          'The event based calculator is restricted '

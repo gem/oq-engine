@@ -58,13 +58,13 @@ RM       4,000
 *ALL*    6,000    
 ======== =========''', got)
 
-        # test aggdamages, 1 realization x 3 damage states
-        [dmg] = extract(self.calc.datastore, 'aggdamages/structural?'
+        # test agg_damages, 1 realization x 3 damage states
+        [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
         numpy.testing.assert_almost_equal(
             [998.6327515, 720.0072021, 281.3600769], dmg)
         # test no intersection
-        dmg = extract(self.calc.datastore, 'aggdamages/structural?'
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
         self.assertEqual(len(dmg), 0)
 
@@ -73,7 +73,7 @@ RM       4,000
         # this is a case with more hazard sites than exposure sites
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
-        total = extract(self.calc.datastore, 'aggdamages/structural')
+        total = extract(self.calc.datastore, 'agg_damages/structural')
         aae([[0.4799988, 0.3537988, 0.0655346, 0.018449, 0.0822188]],
             total)  # shape (R, D) = (1, 5)
 
@@ -102,10 +102,8 @@ RM       4,000
     def test_case_4b(self):
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
-        fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # one per realization
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -135,7 +133,7 @@ RM       4,000
     def test_case_5a(self):
         # this is a case with two gsims and one asset
         self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
-        dmg = extract(self.calc.datastore, 'aggdamages/structural?taxonomy=*')
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (1, 2, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
@@ -143,7 +141,7 @@ RM       4,000
     def test_case_6(self):
         # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
-        dmg = extract(self.calc.datastore, 'aggdamages/structural?taxonomy=*')
+        dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 

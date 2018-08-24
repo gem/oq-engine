@@ -28,7 +28,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.risklib import riskinput
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import util, readinput
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
@@ -284,7 +284,6 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
-        self.rupser = calc.RuptureSerializer(self.datastore)
         self.precomputed_gmfs = False
 
     def filter_csm(self):
@@ -397,7 +396,9 @@ class UCERFRiskCalculator(EbrCalculator):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm_info.grp_by("trt")
-        res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
+        res = parallel.Starmap(
+            compute_losses, self.gen_args(),
+            self.monitor()).submit_all()
         self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)

@@ -1,6 +1,7 @@
 import unittest
 import numpy
-from openquake.hazardlib.stats import mean_curve, quantile_curve
+from openquake.hazardlib.stats import (
+    mean_curve, quantile_curve, std_curve)
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -41,6 +42,14 @@ class MeanCurveTestCase(unittest.TestCase):
         expected_mean_curve = numpy.array([0.83, 0.67333333, 0.54333333, 0.17])
         numpy.testing.assert_allclose(
             expected_mean_curve, mean_curve(curves, weights=weights))
+
+    def test_mean_std(self):
+        values = [[5, 4], [10, 9], [8, 7]]
+        weights = [.2, .3, .5]
+        mean = mean_curve(values, weights)
+        std = std_curve(values, weights)
+        aaae(mean, [8, 7])
+        aaae(std, [1.73205081, 1.73205081])
 
 
 class QuantileCurveTestCase(unittest.TestCase):

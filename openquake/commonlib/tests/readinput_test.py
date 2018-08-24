@@ -249,10 +249,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam)), 3)
+        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
         oqparam.hazard_calculation_id = None
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
@@ -683,7 +684,7 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
         assert_allclose(eids, range(5))
         self.assertEqual(
             writers.write_csv(BytesIO(), gmfa), b'''\
-PGA:float32,PGV:float32
+PGA,PGV
 6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
 1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
 1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01,1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01''')

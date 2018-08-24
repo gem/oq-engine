@@ -164,7 +164,7 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check avg_losses-rlzs
         resp = self.c.get(
-            extract_url + 'agglosses/structural?taxonomy=W-SLFB-1')
+            extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
@@ -172,14 +172,22 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check *-aggregation
         resp = self.c.get(
-            extract_url + 'agglosses/structural?taxonomy=*')
+            extract_url + 'agg_losses/structural?taxonomy=*')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
 
-        # TODO: check aggcurves
+        # check agg_curves with a single realization
+        # the case with multiple rlzs is tested in event_based_risk/case_master
+        resp = self.c.get(
+            extract_url + 'agg_curves/structural?taxonomy=*')
+        data = b''.join(ln for ln in resp.streaming_content)
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertEqual(list(got['stats']), [b'mean'])
+        self.assertEqual(list(got['return_periods']), [2, 5, 10, 20, 50])
+        self.assertEqual(list(got['units']), [b'EUR'])
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
@@ -188,6 +196,13 @@ class EngineServerTestCase(unittest.TestCase):
         with self.assertRaises(core.DataStoreExportError) as ctx:
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
+
+        # check MFD distribution
+        extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
+        data = b''.join(ln for ln in self.c.get(extract_url))
+        got = numpy.load(io.BytesIO(data))  # load npz file
+        self.assertGreater(len(got['array']['mag']), 1)
+        self.assertGreater(len(got['array']['freq']), 1)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
