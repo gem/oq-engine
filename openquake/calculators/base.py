@@ -666,7 +666,7 @@ class HazardCalculator(BaseCalculator):
                 N = len(self.sitecol.complete)
                 ct = oq.concurrent_tasks or 1
                 if 'hcurves' in self.datastore:
-                    kinds = self.datastore['hcurves']
+                    kinds = list(self.datastore['hcurves'])
                     hmaps_dt = numpy.dtype(
                         [('%s-%s' % (imt, poe), F32)
                          for imt in oq.imtls for poe in oq.poes])

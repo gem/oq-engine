@@ -426,20 +426,14 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.rlzs_assoc.realizations
-            if oq.individual_curves:
-                # save individual curves
-                for i in sorted(result):
-                    key = 'hcurves/rlz-%03d' % i
-                    if result[i]:
-                        self.datastore[key] = result[i]
-                    else:
-                        self.datastore[key] = ProbabilityMap(
-                            oq.imtls.array.size)
-                        logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
-            hstats = self.oqparam.hazard_stats()
+
+            # NB: in the future we may want to save to individual hazard
+            # curves if oq.individual_curves is set; for the moment we
+            # save the statistical curves only
+            hstats = oq.hazard_stats()
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
                 for kind, stat in hstats:
