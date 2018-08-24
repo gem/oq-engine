@@ -719,24 +719,23 @@ class Starmap(object):
     def _loop(self, ierr, isocket, num_tasks):
         self.total = self.todo = num_tasks
         yield num_tasks
-        for err in ierr:
-            while self.todo:
-                try:
-                    err = next(ierr)
-                except StopIteration:  # sent everything already
-                    pass
-                else:
-                    if isinstance(err, Exception):  # TaskRevokedError
-                        raise err
-                res = next(isocket)
-                if self.calc_id and self.calc_id != res.mon.calc_id:
-                    logging.warn('Discarding a result from job %d, since this '
-                                 'is job %d', res.mon.calc_id, self.calc_id)
-                    continue
-                elif res.tb_str == 'TASK_ENDED':
-                    self.todo -= 1
-                else:
-                    yield res
+        while self.todo:
+            try:
+                err = next(ierr)
+            except StopIteration:  # sent everything already
+                pass
+            else:
+                if isinstance(err, Exception):  # TaskRevokedError
+                    raise err
+            res = next(isocket)
+            if self.calc_id and self.calc_id != res.mon.calc_id:
+                logging.warn('Discarding a result from job %d, since this '
+                             'is job %d', res.mon.calc_id, self.calc_id)
+                continue
+            elif res.tb_str == 'TASK_ENDED':
+                self.todo -= 1
+            else:
+                yield res
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
