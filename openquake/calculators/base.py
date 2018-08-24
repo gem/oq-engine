@@ -51,6 +51,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
 logversion = True
+MAX_ASSETS_PER_SITE = 500  # hard-coded for the moment
 
 
 class InvalidCalculationID(Exception):
@@ -805,9 +806,13 @@ class RiskCalculator(HazardCalculator):
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            ri = riskinput.RiskInput(getter, [assets], reduced_eps)
-            ri.weight = len(assets)
-            yield ri
+            if len(assets) > MAX_ASSETS_PER_SITE:
+                # if there are lots of assets on the same site split them
+                # by taxonomy to avoid slow tasks
+                for ass in general.groupby(assets, get_taxonomy).values():
+                    yield riskinput.RiskInput(getter, [ass], reduced_eps)
+            else:
+                yield riskinput.RiskInput(getter, [assets], reduced_eps)
 
     def execute(self):
         """
