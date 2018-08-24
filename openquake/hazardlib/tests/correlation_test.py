@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2012-2018 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,7 +19,7 @@ import numpy
 
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.correlation import JB2009CorrelationModel, \
-HM2018CorrelationModel
+                                            HM2018CorrelationModel
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 
@@ -108,8 +108,7 @@ class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
 
     def test(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        lt = cormo.get_lower_triangle_correlation_matrix(self.SITECOL, PGA(),
-              numpy.array((1, 1, 1)))
+        lt = cormo.get_lower_triangle_correlation_matrix(self.SITECOL, PGA())
         aaae(lt, [[1.0,            0.0,            0.0],
                   [1.97514806e-02, 9.99804920e-01, 0.0],
                   [1.97514806e-02, 5.42206860e-20, 9.99804920e-01]])
@@ -123,26 +122,19 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
     def test(self):
         numpy.random.seed(13)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        stddev_intra = numpy.array([0.5, 0.6, 0.7])
-        intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3), numpy.diag(stddev_intra**2), 100000).\
-            transpose(1, 0)
-
+        intra_residuals_sampled = numpy.random.normal(size=(3, 100000))
         intra_residuals_correlated = cormo.apply_correlation(
-            self.SITECOL, PGA(), intra_residuals_sampled, stddev_intra)
-
+            self.SITECOL, PGA(), intra_residuals_sampled
+        )
         inferred_corrcoef = numpy.corrcoef(intra_residuals_correlated)
-        mean = intra_residuals_correlated.mean(1)
-        std = intra_residuals_correlated.std(1)
-        
-        aaae(numpy.squeeze(numpy.asarray(mean)), numpy.zeros(3), 2)
-        aaae(numpy.squeeze(numpy.asarray(std)), stddev_intra, 2)
+        mean = intra_residuals_correlated.mean()
+        std = intra_residuals_correlated.std()
+        self.assertAlmostEqual(mean, 0, delta=0.002)
+        self.assertAlmostEqual(std, 1, delta=0.002)
 
         actual_corrcoef = cormo._get_correlation_matrix(self.SITECOL, PGA())
         numpy.testing.assert_almost_equal(inferred_corrcoef, actual_corrcoef,
                                           decimal=2)
-
-
 
 
 class HM2018CorrelationMatrixTestCase(unittest.TestCase):
@@ -250,14 +242,14 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
                               Site(Point(2, -39.95), 1, True, 1, 1)])
 
     def test_no_uncertainty(self):
-        numpy.random.seed() # 13
+        numpy.random.seed()
         Nsim = 10000
         imt = SA(period=2.0, damping=5)
         stddev_intra = numpy.array([0.5, 0.6, 0.7])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
 
         intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3), numpy.diag(stddev_intra**2), Nsim).\
+            numpy.zeros(3), numpy.diag(stddev_intra ** 2), Nsim).\
             transpose(1, 0)
 
         intra_residuals_correlated = cormo.apply_correlation(
@@ -275,14 +267,14 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
 
 
     def test_with_uncertainty(self):
-        numpy.random.seed() # 13
+        numpy.random.seed()
         Nsim = 50000
         imt = SA(period=3.0, damping=5) 
         stddev_intra = numpy.array([0.3, 0.6, 0.9])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
 
         intra_residuals_sampled = numpy.random.multivariate_normal(
-            numpy.zeros(3), numpy.diag(stddev_intra**2), Nsim).\
+            numpy.zeros(3), numpy.diag(stddev_intra ** 2), Nsim).\
             transpose(1, 0)
 
         intra_residuals_correlated = cormo.apply_correlation(
@@ -294,7 +286,7 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
 
         aaae(numpy.squeeze(numpy.asarray(mean)), numpy.zeros(3), 2)
         aaae(numpy.squeeze(numpy.asarray(std)), stddev_intra, 2)
-
         aaae(inferred_corrcoef, [[1.0000000,    0.3758721,    0.5034898,],
                      [0.3758721,    1.0000000,    0.3049717,],
                      [0.5034898,    0.3049717,    1.0000000,]], 2)
+
