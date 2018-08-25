@@ -199,7 +199,6 @@ def raiseMasterKilled(signum, _stack):
             else:
                 msg = 'The openquake master lost its controlling terminal'
 
-    parallel.Starmap.shutdown()
     raise MasterKilled(msg)
 
 
