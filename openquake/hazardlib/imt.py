@@ -238,3 +238,68 @@ class PGDfRupture(IMT):
     """
     Permanent ground deformation (m) from co-seismic rupture
     """
+
+
+# Other IMTs
+
+
+class SDI(IMT):
+    """
+    Spectral inelastic displacement, defined as the maximum displacement of
+    a single-degree-of-freedom system with bilinear behavior (3% postelastic
+	stiffness ratio).
+    Units are ``cm``.
+
+    :param period:
+        The natural period of the oscillator in seconds.
+	:param Cy:
+		The yield strengh coefficient, defined as Fy/W, where 
+		Fy is the lateral yield strengh of the system, and W 
+		is the weight of the system.
+    :param damping:
+        The degree of damping for the oscillator in percents.
+  
+    :raises ValueError:
+        if period, Cy, or damping is not positive.
+    """
+    _fields =  [('period', positivefloat),  ('Cy',positivefloat), \
+                ('damping', positivefloat)]
+    _defaults=(5.,)   # damping
+
+class SAAVG(IMT):
+    """
+    Sa_avg, defined as the geometric mean of 10 equally spaced spectral 
+    accelerations between one fifth and three times the input period, 
+    Units are ``g``, times of gravitational acceleration.
+
+    :param period:
+        Input period in seconds.
+    :param damping:
+        The degree of damping for the spectral accelerations.
+
+    :raises ValueError:
+        if period or damping is not positive.
+    """
+    _fields =  [('period', positivefloat), ('damping', positivefloat)]
+    _defaults=(5.,)   # damping
+
+
+class FIV3(IMT):
+    """
+    Filtered Incremental Velocity (3), defined as the absolute sum of either
+	the three local maximum or three local minimum period-dependent 
+	accumulated acceleration areas, in a period range of 70% of the input
+	period, computed at all instants t, from a low-pass filtered acceleration
+	time series using a 2nd order Butterworth filter and a 1Hz cut-off 
+	frequency.
+    Units are ``cm/s``.
+
+    :param period:
+        Input period.
+
+    :raises ValueError:
+        if period or damping is not positive.
+    """
+    _fields = [('period', positivefloat)]
+
+
