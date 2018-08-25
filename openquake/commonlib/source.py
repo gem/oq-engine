@@ -714,16 +714,10 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        gsims = self.gsim_lt.values
         split_time = AccumDict()
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                for src in src_group:
-                    trt = src.tectonic_region_type
-                    split_time[src.source_id] = 0
-                    src.ngsims = len(gsims[trt])
-                    src.ndists = contexts.get_num_distances(gsims[trt])
                 if getattr(src_group, 'src_interdep', None) != 'mutex':
                     # mutex sources cannot be split
                     srcs, stime = split_sources(src_group, min_mag)
@@ -940,9 +934,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         Populate the .infos dictionary src_id -> <SourceInfo>
         """
+        gsims = self.gsim_lt.values
         for src in sources:
             info = SourceInfo(src)
             self.infos[info.source_id] = info
+            trt = src.tectonic_region_type
+            src.ngsims = len(gsims[trt])
+            src.ndists = contexts.get_num_distances(gsims[trt])
 
     def get_floating_spinning_factors(self):
         """
