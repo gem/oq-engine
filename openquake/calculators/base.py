@@ -597,7 +597,8 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol'):
             self.datastore['sitecol'] = self.sitecol.complete
-        self.param = {}  # used in the risk calculators
+        # used in the risk calculators
+        self.param = dict(individual_curves=oq.individual_curves)
 
     def count_eff_ruptures(self, result_dict, src_group_id):
         """
@@ -663,7 +664,7 @@ class HazardCalculator(BaseCalculator):
                 N = len(self.sitecol.complete)
                 ct = oq.concurrent_tasks or 1
                 if 'hcurves' in self.datastore:
-                    kinds = self.datastore['hcurves']
+                    kinds = list(self.datastore['hcurves'])
                     hmaps_dt = numpy.dtype(
                         [('%s-%s' % (imt, poe), F32)
                          for imt in oq.imtls for poe in oq.poes])
