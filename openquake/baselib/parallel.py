@@ -358,11 +358,13 @@ def safely_call(func, args, monitor=dummy_mon):
     :param func: the function to call
     :param args: the arguments
     """
+    isgenfunc = inspect.isgeneratorfunction(func)
     monitor.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
     if monitor is dummy_mon:  # in the DbServer
+        assert not isgenfunc, func
         return Result.new(func, args, monitor)
 
     mon = args[-1]
@@ -371,7 +373,11 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    if monitor.backurl is None:
+    if monitor.backurl is None and isgenfunc:
+        def newfunc(*args):
+            return list(func(*args))
+        return Result.new(newfunc, args, mon)
+    elif monitor.backurl is None:  # regular function
         return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         if inspect.isgeneratorfunction(func):
@@ -627,10 +633,6 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
-        if inspect.isgeneratorfunction(task_func) and self.distribute not in (
-                'no', 'zmq', 'celery'):
-            raise ValueError('Cannot used generator task %s with %s' %
-                             (self.task_func.__name__, self.distribute))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
