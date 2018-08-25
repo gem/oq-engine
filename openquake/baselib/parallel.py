@@ -735,7 +735,7 @@ class Starmap(object):
                     raise err
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %d, since this '
+                logging.warn('Discarding a result from job %s, since this '
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.tb_str == 'TASK_ENDED':
