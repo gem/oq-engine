@@ -207,8 +207,6 @@ class SiMidorikawa1999Asc(GMPE):
         """
         Return mean value as defined in equation 3.5.1-1 page 148
         """
-        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
         # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
         # in "Technical Reports on National Seismic Hazard Maps for Japan"
         mag = min(mag, 8.3)

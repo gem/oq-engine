@@ -334,12 +334,12 @@ class OqParamTestCase(unittest.TestCase):
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
         vf = mock.Mock()
-        vf.imt = ' SA(0.1)'
+        vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
         rm = dict(taxo=dict(structural=vf))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
-        self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+        self.assertIn("'SA '", str(ctx.exception))
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()

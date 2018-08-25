@@ -111,7 +111,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
                                                             C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
-        if isinstance(imt, SA):
+        if imt.name == "SA":
             mean = np.log(np.exp(mean) * 1e-2 / g)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
