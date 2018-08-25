@@ -787,11 +787,6 @@ class RiskCalculator(HazardCalculator):
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            # dictionary of epsilons for the reduced assets
-            reduced_eps = {}
-            for ass in assets:
-                if eps is not None and len(eps):
-                    reduced_eps[ass.ordinal] = eps[ass.ordinal]
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
                 getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
@@ -806,6 +801,10 @@ class RiskCalculator(HazardCalculator):
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
             for block in general.block_splitter(assets, 1000):
+                # dictionary of epsilons for the reduced assets
+                reduced_eps = {ass.ordinal: eps[ass.ordinal]
+                               for ass in block
+                               if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
 
     def execute(self):
@@ -819,7 +818,7 @@ class RiskCalculator(HazardCalculator):
         res = Starmap.apply(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.param, self.monitor()),
-            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            #concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight
         ).reduce(self.combine)
         return res
