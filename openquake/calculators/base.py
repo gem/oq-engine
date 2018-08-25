@@ -822,11 +822,9 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        mon = self.monitor()
-        all_args = [(riskinput, self.riskmodel, self.param, mon)
-                    for riskinput in self.riskinputs]
-        res = Starmap(
-            self.core_task.__func__, all_args, mon
+        res = Starmap.apply(
+            self.core_task.__func__,
+            (self.riskinputs, self.riskmodel, self.param, self.monitor())
         ).reduce(self.combine)
         return res
 
