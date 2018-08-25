@@ -34,7 +34,6 @@ from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
                                           DistancesContext)
 from openquake.hazardlib.imt import registry
 
-
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
@@ -109,6 +108,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
 
             discrep_percentage = numpy.abs(
                 result / expected_result * 100 - 100)
+
             discrepancies.extend(discrep_percentage)
             errors += (discrep_percentage > max_discrep_percentage).sum()
 
@@ -258,7 +258,6 @@ def _parse_csv_line(headers, values, req_site_params):
     dctx = DistancesContext()
     expected_results = {}
     stddev_types = result_type = damping = None
-
     for param, value in zip(headers, values):
         if param == 'result_type':
             value = value.upper()
@@ -301,6 +300,7 @@ def _parse_csv_line(headers, values, req_site_params):
                 imt = imtclass()
             else:  # assume the IMT is a Spectral Acceleration
                 imt = registry['SA'](float(param), damping)
+
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
