@@ -94,14 +94,14 @@ class BindiEtAl2011(GMPE):
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             # PGV:
             mean = np.log(10.0 ** imean)
         # Return stddevs in terms of natural log scaling
         stddevs = np.log(10.0 ** np.array(istddevs))
-        #mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
+        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stddevs
 
     def _get_stddevs(self, C, stddev_types, num_sites):
