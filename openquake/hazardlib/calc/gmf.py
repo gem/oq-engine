@@ -183,7 +183,7 @@ class GmfComputer(object):
 
             if self.correlation_model is not None:
                 ir = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual)
+                    self.sites, imt, intra_residual, stddev_intra)
                 # this fixes a mysterious bug: ir[row] is actually
                 # a matrix of shape (E, 1) and not a vector of size E
                 intra_residual = numpy.zeros(ir.shape)
