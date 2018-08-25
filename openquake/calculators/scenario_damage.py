@@ -104,7 +104,7 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
                         # TODO: consequences for the occupants
                     result['d_asset'].append(
                         (l, r, asset.ordinal, scientific.mean_std(damages)))
-        result['gmdata'] = riskinput.gmdata
+        result['gmdata'] = ri.gmdata
         yield result
 
 
