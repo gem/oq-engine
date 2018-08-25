@@ -51,12 +51,12 @@ def dist_by_asset(data, multi_stat_dt, number):
     return out
 
 
-def scenario_damage(riskinput, riskmodel, param, monitor):
+def scenario_damage(riskinputs, riskmodel, param, monitor):
     """
     Core function for a damage computation.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param monitor:
@@ -76,35 +76,36 @@ def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
-    R = riskinput.hazard_getter.num_rlzs
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
-    result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
-                  c_asset=[], c_event=numpy.zeros((E, R, L), F64))
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        r = outputs.rlzi
-        for l, damages in enumerate(outputs):
-            loss_type = riskmodel.loss_types[l]
-            c_model = c_models.get(loss_type)
-            for a, fraction in enumerate(damages):
-                asset = outputs.assets[a]
-                taxo = riskmodel.taxonomy[asset.taxonomy]
-                damages = fraction * asset.number
-                result['d_event'][:, r, l] += damages  # shape (E, D)
-                if c_model:  # compute consequences
-                    means = [par[0] for par in c_model[taxo].params]
-                    # NB: we add a 0 in front for nodamage state
-                    c_ratio = numpy.dot(fraction, [0] + means)
-                    consequences = c_ratio * asset.value(loss_type)
-                    result['c_asset'].append(
-                        (l, r, asset.ordinal,
-                         scientific.mean_std(consequences)))
-                    result['c_event'][:, r, l] += consequences
-                    # TODO: consequences for the occupants
-                result['d_asset'].append(
-                    (l, r, asset.ordinal, scientific.mean_std(damages)))
-    result['gmdata'] = riskinput.gmdata
-    return result
+    for ri in riskinputs:
+        R = ri.hazard_getter.num_rlzs
+        result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
+                      c_asset=[], c_event=numpy.zeros((E, R, L), F64))
+        for outputs in riskmodel.gen_outputs(ri, monitor):
+            r = outputs.rlzi
+            for l, damages in enumerate(outputs):
+                loss_type = riskmodel.loss_types[l]
+                c_model = c_models.get(loss_type)
+                for a, fraction in enumerate(damages):
+                    asset = outputs.assets[a]
+                    taxo = riskmodel.taxonomy[asset.taxonomy]
+                    damages = fraction * asset.number
+                    result['d_event'][:, r, l] += damages  # shape (E, D)
+                    if c_model:  # compute consequences
+                        means = [par[0] for par in c_model[taxo].params]
+                        # NB: we add a 0 in front for nodamage state
+                        c_ratio = numpy.dot(fraction, [0] + means)
+                        consequences = c_ratio * asset.value(loss_type)
+                        result['c_asset'].append(
+                            (l, r, asset.ordinal,
+                             scientific.mean_std(consequences)))
+                        result['c_event'][:, r, l] += consequences
+                        # TODO: consequences for the occupants
+                    result['d_asset'].append(
+                        (l, r, asset.ordinal, scientific.mean_std(damages)))
+        result['gmdata'] = riskinput.gmdata
+        yield result
 
 
 @base.calculators.add('scenario_damage')
