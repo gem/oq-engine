@@ -326,7 +326,7 @@ class Result(object):
         return val
 
     @classmethod
-    def new(cls, func, args, mon, islist=False):
+    def new(cls, func, args, mon, splice=False):
         """
         :returns: a new Result instance
         """
@@ -340,7 +340,7 @@ class Result(object):
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
             res = Result(val, mon)
-        res.islist = islist
+        res.splice = splice
         return res
 
 
@@ -377,7 +377,7 @@ def safely_call(func, args, monitor=dummy_mon):
     if monitor.backurl is None and isgenfunc:
         def newfunc(*args):
             return list(func(*args))
-        return Result.new(newfunc, args, mon, islist=True)
+        return Result.new(newfunc, args, mon, splice=True)
     elif monitor.backurl is None:  # regular function
         return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
@@ -487,7 +487,7 @@ class IterResult(object):
             next(self.log_percent)
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_info(result.mon, mem_gb)
-            if result.islist:
+            if result.splice:
                 yield from val
             else:
                 yield val
