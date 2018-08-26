@@ -818,7 +818,7 @@ class RiskCalculator(HazardCalculator):
         res = Starmap.apply(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.param, self.monitor()),
-            #concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight
         ).reduce(self.combine)
         return res
