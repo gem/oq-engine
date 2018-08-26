@@ -68,22 +68,26 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    aids = []
     for ri in riskinputs:
         with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
+            # NB: ri.dstore['events']['eid'] will be called multiple times
             ri.hazard_getter.init()
-        eids = ri.hazard_getter.eids
-        A = len(ri.aids)
-        E = len(eids)
-        I = param['insured_losses'] + 1
-        L = len(riskmodel.lti)
-        R = ri.hazard_getter.num_rlzs
-        param['lrs_dt'] = numpy.dtype(
-            [('rlzi', U16), ('ratios', (F32, (L * I,)))])
-        ass = []
-        agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(accum={} if ri.by_site or not param['avg_losses']
-                        else numpy.zeros(A, F64))
-        result = dict(assratios=ass, aids=ri.aids, avglosses=avg)
+            aids.extend(ri.aids)
+    eids = ri.hazard_getter.eids
+    A = len(aids)
+    E = len(eids)
+    I = param['insured_losses'] + 1
+    L = len(riskmodel.lti)
+    R = ri.hazard_getter.num_rlzs
+    param['lrs_dt'] = numpy.dtype(
+        [('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    ass = []
+    agg = numpy.zeros((E, R, L * I), F32)
+    avg = AccumDict(accum={} if ri.by_site or not param['avg_losses']
+                    else numpy.zeros(A, F64))
+    result = dict(assratios=ass, aids=aids, avglosses=avg)
+    for ri in riskinputs:
         if 'builder' in param:
             builder = param['builder']
             R = len(builder.weights)
@@ -144,9 +148,9 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if R > 1 and param['individual_curves'] is False:
                     del result['loss_maps-rlzs']
 
-        # store info about the GMFs, must be done at the end
-        result['gmdata'] = ri.gmdata
-        yield result
+    # store info about the GMFs, must be done at the end
+    result['gmdata'] = ri.gmdata
+    return result
 
 
 @base.calculators.add('event_based_risk')
