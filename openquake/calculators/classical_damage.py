@@ -38,13 +38,13 @@ def classical_damage(riskinputs, riskmodel, param, monitor):
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
+    result = AccumDict(accum=AccumDict())
     for ri in riskinputs:
-        result = AccumDict(accum=AccumDict())
         for outputs in riskmodel.gen_outputs(ri, monitor):
             for l, out in enumerate(outputs):
                 ordinals = [a.ordinal for a in outputs.assets]
                 result[l, outputs.rlzi] += dict(zip(ordinals, out))
-        yield result
+    return result
 
 
 @base.calculators.add('classical_damage')
