@@ -41,9 +41,9 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
+    R = riskinputs[0].hazard_getter.num_rlzs
+    result = AccumDict(accum=numpy.zeros((R, 3), F32))
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
-        result = AccumDict(accum=numpy.zeros((R, 3), F32))
         for outputs in riskmodel.gen_outputs(ri, monitor):
             assets = outputs.assets
             for out in outputs:
@@ -51,7 +51,7 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
                     aval = asset.value('structural')
                     result[asset.ordinal][outputs.rlzi] = numpy.array([
                         eal_orig * aval, eal_retro * aval, bcr])
-        yield result
+    return result
 
 
 @base.calculators.add('classical_bcr')
