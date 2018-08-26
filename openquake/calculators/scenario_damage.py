@@ -78,10 +78,10 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
     L = len(riskmodel.loss_types)
     D = len(riskmodel.damage_states)
     E = param['number_of_ground_motion_fields']
+    R = riskinputs[0].hazard_getter.num_rlzs
+    result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
+                  c_asset=[], c_event=numpy.zeros((E, R, L), F64))
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
-        result = dict(d_asset=[], d_event=numpy.zeros((E, R, L, D), F64),
-                      c_asset=[], c_event=numpy.zeros((E, R, L), F64))
         for outputs in riskmodel.gen_outputs(ri, monitor):
             r = outputs.rlzi
             for l, damages in enumerate(outputs):
@@ -104,8 +104,8 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
                         # TODO: consequences for the occupants
                     result['d_asset'].append(
                         (l, r, asset.ordinal, scientific.mean_std(damages)))
-        result['gmdata'] = ri.gmdata
-        yield result
+    result['gmdata'] = ri.gmdata
+    return result
 
 
 @base.calculators.add('scenario_damage')
