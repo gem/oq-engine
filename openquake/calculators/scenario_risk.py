@@ -56,10 +56,10 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
     E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
     I = param['insured_losses'] + 1
+    R = riskinputs[0].hazard_getter.num_rlzs
+    result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
+                  all_losses=AccumDict(accum={}))
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
-        result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
-                      all_losses=AccumDict(accum={}))
         for outputs in riskmodel.gen_outputs(ri, monitor):
             r = outputs.rlzi
             assets = outputs.assets
@@ -77,7 +77,7 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
                 if param['asset_loss_table']:
                     aids = [asset.ordinal for asset in outputs.assets]
                     result['all_losses'][l, r] += AccumDict(zip(aids, losses))
-        yield result
+    return result
 
 
 @base.calculators.add('scenario_risk')
