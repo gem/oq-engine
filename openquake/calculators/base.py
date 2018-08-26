@@ -788,31 +788,26 @@ class RiskCalculator(HazardCalculator):
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            # dictionary of epsilons for the reduced assets
-            reduced_eps = {}
-            for ass in assets:
-                if eps is not None and len(eps):
-                    reduced_eps[ass.ordinal] = eps[ass.ordinal]
-            # build the riskinputs
-            if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
-                getter.num_rlzs = self.R
-            else:  # gmf
-                getter = GmfDataGetter(dstore, [sid], self.R,
-                                       self.oqparam.imtls)
-            if dstore is self.datastore:
-                # read the hazard data in the controller node
-                getter.init()
-            else:
-                # the datastore must be closed to avoid the HDF5 fork bug
-                assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            if len(assets) > MAX_ASSETS_PER_SITE:
-                # if there are lots of assets on the same site split them
-                # by taxonomy to avoid slow tasks
-                for ass in general.groupby(assets, get_taxonomy).values():
-                    yield riskinput.RiskInput(getter, [ass], reduced_eps)
-            else:
-                yield riskinput.RiskInput(getter, [assets], reduced_eps)
+            for block in general.block_splitter(assets, MAX_ASSETS_PER_SITE):
+                # dictionary of epsilons for the reduced assets
+                reduced_eps = {}
+                for ass in block:
+                    if eps is not None and len(eps):
+                        reduced_eps[ass.ordinal] = eps[ass.ordinal]
+                # build the riskinputs
+                if kind == 'poe':  # hcurves, shape (R, N)
+                    getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
+                    getter.num_rlzs = self.R
+                else:  # gmf
+                    getter = GmfDataGetter(dstore, [sid], self.R,
+                                           self.oqparam.imtls)
+                if dstore is self.datastore:
+                    # read the hazard data in the controller node
+                    getter.init()
+                else:
+                    # the datastore must be closed to avoid the HDF5 fork bug
+                    assert dstore.hdf5 == (), '%s is not closed!' % dstore
+                yield riskinput.RiskInput(getter, [block], reduced_eps)
 
     def execute(self):
         """
