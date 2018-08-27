@@ -482,6 +482,7 @@ class IterResult(object):
                 self.save_task_info(result.mon, mem_gb)
             yield val
 
+        next(self.log_percent)
         if self.received:
             tot = sum(self.received)
             max_per_task = max(self.received)
