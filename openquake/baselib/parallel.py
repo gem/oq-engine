@@ -443,27 +443,20 @@ class IterResult(object):
         self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        self.log_percent = self._log_percent()
-        next(self.log_percent)
+        done, self.total = self.done_total()
+        self.prev_percent = 0
         self.progress('Sent %s of data in %s task(s)',
                       humansize(sent.sum()), self.total)
 
-    def _log_percent(self):
+    def log_percent(self):
         done, self.total = self.done_total()
-        yield 0
-        prev_percent = 0
-        while done < self.total:
-            if done == 1:  # first time
-                self.progress('Submitting %s "%s" tasks',
-                              self.total, self.name)
-            percent = int(float(done) / self.total * 100)
-            if percent > prev_percent:
-                self.progress('%s %3d%%', self.name, percent)
-                prev_percent = percent
-            yield done
-            done += 1
-        self.progress('%s 100%%', self.name)
-        yield done
+        if done == 0:  # first time
+            self.progress('Submitting %s "%s" tasks',
+                          self.total, self.name)
+        percent = int(float(done) / self.total * 100)
+        if percent > self.prev_percent:
+            self.progress('%s %3d%%', self.name, percent)
+            self.prev_percent = percent
 
     def __iter__(self):
         self.received = []
@@ -484,7 +477,7 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            next(self.log_percent)
+            self.log_percent()
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_info(result.mon, mem_gb)
             if result.splice:
@@ -492,7 +485,7 @@ class IterResult(object):
             else:
                 yield val
 
-        next(self.log_percent)
+        self.log_percent()  # 100%
         if self.received:
             tot = sum(self.received)
             max_per_task = max(self.received)
@@ -719,7 +712,9 @@ class Starmap(object):
                                      monitor=self.monitor)
         allargs = list(self._genargs())
         yield len(allargs)
-        yield from self.pool.imap_unordered(safefunc, allargs)
+        for res in self.pool.imap_unordered(safefunc, allargs):
+            yield res
+            self.todo -= 1
 
     _iter_threadpool = _iter_processpool
 
