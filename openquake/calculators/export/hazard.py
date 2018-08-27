@@ -483,15 +483,15 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        for imt in oq.imtls:
-            slc = oq.imtls(imt)
-            imt = from_string(imt)
+        for im in oq.imtls:
+            slc = oq.imtls(im)
+            imt = from_string(im)
             fname = name[:-len_ext] + '-' + imt.name + '.' + fmt
             data = [HazardCurve(Location(site), poes[slc])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
-                               imls=oq.imtls[imt.name], imt=imt.name,
+                               imls=oq.imtls[im], imt=imt.name,
                                sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
