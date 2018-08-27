@@ -39,8 +39,8 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    result = dict(loss_curves=[], stat_curves=[])
     for ri in riskinputs:
+        result = dict(loss_curves=[], stat_curves=[])
         all_outputs = list(riskmodel.gen_outputs(ri, monitor))
         for outputs in all_outputs:
             r = outputs.rlzi
@@ -76,9 +76,9 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                         stats, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
-    if R == 1:  # the realization is the same as the mean
-        del result['loss_curves']
-    return result
+        if R == 1:  # the realization is the same as the mean
+            del result['loss_curves']
+        yield result
 
 
 @base.calculators.add('classical_risk')
@@ -141,7 +141,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             for l, r, a, (losses, poes, avg) in result['loss_curves']:
                 lc = loss_curves[a, r][ltypes[l]]
                 avg_losses[a, r, l] = avg
-                base.set_array(lc['losses'], losses)
-                base.set_array(lc['poes'], poes)
+                lc['losses'] = losses
+                lc['poes'] = poes
             self.datastore['avg_losses-rlzs'] = avg_losses
             self.datastore['loss_curves-rlzs'] = loss_curves
