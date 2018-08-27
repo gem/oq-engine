@@ -283,6 +283,12 @@ class SAAVG(IMT):
     _fields =  [('period', positivefloat), ('damping', positivefloat)]
     _defaults=(5.,)   # damping
 
+    def __repr__(self):
+        if self.damping != 5.0:
+            return '%s(%s, %s)' % (self.name, self.period, self.damping)
+        else:
+            return '%s(%s)' % (self.name, self.period)
+
 
 class FIV3(IMT):
     """
@@ -298,7 +304,7 @@ class FIV3(IMT):
         Input period.
 
     :raises ValueError:
-        if period or damping is not positive.
+        if period is not positive.
     """
     _fields = [('period', positivefloat)]
 
