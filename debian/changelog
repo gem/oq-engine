@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Solved the pickling bug in event based hazard by using generator tasks
   * Improved the distribution of the risk tasks by changing the weight
 
   [Pablo Heresi]
