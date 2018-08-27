@@ -14,7 +14,7 @@ if [ ! -d "$1" ]; then
 fi
 
 for ini in $(find $1 -name job.ini | sort); do
-    oq engine --run $ini
+    oq engine --run $ini --exports xml,hdf5
 done
 
 # test generation of statistical hazard curves from previous calculation;
