@@ -473,8 +473,8 @@ class IterResult(object):
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool':
-                mem_gb = memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids) / GB
+                mem_gb = (memory_rss(os.getpid()) + sum(
+                    memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
             next(self.log_percent)
@@ -482,6 +482,7 @@ class IterResult(object):
                 self.save_task_info(result.mon, mem_gb)
             yield val
 
+        next(self.log_percent)
         if self.received:
             tot = sum(self.received)
             max_per_task = max(self.received)
