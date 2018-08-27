@@ -26,6 +26,8 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SInter,
                                                       AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
+                                                    MontalvaEtAl2017SSlab)
 
 
 class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
