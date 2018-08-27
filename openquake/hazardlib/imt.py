@@ -266,6 +266,13 @@ class SDI(IMT):
                 ('damping', positivefloat)]
     _defaults=(5.,)   # damping
 
+    def __repr__(self):
+        if self.damping != 5.0:
+            return '%s(%s, %s, %s)' % (self.name, self.period, self.Cy,
+                                                               self.damping)
+        else:
+            return '%s(%s, %s)' % (self.name, self.period, self.Cy)
+
 class SAAVG(IMT):
     """
     Sa_avg, defined as the geometric mean of 10 equally spaced spectral 
