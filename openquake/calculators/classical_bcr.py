@@ -28,12 +28,12 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-def classical_bcr(riskinput, riskmodel, param, monitor):
+def classical_bcr(riskinputs, riskmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -41,15 +41,16 @@ def classical_bcr(riskinput, riskmodel, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    R = riskinput.hazard_getter.num_rlzs
+    R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        assets = outputs.assets
-        for out in outputs:
-            for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
-                aval = asset.value('structural')
-                result[asset.ordinal][outputs.rlzi] = numpy.array([
-                    eal_orig * aval, eal_retro * aval, bcr])
+    for ri in riskinputs:
+        for outputs in riskmodel.gen_outputs(ri, monitor):
+            assets = outputs.assets
+            for out in outputs:
+                for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
+                    aval = asset.value('structural')
+                    result[asset.ordinal][outputs.rlzi] = numpy.array([
+                        eal_orig * aval, eal_retro * aval, bcr])
     return result
 
 

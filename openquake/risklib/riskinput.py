@@ -318,6 +318,7 @@ class RiskInput(object):
         self.hazard_getter = hazard_getter
         self.assets_by_site = assets_by_site
         self.eps = eps_dict or {}
+        self.weight = sum(len(assets) for assets in assets_by_site)
         taxonomies_set = set()
         aids = []
         for assets in self.assets_by_site:
