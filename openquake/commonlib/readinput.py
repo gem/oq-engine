@@ -167,31 +167,10 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        s = set()
-        for paths in gen_sm_paths(smlt):
-            s.update(paths)
-        inputs['source'] = sorted(s)
+        inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
-
-
-def gen_sm_paths(smlt):
-    """
-    Yields the path names for the source models listed in the smlt file,
-    a block at the time.
-    """
-    base_path = os.path.dirname(smlt)
-    for model in logictree.collect_source_model_paths(smlt):
-        paths = []
-        for name in model.split():
-            if os.path.isabs(name):
-                raise InvalidFile('%s: %s must be a relative path' %
-                                  (smlt, name))
-            fname = os.path.abspath(os.path.join(base_path, name))
-            if os.path.exists(fname):  # consider only real paths
-                paths.append(fname)
-        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
@@ -446,48 +425,6 @@ def get_rupture(oqparam):
     return rup
 
 
-def read_source_groups(fname):
-    """
-    :param fname: a path to a source model XML file
-    :return: a list of SourceGroup objects containing source nodes
-    """
-    smodel = nrml.read(fname).sourceModel
-    src_groups = []
-    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
-        for sg_node in smodel:
-            sg = sourceconverter.SourceGroup(
-                sg_node['tectonicRegion'])
-            sg.sources = sg_node.nodes
-            src_groups.append(sg)
-    else:  # NRML 0.4 format: smodel is a list of source nodes
-        src_groups.extend(
-            sourceconverter.SourceGroup.collect(smodel))
-    return src_groups
-
-
-def get_source_ids(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        the complete set of source IDs found in all the source models
-    """
-    fnames = oqparam.inputs['source']
-    source_ids = set()
-    logging.info('Reading source IDs from %d model file(s)', len(fnames))
-    for fname in fnames:
-        if fname.endswith('.hdf5'):
-            with hdf5.File(fname, 'r') as f:
-                for sg in f['/']:
-                    for src in sg:
-                        source_ids.add(src.source_id)
-        else:
-            for sg in read_source_groups(fname):
-                for src_node in sg:
-                    source_ids.add(src_node['id'])
-    return source_ids
-
-
 def get_source_model_lt(oqparam):
     """
     :param oqparam:
@@ -501,8 +438,7 @@ def get_source_model_lt(oqparam):
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
             fname, validate=False, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples,
-            source_ids=get_source_ids(oqparam))
+            num_samples=oqparam.number_of_logic_tree_samples)
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
                               oqparam.number_of_logic_tree_samples)
@@ -535,11 +471,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         oqparam.area_source_discretization)
 
     psr = nrml.SourceModelParser(converter)
+    pik = {}
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
         logging.info('Pickling the source model(s)')
-        pik = logictree.parallel_read_source_models(
+        pik = logictree.parallel_pickle_source_models(
             gsim_lt, source_model_lt, converter, monitor)
 
     # consider only the effective realizations
@@ -558,7 +495,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 src_groups.extend(psr.parse(
                     fname, pik[fname], apply_unc, oqparam.investigation_time))
             else:  # just collect the TRT models
-                src_groups.extend(read_source_groups(fname))
+                src_groups.extend(logictree.read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -587,6 +524,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
+    # file cleanup
+    for pikfile in pik.values():
+        os.remove(pikfile)
 
 
 def getid(src):
@@ -1029,29 +969,28 @@ def reduce_source_model(smlt_file, source_ids):
     """
     Extract sources from the composite source model
     """
-    for paths in gen_sm_paths(smlt_file):
-        for path in paths:
-            root = nrml.read(path)
-            model = Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
+    for path in logictree.collect_info(smlt_file).smpaths:
+        root = nrml.read(path)
+        model = Node('sourceModel', root[0].attrib)
+        origmodel = root[0]
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            for src_node in origmodel:
+                if src_node['id'] in source_ids:
+                    model.nodes.append(src_node)
+        else:  # nrml/0.5
+            for src_group in origmodel:
+                sg = copy.copy(src_group)
+                sg.nodes = []
+                for src_node in src_group:
                     if src_node['id'] in source_ids:
-                        model.nodes.append(src_node)
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    sg = copy.copy(src_group)
-                    sg.nodes = []
-                    for src_node in src_group:
-                        if src_node['id'] in source_ids:
-                            sg.nodes.append(src_node)
-                    if sg.nodes:
-                        model.nodes.append(sg)
-            if model:
-                shutil.copy(path, path + '.bak')
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-                    logging.warn('Reduced %s' % path)
+                        sg.nodes.append(src_node)
+                if sg.nodes:
+                    model.nodes.append(sg)
+        if model:
+            shutil.copy(path, path + '.bak')
+            with open(path, 'wb') as f:
+                nrml.write([model], f, xmlns=root['xmlns'])
+                logging.warn('Reduced %s' % path)
 
 
 def get_checksum32(oqparam):

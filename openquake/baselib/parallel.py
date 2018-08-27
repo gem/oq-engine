@@ -316,7 +316,7 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         val = self.pik.unpickle()
-        if self.tb_str:
+        if self.tb_str and self.tb_str != 'TASK_ENDED':
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
             if issubclass(etype, KeyError):
@@ -334,7 +334,7 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
-            res = None
+            res = Result(None, mon, 'TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
@@ -371,16 +371,25 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    res = Result.new(func, args, mon)
     if monitor.backurl is None:
-        return res
+        return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
-        try:
-            zsocket.send(res)
-        except Exception:  # like OverflowError
-            _etype, exc, tb = sys.exc_info()
-            err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-            zsocket.send(err)
+        if inspect.isgeneratorfunction(func):
+            gfunc = func
+        else:
+            def gfunc(*args):
+                yield func(*args)
+        gobj = gfunc(*args)
+        while True:
+            res = Result.new(next, (gobj,), mon)  # StopIteration -> TASK_ENDED
+            try:
+                zsocket.send(res)
+            except Exception:  # like OverflowError
+                _etype, exc, tb = sys.exc_info()
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+                zsocket.send(err)
+            if res.tb_str == 'TASK_ENDED':
+                break
     return zsocket.num_sent
 
 
@@ -408,8 +417,8 @@ class IterResult(object):
         an iterator over Result objects
     :param taskname:
         the name of the task
-    :param num_tasks:
-        the total number of expected tasks
+    :param done_total:
+        a function returning the number of done tasks and the total
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     :param progress:
@@ -417,33 +426,30 @@ class IterResult(object):
     :param hdf5:
         if given, hdf5 file where to append the performance information
     """
-    def __init__(self, iresults, taskname, argnames, num_tasks, sent,
+    def __init__(self, iresults, taskname, argnames, done_total, sent,
                  progress=logging.info, hdf5=None):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
-        self.num_tasks = num_tasks
+        self.done_total = done_total
         self.sent = sent
         self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        if self.num_tasks:
-            self.log_percent = self._log_percent()
-            next(self.log_percent)
-        else:
-            self.progress('No %s tasks were submitted', self.name)
+        self.log_percent = self._log_percent()
+        next(self.log_percent)
         self.progress('Sent %s of data in %s task(s)',
-                      humansize(sent.sum()), num_tasks)
+                      humansize(sent.sum()), self.total)
 
     def _log_percent(self):
+        done, self.total = self.done_total()
         yield 0
-        done = 1
         prev_percent = 0
-        while done < self.num_tasks:
+        while done < self.total:
             if done == 1:  # first time
-                self.progress('Submitting %s "%s" tasks', self.num_tasks,
-                              self.name)
-            percent = int(float(done) / self.num_tasks * 100)
+                self.progress('Submitting %s "%s" tasks',
+                              self.total, self.name)
+            percent = int(float(done) / self.total * 100)
             if percent > prev_percent:
                 self.progress('%s %3d%%', self.name, percent)
                 prev_percent = percent
@@ -454,7 +460,7 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
-        if self.num_tasks == 0:
+        if self.total == 0:
             return
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -621,6 +627,10 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__init__).args[1:]
         else:  # instance with a __call__ method
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
+        if inspect.isgeneratorfunction(task_func) and self.distribute not in (
+                'no', 'zmq', 'celery'):
+            raise ValueError('Cannot used generator task %s with %s' %
+                             (self.task_func.__name__, self.distribute))
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
@@ -644,6 +654,12 @@ class Starmap(object):
             return ''
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
+
+    def done_total(self):
+        """
+        :returns: the number of tasks done vs the total
+        """
+        return self.total - self.todo, self.total
 
     def _genargs(self, pickle=True):
         """
@@ -669,8 +685,8 @@ class Starmap(object):
             it = self._iter_sequential()
         else:
             it = getattr(self, '_iter_' + self.distribute)()
-        num_tasks = next(it)
-        return IterResult(it, self.name, self.argnames, num_tasks,
+        self.todo = self.total = next(it)
+        return IterResult(it, self.name, self.argnames, self.done_total,
                           self.sent, progress, self.monitor.hdf5)
 
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
@@ -683,10 +699,13 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _iter_sequential(self):
-        allargs = list(self._genargs(pickle=False))
-        yield len(allargs)
-        for args in allargs:
-            yield safely_call(self.task_func, args, self.monitor)
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
+            allargs = list(self._genargs(pickle=False))
+            results = (safely_call(self.task_func, args, self.monitor)
+                       for args in allargs)
+            yield from self._loop(results, iter(socket), len(allargs))
 
     def _iter_processpool(self):
         safefunc = functools.partial(safely_call, self.task_func,
@@ -697,29 +716,39 @@ class Starmap(object):
 
     _iter_threadpool = _iter_processpool
 
-    def _loop(self, ierr, isocket, num_results):
-        yield num_results
-        for err, res in zip(ierr, isocket):
-            if isinstance(err, Exception):  # TaskRevokedError
-                raise err
-            elif self.calc_id and self.calc_id != res.mon.calc_id:
+    def _loop(self, ierr, isocket, num_tasks):
+        self.total = self.todo = num_tasks
+        yield num_tasks
+        while self.todo:
+            try:
+                err = next(ierr)
+            except StopIteration:  # sent everything already
+                pass
+            else:
+                if isinstance(err, Exception):  # TaskRevokedError
+                    raise err
+            res = next(isocket)
+            if self.calc_id and self.calc_id != res.mon.calc_id:
                 logging.warn('Discarding a result from job %d, since this '
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
-            yield res
+            elif res.tb_str == 'TASK_ENDED':
+                self.todo -= 1
+            else:
+                yield res
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
-            results = []
+            tasks = []
             for piks in self._genargs():
-                res = safetask.delay(self.task_func, piks, self.monitor)
+                task = safetask.delay(self.task_func, piks, self.monitor)
                 # populating Starmap.task_ids, used in celery_cleanup
-                self.task_ids.append(res.task_id)
-                results.append(res)
-            yield from self._loop(_iter_native(self.task_ids, results),
-                                  iter(socket), len(results))
+                self.task_ids.append(task.task_id)
+                tasks.append(task)
+            yield from self._loop(_iter_native(self.task_ids, tasks),
+                                  iter(socket), len(tasks))
 
     def _iter_zmq(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
@@ -728,12 +757,12 @@ class Starmap(object):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                num_results = 0
+                num_tasks = 0
                 for args in self._genargs():
                     sender.send((self.task_func, args, self.monitor))
-                    num_results += 1
-            yield from self._loop(range(num_results), iter(socket),
-                                  num_results)
+                    num_tasks += 1
+            yield from self._loop(iter(range(num_tasks)), iter(socket),
+                                  num_tasks)
 
     def _iter_dask(self):
         safefunc = functools.partial(safely_call, self.task_func,
