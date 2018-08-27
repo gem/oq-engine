@@ -68,28 +68,27 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    aids = []
+    results = []
     for ri in riskinputs:
         with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
-            # NB: ri.dstore['events']['eid'] will be called multiple times
             ri.hazard_getter.init()
-            aids.extend(ri.aids)
-    eids = ri.hazard_getter.eids
-    A = len(aids)
-    E = len(eids)
-    I = param['insured_losses'] + 1
-    L = len(riskmodel.lti)
-    R = ri.hazard_getter.num_rlzs
-    param['lrs_dt'] = numpy.dtype(
-        [('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    ass = []
-    agg = numpy.zeros((E, R, L * I), F32)
-    avg = AccumDict(accum={} if ri.by_site or not param['avg_losses']
-                    else numpy.zeros(A, F64))
-    result = dict(assratios=ass, aids=aids, avglosses=avg)
-    for ri in riskinputs:
+        eids = ri.hazard_getter.eids
+        A = len(ri.aids)
+        E = len(eids)
+        I = param['insured_losses'] + 1
+        L = len(riskmodel.lti)
+        R = ri.hazard_getter.num_rlzs
+        param['lrs_dt'] = numpy.dtype(
+            [('rlzi', U16), ('ratios', (F32, (L * I,)))])
+        ass = []
+        agg = numpy.zeros((E, R, L * I), F32)
+        avg = AccumDict(
+            accum={} if ri.by_site or not param['avg_losses']
+            else numpy.zeros(A, F64))
+        result = dict(assratios=ass, aids=ri.aids, avglosses=avg)
         if 'builder' in param:
             builder = param['builder']
+            A = len(ri.aids)
             R = len(builder.weights)
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
@@ -148,9 +147,10 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if R > 1 and param['individual_curves'] is False:
                     del result['loss_maps-rlzs']
 
-    # store info about the GMFs, must be done at the end
-    result['gmdata'] = ri.gmdata
-    return result
+        # store info about the GMFs, must be done at the end
+        result['gmdata'] = ri.gmdata
+        results.append(result)
+    return results
 
 
 @base.calculators.add('event_based_risk')
@@ -300,12 +300,13 @@ class EbrCalculator(base.RiskCalculator):
                 for aid, arr in zip(aids, loss_maps):
                     self.datastore[key][aid] = arr
 
-    def combine(self, dummy, res):
+    def combine(self, dummy, results):
         """
         :param dummy: unused parameter
-        :param res: a result dictionary
+        :param res: a list of result dictionaries
         """
-        self.save_losses(res, offset=0)
+        for res in results:
+            self.save_losses(res, offset=0)
         return 1
 
     def post_execute(self, result):
