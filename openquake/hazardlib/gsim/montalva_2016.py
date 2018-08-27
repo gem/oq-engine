@@ -45,7 +45,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     model, however this version is retained for reproducibility of previous
     hazard models using this implementation
     """
-    deprecated = True
+    superseded_by = MontalvaEtAl2017SInter
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -144,7 +144,7 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     model, however this version is retained for reproducibility of previous
     hazard models using this implementation
     """
-    deprecated = True
+    superseded_by = MontalvaEtAl2017SSlab
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
