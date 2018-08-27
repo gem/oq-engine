@@ -69,27 +69,25 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         a dictionary of numpy arrays of shape (L, R)
     """
     results = []
+    mon = monitor('build risk curves', measuremem=False)
+    I = param['insured_losses'] + 1
+    L = len(riskmodel.lti)
+    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     for ri in riskinputs:
         with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
             ri.hazard_getter.init()
         eids = ri.hazard_getter.eids
+        eid2idx = ri.hazard_getter.eid2idx
         A = len(ri.aids)
         E = len(eids)
-        I = param['insured_losses'] + 1
-        L = len(riskmodel.lti)
         R = ri.hazard_getter.num_rlzs
-        param['lrs_dt'] = numpy.dtype(
-            [('rlzi', U16), ('ratios', (F32, (L * I,)))])
-        ass = []
         agg = numpy.zeros((E, R, L * I), F32)
         avg = AccumDict(
             accum={} if ri.by_site or not param['avg_losses']
             else numpy.zeros(A, F64))
-        result = dict(assratios=ass, aids=ri.aids, avglosses=avg)
+        result = dict(aids=ri.aids, avglosses=avg)
         if 'builder' in param:
             builder = param['builder']
-            A = len(ri.aids)
-            R = len(builder.weights)
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
             aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
@@ -98,7 +96,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
-            eid2idx = ri.hazard_getter.eid2idx
             for l, loss_ratios in enumerate(out):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
@@ -110,11 +107,12 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     aval = asset.value(loss_type)
                     losses = aval * ratios
                     if 'builder' in param:
-                        idx = aid2idx[aid]
-                        for i in range(I):
-                            lt = loss_type + '_ins' * i
-                            all_curves[idx, r][lt] = builder.build_curve(
-                                aval, ratios[:, i], r)
+                        with mon:  # this is the heaviest part
+                            idx = aid2idx[aid]
+                            for i in range(I):
+                                lt = loss_type + '_ins' * i
+                                all_curves[idx, r][lt] = builder.build_curve(
+                                    aval, ratios[:, i], r)
 
                     # average losses
                     if param['avg_losses']:
@@ -259,7 +257,7 @@ class EbrCalculator(base.RiskCalculator):
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, assratios, avglosses
+            dictionary with agglosses, avglosses
         :param offset:
             realization offset
         """
