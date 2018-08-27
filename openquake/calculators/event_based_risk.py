@@ -55,10 +55,10 @@ def build_loss_tables(dstore):
     return tbl, lbr
 
 
-def event_based_risk(riskinput, riskmodel, param, monitor):
+def event_based_risk(riskinputs, riskmodel, param, monitor):
     """
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -68,83 +68,88 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
-        riskinput.hazard_getter.init()
-    eids = riskinput.hazard_getter.eids
-    A = len(riskinput.aids)
+    aids = []
+    for ri in riskinputs:
+        with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
+            # NB: ri.dstore['events']['eid'] will be called multiple times
+            ri.hazard_getter.init()
+            aids.extend(ri.aids)
+    eids = ri.hazard_getter.eids
+    A = len(aids)
     E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
-    R = riskinput.hazard_getter.num_rlzs
-    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    R = ri.hazard_getter.num_rlzs
+    param['lrs_dt'] = numpy.dtype(
+        [('rlzi', U16), ('ratios', (F32, (L * I,)))])
     ass = []
     agg = numpy.zeros((E, R, L * I), F32)
-    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
+    avg = AccumDict(accum={} if ri.by_site or not param['avg_losses']
                     else numpy.zeros(A, F64))
-    result = dict(assratios=ass, aids=riskinput.aids, avglosses=avg)
-    if 'builder' in param:
-        builder = param['builder']
-        A = len(riskinput.aids)
-        R = len(builder.weights)
-        P = len(builder.return_periods)
-        all_curves = numpy.zeros((A, R, P), builder.loss_dt)
-        aid2idx = {aid: idx for idx, aid in enumerate(riskinput.aids)}
-    # update the result dictionary and the agg array with each output
-    for out in riskmodel.gen_outputs(riskinput, monitor):
-        if len(out.eids) == 0:  # this happens for sites with no events
-            continue
-        r = out.rlzi
-        eid2idx = riskinput.hazard_getter.eid2idx
-        for l, loss_ratios in enumerate(out):
-            if loss_ratios is None:  # for GMFs below the minimum_intensity
+    result = dict(assratios=ass, aids=aids, avglosses=avg)
+    for ri in riskinputs:
+        if 'builder' in param:
+            builder = param['builder']
+            R = len(builder.weights)
+            P = len(builder.return_periods)
+            all_curves = numpy.zeros((A, R, P), builder.loss_dt)
+            aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
+        # update the result dictionary and the agg array with each output
+        for out in riskmodel.gen_outputs(ri, monitor):
+            if len(out.eids) == 0:  # this happens for sites with no events
                 continue
-            loss_type = riskmodel.loss_types[l]
-            indices = numpy.array([eid2idx[eid] for eid in out.eids])
-            for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape (E, I)
-                aid = asset.ordinal
-                aval = asset.value(loss_type)
-                losses = aval * ratios
-                if 'builder' in param:
-                    idx = aid2idx[aid]
+            r = out.rlzi
+            eid2idx = ri.hazard_getter.eid2idx
+            for l, loss_ratios in enumerate(out):
+                if loss_ratios is None:  # for GMFs below the minimum_intensity
+                    continue
+                loss_type = riskmodel.loss_types[l]
+                indices = numpy.array([eid2idx[eid] for eid in out.eids])
+                for a, asset in enumerate(out.assets):
+                    ratios = loss_ratios[a]  # shape (E, I)
+                    aid = asset.ordinal
+                    aval = asset.value(loss_type)
+                    losses = aval * ratios
+                    if 'builder' in param:
+                        idx = aid2idx[aid]
+                        for i in range(I):
+                            lt = loss_type + '_ins' * i
+                            all_curves[idx, r][lt] = builder.build_curve(
+                                aval, ratios[:, i], r)
+
+                    # average losses
+                    if param['avg_losses']:
+                        rat = ratios.sum(axis=0) * param['ses_ratio']
+                        for i in range(I):
+                            lba = avg[l + L * i, r]
+                            try:
+                                lba[aid] += rat[i]
+                            except KeyError:
+                                lba[aid] = rat[i]
+
+                    # agglosses
                     for i in range(I):
-                        lt = loss_type + '_ins' * i
-                        all_curves[idx, r][lt] = builder.build_curve(
-                            aval, ratios[:, i], r)
+                        li = l + L * i
+                        # this is the critical loop: it is important to keep it
+                        # vectorized in terms of the event indices
+                        agg[indices, r, li] += losses[:, i]
 
-                # average losses
-                if param['avg_losses']:
-                    rat = ratios.sum(axis=0) * param['ses_ratio']
-                    for i in range(I):
-                        lba = avg[l + L * i, r]
-                        try:
-                            lba[aid] += rat[i]
-                        except KeyError:
-                            lba[aid] = rat[i]
-
-                # agglosses
-                for i in range(I):
-                    li = l + L * i
-                    # this is the critical loop: it is important to keep it
-                    # vectorized in terms of the event indices
-                    agg[indices, r, li] += losses[:, i]
-
-    idx = agg.nonzero()  # return only the nonzero values
-    result['agglosses'] = (idx, agg[idx])
-    if 'builder' in param:
-        clp = param['conditional_loss_poes']
-        result['curves-rlzs'], result['curves-stats'] = builder.pair(
-            all_curves, param['stats'])
-        if R > 1 and param['individual_curves'] is False:
-            del result['curves-rlzs']
-        if clp:
-            result['loss_maps-rlzs'], result['loss_maps-stats'] = (
-                builder.build_maps(all_curves, clp, param['stats']))
+        idx = agg.nonzero()  # return only the nonzero values
+        result['agglosses'] = (idx, agg[idx])
+        if 'builder' in param:
+            clp = param['conditional_loss_poes']
+            result['curves-rlzs'], result['curves-stats'] = builder.pair(
+                all_curves, param['stats'])
             if R > 1 and param['individual_curves'] is False:
-                del result['loss_maps-rlzs']
+                del result['curves-rlzs']
+            if clp:
+                result['loss_maps-rlzs'], result['loss_maps-stats'] = (
+                    builder.build_maps(all_curves, clp, param['stats']))
+                if R > 1 and param['individual_curves'] is False:
+                    del result['loss_maps-rlzs']
 
     # store info about the GMFs, must be done at the end
-    result['gmdata'] = riskinput.gmdata
+    result['gmdata'] = ri.gmdata
     return result
 
 

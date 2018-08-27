@@ -51,7 +51,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
 logversion = True
-MAX_ASSETS_PER_SITE = 500  # hard-coded for the moment
 
 
 class InvalidCalculationID(Exception):
@@ -788,25 +787,24 @@ class RiskCalculator(HazardCalculator):
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            for block in general.block_splitter(assets, MAX_ASSETS_PER_SITE):
+            # build the riskinputs
+            if kind == 'poe':  # hcurves, shape (R, N)
+                getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
+                getter.num_rlzs = self.R
+            else:  # gmf
+                getter = GmfDataGetter(dstore, [sid], self.R,
+                                       self.oqparam.imtls)
+            if dstore is self.datastore:
+                # read the hazard data in the controller node
+                getter.init()
+            else:
+                # the datastore must be closed to avoid the HDF5 fork bug
+                assert dstore.hdf5 == (), '%s is not closed!' % dstore
+            for block in general.block_splitter(assets, 1000):
                 # dictionary of epsilons for the reduced assets
-                reduced_eps = {}
-                for ass in block:
-                    if eps is not None and len(eps):
-                        reduced_eps[ass.ordinal] = eps[ass.ordinal]
-                # build the riskinputs
-                if kind == 'poe':  # hcurves, shape (R, N)
-                    getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
-                    getter.num_rlzs = self.R
-                else:  # gmf
-                    getter = GmfDataGetter(dstore, [sid], self.R,
-                                           self.oqparam.imtls)
-                if dstore is self.datastore:
-                    # read the hazard data in the controller node
-                    getter.init()
-                else:
-                    # the datastore must be closed to avoid the HDF5 fork bug
-                    assert dstore.hdf5 == (), '%s is not closed!' % dstore
+                reduced_eps = {ass.ordinal: eps[ass.ordinal]
+                               for ass in block
+                               if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
 
     def execute(self):
@@ -817,11 +815,11 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        mon = self.monitor()
-        all_args = [(riskinput, self.riskmodel, self.param, mon)
-                    for riskinput in self.riskinputs]
-        res = Starmap(
-            self.core_task.__func__, all_args, mon
+        res = Starmap.apply(
+            self.core_task.__func__,
+            (self.riskinputs, self.riskmodel, self.param, self.monitor()),
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            weight=get_weight
         ).reduce(self.combine)
         return res
 
