@@ -1,3 +1,6 @@
+  [Pablo Heresi]
+  * Contributed the HM2018CorrelationModel
+
   [Michele Simionato]
   * Restored the `individual_curves` flag that for the moment is used for the
     risk curves
