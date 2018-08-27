@@ -445,16 +445,14 @@ class IterResult(object):
         self.received = []
         done, self.total = self.done_total()
         self.prev_percent = 0
-        self.progress('Sent %s of data in %s task(s)',
-                      humansize(sent.sum()), self.total)
 
     def log_percent(self):
         done, self.total = self.done_total()
-        if done == 0:  # first time
-            self.progress('Submitting %s "%s" tasks',
-                          self.total, self.name)
         percent = int(float(done) / self.total * 100)
         if percent > self.prev_percent:
+            if done == 1:  # first time
+                self.progress('Sent %s of data in %d task(s)',
+                              humansize(self.sent.sum()), self.total)
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
 
