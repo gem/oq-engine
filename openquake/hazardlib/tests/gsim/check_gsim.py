@@ -35,6 +35,7 @@ from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
 from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
+
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
@@ -300,7 +301,6 @@ def _parse_csv_line(headers, values, req_site_params):
                 imt = from_string(param.upper())
             except KeyError:  # Then it is just a period for SA
                 imt = registry['SA'](float(param), damping)
-
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
