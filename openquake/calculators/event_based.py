@@ -41,6 +41,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+RUPTURES_PER_BLOCK = 200  # decided by MS
 
 
 def weight(src):
@@ -167,7 +168,7 @@ def compute_hazard(sources_or_ruptures, src_filter,
         res.events = get_events(ruptures)
         res['ruptures'] = {}
     yield res
-    for block in block_splitter(ruptures, 1000):
+    for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
         getter = GmfGetter(
             rlzs_by_gsim, block, sitecol,
             param['oqparam'], param['min_iml'], param['samples'])
