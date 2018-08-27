@@ -23,7 +23,6 @@ from openquake.hazardlib.correlation import JB2009CorrelationModel, \
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 
-
 aaae = numpy.testing.assert_array_almost_equal
 
 
@@ -241,9 +240,8 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
                               Site(Point(2, -39.95), 1, True, 1, 1)])
 
     def test_no_uncertainty(self):
-        raise unittest.SkipTest('does not pass on travis')
-        numpy.random.seed()
-        Nsim = 10000
+        numpy.random.seed(1)
+        Nsim = 100000
         imt = SA(period=2.0, damping=5)
         stddev_intra = numpy.array([0.5, 0.6, 0.7])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
@@ -266,9 +264,8 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
         aaae(inferred_corrcoef, actual_corrcoef, 2)
 
     def test_with_uncertainty(self):
-        raise unittest.SkipTest('does not pass on travis')
-        numpy.random.seed()
-        Nsim = 50000
+        numpy.random.seed(1)
+        Nsim = 100000
         imt = SA(period=3.0, damping=5)
         stddev_intra = numpy.array([0.3, 0.6, 0.9])
         cormo = HM2018CorrelationModel(uncertainty_multiplier=1)
@@ -287,6 +284,6 @@ class HM2018ApplyCorrelationTestCase(unittest.TestCase):
         aaae(numpy.squeeze(numpy.asarray(mean)), numpy.zeros(3), 2)
         aaae(numpy.squeeze(numpy.asarray(std)), stddev_intra, 2)
         aaae(inferred_corrcoef,
-             [[1.0000000, 0.3758721, 0.5034898],
-              [0.3758721, 1.0000000, 0.3049717],
-              [0.5034898, 0.3049717, 1.0000000]], 2)
+             [[1.        , 0.3807, 0.5066],
+              [0.3807, 1.        , 0.3075],
+              [0.5066, 0.3075, 1.        ]], 2)
