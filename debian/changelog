@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the deprecation mechanism of GSIMs to use a class attribute
+    `superseded_by=NewGsimClass`
   * Solved the pickling bug in event based hazard by using generator tasks
   * Improved the distribution of the risk tasks by changing the weight
 
