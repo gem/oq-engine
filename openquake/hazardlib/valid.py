@@ -663,7 +663,7 @@ def intensity_measure_types(value):
     return imts
 
 
-def check_levels(imls, imt):
+def check_levels(imls, imt, no_damage_limit=0):
     """
     Raise a ValueError if the given levels are invalid.
 
@@ -686,6 +686,8 @@ def check_levels(imls, imt):
     """
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
+    elif imls[0] == 0 and no_damage_limit == 0:
+        raise ValueError('The imls for %s start from 0: %s' % (imt, imls))
     elif imls != sorted(imls):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
