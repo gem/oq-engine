@@ -444,8 +444,8 @@ class IterResult(object):
         self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        done, self.total = self.done_total()
         self.prev_percent = 0
+        self.log_percent()
 
     def log_percent(self):
         done, self.total = self.done_total()
@@ -456,6 +456,7 @@ class IterResult(object):
                               humansize(self.sent.sum()), self.total)
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
+        return done
 
     def __iter__(self):
         self.received = []
@@ -487,9 +488,11 @@ class IterResult(object):
         self.log_percent()  # 100%
         if self.received:
             tot = sum(self.received)
-            max_per_task = max(self.received)
-            self.progress('Received %s of data, maximum per task %s',
-                          humansize(tot), humansize(max_per_task))
+            max_per_output = max(self.received)
+            msg = ('Received %s in %d outputs from %d tasks, '
+                   'maximum per output %s')
+            self.progress(msg, humansize(tot), len(self.received),
+                          self.total, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
