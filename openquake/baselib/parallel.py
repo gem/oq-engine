@@ -444,8 +444,8 @@ class IterResult(object):
         self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        done, self.total = self.done_total()
         self.prev_percent = 0
+        self.log_percent()
 
     def log_percent(self):
         done, self.total = self.done_total()
@@ -660,7 +660,7 @@ class Starmap(object):
         """
         :returns: the number of tasks done vs the total
         """
-        return self.total - self.todo + 1, self.total
+        return self.total - self.todo, self.total
 
     def _genargs(self, pickle=True):
         """
