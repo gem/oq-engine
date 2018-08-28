@@ -246,8 +246,7 @@ def get_fragility_model(node, fname):
     for ff in ffs:
         imt_taxo = ff.imls['imt'], ff['id']
         array, attrs = ffconvert(fname, limit_states, ff)
-        ffl = scientific.FragilityFunctionList(array)
-        vars(ffl).update(attrs)
+        ffl = scientific.FragilityFunctionList(array, **attrs)
         fmodel[imt_taxo] = ffl
     return fmodel
 
