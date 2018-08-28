@@ -489,9 +489,10 @@ class IterResult(object):
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
-            self.progress(
-                'Received %s of data in %d outputs, maximum per output %s',
-                humansize(tot), len(self.received), humansize(max_per_output))
+            msg = ('Received %s in %d outputs from %d tasks, '
+                   'maximum per output %s')
+            self.progress(msg, humansize(tot), len(self.received),
+                          self.total, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
