@@ -397,6 +397,7 @@ def safely_call(func, args, monitor=dummy_mon):
                 zsocket.send(err)
             if res.tb_str == 'TASK_ENDED':
                 break
+            mon.duration = 0
     return zsocket.num_sent
 
 
@@ -455,6 +456,7 @@ class IterResult(object):
                               humansize(self.sent.sum()), self.total)
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
+        return done
 
     def __iter__(self):
         self.received = []
@@ -486,9 +488,10 @@ class IterResult(object):
         self.log_percent()  # 100%
         if self.received:
             tot = sum(self.received)
-            max_per_task = max(self.received)
-            self.progress('Received %s of data, maximum per task %s',
-                          humansize(tot), humansize(max_per_task))
+            max_per_output = max(self.received)
+            self.progress(
+                'Received %s of data in %d outputs, maximum per output %s',
+                humansize(tot), len(self.received), humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
@@ -657,7 +660,7 @@ class Starmap(object):
         """
         :returns: the number of tasks done vs the total
         """
-        return self.total - self.todo, self.total
+        return self.total - self.todo + 1, self.total
 
     def _genargs(self, pickle=True):
         """
