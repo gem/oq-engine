@@ -23,9 +23,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.scalerel.point import PointMSR
-
-pointMSR = PointMSR()
+from openquake.hazardlib.geo.surface import PlanarSurface
 
 
 def get_distances(rupture, mesh, param):
@@ -81,9 +79,11 @@ class ContextMaker(object):
 
     def __init__(self, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
+        param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        param = param or {}
+        self.floating_distance = param.get('floating_distance')
+        self.spinning_distance = param.get('spinning_distance')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -185,9 +185,14 @@ class ContextMaker(object):
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
-            if param == 'repi' and self.reqv:
-                distances = self.reqv.get(distances, rupture.mag)
             setattr(dctx, param, distances)
+        if self.reqv and isinstance(rupture.surface, PlanarSurface):
+            reqv = self.reqv.get(dctx.repi, rupture.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                dctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
+                dctx.rrup = reqv_rup
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
@@ -208,8 +213,16 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
-            if self.reqv and hasattr(src, 'location'):  # point source
-                src.magnitude_scaling_relationship = pointMSR
+            if hasattr(src, 'location'):
+                dist = src.location.distance_to_mesh(sites).min()
+                if (self.floating_distance is not None and
+                        dist > self.floating_distance):
+                    # disable floating
+                    src.hypocenter_distribution.reduce()
+                if (self.spinning_distance is not None and
+                        dist > self.spinning_distance):
+                    # disable spinning
+                    src.nodal_plane_distribution.reduce()
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen

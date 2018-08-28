@@ -138,7 +138,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
             ires = parallel.Starmap(
-                self.core_task.__func__, iterargs).submit_all()
+                self.core_task.__func__, iterargs, self.monitor()
+            ).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
         if not self.nsites:
@@ -158,7 +159,9 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
         param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
-                     filter_distance=oq.filter_distance, reqv=oq.get_reqv())
+                     filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
+                     floating_distance=oq.floating_distance,
+                     spinning_distance=oq.spinning_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
@@ -204,7 +207,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
-        Works by side effect by saving hcurves and statistics on the
+        Works by side effect by saving statistical hcurves on the
         datastore; the accumulator stores the number of bytes saved.
 
         :param acc: dictionary kind -> nbytes
@@ -214,10 +217,10 @@ class ClassicalCalculator(base.HazardCalculator):
             for kind in pmap_by_kind:
                 pmap = pmap_by_kind[kind]
                 if pmap:
-                    key = 'hcurves/%s/array' % kind
+                    key = 'hcurves/%s' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
-                        dset[sid] = pmap[sid].array
+                        dset[sid] = pmap[sid].array[:, 0]
                     # in the datastore we save 4 byte floats, thus we
                     # divide the memory consumption by 2: pmap.nbytes / 2
                     acc += {kind: pmap.nbytes // 2}
@@ -264,13 +267,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
+        self.datastore.open('r+')
+        self.save_hmaps()
 
     def calc_stats(self, parent):
         oq = self.oqparam
-        num_rlzs = self.csm_info.get_num_rlzs()
-        if num_rlzs == 1:
-            return {}
-        elif not oq.hazard_stats():
+        if not oq.hazard_stats():
             if oq.hazard_maps or oq.uniform_hazard_spectra:
                 logging.warn('mean_hazard_curves was false in the job.ini, '
                              'so no outputs were generated.\nYou can compute '
@@ -280,25 +282,19 @@ class ClassicalCalculator(base.HazardCalculator):
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        pyclass = 'openquake.hazardlib.probability_map.ProbabilityMap'
-        all_sids = self.sitecol.complete.sids
         nbytes = N * L * 4  # bytes per realization (32 bit floats)
         totbytes = 0
-        if num_rlzs > 1:
-            for name, stat in oq.hazard_stats():
-                self.datastore.create_dset(
-                    'hcurves/%s/array' % name, F32, (N, L, 1))
-                self.datastore['hcurves/%s/sids' % name] = all_sids
-                self.datastore.set_attrs(
-                    'hcurves/%s' % name, __pyclass__=pyclass)
-                totbytes += nbytes
+        for name, stat in oq.hazard_stats():
+            self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
+            self.datastore.set_attrs('hcurves/%s' % name)
+            totbytes += nbytes
         if 'hcurves' in self.datastore:
             self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
-        # self.datastore.hdf5.swmr = True  # start reading
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
             ires = parallel.Starmap(
-                build_hcurves_and_stats, self.gen_getters(parent)
+                build_hcurves_and_stats, self.gen_getters(parent),
+                self.monitor()
             ).submit_all()
         for kind, nbytes in ires.reduce(self.save_hcurves).items():
             self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes

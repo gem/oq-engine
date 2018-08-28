@@ -1200,11 +1200,11 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             yield item
 
 
-class RepiEquivalent(object):
+class RjbEquivalent(object):
     """
-    A class to compute the equivalent epicentral distance. Usage:
+    A class to compute the equivalent Rjb distance. Usage:
 
-    >> reqv = RepiEquivalent('lookup.hdf5')
+    >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
     def __init__(self, hdf5path):

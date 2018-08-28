@@ -123,7 +123,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
 
-    def monitor(self, operation, **kw):
+    def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
         """
@@ -331,15 +331,15 @@ class HazardCalculator(BaseCalculator):
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None):
             logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.filter(src_filter, mon)
+            csm = self.csm.pfilter(src_filter, oq.concurrent_tasks, mon)
         elif oq.prefilter_sources == 'rtree':
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.filter(prefilter, mon)
+            csm = self.csm.pfilter(prefilter, oq.concurrent_tasks, mon)
         else:  # prefilter_sources='no'
             logging.info('Not prefiltering the sources')
-            csm = self.csm.filter(SourceFilter(None, {}), mon)
+            csm = self.csm
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 
@@ -360,7 +360,10 @@ class HazardCalculator(BaseCalculator):
             self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
         logging.warn('With a parent calculation reading the hazard '
-                     'would be much faster')
+                     'would be faster')
+
+    def check_overflow(self):
+        """Overridden in event based"""
 
     def read_inputs(self, split_sources=True):
         """
@@ -368,15 +371,18 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self._read_risk_data()
+        self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
-            with self.monitor('reading composite source model', autoflush=1):
-                self.csm = readinput.get_composite_source_model(oq)
-                if oq.disagg_by_src:
-                    self.csm = self.csm.grp_by_src()
+            self.csm = readinput.get_composite_source_model(oq, self.monitor())
+            if oq.disagg_by_src:
+                self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 if split_sources:
                     logging.info('Splitting sources')
                     self.csm.split_all(oq.minimum_magnitude)
+                else:  # do not split sources, used in `oq info --report`
+                    for src_group in self.csm.src_groups:
+                        self.csm.add_infos(src_group)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
@@ -593,7 +599,8 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol'):
             self.datastore['sitecol'] = self.sitecol.complete
-        self.param = {}  # used in the risk calculators
+        # used in the risk calculators
+        self.param = dict(individual_curves=oq.individual_curves)
 
     def count_eff_ruptures(self, result_dict, src_group_id):
         """
@@ -647,8 +654,53 @@ class HazardCalculator(BaseCalculator):
                 has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
+    def save_hmaps(self):
+        """
+        Save hazard maps generated from the hazard curves
+        """
+        oq = self.oqparam
+        if oq.poes:
+            mon = self.monitor('computing hazard maps')
+            logging.info('Computing hazard maps for PoEs=%s', oq.poes)
+            with mon:
+                N = len(self.sitecol.complete)
+                ct = oq.concurrent_tasks or 1
+                if 'hcurves' in self.datastore:
+                    kinds = list(self.datastore['hcurves'])
+                    hmaps_dt = numpy.dtype(
+                        [('%s-%s' % (imt, poe), F32)
+                         for imt in oq.imtls for poe in oq.poes])
+                    for kind in kinds:
+                        self.datastore.create_dset(
+                            'hmaps/' + kind, hmaps_dt, (N,), fillvalue=None)
+                    allargs = []
+                    for slc in general.split_in_slices(N, ct):
+                        hcurves_by_kind = {
+                            kind: self.datastore['hcurves/' + kind][slc]
+                            for kind in kinds}
+                        allargs.append((hcurves_by_kind, slc,
+                                        oq.imtls, oq.poes, mon))
+                    for dic, slc in Starmap(build_hmaps, allargs, mon):
+                        for kind, hmaps in dic.items():
+                            self.datastore['hmaps/' + kind][slc] = hmaps
+                else:  # single realization
+                    pg = PmapGetter(self.datastore, self.rlzs_assoc)
+                    self.datastore['hmaps/mean'] = calc.make_hmap_array(
+                        pg.get_mean(), oq.imtls, oq.poes, N)
+
     def post_process(self):
         """For compatibility with the engine"""
+
+
+def build_hmaps(hcurves_by_kind, slice_, imtls, poes, monitor):
+    """
+    Build hazard maps from a slice of hazard curves.
+    :returns: a pair ({kind: hmaps}, slice)
+    """
+    dic = {}
+    for kind, hcurves in hcurves_by_kind.items():
+        dic[kind] = calc.make_hmap_array(hcurves, imtls, poes, len(hcurves))
+    return dic, slice_
 
 
 class RiskCalculator(HazardCalculator):
@@ -730,43 +782,17 @@ class RiskCalculator(HazardCalculator):
         return riskinputs
 
     def _gen_riskinputs(self, kind, eps, num_events):
-        num_tasks = self.oqparam.concurrent_tasks or 1
         assets_by_site = self.assetcol.assets_by_site()
-        if kind == 'poe':
-            indices = None
-        else:
-            indices = self.datastore['gmf_data/indices'].value
         dstore = self.can_read_parent() or self.datastore
-        sid_weight = []
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            elif indices is None:
-                weight = len(assets)
-            else:
-                idx = indices[sid]
-                if indices.dtype.names:  # engine < 3.2
-                    num_gmfs = sum(stop - start for start, stop in idx)
-                else:  # engine >= 3.2
-                    num_gmfs = (idx[1] - idx[0]).sum()
-                weight = len(assets) * (num_gmfs or 1)
-            sid_weight.append((sid, weight))
-        for block in general.split_in_blocks(
-                sid_weight, num_tasks, weight=operator.itemgetter(1)):
-            sids = numpy.array([sid for sid, _weight in block])
-            reduced_assets = assets_by_site[sids]
-            # dictionary of epsilons for the reduced assets
-            reduced_eps = {}
-            for assets in reduced_assets:
-                for ass in assets:
-                    if eps is not None and len(eps):
-                        reduced_eps[ass.ordinal] = eps[ass.ordinal]
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, self.rlzs_assoc, sids)
+                getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, sids, self.R,
+                getter = GmfDataGetter(dstore, [sid], self.R,
                                        self.oqparam.imtls)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
@@ -774,9 +800,12 @@ class RiskCalculator(HazardCalculator):
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            ri = riskinput.RiskInput(getter, reduced_assets, reduced_eps)
-            ri.weight = block.weight
-            yield ri
+            for block in general.block_splitter(assets, 1000):
+                # dictionary of epsilons for the reduced assets
+                reduced_eps = {ass.ordinal: eps[ass.ordinal]
+                               for ass in block
+                               if eps is not None and len(eps)}
+                yield riskinput.RiskInput(getter, [block], reduced_eps)
 
     def execute(self):
         """
@@ -786,10 +815,12 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        mon = self.monitor('risk')
-        all_args = [(riskinput, self.riskmodel, self.param, mon)
-                    for riskinput in self.riskinputs]
-        res = Starmap(self.core_task.__func__, all_args).reduce(self.combine)
+        res = Starmap.apply(
+            self.core_task.__func__,
+            (self.riskinputs, self.riskmodel, self.param, self.monitor()),
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            weight=get_weight
+        ).reduce(self.combine)
         return res
 
     def combine(self, acc, res):
