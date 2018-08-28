@@ -397,6 +397,7 @@ def safely_call(func, args, monitor=dummy_mon):
                 zsocket.send(err)
             if res.tb_str == 'TASK_ENDED':
                 break
+            mon.duration = 0
     return zsocket.num_sent
 
 
