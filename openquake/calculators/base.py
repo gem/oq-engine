@@ -365,7 +365,7 @@ class HazardCalculator(BaseCalculator):
     def check_overflow(self):
         """Overridden in event based"""
 
-    def read_inputs(self, split_sources=True):
+    def read_inputs(self):
         """
         Read risk data and sources if any
         """
@@ -377,12 +377,8 @@ class HazardCalculator(BaseCalculator):
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                if split_sources:
-                    logging.info('Splitting sources')
-                    self.csm.split_all(oq.minimum_magnitude)
-                else:  # do not split sources, used in `oq info --report`
-                    for src_group in self.csm.src_groups:
-                        self.csm.add_infos(src_group)
+                logging.info('Splitting sources')
+                self.csm.split_all(oq.minimum_magnitude)
             if self.is_stochastic:
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
