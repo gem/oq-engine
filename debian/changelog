@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Used the rupture seed as rupture ID in event based calculations
   * Changed the deprecation mechanism of GSIMs to use a class attribute
     `superseded_by=NewGsimClass`
   * Solved the pickling bug in event based hazard by using generator tasks
