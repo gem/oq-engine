@@ -794,6 +794,7 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
         new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
+        new.infos = self.infos
         return new
 
     def get_weight(self, weight):
@@ -1001,3 +1002,7 @@ class SourceInfo(object):
         self.split_time = split_time
         self.num_split = num_split
         self.events = 0  # set in event based
+
+    def __repr__(self):
+        return '<%s>' % ' '.join('%s=%s' % (name, getattr(self, name))
+                                 for name in self.dt.names)
