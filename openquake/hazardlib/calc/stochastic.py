@@ -120,7 +120,7 @@ def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if not param:
-        param = dict(ses_per_logic_tree_path=1, samples=1, seed=42,
+        param = dict(ses_per_logic_tree_path=1, samples=1,
                      filter_distance=1000)
     if getattr(group, 'src_interdep', None) == 'mutex':
         prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
@@ -189,7 +189,7 @@ def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
     yield pairs (rupture, <list of associated EBRuptures>)
     """
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        rup.serial = rup.seed + 1
+        rup.serial = rup.seed
         if cmaker.maximum_distance:
             with rup_mon:
                 try:
