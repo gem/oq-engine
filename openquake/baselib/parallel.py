@@ -461,7 +461,7 @@ class IterResult(object):
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
         elif res and res.count:
-            self.progress('Got output %d from task #%d',
+            self.progress('Got output #%d from task #%d',
                           res.count, res.mon.task_no)
         return done
 

@@ -220,7 +220,6 @@ class EventBasedCalculator(base.HazardCalculator):
             param['samples'] = sm.samples
             for sg in sm.src_groups:
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
-                self.csm.add_infos(sg.sources)
                 if sg.src_interdep == 'mutex':  # do not split
                     yield sg, self.src_filter, rlzs_by_gsim, param, monitor
                     num_tasks += 1
