@@ -387,7 +387,7 @@ class HazardCalculator(BaseCalculator):
                 # initialize the rupture serial numbers before filtering; in
                 # this way the serials are independent from the site collection
                 # this is ultra-fast
-                self.csm.init_serials()
+                self.csm.init_serials(oq.ses_seed)
             f, s = self.csm.get_floating_spinning_factors()
             if f != 1:
                 logging.info('Rupture floating factor=%s', f)
