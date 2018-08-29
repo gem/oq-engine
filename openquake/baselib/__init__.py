@@ -101,7 +101,7 @@ def boolean(flag):
 
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean)
+            multi_user=boolean, multi_node=boolean)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
@@ -109,13 +109,9 @@ if config.directory.custom_tmp:
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
-platform = config.distribution.get('platform', 'single_machine')
-if platform not in ('single_machine', 'cluster_with_shared_dir',
-                    'cluster_without_shared_dir'):
-    raise ValueError('Invalid platform=%s in %s' % (platform, config.found))
+multi_node = config.distribution.get('multi_node', False)
 
-if (config.distribution.oq_distribute == 'celery' and not
-        platform.startswith('cluster')):
+if config.distribution.oq_distribute == 'celery' and not multi_node:
     sys.stderr.write(
         'oq_distribute is celery but you are not in a cluster? '
-        'probably you forgot to change the platform in openquake.cfg\n')
+        'probably you forgot to set `multi_node=true` in openquake.cfg\n')
