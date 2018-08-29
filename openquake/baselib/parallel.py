@@ -460,7 +460,7 @@ class IterResult(object):
         elif percent > self.prev_percent:
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
-        elif res and res.count:
+        if res and res.count:
             logging.debug('Got output #%d from task #%d',
                           res.count, res.mon.task_no)
         return done
