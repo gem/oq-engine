@@ -306,10 +306,11 @@ class Result(object):
     :param mon: Monitor instance
     :param tb_str: traceback string (empty if there was no exception)
     """
-    def __init__(self, val, mon, tb_str=''):
+    def __init__(self, val, mon, tb_str='', count=0):
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
+        self.count = count
 
     def get(self):
         """
@@ -326,7 +327,7 @@ class Result(object):
         return val
 
     @classmethod
-    def new(cls, func, args, mon, splice=False):
+    def new(cls, func, args, mon, splice=False, count=0):
         """
         :returns: a new Result instance
         """
@@ -337,9 +338,10 @@ class Result(object):
             res = Result(None, mon, 'TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)),
+                         count=count)
         else:
-            res = Result(val, mon)
+            res = Result(val, mon, count=count)
         res.splice = splice
         return res
 
@@ -387,13 +389,15 @@ def safely_call(func, args, monitor=dummy_mon):
             def gfunc(*args):
                 yield func(*args)
         gobj = gfunc(*args)
-        while True:
-            res = Result.new(next, (gobj,), mon)  # StopIteration -> TASK_ENDED
+        for count in itertools.count():
+            res = Result.new(next, (gobj,), mon, count=count)
+            # StopIteration -> TASK_ENDED
             try:
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
+                             count=count)
                 zsocket.send(err)
             if res.tb_str == 'TASK_ENDED':
                 break
@@ -444,18 +448,21 @@ class IterResult(object):
         self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        self.prev_percent = 0
         self.log_percent()
 
-    def log_percent(self):
+    def log_percent(self, res=None):
         done, self.total = self.done_total()
         percent = int(float(done) / self.total * 100)
-        if percent > self.prev_percent:
-            if done == 1:  # first time
-                self.progress('Sent %s of data in %d task(s)',
-                              humansize(self.sent.sum()), self.total)
+        if not hasattr(self, 'prev_percent'):  # first time
+            self.prev_percent = 0
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent.sum()), self.total)
+        elif percent > self.prev_percent:
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
+        if res and res.count:
+            logging.debug('Got output #%d from task #%d',
+                          res.count, res.mon.task_no)
         return done
 
     def __iter__(self):
@@ -477,7 +484,7 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            self.log_percent()
+            self.log_percent(result)
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_info(result.mon, mem_gb)
             if result.splice:
