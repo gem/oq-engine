@@ -36,7 +36,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
         aae(group.srcs_weights,
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
-        rup_serial = numpy.arange(group.tot_ruptures, dtype=numpy.uint32)
+        seed = 42
+        rup_serial = numpy.arange(seed, seed + group.tot_ruptures,
+                                  dtype=numpy.uint32)
         start = 0
         for i, src in enumerate(group):
             src.id = i
@@ -46,7 +48,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         lonlat = 135.68, 35.68
         site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
-        param = dict(ses_per_logic_tree_path=10, seed=42,
+        param = dict(ses_per_logic_tree_path=10,
                      filter_distance='rjb', samples=1)
         gsims = [SiMidorikawa1999SInter()]
         dic = sample_ruptures(group, s_filter, gsims, param)
