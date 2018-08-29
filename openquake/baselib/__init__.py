@@ -99,6 +99,7 @@ def boolean(flag):
         return False
     raise ValueError('Unknown flag %r' % s)
 
+
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=boolean)
 
@@ -107,3 +108,11 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
+
+
+if config.distribution.platform not in (
+        'single_machine',
+        'cluster_with_shared_dir',
+        'cluster_without_shared_dir'):
+    raise ValueError('Invalid platform=%s in %s' % (
+        config.distribution.platform, config.found))
