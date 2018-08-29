@@ -109,10 +109,15 @@ if config.directory.custom_tmp:
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
-
 if config.distribution.platform not in (
         'single_machine',
         'cluster_with_shared_dir',
         'cluster_without_shared_dir'):
     raise ValueError('Invalid platform=%s in %s' % (
         config.distribution.platform, config.found))
+
+if (config.distribution.oq_distribute == 'celery' and not
+        config.distribution.platform.startswith('cluster')):
+    sys.stderr.write(
+        'oq_distribute is celery but you are not in a cluster? '
+        'probably you forgot to set the platform in openquake.cfg')
