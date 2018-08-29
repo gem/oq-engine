@@ -330,7 +330,7 @@ class HazardCalculator(BaseCalculator):
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
         if (oq.prefilter_sources == 'numpy' or rtree is None or
-                config.distribute.multi_node):
+                config.distribution.multi_node):
             logging.info('Prefiltering the sources with numpy')
             csm = self.csm.pfilter(src_filter, oq.concurrent_tasks, mon)
         elif oq.prefilter_sources == 'rtree':
