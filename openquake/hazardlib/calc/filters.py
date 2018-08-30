@@ -316,7 +316,8 @@ class SourceFilter(object):
             prefilter, (sources, self, param, monitor),
             concurrent_tasks=param['concurrent_tasks'],
             key=operator.attrgetter('src_group_id'),
-            progress=logging.debug if len(sources) < 1000 else logging.info
+            progress=logging.info if 'gsims_by_trt' in param else logging.debug
+            # log the prefiltering phase in an event based calculation
         ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
