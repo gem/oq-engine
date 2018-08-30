@@ -169,11 +169,12 @@ def compute_hazard(sources_or_ruptures, src_filter,
         res['ruptures'] = {}
     #yield res
     #for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
-    getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol,
-        param['oqparam'], param['min_iml'], param['samples'])
-    #res = AccumDict(ruptures={})
-    res.update(getter.compute_gmfs_curves(monitor))
+    if ruptures:
+        getter = GmfGetter(
+            rlzs_by_gsim, ruptures, sitecol,
+            param['oqparam'], param['min_iml'], param['samples'])
+        #res = AccumDict(ruptures={})
+        res.update(getter.compute_gmfs_curves(monitor))
     #yield res
     return res
 
