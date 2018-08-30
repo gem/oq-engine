@@ -168,13 +168,13 @@ def compute_hazard(sources_or_ruptures, src_filter,
         res.events = get_events(ruptures)
         res['ruptures'] = {}
     #yield res
-    for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
-        getter = GmfGetter(
-            rlzs_by_gsim, block, sitecol,
-            param['oqparam'], param['min_iml'], param['samples'])
-        #res = AccumDict(ruptures={})
-        res.update(getter.compute_gmfs_curves(monitor))
-        #yield res
+    #for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
+    getter = GmfGetter(
+        rlzs_by_gsim, ruptures, sitecol,
+        param['oqparam'], param['min_iml'], param['samples'])
+    #res = AccumDict(ruptures={})
+    res.update(getter.compute_gmfs_curves(monitor))
+    #yield res
     return res
 
 
@@ -197,7 +197,6 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq, min_iml=self.get_min_iml(oq),
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
-            maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
