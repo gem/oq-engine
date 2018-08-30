@@ -222,10 +222,6 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if os.environ.get('OQ_DISTRIBUTE') == 'no':
-            self.distribute = 'no'
-        else:
-            self.distribute = 'processpool'
 
     @property
     def sitecol(self):
@@ -307,7 +303,7 @@ class SourceFilter(object):
         """
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, monitor),
-            concurrent_tasks=concurrent_tasks, distribute=self.distribute,
+            concurrent_tasks=concurrent_tasks,
             progress=logging.debug).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
