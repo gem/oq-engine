@@ -1,3 +1,7 @@
+  [Robin Gee]
+  * Raised the source ID length limit in the validation from 60 to 75 characters
+    to allow sources with longer IDs
+
   [Michele Simionato]
   * Introduced a `multi_node` flag in `openquake.cfg` and used it to
     fully parallelize the prefiltering in a cluster
