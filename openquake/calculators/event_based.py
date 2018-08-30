@@ -157,7 +157,7 @@ def compute_hazard(sources_or_ruptures, src_filter,
             dic = sample_ruptures(
                 sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
             ruptures = dic['eb_ruptures']
-            res.num_events = dic['num_events']
+            #res.num_events = dic['num_events']
             res.calc_times = dic['calc_times']
             res.eff_ruptures = {grp_id: dic['num_ruptures']}
             res['ruptures'] = {grp_id: ruptures}
