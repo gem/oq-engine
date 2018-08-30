@@ -24,7 +24,6 @@ from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_slices, humansize, get_array)
-from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.risklib.riskinput import str2rsi
@@ -46,7 +45,7 @@ RUPTURES_PER_BLOCK = 200  # decided by MS
 
 def weight(src):
     # heuristic weight
-    return src.num_ruptures * src.ndists
+    return len(src.eb_ruptures) * src.ndists
 
 
 def get_events(ebruptures):
