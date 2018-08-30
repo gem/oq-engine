@@ -167,14 +167,15 @@ def compute_hazard(sources_or_ruptures, src_filter,
     if param['oqparam'].save_ruptures is False:
         res.events = get_events(ruptures)
         res['ruptures'] = {}
-    yield res
+    #yield res
     for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
         getter = GmfGetter(
             rlzs_by_gsim, block, sitecol,
             param['oqparam'], param['min_iml'], param['samples'])
-        res = AccumDict(ruptures={})
+        #res = AccumDict(ruptures={})
         res.update(getter.compute_gmfs_curves(monitor))
-        yield res
+        #yield res
+    return res
 
 
 @base.calculators.add('event_based')
