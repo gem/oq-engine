@@ -107,7 +107,6 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     """
     vf = _construct_surface(VOLCANIC_FRONT_LONS, VOLCANIC_FRONT_LATS, 0., 10.)
     sites = Mesh(lons, lats, None)
-
     return vf.get_rx_distance(sites)
 
 
@@ -119,30 +118,31 @@ def _apply_subduction_trench_correction(mean, x_tr, H, rrup):
     """
     V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
     V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
-
     corr = V2
     if H > 30:
         corr *= V1
-
     return np.log(np.exp(mean) * corr)
 
 
-def _apply_volcanic_front_correction(mean, x_vf, H):
+def _apply_volcanic_front_correction(mean, x_vf, H, imt):
     """
     Implement equation for volcanic front correction as described in equation
     3.5.2.-2, page 3-149 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
     V1 = np.zeros_like(x_vf)
-
-    idx = x_vf <= 75
-    V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
-
-    idx = x_vf > 75
-    V1[idx] = 3.21e-3 * (H - 30)
-
-    V1 = 10 ** V1
-
+    if imt.name == 'PGV':
+        idx = x_vf <= 75
+        V1[idx] = 4.28e-5 * x_vf[idx] * (H - 30)
+        idx = x_vf > 75
+        V1[idx] = 3.21e-3 * (H - 30)
+        V1 = 10 ** V1
+    else:
+        idx = x_vf <= 75
+        V1[idx] = 7.06e-5 * x_vf[idx] * (H - 30)
+        idx = x_vf > 75
+        V1[idx] = 5.30e-3 * (H - 30)
+        V1 = 10 ** V1
     return np.log(np.exp(mean) * V1)
 
 
@@ -198,9 +198,7 @@ class SiMidorikawa1999Asc(GMPE):
         """
         mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
         stddevs = self._get_stddevs(stddev_types, dists.rrup)
-
         mean = self._apply_amplification_factor(mean)
-
         return mean, stddevs
 
     def _get_mean(self, imt, mag, hypo_depth, rrup, d):
@@ -210,15 +208,24 @@ class SiMidorikawa1999Asc(GMPE):
         # clip magnitude at 8.3 as per note at page 3-36 in table Table 3.3.2-6
         # in "Technical Reports on National Seismic Hazard Maps for Japan"
         mag = min(mag, 8.3)
-
-        mean = (
-            0.58 * mag +
-            0.0038 * hypo_depth +
-            d -
-            1.29 -
-            np.log10(rrup + 0.0028 * 10 ** (0.5 * mag)) -
-            0.002 * rrup
-        )
+        if imt.name == 'PGV':
+            mean = (
+                0.58 * mag +
+                0.0038 * hypo_depth +
+                d -
+                1.29 -
+                np.log10(rrup + 0.0028 * 10 ** (0.5 * mag)) -
+                0.002 * rrup
+            )
+        else:
+            mean = (
+                0.50 * mag +
+                0.0043 * hypo_depth +
+                d +
+                0.61 -
+                np.log10(rrup + 0.0055 * 10 ** (0.5 * mag)) -
+                0.003 * rrup
+            )
 
         return mean
 
@@ -348,7 +355,8 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
             sites, rup, dists, imt, stddev_types)
 
         x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
+        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth,
+                                                imt)
 
         return mean, stddevs
 
@@ -428,6 +436,7 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
             sites, rup, dists, imt, stddev_types)
 
         x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
+        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth,
+                                                imt)
 
         return mean, stddevs
