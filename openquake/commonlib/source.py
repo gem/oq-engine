@@ -528,7 +528,7 @@ class CompositionInfo(object):
                     name=get_field(data, 'name', ''),
                     eff_ruptures=data['effrup'],
                     tot_ruptures=get_field(data, 'totrup', 0))
-                for data in tdata if data['effrup']]
+                for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             sm = logictree.LtSourceModel(
