@@ -329,15 +329,16 @@ class HazardCalculator(BaseCalculator):
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
+        param = dict(concurrent_tasks=oq.concurrent_tasks)
         if (oq.prefilter_sources == 'numpy' or rtree is None or
                 config.distribution.multi_node):
             logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.pfilter(src_filter, oq.concurrent_tasks, mon)
+            csm = self.csm.pfilter(src_filter, param, mon)
         elif oq.prefilter_sources == 'rtree':
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.pfilter(prefilter, oq.concurrent_tasks, mon)
+            csm = self.csm.pfilter(prefilter, param, mon)
         else:  # prefilter_sources='no'
             logging.info('Not prefiltering the sources')
             csm = self.csm
