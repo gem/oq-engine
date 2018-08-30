@@ -333,6 +333,7 @@ class HazardCalculator(BaseCalculator):
         if 'EventBased' in self.__class__.__name__:
             param['filter_distance'] = oq.filter_distance
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['gsims_by_trt'] = self.csm.gsim_lt.values
         if (oq.prefilter_sources == 'numpy' or rtree is None or
                 config.distribution.multi_node):
             logging.info('Prefiltering the sources with numpy')
