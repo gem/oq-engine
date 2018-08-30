@@ -316,6 +316,7 @@ class SourceFilter(object):
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, param, monitor),
             concurrent_tasks=param['concurrent_tasks'],
+            weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'),
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
             # log the prefiltering phase in an event based calculation
