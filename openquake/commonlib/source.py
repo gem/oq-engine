@@ -859,9 +859,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
-        for src_group in self.src_groups:
-            if kind in ('all', src_group.src_interdep):
-                sources.extend(src_group)
+        for sm in self.source_models:
+            for src_group in sm.src_groups:
+                if kind in ('all', src_group.src_interdep):
+                    for src in src_group:
+                        if sm.samples > 1:
+                            src.samples = sm.samples
+                        sources.extend(src)
         if kind == 'all' and not sources:
             raise RuntimeError('All sources were filtered away!')
         return sources
