@@ -26,12 +26,15 @@ Note: you have to **restart every celery node** after a configuration change.
 
 ### Enable Celery
 
-In all the nodes, the following file should be modified to enable the *Celery* support:
+In all the nodes, the following file should be modified to enable *multi node* and *Celery* support:
 
 `/etc/openquake/openquake.cfg:`
 
 ```
 [distribution]
+# set multi_node = true if are on a cluster
+multi_node = true
+
 # enable celery only if you have a cluster
 oq_distribute = celery
 ```
