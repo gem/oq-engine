@@ -44,6 +44,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             src.id = i
             nr = src.num_ruptures
             src.serial = rup_serial[start:start + nr]
+            src.mutex_weight = group.srcs_weights[i]
             start += nr
         lonlat = 135.68, 35.68
         site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)

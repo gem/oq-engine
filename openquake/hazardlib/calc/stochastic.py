@@ -108,11 +108,11 @@ def set_eids(ebruptures):
     return numpy.array(all_eids)
 
 
-def sample_ruptures(group, src_filter=source_site_noop_filter,
+def sample_ruptures(sources, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
-    :param group:
-        a SourceGroup or a sequence of sources of the same group
+    :param sources:
+        a sequence of sources of the same group
     :param src_filter:
         a source site filter
     :param gsims:
@@ -127,10 +127,6 @@ def sample_ruptures(group, src_filter=source_site_noop_filter,
     """
     if not param:
         param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
-    if getattr(group, 'src_interdep', None) == 'mutex':
-        prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
-    else:
-        prob = {src: 1 for src in group}
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('making contexts', measuremem=False)
@@ -138,12 +134,13 @@ def sample_ruptures(group, src_filter=source_site_noop_filter,
     num_ruptures = 0
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
-    for src, s_sites in src_filter(group):
+    for src, s_sites in src_filter(sources):
+        mutex_weight = getattr(src, 'mutex_weight', 1)
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
         num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], samples)
+            src, mutex_weight, param['ses_per_logic_tree_path'], samples)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
