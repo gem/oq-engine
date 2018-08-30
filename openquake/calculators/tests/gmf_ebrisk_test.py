@@ -111,6 +111,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
                       concurrent_tasks='0')  # to avoid fork bug
         calc2 = self.calc.datastore  # two files event_based_risk
 
+        check_csm_info(calc0, calc1)  # the csm_info arrays must be equal
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
         if sys.platform == 'darwin':
