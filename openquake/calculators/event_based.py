@@ -162,10 +162,10 @@ def compute_hazard(sources_or_ruptures, src_filter,
             res.eff_ruptures = {grp_id: dic['num_ruptures']}
             res['ruptures'] = {grp_id: ruptures}
             sitecol = src_filter.sitecol
-    if param['oqparam'].save_ruptures is False:
-        res.events = get_events(ruptures)
-        res['ruptures'] = {}
     if ruptures:
+        if param['oqparam'].save_ruptures is False:
+            res['ruptures'] = {}
+            res.events = get_events(ruptures)
         getter = GmfGetter(
             rlzs_by_gsim, ruptures, sitecol,
             param['oqparam'], param['min_iml'], param['samples'])
