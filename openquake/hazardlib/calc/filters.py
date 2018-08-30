@@ -315,6 +315,7 @@ class SourceFilter(object):
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, param, monitor),
             concurrent_tasks=param['concurrent_tasks'],
+            key=operator.attrgetter('src_group_id'),
             progress=logging.debug if len(sources) < 1000 else logging.info
         ).reduce()
         # avoid task ordering issues
