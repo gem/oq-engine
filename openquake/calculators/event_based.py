@@ -145,7 +145,7 @@ def compute_hazard(sources_or_ruptures, src_filter,
     """
     Compute events, ruptures, gmfs and hazard curves
     """
-    res = AccumDict()
+    res = AccumDict(ruptures={})
     with monitor('building ruptures', measuremem=True):
         if isinstance(sources_or_ruptures, RuptureGetter):
             grp_id = sources_or_ruptures.grp_id
@@ -157,24 +157,20 @@ def compute_hazard(sources_or_ruptures, src_filter,
             dic = sample_ruptures(
                 sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
             ruptures = dic['eb_ruptures']
-            #res.num_events = dic['num_events']
             res.calc_times = dic['calc_times']
             res.eff_ruptures = {grp_id: dic['num_ruptures']}
             res['ruptures'] = {grp_id: ruptures}
             res.num_ruptures = len(ruptures)
             sitecol = src_filter.sitecol
     res['num_ruptures'] = len(ruptures)
-    if param['oqparam'].save_ruptures is False:
-        res.events = get_events(ruptures)
-        res['ruptures'] = {}
-    #yield res
-    #for block in block_splitter(ruptures, RUPTURES_PER_BLOCK):
-    getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol,
-        param['oqparam'], param['min_iml'], param['samples'])
-    #res = AccumDict(ruptures={})
-    res.update(getter.compute_gmfs_curves(monitor))
-    #yield res
+    if ruptures:
+        if param['oqparam'].save_ruptures is False:
+            res.events = get_events(ruptures)
+            res['ruptures'] = {}
+        getter = GmfGetter(
+            rlzs_by_gsim, ruptures, sitecol,
+            param['oqparam'], param['min_iml'], param['samples'])
+        res.update(getter.compute_gmfs_curves(monitor))
     return res
 
 
