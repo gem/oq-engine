@@ -203,7 +203,7 @@ def sample_background_model(
 
 
 @util.reader
-def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
+def compute_gmfs(sources, src_filter, rlzs_by_gsim, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param src_filter: a SourceFilter instance
@@ -264,7 +264,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_task = compute_hazard
+    core_task = compute_gmfs
 
     def pre_execute(self):
         """
@@ -335,7 +335,7 @@ def compute_losses(ssm, src_filter, param, riskmodel, monitor):
     res = List()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
-    hazard = compute_hazard(grp, src_filter, rlzs_by_gsim, param, monitor)
+    hazard = compute_gmfs(grp, src_filter, rlzs_by_gsim, param, monitor)
     [(grp_id, ebruptures)] = hazard['ruptures'].items()
 
     samples = ssm.info.get_samples_by_grp()

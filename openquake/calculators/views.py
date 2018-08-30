@@ -620,7 +620,7 @@ def view_task_hazard(token, dstore):
     elif 'count_eff_ruptures' in tasks:
         data = dstore['task_info/count_eff_ruptures'].value
     else:
-        data = dstore['task_info/compute_hazard'].value
+        data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
