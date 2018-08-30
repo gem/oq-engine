@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a `multi_node` flag in `openquake.cfg` and used it to
+    fully parallelize the prefiltering in a cluster
   * Used the rupture seed as rupture ID in event based calculations
   * Changed the deprecation mechanism of GSIMs to use a class attribute
     `superseded_by=NewGsimClass`

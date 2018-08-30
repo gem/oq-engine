@@ -140,8 +140,8 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_hazard(sources_or_ruptures, src_filter,
-                   rlzs_by_gsim, param, monitor):
+def compute_gmfs(sources_or_ruptures, src_filter,
+                 rlzs_by_gsim, param, monitor):
     """
     Compute events, ruptures, gmfs and hazard curves
     """
@@ -183,7 +183,7 @@ class EventBasedCalculator(base.HazardCalculator):
     the hazard curves from the ruptures, depending on the configuration
     parameters.
     """
-    core_task = compute_hazard
+    core_task = compute_gmfs
     is_stochastic = True
 
     def gen_args(self, monitor):
