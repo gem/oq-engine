@@ -146,21 +146,22 @@ def compute_hazard(sources_or_ruptures, src_filter,
     Compute events, ruptures, gmfs and hazard curves
     """
     res = AccumDict(ruptures={})
+    res.calc_times = []
+    res.eff_ruptures = AccumDict()
     ruptures = []
     with monitor('building ruptures', measuremem=True):
         if isinstance(sources_or_ruptures, RuptureGetter):
+            # the ruptures are read from the datastore
             grp_id = sources_or_ruptures.grp_id
             ruptures.extend(sources_or_ruptures)
             sitecol = src_filter  # this is actually a site collection
         else:
+            # use the ruptures sampled in prefiltering
             grp_id = sources_or_ruptures[0].src_group_id
-            dic = sample_ruptures(
-                sources_or_ruptures, src_filter, rlzs_by_gsim, param, monitor)
-            #for src in sources_or_ruptures:
-            #    ruptures.extend(src.eb_ruptures)
-            ruptures.extend(dic['eb_ruptures'])
-            res.calc_times = dic['calc_times']
-            res.eff_ruptures = {grp_id: dic['num_ruptures']}
+            for src in sources_or_ruptures:
+                ruptures.extend(src.eb_ruptures)
+                res.calc_times.extend(src.calc_times)
+                res.eff_ruptures += {grp_id: src.num_ruptures}
             sitecol = src_filter.sitecol
     if ruptures:
         if not param['oqparam'].save_ruptures or isinstance(
