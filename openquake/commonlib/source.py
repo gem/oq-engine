@@ -866,7 +866,7 @@ class CompositeSourceModel(collections.Sequence):
                     for src in src_group:
                         if sm.samples > 1:
                             src.samples = sm.samples
-                        sources.extend(src)
+                        sources.append(src)
         if kind == 'all' and not sources:
             raise RuntimeError('All sources were filtered away!')
         return sources
