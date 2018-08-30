@@ -197,7 +197,6 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq, min_iml=self.get_min_iml(oq),
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
-            maximum_distance=oq.maximum_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
