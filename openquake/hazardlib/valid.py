@@ -261,7 +261,7 @@ class SimpleId(object):
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 
-MAX_ID_LENGTH = 60
+MAX_ID_LENGTH = 75
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
