@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
 import sys
 import logging
 import operator
@@ -194,7 +192,17 @@ def prefilter(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
     """
-    return groupby(srcfilter.filter(srcs), src_group_id)
+    if 'Xses_per_logic_tree_path' in param:  # from event based
+        from openquake.hazardlib.calc.stochastic import sample_ruptures
+        ok = []
+        for src in srcs:
+            dic = sample_ruptures(
+                [src], srcfilter, param=param, monitor=monitor)
+            if dic['ebruptures']:
+                ok.append(src)
+    else:  # from classical
+        ok = srcfilter.filter(srcs)
+    return groupby(ok, src_group_id)
 
 
 class SourceFilter(object):
