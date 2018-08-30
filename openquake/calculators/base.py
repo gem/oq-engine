@@ -330,7 +330,7 @@ class HazardCalculator(BaseCalculator):
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
         param = dict(concurrent_tasks=oq.concurrent_tasks)
-        if 'event_based' in oq.calculation_mode:
+        if 'EventBased' in self.__class__.__name__:
             param['filter_distance'] = oq.filter_distance
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
         if (oq.prefilter_sources == 'numpy' or rtree is None or

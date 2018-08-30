@@ -192,13 +192,15 @@ def prefilter(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
     """
-    if 'Xses_per_logic_tree_path' in param:  # from event based
+    if 'ses_per_logic_tree_path' in param:  # from event based
+        # keep only the sources producing ruptures
         from openquake.hazardlib.calc.stochastic import sample_ruptures
         ok = []
         for src in srcs:
             dic = sample_ruptures(
                 [src], srcfilter, param=param, monitor=monitor)
-            if dic['ebruptures']:
+            if dic['eb_ruptures']:
+                vars(src).update(dic)
                 ok.append(src)
     else:  # from classical
         ok = srcfilter.filter(srcs)
