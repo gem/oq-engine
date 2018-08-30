@@ -30,7 +30,6 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc import filters
 
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
@@ -41,9 +40,16 @@ event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
                         ('sample', U32)])
 
 
+def source_site_noop_filter(srcs):
+    for src in srcs:
+        yield src, None
+
+
+source_site_noop_filter.integration_distance = {}
+
+
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(
-        sources, source_site_filter=filters.source_site_noop_filter):
+def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -102,26 +108,25 @@ def set_eids(ebruptures):
     return numpy.array(all_eids)
 
 
-def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
+def sample_ruptures(group, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
     :param group:
         a SourceGroup or a sequence of sources of the same group
     :param src_filter:
-        a source site filter (default noop filter)
+        a source site filter
     :param gsims:
-        a list of GSIMs for the current tectonic region model
+        a list of GSIMs for the current tectonic region model (can be empty)
     :param param:
         a dictionary of additional parameters (by default
-        ses_per_logic_tree_path=1,  samples=1, filter_distance=1000)
+        ses_per_logic_tree_path=1 and filter_distance=1000)
     :param monitor:
         monitor instance
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if not param:
-        param = dict(ses_per_logic_tree_path=1, samples=1,
-                     filter_distance=1000)
+        param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
     if getattr(group, 'src_interdep', None) == 'mutex':
         prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
     else:
@@ -185,10 +190,10 @@ def _sample_ruptures(src, prob, num_ses, num_samples):
 
 
 def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
-    """
-    Filter the ruptures stored in the dictionary num_occ_by_rup and
-    yield pairs (rupture, <list of associated EBRuptures>)
-    """
+    # Filter the ruptures stored in the dictionary num_occ_by_rup and
+    # yield pairs (rupture, <list of associated EBRuptures>).
+    # NB: s_sites can be None if cmaker.maximum_distance is False, then
+    # the contexts are not computed and the ruptures not filtered
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         rup.serial = rup.seed
         if cmaker.maximum_distance:
