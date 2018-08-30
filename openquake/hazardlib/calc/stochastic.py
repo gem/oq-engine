@@ -135,10 +135,11 @@ def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
     for src, s_sites in src_filter(group):
+        samples = getattr(src, 'samples', 1)
         t0 = time.time()
         num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], param['samples'])
+            src, prob[src], param['ses_per_logic_tree_path'], samples)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
