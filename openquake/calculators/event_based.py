@@ -162,7 +162,6 @@ def compute_hazard(sources_or_ruptures, src_filter,
             res['ruptures'] = {grp_id: ruptures}
             res.num_ruptures = len(ruptures)
             sitecol = src_filter.sitecol
-    res['num_ruptures'] = len(ruptures)
     if ruptures:
         if param['oqparam'].save_ruptures is False:
             res.events = get_events(ruptures)
