@@ -196,9 +196,10 @@ def prefilter(srcs, srcfilter, param, monitor):
         # keep only the sources producing ruptures
         from openquake.hazardlib.calc.stochastic import sample_ruptures
         ok = []
+        gsims_by_trt = param['gsims_by_trt']
         for src in srcs:
-            dic = sample_ruptures(
-                [src], srcfilter, param=param, monitor=monitor)
+            gsims = gsims_by_trt[src.tectonic_region_type]
+            dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
             if dic['eb_ruptures']:
                 vars(src).update(dic)
                 ok.append(src)
