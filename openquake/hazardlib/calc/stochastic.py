@@ -131,14 +131,12 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     calc_times = []
     rup_mon = monitor('making contexts', measuremem=False)
     # Compute and save stochastic event sets
-    num_ruptures = 0
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
     for src, s_sites in src_filter(sources):
         mutex_weight = getattr(src, 'mutex_weight', 1)
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
             src, mutex_weight, param['ses_per_logic_tree_path'], samples)
         # NB: the number of occurrences is very low, << 1, so it is
@@ -151,8 +149,7 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
         calc_times.append((src_id, src.nsites, eids, dt))
-    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times,
-               num_ruptures=num_ruptures)
+    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
 
