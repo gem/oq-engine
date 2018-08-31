@@ -754,6 +754,16 @@ def view_global_poes(token, dstore):
     return rst_table(tbl, header=header)
 
 
+@view.add('global_gmfs')
+def view_global_gmfs(token, dstore):
+    """
+    Display GMFs averaged on everything for debugging purposes
+    """
+    imtls = dstore['oqparam'].imtls
+    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    return rst_table([row], header=imtls)
+
+
 @view.add('mean_disagg')
 def view_mean_disagg(token, dstore):
     """
