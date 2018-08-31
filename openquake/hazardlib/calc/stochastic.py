@@ -142,10 +142,10 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for ebr in _build_eb_ruptures(
-                src, num_occ_by_rup, cmaker, s_sites, rup_mon):
-            eb_ruptures.append(ebr)
-        eids = set_eids(eb_ruptures)
+        ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
+                                       s_sites, rup_mon))
+        eb_ruptures.extend(ebrs)
+        eids = set_eids(ebrs)
         src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
         calc_times.append((src_id, src.nsites, eids, dt))

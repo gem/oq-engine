@@ -18,6 +18,7 @@
 import os.path
 import logging
 import collections
+import mock
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -147,7 +148,7 @@ def compute_gmfs(sources_or_ruptures, src_filter,
     """
     res = AccumDict(ruptures={})
     res.calc_times = []
-    res.eff_ruptures = AccumDict()
+    #res.eff_ruptures = AccumDict()
     ruptures = []
     with monitor('building ruptures', measuremem=True):
         if isinstance(sources_or_ruptures, RuptureGetter):
@@ -161,8 +162,8 @@ def compute_gmfs(sources_or_ruptures, src_filter,
             for src in sources_or_ruptures:
                 ruptures.extend(src.eb_ruptures)
                 res.calc_times.extend(src.calc_times)
+                #res.eff_ruptures = {grp_id: src.num_ruptures}
             sitecol = src_filter.sitecol
-        res.eff_ruptures = {grp_id: len(ruptures)}
     if ruptures:
         if not param['oqparam'].save_ruptures or isinstance(
                 sources_or_ruptures, RuptureGetter):  # ruptures already saved
@@ -217,6 +218,10 @@ class EventBasedCalculator(base.HazardCalculator):
         for sm in self.csm.source_models:
             param['samples'] = sm.samples
             for sg in sm.src_groups:
+                # ignore the sources not producing ruptures
+                #sg.sources = [src for src in sg.sources if src.eb_ruptures]
+                #if not sg.sources:
+                #    continue
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
                 if sg.src_interdep == 'mutex':  # do not split
                     yield sg, self.src_filter, rlzs_by_gsim, param, monitor
@@ -237,6 +242,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # filter_csm must be called first
             self.src_filter, self.csm = self.filter_csm()
             self.csm_info = self.csm.info
+            with self.monitor('store source_info', autoflush=True):
+                acc = mock.Mock(eff_ruptures={
+                    grp.id: sum(src.num_ruptures for src in grp)
+                    for grp in self.csm.src_groups})
+                self.store_source_info(self.csm.infos, acc)
         else:
             self.datastore.parent = datastore.read(
                 self.oqparam.hazard_calculation_id)
@@ -259,15 +269,15 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gmf_size += max_gmf_size(
                 result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
                 self.csm_info.get_samples_by_grp(), len(self.oqparam.imtls))
-        if hasattr(result, 'calc_times'):
-            for srcid, nsites, eids, dt in result.calc_times:
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += dt
-                info.num_split += 1
-                info.events += len(eids)
-        if hasattr(result, 'eff_ruptures'):
-            acc.eff_ruptures += result.eff_ruptures
+        #if hasattr(result, 'calc_times'):
+        #    for srcid, nsites, eids, dt in result.calc_times:
+        #        info = self.csm.infos[srcid]
+        #        info.num_sites += nsites
+        #        info.calc_time += dt
+        #        info.num_split += 1
+        #        info.events += len(eids)
+        #if hasattr(result, 'eff_ruptures'):
+        #    acc.eff_ruptures += result.eff_ruptures
         if hasattr(result, 'events'):
             self.datastore.extend('events', result.events)
         for grp_id, rupts in result['ruptures'].items():
@@ -360,9 +370,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.core_task.__func__, iterargs, self.monitor()
             ).submit_all()
         acc = ires.reduce(self.agg_dicts, acc)
-        if self.oqparam.hazard_calculation_id is None:
-            with self.monitor('store source_info', autoflush=True):
-                self.store_source_info(self.csm.infos, acc)
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
