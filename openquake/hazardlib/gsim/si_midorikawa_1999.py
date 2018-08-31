@@ -235,19 +235,13 @@ class SiMidorikawa1999Asc(GMPE):
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
-
         std = np.zeros_like(rrup)
-
         std[rrup <= 20] = 0.23
-
         idx = (rrup > 20) & (rrup <= 30)
         std[idx] = 0.23 - 0.03 * np.log10(rrup[idx] / 20) / np.log10(30. / 20.)
-
         std[rrup > 30] = 0.20
-
         # convert from log10 to ln
         std = np.log(10 ** std)
-
         return [std for stddev_type in stddev_types]
 
     def _apply_amplification_factor(self, mean):
@@ -293,16 +287,11 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
-
         std = np.zeros_like(pgv)
-
         std[pgv <= 25] = 0.20
-
         idx = (pgv > 25) & (pgv <= 50)
         std[idx] = 0.20 - 0.05 * (pgv[idx] - 25) / 25
-
         std[pgv > 50] = 0.15
-
         # convert from log10 to ln
         std = np.log(10 ** std)
 
