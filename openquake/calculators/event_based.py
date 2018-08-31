@@ -143,7 +143,7 @@ def get_mean_curves(dstore):
 def compute_gmfs(sources_or_ruptures, src_filter,
                  rlzs_by_gsim, param, monitor):
     """
-    Compute events, ruptures, gmfs and hazard curves
+    Compute GMFs and optionally hazard curves
     """
     res = AccumDict(ruptures={})
     res.calc_times = []
@@ -307,8 +307,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         :param ruptures: a list of EBRuptures
         """
-        with self.monitor('saving ruptures', autoflush=True):
-            if len(ruptures):
+        if len(ruptures):
+            with self.monitor('saving ruptures', autoflush=True):
                 events = get_events(ruptures)
                 dset = self.datastore.extend('events', events)
                 if self.oqparam.save_ruptures:
