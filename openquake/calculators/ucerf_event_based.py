@@ -336,7 +336,7 @@ def compute_losses(ssm, src_filter, param, riskmodel, monitor):
     res = List()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(DEFAULT_TRT)
-    hazard = compute_gmfs(grp, src_filter, rlzs_by_gsim, param, monitor)
+    hazard = compute_hazard(grp, src_filter, rlzs_by_gsim, param, monitor)
     [(grp_id, ebruptures)] = hazard['ruptures'].items()
 
     samples = ssm.info.get_samples_by_grp()
