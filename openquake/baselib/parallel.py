@@ -641,7 +641,10 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def log_percent(self, res=None):
+    def log_percent(self):
+        """
+        Log the progress of the computation in percentage
+        """
         done = self.total - self.todo
         if not self.name.startswith('_'):  # public task
             percent = int(float(done) / self.total * 100)
@@ -707,8 +710,9 @@ class Starmap(object):
         yield len(allargs)
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
+            self.log_percent()
             self.todo -= 1
-            self.log_percent(res)
+        self.log_percent()
 
     _iter_threadpool = _iter_processpool
 
@@ -729,10 +733,11 @@ class Starmap(object):
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.tb_str == 'TASK_ENDED':
-                self.todo -= 1
                 self.log_percent(res)
+                self.todo -= 1
             else:
                 yield res
+        self.log_percent()
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
