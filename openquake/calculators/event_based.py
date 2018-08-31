@@ -270,7 +270,8 @@ class EventBasedCalculator(base.HazardCalculator):
             acc.eff_ruptures += result.eff_ruptures
         if hasattr(result, 'events'):
             self.datastore.extend('events', result.events)
-        self.save_ruptures(result['ruptures'])
+        for grp_id, rupts in result['ruptures'].items():
+            self.save_ruptures(rupts)
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
@@ -299,20 +300,19 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def save_ruptures(self, ruptures_by_grp_id):
+    def save_ruptures(self, ruptures):
         """
         Extend the 'events' dataset with the events from the given ruptures;
         also, save the ruptures if the flag `save_ruptures` is on.
 
-        :param ruptures_by_grp_id: a dictionary grp_id -> list of EBRuptures
+        :param ruptures: a list of EBRuptures
         """
         with self.monitor('saving ruptures', autoflush=True):
-            for grp_id, ebrs in ruptures_by_grp_id.items():
-                if len(ebrs):
-                    events = get_events(ebrs)
-                    dset = self.datastore.extend('events', events)
-                    if self.oqparam.save_ruptures:
-                        self.rupser.save(ebrs, eidx=len(dset)-len(events))
+            if len(ruptures):
+                events = get_events(ruptures)
+                dset = self.datastore.extend('events', events)
+                if self.oqparam.save_ruptures:
+                    self.rupser.save(ruptures, eidx=len(dset)-len(events))
 
     def check_overflow(self):
         """
