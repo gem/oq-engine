@@ -733,7 +733,7 @@ class Starmap(object):
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.tb_str == 'TASK_ENDED':
-                self.log_percent(res)
+                self.log_percent()
                 self.todo -= 1
             else:
                 yield res
