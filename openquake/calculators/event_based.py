@@ -147,8 +147,6 @@ def compute_gmfs(sources_or_ruptures, src_filter,
     Compute GMFs and optionally hazard curves
     """
     res = AccumDict(ruptures={})
-    res.calc_times = []
-    #res.eff_ruptures = AccumDict()
     ruptures = []
     with monitor('building ruptures', measuremem=True):
         if isinstance(sources_or_ruptures, RuptureGetter):
@@ -161,8 +159,6 @@ def compute_gmfs(sources_or_ruptures, src_filter,
             grp_id = sources_or_ruptures[0].src_group_id
             for src in sources_or_ruptures:
                 ruptures.extend(src.eb_ruptures)
-                res.calc_times.extend(src.calc_times)
-                #res.eff_ruptures = {grp_id: src.num_ruptures}
             sitecol = src_filter.sitecol
     if ruptures:
         if not param['oqparam'].save_ruptures or isinstance(
@@ -252,27 +248,32 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def process_csm(self):
+    def process_csm(self):  # called after split_all
         """
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
         self.src_filter, self.csm = self.filter_csm()
+        rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         for src in self.csm.get_sources():
             if oq.save_ruptures and not oq.ground_motion_fields:
                 self.gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
-                    self.csm.info.rlzs_assoc.get_rlzs_by_gsim,
+                    rlzs_assoc.get_rlzs_by_gsim,
                     samples_by_grp, len(self.oqparam.imtls))
             # update self.csm.infos
-            for srcid, nsites, eids, dt in src.calc_times:
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += dt
-                info.num_split += 1
-                info.events += len(eids)
-            self.save_ruptures(src.eb_ruptures)
+            if hasattr(src, 'calc_times'):
+                for srcid, nsites, eids, dt in src.calc_times:
+                    info = self.csm.infos[srcid]
+                    info.num_sites += nsites
+                    info.calc_time += dt
+                    info.num_split += 1
+                    info.events += len(eids)
+                del src.calc_times
+            # save the events always and the ruptures if oq.save_ruptures
+            if hasattr(src, 'eb_ruptures'):
+                self.save_ruptures(src.eb_ruptures)
         with self.monitor('store source_info', autoflush=True):
             acc = mock.Mock(eff_ruptures={
                 grp.id: sum(src.num_ruptures for src in grp)
