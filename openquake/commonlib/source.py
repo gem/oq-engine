@@ -920,14 +920,14 @@ class CompositeSourceModel(collections.Sequence):
         Generate unique seeds for each rupture with numpy.arange.
         This should be called only in event based calculators
         """
-        n = sum(sg.tot_ruptures for sg in self.src_groups)
+        sources = self.get_sources()
+        n = sum(src.num_ruptures for src in sources)
         rup_serial = numpy.arange(ses_seed, ses_seed + n, dtype=numpy.uint32)
         start = 0
-        for sg in self.src_groups:
-            for src in sg:
-                nr = src.num_ruptures
-                src.serial = rup_serial[start:start + nr]
-                start += nr
+        for src in sources:
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
 
     def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
         """
