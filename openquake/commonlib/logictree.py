@@ -462,9 +462,7 @@ class FakeSmlt(object):
         self.seed = seed
         self.num_samples = num_samples
         self.tectonic_region_types = set()
-
-    def on_each_source(self):
-        return False
+        self.on_each_source = False
 
     def gen_source_models(self, gsim_lt):
         """
@@ -592,13 +590,8 @@ class SourceModelLogicTree(object):
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
-
-    def on_each_source(self):
-        """
-        :returns: True if the logic tree is defined on each source
-        """
-        return (self.info.applytosources and
-                self.info.applytosources == self.source_ids)
+        self.on_each_source = (self.info.applytosources and
+                               self.info.applytosources == self.source_ids)
 
     def get_source_ids(self):
         """
