@@ -57,7 +57,6 @@ import sys
 import time
 import operator
 import numpy
-from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby, AccumDict
@@ -78,11 +77,6 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         a dictionary {grp_id: pmap} with attributes .grp_ids, .calc_times,
         .eff_ruptures
     """
-    if getattr(group, 'src_interdep', None) == 'mutex':
-        mutex_weight = {src.source_id: weight for src, weight in
-                        zip(group.sources, group.srcs_weights)}
-    else:
-        mutex_weight = None
     grp_ids = set()
     for src in group:
         if not src.num_ruptures:
@@ -100,6 +94,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap.calc_times = AccumDict(accum=numpy.zeros(4))
     pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
     for src, s_sites in src_filter(group):  # filter now
+        mutex_weight = getattr(src, 'mutex_weight', None)
         t0 = time.time()
         indep = group.rup_interdep == 'indep' if mutex_weight else True
         try:
@@ -109,10 +104,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             msg = '%s (source id=%s)' % (str(err), src.source_id)
             raise etype(msg).with_traceback(tb)
         if mutex_weight:  # mutex sources
-            weight = mutex_weight[src.source_id]
             for sid in poemap:
                 pcurve = pmap[group.id].setdefault(sid, 0)
-                pcurve += poemap[sid] * weight
+                pcurve += poemap[sid] * mutex_weight
         elif poemap:
             for grp_id in src.src_group_ids:
                 pmap[grp_id] |= poemap
