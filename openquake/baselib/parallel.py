@@ -532,6 +532,8 @@ def init_workers():
 class Starmap(object):
     calc_id = None
     hdf5 = None
+    pids = ()
+    task_ids = ()
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
