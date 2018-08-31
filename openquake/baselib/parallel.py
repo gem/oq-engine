@@ -438,37 +438,16 @@ class IterResult(object):
     :param hdf5:
         if given, hdf5 file where to append the performance information
     """
-    def __init__(self, iresults, taskname, argnames, done_total, sent,
-                 progress=logging.info, hdf5=None):
+    def __init__(self, iresults, taskname, argnames, sent, hdf5=None):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
-        self.done_total = done_total
         self.sent = sent
-        self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        self.log_percent()
-
-    def log_percent(self, res=None):
-        done, self.total = self.done_total()
-        percent = int(float(done) / self.total * 100)
-        if not hasattr(self, 'prev_percent'):  # first time
-            self.prev_percent = 0
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(self.sent.sum()), self.total)
-        elif percent > self.prev_percent:
-            self.progress('%s %3d%%', self.name, percent)
-            self.prev_percent = percent
-        if res and res.count:
-            logging.debug('Got output #%d from task #%d',
-                          res.count, res.mon.task_no)
-        return done
 
     def __iter__(self):
         self.received = []
-        if self.total == 0:
-            return
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
             if isinstance(result, BaseException):
@@ -484,22 +463,18 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            self.log_percent(result)
             if not self.name.startswith('_'):  # no info for private tasks
                 self.save_task_info(result.mon, mem_gb)
             if result.splice:
                 yield from val
             else:
                 yield val
-
-        self.log_percent()  # 100%
-        if self.received:
+        if self.received and not self.name.startswith('_'):
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = ('Received %s in %d outputs from %d tasks, '
-                   'maximum per output %s')
-            self.progress(msg, humansize(tot), len(self.received),
-                          self.total, humansize(max_per_output))
+            msg = ('Received %s from %d tasks, maximum per output %s')
+            logging.info(msg, humansize(tot), len(self.received),
+                         humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
@@ -624,15 +599,17 @@ class Starmap(object):
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         task_args = [(ch,) + args for ch in chunks]
-        return cls(task, task_args, mon, distribute).submit_all(progress)
+        return cls(task, task_args, mon, distribute, progress).submit_all()
 
-    def __init__(self, task_func, task_args, monitor=None, distribute=None):
+    def __init__(self, task_func, task_args, monitor=None, distribute=None,
+                 progress=logging.info):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
+        self.progress = progress
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
             self.argnames = inspect.getargspec(task_func).args
@@ -664,11 +641,21 @@ class Starmap(object):
         # NB: returning -1 breaks openquake.hazardlib.tests.calc.
         # hazard_curve_new_test.HazardCurvesTestCase02 :-(
 
-    def done_total(self):
+    def log_percent(self):
         """
-        :returns: the number of tasks done vs the total
+        Log the progress of the computation in percentage
         """
-        return self.total - self.todo, self.total
+        done = self.total - self.todo
+        if not self.name.startswith('_'):  # public task
+            percent = int(float(done) / self.total * 100)
+            if not hasattr(self, 'prev_percent'):  # first time
+                self.prev_percent = 0
+                self.progress('Sent %s of data in %d task(s)',
+                              humansize(self.sent.sum()), self.total)
+            elif percent > self.prev_percent:
+                self.progress('%s %3d%%', self.name, percent)
+                self.prev_percent = percent
+        return done
 
     def _genargs(self, pickle=True):
         """
@@ -695,8 +682,8 @@ class Starmap(object):
         else:
             it = getattr(self, '_iter_' + self.distribute)()
         self.todo = self.total = next(it)
-        return IterResult(it, self.name, self.argnames, self.done_total,
-                          self.sent, progress, self.monitor.hdf5)
+        return IterResult(it, self.name, self.argnames,
+                          self.sent, self.monitor.hdf5)
 
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         """
@@ -723,7 +710,9 @@ class Starmap(object):
         yield len(allargs)
         for res in self.pool.imap_unordered(safefunc, allargs):
             yield res
+            self.log_percent()
             self.todo -= 1
+        self.log_percent()
 
     _iter_threadpool = _iter_processpool
 
@@ -744,9 +733,11 @@ class Starmap(object):
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
             elif res.tb_str == 'TASK_ENDED':
+                self.log_percent()
                 self.todo -= 1
             else:
                 yield res
+        self.log_percent()
 
     def _iter_celery(self):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
