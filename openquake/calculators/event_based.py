@@ -219,9 +219,9 @@ class EventBasedCalculator(base.HazardCalculator):
             param['samples'] = sm.samples
             for sg in sm.src_groups:
                 # ignore the sources not producing ruptures
-                #sg.sources = [src for src in sg.sources if src.eb_ruptures]
-                #if not sg.sources:
-                #    continue
+                sg.sources = [src for src in sg.sources if src.eb_ruptures]
+                if not sg.sources:
+                    continue
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
                 if sg.src_interdep == 'mutex':  # do not split
                     yield sg, self.src_filter, rlzs_by_gsim, param, monitor
@@ -239,14 +239,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         if self.oqparam.hazard_calculation_id is None:
-            # filter_csm must be called first
-            self.src_filter, self.csm = self.filter_csm()
-            self.csm_info = self.csm.info
-            with self.monitor('store source_info', autoflush=True):
-                acc = mock.Mock(eff_ruptures={
-                    grp.id: sum(src.num_ruptures for src in grp)
-                    for grp in self.csm.src_groups})
-                self.store_source_info(self.csm.infos, acc)
+            self.csm_info = self.process_csm()
         else:
             self.datastore.parent = datastore.read(
                 self.oqparam.hazard_calculation_id)
@@ -259,29 +252,39 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
+    def process_csm(self):
+        """
+        Prefilter the composite source model and store the source_info
+        """
+        oq = self.oqparam
+        self.src_filter, self.csm = self.filter_csm()
+        samples_by_grp = self.csm.info.get_samples_by_grp()
+        for src in self.csm.get_sources():
+            if oq.save_ruptures and not oq.ground_motion_fields:
+                self.gmf_size += max_gmf_size(
+                    {src.src_group_id: src.eb_ruptures},
+                    self.csm.info.rlzs_assoc.get_rlzs_by_gsim,
+                    samples_by_grp, len(self.oqparam.imtls))
+            # update self.csm.infos
+            for srcid, nsites, eids, dt in src.calc_times:
+                info = self.csm.infos[srcid]
+                info.num_sites += nsites
+                info.calc_time += dt
+                info.num_split += 1
+                info.events += len(eids)
+            self.save_ruptures(src.eb_ruptures)
+        with self.monitor('store source_info', autoflush=True):
+            acc = mock.Mock(eff_ruptures={
+                grp.id: sum(src.num_ruptures for src in grp)
+                for grp in self.csm.src_groups})
+            self.store_source_info(self.csm.infos, acc)
+        return self.csm.info
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        oq = self.oqparam
-        if oq.save_ruptures and not oq.ground_motion_fields:
-            self.gmf_size += max_gmf_size(
-                result['ruptures'], self.csm_info.rlzs_assoc.get_rlzs_by_gsim,
-                self.csm_info.get_samples_by_grp(), len(self.oqparam.imtls))
-        #if hasattr(result, 'calc_times'):
-        #    for srcid, nsites, eids, dt in result.calc_times:
-        #        info = self.csm.infos[srcid]
-        #        info.num_sites += nsites
-        #        info.calc_time += dt
-        #        info.num_split += 1
-        #        info.events += len(eids)
-        #if hasattr(result, 'eff_ruptures'):
-        #    acc.eff_ruptures += result.eff_ruptures
-        if hasattr(result, 'events'):
-            self.datastore.extend('events', result.events)
-        for grp_id, rupts in result['ruptures'].items():
-            self.save_ruptures(rupts)
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
