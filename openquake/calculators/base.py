@@ -329,6 +329,11 @@ class HazardCalculator(BaseCalculator):
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
+        param = dict(concurrent_tasks=oq.concurrent_tasks)
+        if 'EventBased' in self.__class__.__name__:
+            param['filter_distance'] = oq.filter_distance
+            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['gsims_by_trt'] = self.csm.gsim_lt.values
         dist = os.environ['OQ_DISTRIBUTE']
         if oq.prefilter_sources == 'no':
             logging.info('Not prefiltering the sources')
@@ -341,10 +346,10 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.pfilter(prefilter, oq.concurrent_tasks, mon)
+            csm = self.csm.pfilter(prefilter, param, mon)
         else:
             logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.pfilter(src_filter, oq.concurrent_tasks, mon)
+            csm = self.csm.pfilter(src_filter, param, mon)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 
