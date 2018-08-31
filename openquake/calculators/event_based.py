@@ -256,7 +256,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
-        self.rupser = calc.RuptureSerializer(self.datastore)
         for src in self.csm.get_sources():
             if oq.save_ruptures and not oq.ground_motion_fields:
                 self.gmf_size += max_gmf_size(
@@ -288,6 +287,14 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
+        # in UCERF
+        if hasattr(result, 'ruptures_by_grp'):
+            for ruptures in result.ruptures_by_grp.values():
+                self.save_ruptures(ruptures)
+        elif hasattr(result, 'events_by_grp'):
+            for grp_id in result.events_by_grp:
+                events = result.events_by_grp[grp_id]
+                self.datastore.extend('events', events)
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
@@ -403,12 +410,13 @@ class EventBasedCalculator(base.HazardCalculator):
         ds.set_nbytes('gmf_data')
 
     def init(self):
-        pass
+        self.rupser = calc.RuptureSerializer(self.datastore)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
+        self.rupser.close()
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
