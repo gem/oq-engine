@@ -512,7 +512,7 @@ class IterResult(object):
         return res
 
 
-def init_workers(pids):
+def init_workers():
     """Waiting function, used to wake up the process pool"""
     setproctitle('oq-worker')
     # unregister raiseMasterKilled in oq-workers to avoid deadlock
@@ -527,7 +527,6 @@ def init_workers(pids):
     else:
         # if the parent dies, the children die
         prctl.set_pdeathsig(signal.SIGKILL)
-    pids.append(os.getpid())
 
 
 class Starmap(object):
@@ -537,10 +536,10 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            cls.pids = []
-            cls.pool = multiprocessing.Pool(poolsize, init_workers, [cls.pids])
-            signal.signal(signal.SIGINT, sigint_handler)
+            orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            cls.pids = [proc.pid for proc in cls.pool._pool]
+            signal.signal(signal.SIGINT, orig_handler)
             cls.task_ids = []
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
