@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Fixed a bug with CTRL-C when using the `processpool` distribution
+
   [Robin Gee]
   * Raised the source ID length limit in the validation from 60 to 75 characters
     to allow sources with longer IDs
