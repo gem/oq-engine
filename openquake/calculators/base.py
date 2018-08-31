@@ -334,18 +334,22 @@ class HazardCalculator(BaseCalculator):
             param['filter_distance'] = oq.filter_distance
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['gsims_by_trt'] = self.csm.gsim_lt.values
-        if (oq.prefilter_sources == 'numpy' or rtree is None or
-                config.distribution.multi_node):
-            logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.pfilter(src_filter, param, mon)
-        elif oq.prefilter_sources == 'rtree':
+        dist = os.environ['OQ_DISTRIBUTE']
+        if oq.prefilter_sources == 'no':
+            logging.info('Not prefiltering the sources')
+            csm = self.csm
+        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+            # rtree can be used only with processpool, otherwise one gets an
+            # RTreeError: Error in "Index_Create": Spatial Index Error:
+            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
+            # Index/Data file cannot be read/writen.
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
             csm = self.csm.pfilter(prefilter, param, mon)
-        else:  # prefilter_sources='no'
-            logging.info('Not prefiltering the sources')
-            csm = self.csm
+        else:
+            logging.info('Prefiltering the sources with numpy')
+            csm = self.csm.pfilter(src_filter, param, mon)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 

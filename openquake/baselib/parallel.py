@@ -545,7 +545,9 @@ class Starmap(object):
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
+            sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            signal.signal(signal.SIGINT, sigint_handler)
             m = Monitor('wakeup')
             ires = cls(
                 _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
