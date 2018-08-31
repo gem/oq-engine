@@ -469,7 +469,7 @@ class IterResult(object):
                 yield from val
             else:
                 yield val
-        if self.received:
+        if self.received and not self.name.startswith('_'):
             tot = sum(self.received)
             max_per_output = max(self.received)
             msg = ('Received %s from %d tasks, maximum per output %s')
