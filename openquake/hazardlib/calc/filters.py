@@ -28,7 +28,7 @@ except ImportError:
 from scipy.interpolate import interp1d
 from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import gettemp, groupby
+from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -197,9 +197,8 @@ def prefilter(srcs, srcfilter, param, monitor):
         # keep only the sources producing ruptures
         from openquake.hazardlib.calc.stochastic import sample_ruptures
         ok = []
-        gsims_by_trt = param['gsims_by_trt']
         for src in srcs:
-            gsims = gsims_by_trt[src.tectonic_region_type]
+            gsims = param['gsims_by_trt'][src.tectonic_region_type]
             dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
             if dic['eb_ruptures']:
                 vars(src).update(dic)

@@ -161,8 +161,8 @@ def compute_gmfs(sources_or_ruptures, src_filter,
             for src in sources_or_ruptures:
                 ruptures.extend(src.eb_ruptures)
                 res.calc_times.extend(src.calc_times)
-                res.eff_ruptures += {grp_id: src.num_ruptures}
             sitecol = src_filter.sitecol
+        res.eff_ruptures = {grp_id: len(ruptures)}
     if ruptures:
         if not param['oqparam'].save_ruptures or isinstance(
                 sources_or_ruptures, RuptureGetter):  # ruptures already saved
