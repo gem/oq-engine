@@ -256,6 +256,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
+        self.rupser = calc.RuptureSerializer(self.datastore)
         for src in self.csm.get_sources():
             if oq.save_ruptures and not oq.ground_motion_fields:
                 self.gmf_size += max_gmf_size(
@@ -274,6 +275,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # save the events always and the ruptures if oq.save_ruptures
             if hasattr(src, 'eb_ruptures'):
                 self.save_ruptures(src.eb_ruptures)
+        self.rupser.close()
         with self.monitor('store source_info', autoflush=True):
             acc = mock.Mock(eff_ruptures={
                 grp.id: sum(src.num_ruptures for src in grp)
@@ -401,11 +403,7 @@ class EventBasedCalculator(base.HazardCalculator):
         ds.set_nbytes('gmf_data')
 
     def init(self):
-        """
-        Set the random seed passed to the SourceManager and the
-        minimum_intensity dictionary.
-        """
-        self.rupser = calc.RuptureSerializer(self.datastore)
+        pass
 
     def post_execute(self, result):
         """
@@ -415,7 +413,6 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if oq.hazard_calculation_id is None:
-            self.rupser.close()
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
