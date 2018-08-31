@@ -434,7 +434,8 @@ class UCERFRiskCalculator(EbrCalculator):
             if hasattr(res, 'eff_ruptures'):  # for UCERF
                 self.eff_ruptures += res.eff_ruptures
             if hasattr(res, 'ruptures_by_grp'):  # for UCERF
-                save_ruptures(self, res.ruptures_by_grp)
+                for ruptures in res.ruptures_by_grp.values():
+                    save_ruptures(self, ruptures)
             elif hasattr(res, 'events_by_grp'):  # for UCERF
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
