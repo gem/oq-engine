@@ -406,7 +406,6 @@ class HazardCalculator(BaseCalculator):
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
-        self.init()
 
     def pre_execute(self, pre_calculator=None):
         """
@@ -465,6 +464,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+
+        self.init()  # do this at the end of pre-execute
 
     def init(self):
         """
