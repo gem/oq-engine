@@ -71,6 +71,7 @@ def split_sources(srcs, min_mag):
         split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
         has_serial = hasattr(src, 'serial')
+        has_samples = hasattr(src, 'samples')
         if len(splits) > 1:
             start = 0
             for i, split in enumerate(splits):
@@ -82,11 +83,15 @@ def split_sources(srcs, min_mag):
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
+                if has_samples:
+                    split.samples = src.samples
         elif splits:  # single source
             splits[0].ngsims = src.ngsims
             splits[0].ndists = src.ndists
             if has_serial:
                 splits[0].serial = src.serial
+            if has_samples:
+                splits[0].samples = src.samples
     return sources, split_time
 
 

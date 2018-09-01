@@ -590,8 +590,14 @@ class SourceModelLogicTree(object):
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
-        self.on_each_source = (self.info.applytosources and
-                               self.info.applytosources == self.source_ids)
+
+    @property
+    def on_each_source(self):
+        """
+        True if there is an applyToSources for each source.
+        """
+        return (self.info.applytosources and
+                self.info.applytosources == self.source_ids)
 
     def get_source_ids(self):
         """
@@ -1033,7 +1039,7 @@ class SourceModelLogicTree(object):
         Converts "applyToSources" filter value by just splitting it to a list.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = ss = filters['applyToSources'].split()
+            filters['applyToSources'] = filters['applyToSources'].split()
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
