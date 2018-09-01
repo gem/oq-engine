@@ -313,7 +313,7 @@ class SourceFilter(object):
         """
         sources_by_grp = Starmap.apply(
             prefilter, (sources, self, param, monitor),
-            maxweight=1000,  # hard-coded
+            maxweight=10000,  # hard-coded
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'),
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
