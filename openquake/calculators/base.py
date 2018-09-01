@@ -335,8 +335,13 @@ class HazardCalculator(BaseCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['gsims_by_trt'] = self.csm.gsim_lt.values
         dist = os.environ['OQ_DISTRIBUTE']
+        logging.info('Splitting sources')
+        isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
+
         if oq.prefilter_sources == 'no':
             logging.info('Not prefiltering the sources')
+            for src in isources:
+                pass  # invoked purely for side effects
             csm = self.csm
         elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
@@ -346,13 +351,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            sources_by_grp = prefilter.pfilter(
-                self.csm.get_sources(), param, mon)
+            sources_by_grp = prefilter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         else:
             logging.info('Prefiltering the sources with numpy')
-            sources_by_grp = src_filter.pfilter(
-                self.csm.get_sources(), param, mon)
+            sources_by_grp = src_filter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
@@ -397,13 +400,9 @@ class HazardCalculator(BaseCalculator):
             self.csm = readinput.get_composite_source_model(oq, self.monitor())
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()
-            with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
-        self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
         """
@@ -416,6 +415,7 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
+            self.init()  # store csm_info
             save_gmfs(self)
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
@@ -462,6 +462,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+
+        self.init()  # do this at the end of pre-execute
 
     def init(self):
         """
