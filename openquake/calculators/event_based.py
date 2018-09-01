@@ -416,7 +416,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Save the SES collection
         """
-        self.rupser.close()
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
