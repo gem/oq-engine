@@ -335,11 +335,9 @@ class HazardCalculator(BaseCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['gsims_by_trt'] = self.csm.gsim_lt.values
         dist = os.environ['OQ_DISTRIBUTE']
-        logging.info('Splitting sources')
         isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
-
         if oq.prefilter_sources == 'no':
-            logging.info('Not prefiltering the sources')
+            logging.info('Splitting the sources')
             for src in isources:
                 pass  # invoked purely for side effects
             csm = self.csm

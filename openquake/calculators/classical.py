@@ -141,8 +141,6 @@ class ClassicalCalculator(base.HazardCalculator):
             ).submit_all()
         self.nsites = []
         acc = ires.reduce(self.agg_dicts, self.zerodict())
-        if not self.nsites:
-            raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos, acc)

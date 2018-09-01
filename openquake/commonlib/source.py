@@ -718,6 +718,7 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
+        n = 0
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
@@ -726,6 +727,7 @@ class CompositeSourceModel(collections.Sequence):
                     for src, sw in zip(src_group, src_group.srcs_weights):
                         src.mutex_weight = sw
                         yield src
+                        n += 1
                 else:
                     # split regular sources
                     srcs = []
@@ -735,12 +737,15 @@ class CompositeSourceModel(collections.Sequence):
                         for split in splits:
                             srcs.append(split)
                             yield split
+                            n += 1
                     if sample_factor:
                         # debugging tip to reduce the size of a calculation
                         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
                         # will run a computation 100 times smaller
                         srcs = random_filter(srcs, float(sample_factor))
                     src_group.sources = srcs
+        if n == 0:
+            raise RuntimeError('All sources were filtered away!')
 
     def grp_by_src(self):
         """
@@ -871,8 +876,6 @@ class CompositeSourceModel(collections.Sequence):
                         if sm.samples > 1:
                             src.samples = sm.samples
                         sources.append(src)
-        if kind == 'all' and not sources:
-            raise RuntimeError('All sources were filtered away!')
         return sources
 
     @cached_property

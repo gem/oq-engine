@@ -214,9 +214,6 @@ producing too small PoEs.'''
         tl = oq.truncation_level
         src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         csm = self.csm
-        if not csm.get_sources():
-            raise RuntimeError('All sources were filtered away!')
-
         R = len(self.rlzs_assoc.realizations)
         I = len(oq.imtls)
         P = len(oq.poes_disagg) or 1
