@@ -346,10 +346,14 @@ class HazardCalculator(BaseCalculator):
             logging.info('Prefiltering the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            csm = self.csm.pfilter(prefilter, param, mon)
+            sources_by_grp = prefilter.pfilter(
+                self.csm.get_sources(), param, mon)
+            csm = self.csm.new(sources_by_grp)
         else:
             logging.info('Prefiltering the sources with numpy')
-            csm = self.csm.pfilter(src_filter, param, mon)
+            sources_by_grp = src_filter.pfilter(
+                self.csm.get_sources(), param, mon)
+            csm = self.csm.new(sources_by_grp)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
 
