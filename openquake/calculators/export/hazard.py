@@ -301,7 +301,7 @@ def export_hcurves_by_imt_csv(
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             if isinstance(array, dict):  # is a pmap, for old versions
-                poes = array.setdefault(sid, 0).array[slc]
+                poes = array.setdefault(sid, 0, F32).array[slc]
             else:  # is an array for recent versions of the engine
                 poes = array[sid, slc]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
