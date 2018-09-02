@@ -117,7 +117,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -127,7 +127,7 @@ class ProbabilityMap(dict):
         """
         dic = cls(shape_y, shape_z)
         for sid in sids:
-            dic.setdefault(sid, initvalue)
+            dic.setdefault(sid, initvalue, dtype)
         return dic
 
     @classmethod
@@ -152,18 +152,19 @@ class ProbabilityMap(dict):
         self.shape_y = shape_y
         self.shape_z = shape_z
 
-    def setdefault(self, sid, value):
+    def setdefault(self, sid, value, dtype=F64):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
         it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
         :param value: value used to fill the returned ProbabilityCurve
+        :param dtype: dtype used internally (F32 or F64)
         """
         try:
             return self[sid]
         except KeyError:
-            array = numpy.empty((self.shape_y, self.shape_z), F64)
+            array = numpy.empty((self.shape_y, self.shape_z), dtype)
             array.fill(value)
             pc = ProbabilityCurve(array)
             self[sid] = pc
