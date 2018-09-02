@@ -687,11 +687,11 @@ class Starmap(object):
         return IterResult(it, self.name, self.argnames,
                           self.sent, self.monitor.hdf5)
 
-    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+    def reduce(self, agg=operator.add, acc=None):
         """
         Submit all tasks and reduce the results
         """
-        return self.submit_all(progress).reduce(agg, acc)
+        return self.submit_all().reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
