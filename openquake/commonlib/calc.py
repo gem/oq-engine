@@ -57,7 +57,7 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+            lst.append(('%s-%s' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, pcurve in pmap.items():
         curve = curves[sid]
@@ -210,7 +210,7 @@ def make_hmap(pmap, imtls, poes):
     :returns: a ProbabilityMap with size (N, M * P, 1)
     """
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap)
+    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
@@ -238,7 +238,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
         hcurves = pmap.value
     except AttributeError:
         hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F64)
+    dtlist = [('%s-%s' % (imt, poe), F32)
               for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
