@@ -226,10 +226,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         arr = pmap[sid].array[:, 0]
                         if kind[0] == 'hmaps':
                             arr = arr.view(self.hmaps_dt)
-                        try:
-                            dset[sid] = arr
-                        except:
-                            import pdb; pdb.set_trace()
+                        dset[sid] = arr
             self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
@@ -272,8 +269,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
-        self.datastore.open('r+')
-        self.save_hmaps()
 
     def calc_stats(self, parent):
         oq = self.oqparam

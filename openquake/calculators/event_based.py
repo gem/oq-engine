@@ -446,7 +446,6 @@ class EventBasedCalculator(base.HazardCalculator):
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
-
             # NB: in the future we may want to save to individual hazard
             # curves if oq.individual_curves is set; for the moment we
             # save the statistical curves only
@@ -459,7 +458,10 @@ class EventBasedCalculator(base.HazardCalculator):
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
                     self.datastore['hcurves/' + kind] = arr
-            self.save_hmaps()
+                    if oq.poes:
+                        arr = calc.make_hmap_array(pmap, oq.imtls, oq.poes, N)
+                        self.datastore['hmaps/' + kind] = arr
+
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if 'gmf_data' in self.datastore:
