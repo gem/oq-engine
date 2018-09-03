@@ -127,7 +127,6 @@ class ClassicalCalculator(base.HazardCalculator):
             parent.close()
             self.calc_stats(parent)  # post-processing
             return {}
-        self.csm_info = self.datastore['csm_info']
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -235,8 +234,9 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        grp_trt = self.csm_info.grp_by("trt")
-        grp_source = self.csm_info.grp_by("name")
+        csm_info = self.datastore['csm_info']
+        grp_trt = csm_info.grp_by("trt")
+        grp_source = csm_info.grp_by("name")
         if oq.disagg_by_src:
             src_name = {src.src_group_id: src.name
                         for src in self.csm.get_sources()}
@@ -253,7 +253,7 @@ class ClassicalCalculator(base.HazardCalculator):
                             (grp_id, grp_source[grp_id], src_name[grp_id]))
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore.set_nbytes('poes')
-            if oq.disagg_by_src and self.csm_info.get_num_rlzs() == 1:
+            if oq.disagg_by_src and csm_info.get_num_rlzs() == 1:
                 # this is useful for disaggregation, which is implemented
                 # only for the case of a single realization
                 self.datastore['disagg_by_src/source_id'] = numpy.array(
