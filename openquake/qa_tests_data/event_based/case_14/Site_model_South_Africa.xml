@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <siteModel>
+    <site lat="-33.01441" lon="20.61534" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-32.15365" lon="26.44655" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-29.45341" lon="21.40248" vs30="394.522033691" vs30Type="inferred" z1pt0="294.604" z2pt5="1.285"/>
+    <site lat="-28.6144" lon="26.86726" vs30="527.309631348" vs30Type="inferred" z1pt0="173.427" z2pt5="0.922"/>
+    <site lat="-28.72806" lon="30.72671" vs30="899.965209961" vs30Type="inferred" z1pt0="15.814" z2pt5="0.5"/>
+    <site lat="-26.26814" lon="25.51965" vs30="288.788116455" vs30Type="inferred" z1pt0="448.903" z2pt5="1.836"/>
+    <site lat="-26.10615" lon="28.12578" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-25.87362" lon="30.29896" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-23.78534" lon="29.28976" vs30="594.8308105469999" vs30Type="inferred" z1pt0="101.085" z2pt5="0.803"/>
+    <site lat="-33.014412" lon="20.61534" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-32.153646" lon="26.446554" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-29.453409" lon="21.402483" vs30="394.522033691" vs30Type="inferred" z1pt0="294.604" z2pt5="1.285"/>
+    <site lat="-28.614403" lon="26.867264" vs30="527.309631348" vs30Type="inferred" z1pt0="173.427" z2pt5="0.922"/>
+    <site lat="-28.728062" lon="30.726706" vs30="899.965209961" vs30Type="inferred" z1pt0="15.814" z2pt5="0.5"/>
+    <site lat="-26.268135" lon="25.519648" vs30="288.788116455" vs30Type="inferred" z1pt0="448.903" z2pt5="1.836"/>
+    <site lat="-26.106147" lon="28.125779" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-25.873624" lon="30.298965" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
+    <site lat="-23.785335" lon="29.289763" vs30="594.8308105469999" vs30Type="inferred" z1pt0="101.085" z2pt5="0.803"/>
+  </siteModel>
+</nrml>
+
+
