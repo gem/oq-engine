@@ -216,7 +216,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistical hcurves', autoflush=True):
+        with self.monitor('saving statistics', autoflush=True):
             for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
                 pmap = pmap_by_kind[kind]
                 if pmap:
