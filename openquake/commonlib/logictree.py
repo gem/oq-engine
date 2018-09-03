@@ -660,11 +660,14 @@ class SourceModelLogicTree(object):
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
             if self.root_branchset is None:  # not set yet
+                self.num_paths = 1
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
             for branch in branchset.branches:
                 new_open_ends.add(branch)
+            self.num_paths *= len(branchset.branches)
+
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
