@@ -18,13 +18,14 @@
 
 """
 Module exports :class:`MunsonThurber1997`
+               :class:`MunsonThurber1997Hawaii`
                :class:`MunsonThurber1997Vector`.
 """
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, SA
 
 
 class MunsonThurber1997(GMPE):
@@ -63,6 +64,7 @@ class MunsonThurber1997(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = set(('rjb', ))
 
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -72,7 +74,6 @@ class MunsonThurber1997(GMPE):
 
         # Distance term
         R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
-
         # Magnitude term
         M = rup.mag - 6
 
@@ -81,8 +82,8 @@ class MunsonThurber1997(GMPE):
         # we use this upper value as class separator
         S = np.zeros(R.shape)
         S[sites.vs30 <= 200] = 1
-
-        # Mean ground motion (log10)
+        
+        #Mean ground motion (log10)
         mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
 
         # Converting to natural log
@@ -94,6 +95,88 @@ class MunsonThurber1997(GMPE):
 
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
+
+        return mean, stddevs
+
+class MunsonThurber1997Hawaii(GMPE):
+    """
+	Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic 
+	hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG. Seismic-
+	hazard maps for Hawaii. US Geological Survey; 2000.
+    """
+
+    #: Supported tectonic region type is volcanic,
+    #: see paragraph 'Introduction', page 99.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
+
+    #: Supported intensity measure types is spectral acceleration,
+    #: see table 3, pag. 110
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+
+    #: Supported intensity measure component is maximum horizontal
+    #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+
+    #: Supported standard deviation type is total
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL
+    ])
+
+    #: Required site parameters is Vs30.
+    #: See paragraph 'Predictor Variables', pag 103
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+
+    #: Required rupture parameter is magnitude
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+
+    #: Required distance measure is hypocentral distance
+    #: see page 18 in Atkinson and Boore's manuscript
+    REQUIRES_DISTANCES = set(('rjb', ))
+
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+
+        # Distance term
+        R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
+        # Magnitude term
+        M = rup.mag - 6
+
+        # Site term only distinguishes between lava and ash;
+        # since ash sites have Vs30 in the range 60-200m/s,
+        # we use this upper value as class separator
+        S = np.zeros(R.shape)
+        S[sites.vs30 <= 200] = 1
+        
+        #Mean ground motion (log10)
+        if rup.mag <= 7.:
+            mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
+        elif rup.mag > 7. and rup.mag <= 7.7:
+            mean = (0.518 + 0.387 + 0.216*(M-1) - np.log10(R) - 0.00256*R + 0.335*S)
+
+        else:
+            mean = (0.518 + 0.387 + (0.216*0.7) - np.log10(R) - 0.00256*R + 0.335*S)
+
+        # Converting to natural log
+        mean /= np.log10(np.e)
+
+        # Check for standard deviation type
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+
+        # Constant (total) standard deviation
+        stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
+        
+        #define SA 0.1 sec and 0.2 sec
+        if isinstance(imt, SA):
+            if imt.period == 0.1:
+                mean *= 2.2
+            if imt.period == 0.2:
+                mean *= 2.5
 
         return mean, stddevs
 
@@ -117,3 +200,4 @@ class MunsonThurber1997Vector(MunsonThurber1997):
         mean += np.log(1.1)
 
         return mean, stddevs
+
