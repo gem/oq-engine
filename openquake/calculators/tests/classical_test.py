@@ -336,9 +336,7 @@ hazard_uhs-mean.csv
 
         # extracting hmaps
         hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
-        self.assertEqual(
-            hmaps.dtype.names,
-            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
+        self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
