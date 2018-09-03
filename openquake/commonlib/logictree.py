@@ -463,6 +463,7 @@ class FakeSmlt(object):
         self.num_samples = num_samples
         self.tectonic_region_types = set()
         self.on_each_source = False
+        self.num_paths = 1
 
     def gen_source_models(self, gsim_lt):
         """
