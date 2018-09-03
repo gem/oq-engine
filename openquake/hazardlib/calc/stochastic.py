@@ -30,7 +30,6 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc import filters
 
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
@@ -41,9 +40,16 @@ event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
                         ('sample', U32)])
 
 
+def source_site_noop_filter(srcs):
+    for src in srcs:
+        yield src, None
+
+
+source_site_noop_filter.integration_distance = {}
+
+
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(
-        sources, source_site_filter=filters.source_site_noop_filter):
+def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -102,54 +108,48 @@ def set_eids(ebruptures):
     return numpy.array(all_eids)
 
 
-def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
+def sample_ruptures(sources, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
-    :param group:
-        a SourceGroup or a sequence of sources of the same group
+    :param sources:
+        a sequence of sources of the same group
     :param src_filter:
-        a source site filter (default noop filter)
+        a source site filter
     :param gsims:
-        a list of GSIMs for the current tectonic region model
+        a list of GSIMs for the current tectonic region model (can be empty)
     :param param:
         a dictionary of additional parameters (by default
-        ses_per_logic_tree_path=1,  samples=1, filter_distance=1000)
+        ses_per_logic_tree_path=1 and filter_distance=1000)
     :param monitor:
         monitor instance
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if not param:
-        param = dict(ses_per_logic_tree_path=1, samples=1,
-                     filter_distance=1000)
-    if getattr(group, 'src_interdep', None) == 'mutex':
-        prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
-    else:
-        prob = {src: 1 for src in group}
+        param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('making contexts', measuremem=False)
     # Compute and save stochastic event sets
-    num_ruptures = 0
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
-    for src, s_sites in src_filter(group):
+    for src, s_sites in src_filter(sources):
+        mutex_weight = getattr(src, 'mutex_weight', 1)
+        samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        num_ruptures += src.num_ruptures
         num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], param['samples'])
+            src, mutex_weight, param['ses_per_logic_tree_path'], samples)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for ebr in _build_eb_ruptures(
-                src, num_occ_by_rup, cmaker, s_sites, rup_mon):
-            eb_ruptures.append(ebr)
-        eids = set_eids(eb_ruptures)
+        ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
+                                       s_sites, rup_mon))
+        eb_ruptures.extend(ebrs)
+        eids = set_eids(ebrs)
         src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
         calc_times.append((src_id, src.nsites, eids, dt))
-    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times,
-               num_ruptures=num_ruptures)
+    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
 
@@ -183,10 +183,10 @@ def _sample_ruptures(src, prob, num_ses, num_samples):
 
 
 def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
-    """
-    Filter the ruptures stored in the dictionary num_occ_by_rup and
-    yield pairs (rupture, <list of associated EBRuptures>)
-    """
+    # Filter the ruptures stored in the dictionary num_occ_by_rup and
+    # yield pairs (rupture, <list of associated EBRuptures>).
+    # NB: s_sites can be None if cmaker.maximum_distance is False, then
+    # the contexts are not computed and the ruptures not filtered
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         rup.serial = rup.seed
         if cmaker.maximum_distance:
