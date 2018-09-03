@@ -179,13 +179,10 @@ class MunsonThurber1997Hawaii(GMPE):
         if isinstance(imt, SA):
             if imt.period == 0.1:
                 mean = np.log10(np.e) * np.log(2.2 * np.exp(mean / np.log10(np.e)))
-                print(imt.period,dists.rjb,rup.mag,mean)
             if imt.period == 0.2:
                 mean = np.log10(np.e) * np.log(2.5 * np.exp(mean / np.log10(np.e)))
-                print(imt.period,dists.rjb,rup.mag,mean)
 
         # Converting to natural log
-#        print(dists.rjb,rup.mag,mean)
         mean /= np.log10(np.e)
         return mean, stddevs
 
