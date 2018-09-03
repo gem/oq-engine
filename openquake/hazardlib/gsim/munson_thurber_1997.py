@@ -103,6 +103,7 @@ class MunsonThurber1997Hawaii(GMPE):
 	Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic 
 	hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG. Seismic-
 	hazard maps for Hawaii. US Geological Survey; 2000.
+    
     """
 
     #: Supported tectonic region type is volcanic,
@@ -134,6 +135,11 @@ class MunsonThurber1997Hawaii(GMPE):
     REQUIRES_DISTANCES = set(('rjb', ))
 
 
+    # Verification values for the mean PGA (magnitude > 7) and all PSA 
+    # were computed manually, since this implementation is a modified
+    # GMPE for which a verification was not provided.
+
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -161,8 +167,6 @@ class MunsonThurber1997Hawaii(GMPE):
         else:
             mean = (0.518 + 0.387 + (0.216*0.7) - np.log10(R) - 0.00256*R + 0.335*S)
 
-        # Converting to natural log
-        mean /= np.log10(np.e)
 
         # Check for standard deviation type
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -174,10 +178,15 @@ class MunsonThurber1997Hawaii(GMPE):
         #define SA 0.1 sec and 0.2 sec
         if isinstance(imt, SA):
             if imt.period == 0.1:
-                mean *= 2.2
+                mean = np.log10(np.e) * np.log(2.2 * np.exp(mean / np.log10(np.e)))
+                print(imt.period,dists.rjb,rup.mag,mean)
             if imt.period == 0.2:
-                mean *= 2.5
+                mean = np.log10(np.e) * np.log(2.5 * np.exp(mean / np.log10(np.e)))
+                print(imt.period,dists.rjb,rup.mag,mean)
 
+        # Converting to natural log
+#        print(dists.rjb,rup.mag,mean)
+        mean /= np.log10(np.e)
         return mean, stddevs
 
 
