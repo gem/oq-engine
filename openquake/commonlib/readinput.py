@@ -586,6 +586,11 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+
+    if 'event_based' in oqparam.calculation_mode:
+        # initialize the rupture serial numbers before filtering; in
+        # this way the serials are independent from the site collection
+        csm.init_serials(oqparam.ses_seed)
     return csm
 
 
