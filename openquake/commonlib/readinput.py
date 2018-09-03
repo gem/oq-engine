@@ -553,6 +553,9 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    if oqparam.number_of_logic_tree_samples == 0:
+        logging.info('Potential number of logic tree paths = %s',
+                     source_model_lt.num_paths * gsim_lt.get_num_paths())
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     for source_model in get_source_models(
