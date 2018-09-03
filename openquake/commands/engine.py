@@ -132,10 +132,6 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datadir)
 
     dbserver.ensure_on()
-    # check if we are talking to the right server
-    err = dbserver.check_foreign()
-    if err:
-        sys.exit(err)
 
     if upgrade_db:
         logs.set_level('info')

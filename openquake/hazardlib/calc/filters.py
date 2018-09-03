@@ -222,7 +222,7 @@ class SourceFilter(object):
             raise ValueError('%s is not complete!' % sitecol)
         self.hdf5path = hdf5path
         if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.distribution.oq_distribute in ('no', 'zmq') or
                 config.directory.shared_dir):  # store the sitecol
             with hdf5.File(hdf5path, 'w') as h5:
                 h5['sitecol'] = sitecol

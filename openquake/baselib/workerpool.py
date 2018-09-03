@@ -71,10 +71,9 @@ class WorkerMaster(object):
             self.streamer.start()
         starting = []
         for host, cores in self.host_cores:
-            if self.status(host)[0][1] == 'running':
-                print('%s:%s already running' % (host, self.ctrl_port))
-                continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            if self.status(host)[0][1] == 'running':
+                continue  # already running
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
@@ -93,7 +92,6 @@ class WorkerMaster(object):
         stopped = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
@@ -110,7 +108,6 @@ class WorkerMaster(object):
         killed = []
         for host, _ in self.host_cores:
             if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
@@ -158,6 +155,9 @@ class WorkerPool(object):
         """
         Start worker processes and a control loop
         """
+        if general.socket_ready(self.ctrl_url):  # already running
+            return
+
         setproctitle('oq-zworkerpool %s' % self.ctrl_url[6:])  # strip tcp://
         # start workers
         self.workers = []
@@ -168,7 +168,7 @@ class WorkerPool(object):
             sock.pid = proc.pid
             self.workers.append(sock)
 
-        # start control loop accepting the commands stop and kill
+        # start control loop accepting stop/kill/getpid/get_num_workers
         with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
             for cmd in ctrlsock:
                 if cmd in ('stop', 'kill'):
@@ -198,6 +198,6 @@ class WorkerPool(object):
 
 
 if __name__ == '__main__':
-    # start a workerpool without a streamer
+    # start a workerpool
     ctrl_url, task_out_port, num_workers = sys.argv[1:]
     WorkerPool(ctrl_url, task_out_port, num_workers).start()

@@ -77,7 +77,7 @@ The parallelization algorithm used by `Starmap` will depend on the
 environment variable `OQ_DISTRIBUTE`. Here are the possibilities
 available at the moment:
 
-`OQ_DISTRIBUTE` not set or set to "processpool":
+`OQ_DISTRIBUTE` not set or set to "zmq":
   use multiprocessing
 `OQ_DISTRIBUTE` set to "no":
   disable the parallelization, useful for debugging
@@ -95,7 +95,7 @@ respect to the time to perform the task), so it is not recommended.
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
->>> Starmap.shutdown()
+>> Starmap.shutdown()
 
 `Starmap.shutdown` is always defined. It does nothing if there is
 no pool, but it is still better to call it: in the future, you may change
@@ -165,7 +165,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import hdf5, config
+from openquake.baselib import hdf5, config, workerpool
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import Monitor, memory_rss, perf_dt
 
@@ -174,12 +174,12 @@ from openquake.baselib.general import (
 
 cpu_count = multiprocessing.cpu_count()
 GB = 1024 ** 3
-OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
-if OQ_DISTRIBUTE == 'futures':  # legacy name
-    print('Warning: OQ_DISTRIBUTE=futures is deprecated', file=sys.stderr)
-    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'processpool'
-if OQ_DISTRIBUTE not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
-                         'dask'):
+OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'zmq').lower()
+if OQ_DISTRIBUTE in ('processpool', 'futures'):  # legacy names
+    print('Warning: OQ_DISTRIBUTE=%s is deprecated' % OQ_DISTRIBUTE,
+          file=sys.stderr)
+    OQ_DISTRIBUTE = os.environ['OQ_DISTRIBUTE'] = 'zmq'
+if OQ_DISTRIBUTE not in ('no', 'celery', 'zmq', 'dask'):
     raise ValueError('Invalid oq_distribute=%s' % OQ_DISTRIBUTE)
 
 # data type for storing the performance information
@@ -191,9 +191,9 @@ task_info_dt = numpy.dtype(
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'processpool'
+    :returns: the value of OQ_DISTRIBUTE or 'zmq'
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', 'zmq').lower()
     read_access = getattr(task, 'read_access', True)
     if dist.startswith('celery') and not read_access:
         raise ValueError('You must configure the shared_dir in openquake.cfg '
@@ -458,9 +458,9 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool':
+            if hasattr(Starmap.pool, 'pids'):
                 mem_gb = (memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids)) / GB
+                    memory_rss(pid) for pid in Starmap.pool.pids)) / GB
             else:
                 mem_gb = numpy.nan
             if not self.name.startswith('_'):  # no info for private tasks
@@ -512,63 +512,30 @@ class IterResult(object):
         return res
 
 
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
-    # unregister raiseMasterKilled in oq-workers to avoid deadlock
-    # since processes are terminated via pool.terminate()
-    signal.signal(signal.SIGTERM, signal.SIG_DFL)
-    # prctl is still useful (on Linux) to terminate all spawned processes
-    # when master is killed via SIGKILL
-    try:
-        import prctl
-    except ImportError:
-        pass
-    else:
-        # if the parent dies, the children die
-        prctl.set_pdeathsig(signal.SIGKILL)
-    return os.getpid()
-
-
-def _wakeup(sec, mon):
-    """Waiting function, used to wake up the process pool"""
-    time.sleep(sec)
-    return os.getpid()
-
-
 class Starmap(object):
     task_ids = []
-    pids = []
     calc_id = None
     hdf5 = None
+    pool = None
 
     @classmethod
-    def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
-        if distribute == 'processpool' and not hasattr(cls, 'pool'):
+    def init(cls, distribute=OQ_DISTRIBUTE):
+        if distribute == 'zmq' and not cls.pool:
             sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            cls.pool = workerpool.WorkerMaster('127.0.0.1', **config.zworkers)
+            cls.pool.start(streamer=True)
             signal.signal(signal.SIGINT, sigint_handler)
-            m = Monitor('wakeup')
-            ires = cls(
-                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
-            ).submit_all(logging.debug)
-            cls.pids = list(ires)
             cls.task_ids = []
-        elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(poolsize)
         elif distribute == 'no' and hasattr(cls, 'pool'):
             cls.shutdown()
         elif distribute == 'dask':
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
-        if hasattr(cls, 'pool'):
-            cls.pool.close()
-            cls.pool.terminate()
-            cls.pool.join()
-            del cls.pool
-            cls.pids = []
+    def shutdown(cls):
+        if cls.pool:
+            cls.pool.stop()
+            cls.pool = None
         if hasattr(cls, 'dask_client'):
             del cls.dask_client
 
@@ -705,18 +672,6 @@ class Starmap(object):
                        for args in allargs)
             yield from self._loop(results, iter(socket), len(allargs))
 
-    def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        for res in self.pool.imap_unordered(safefunc, allargs):
-            yield res
-            self.log_percent()
-            self.todo -= 1
-        self.log_percent()
-
-    _iter_threadpool = _iter_processpool
 
     def _loop(self, ierr, isocket, num_tasks):
         self.total = self.todo = num_tasks
@@ -758,7 +713,7 @@ class Starmap(object):
         with Socket(self.receiver, zmq.PULL, 'bind') as socket:
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, socket.port)
-            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+            task_in_url = 'tcp://%s:%s' % (config.dbserver.listen,
                                            config.zworkers.task_in_port)
             with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
                 num_tasks = 0

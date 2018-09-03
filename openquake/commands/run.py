@@ -20,11 +20,13 @@ import tempfile
 import logging
 import cProfile
 import pstats
+import sys
 
 from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators import base, views
+from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -127,6 +129,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
     """
     Run a calculation bypassing the database layer
     """
+    dbserver.ensure_on()
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:
