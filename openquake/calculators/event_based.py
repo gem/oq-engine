@@ -459,8 +459,16 @@ class EventBasedCalculator(base.HazardCalculator):
                         arr[sid] = pmap[sid].array[:, 0]
                     self.datastore['hcurves/' + kind] = arr
                     if oq.poes:
-                        arr = calc.make_hmap_array(pmap, oq.imtls, oq.poes, N)
-                        self.datastore['hmaps/' + kind] = arr
+                        P = len(oq.poes)
+                        I = len(oq.imtls)
+                        self.datastore.create_dset(
+                            'hmaps/' + kind, F32, (N, P * I))
+                        self.datastore.set_attrs(
+                            'hmaps/' + kind, nbytes=N * P * I * 4)
+                        hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
+                        ds = self.datastore['hmaps/' + kind]
+                        for sid in hmap:
+                            ds[sid] = hmap[sid].array[:, 0]
 
         if self.datastore.parent:
             self.datastore.parent.open('r')
