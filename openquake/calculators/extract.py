@@ -231,7 +231,7 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
-def normalize(dstore, name, imts, imls):
+def _get_dict(dstore, name, imts, imls):
     dic = {}
     dtlist = []
     for imt, imls in zip(imts, imls):
@@ -253,7 +253,7 @@ def extract_hcurves(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
-    dic = normalize(dstore, 'hcurves', oq.imtls, oq.imtls.values())
+    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -266,7 +266,7 @@ def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    dic = normalize(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
+    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
