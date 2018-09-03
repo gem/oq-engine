@@ -211,7 +211,7 @@ class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,
     i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .pfilter method
+    within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
     src_group_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
