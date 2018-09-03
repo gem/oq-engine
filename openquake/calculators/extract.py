@@ -231,6 +231,17 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
+def normalize(dstore, name, imts, imls):
+    dic = {}
+    dtlist = []
+    for imt, imls in zip(imts, imls):
+        dt = numpy.dtype([(str(iml), F32) for iml in imls])
+        dtlist.append((imt, dt))
+    for kind, curves in dstore[name].items():
+        dic[kind] = curves.value.view(dtlist).flatten()
+    return dic
+
+
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
@@ -242,13 +253,7 @@ def extract_hcurves(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
-    dic = {}
-    dtlist = []
-    for imt, imls in oq.imtls.items():
-        dt = numpy.dtype([(str(iml), F32) for iml in imls])
-        dtlist.append((imt, dt))
-    for kind, hcurves in dstore['hcurves'].items():
-        dic[kind] = hcurves.value.view(dtlist).flatten()
+    dic = normalize(dstore, 'hcurves', oq.imtls, oq.imtls.values())
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -261,7 +266,7 @@ def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    dic = {kind: dstore['hmaps/' + kind] for kind in dstore['hmaps']}
+    dic = normalize(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
