@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
+from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
