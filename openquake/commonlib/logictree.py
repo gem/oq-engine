@@ -462,9 +462,7 @@ class FakeSmlt(object):
         self.seed = seed
         self.num_samples = num_samples
         self.tectonic_region_types = set()
-
-    def on_each_source(self):
-        return False
+        self.on_each_source = False
 
     def gen_source_models(self, gsim_lt):
         """
@@ -593,9 +591,10 @@ class SourceModelLogicTree(object):
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
 
+    @property
     def on_each_source(self):
         """
-        :returns: True if the logic tree is defined on each source
+        True if there is an applyToSources for each source.
         """
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
@@ -1040,7 +1039,7 @@ class SourceModelLogicTree(object):
         Converts "applyToSources" filter value by just splitting it to a list.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = ss = filters['applyToSources'].split()
+            filters['applyToSources'] = filters['applyToSources'].split()
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):

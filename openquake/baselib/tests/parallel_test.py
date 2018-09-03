@@ -86,6 +86,9 @@ class StarmapTestCase(unittest.TestCase):
                                     distribute='no'))
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
 
+        res = list(parallel.Starmap(gfunc, [('xy', mon), ('z', mon)]))
+        self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
+
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()

@@ -27,7 +27,7 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import performance
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -553,7 +553,7 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
-    if source_model_lt.on_each_source():
+    if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):

@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
 import sys
 import logging
 import operator
@@ -30,7 +28,7 @@ except ImportError:
 from scipy.interpolate import interp1d
 from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import gettemp, groupby
+from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -190,11 +188,23 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def prefilter(srcs, srcfilter, monitor):
+def prefilter(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
     """
-    return groupby(srcfilter.filter(srcs), src_group_id)
+    src = srcs[0]
+    if 'ses_per_logic_tree_path' in param:  # from event based
+        # keep only the sources producing ruptures
+        from openquake.hazardlib.calc.stochastic import sample_ruptures
+        ok = []
+        for src in srcfilter.filter(srcs):
+            gsims = param['gsims_by_trt'][src.tectonic_region_type]
+            dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
+            vars(src).update(dic)
+            ok.append(src)
+    else:  # from classical
+        ok = list(srcfilter.filter(srcs))
+    return {src.src_group_id: ok}
 
 
 class SourceFilter(object):
@@ -222,10 +232,6 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if os.environ.get('OQ_DISTRIBUTE') == 'no':
-            self.distribute = 'no'
-        else:
-            self.distribute = 'zmq'
 
     @property
     def sitecol(self):
@@ -296,19 +302,23 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, concurrent_tasks, monitor):
+    def pfilter(self, sources, param, monitor):
         """
         Filter the sources in parallel by using Starmap.apply
 
         :param sources: a sequence of sources
-        :param concurrent_tasks: how many tasks to generate
+        :param param: a dictionary of parameters including concurrent_tasks
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor),
-            concurrent_tasks=concurrent_tasks, distribute=self.distribute,
-            progress=logging.debug).reduce()
+            prefilter, (sources, self, param, monitor),
+            concurrent_tasks=param['concurrent_tasks'],
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'),
+            progress=logging.info if 'gsims_by_trt' in param else logging.debug
+            # log the prefiltering phase in an event based calculation
+        ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))

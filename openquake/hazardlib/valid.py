@@ -261,7 +261,7 @@ class SimpleId(object):
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 
-MAX_ID_LENGTH = 60
+MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
@@ -663,12 +663,13 @@ def intensity_measure_types(value):
     return imts
 
 
-def check_levels(imls, imt):
+def check_levels(imls, imt, min_iml=1E-10):
     """
     Raise a ValueError if the given levels are invalid.
 
     :param imls: a list of intensity measure and levels
     :param imt: the intensity measure type
+    :param min_iml: minimum intensity measure level (default 1E-10)
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
     >>> check_levels([], 'PGA')
@@ -690,6 +691,11 @@ def check_levels(imls, imt):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
         raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
+    elif imls[0] == 0 and imls[1] <= min_iml:  # apply the cutoff
+        raise ValueError("The min_iml %s=%s is larger than the second level "
+                         "for %s" % (imt, min_iml, imls))
+    elif imls[0] == 0 and imls[1] > min_iml:  # apply the cutoff
+        imls[0] = min_iml
 
 
 def intensity_measure_types_and_levels(value):
