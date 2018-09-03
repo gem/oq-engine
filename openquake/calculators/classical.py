@@ -211,7 +211,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Works by side effect by saving statistical hcurves and hmaps on the
         datastore.
 
-        :param acc: dictionary kind -> nbytes
+        :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
 
         kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
