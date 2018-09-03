@@ -44,15 +44,14 @@ class StochasticEventSetTestCase(unittest.TestCase):
             src.id = i
             nr = src.num_ruptures
             src.serial = rup_serial[start:start + nr]
+            src.mutex_weight = group.srcs_weights[i]
             start += nr
         lonlat = 135.68, 35.68
         site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
-        param = dict(ses_per_logic_tree_path=10,
-                     filter_distance='rjb', samples=1)
+        param = dict(ses_per_logic_tree_path=10, filter_distance='rjb')
         gsims = [SiMidorikawa1999SInter()]
         dic = sample_ruptures(group, s_filter, gsims, param)
-        self.assertEqual(dic['num_ruptures'], 19)  # total ruptures
         self.assertEqual(len(dic['eb_ruptures']), 8)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
