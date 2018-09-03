@@ -224,8 +224,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
                         arr = pmap[sid].array[:, 0]
-                        if kind[0] == 'hmaps':
-                            arr = arr.view(self.hmaps_dt)
                         dset[sid] = arr
             self.datastore.flush()
 
@@ -279,10 +277,6 @@ class ClassicalCalculator(base.HazardCalculator):
                              'the statistics without repeating the calculation'
                              ' with the --hc option')
             return {}
-        if oq.poes:
-            self.hmaps_dt = numpy.dtype(
-                [('%s-%s' % (imt, poe), F32)
-                 for imt in oq.imtls for poe in oq.poes])
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
@@ -292,8 +286,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
-                self.datastore.create_dset(
-                    'hmaps/' + name, self.hmaps_dt, (N,), fillvalue=None)
+                self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
         self.datastore.flush()
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
