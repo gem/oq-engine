@@ -71,7 +71,9 @@ class PmapGetter(object):
             self.dstore.open('r')  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
-        self.imtls = self.dstore['oqparam'].imtls
+        oq = self.dstore['oqparam']
+        self.imtls = oq.imtls
+        self.poes = oq.poes
         self.data = collections.OrderedDict()
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
