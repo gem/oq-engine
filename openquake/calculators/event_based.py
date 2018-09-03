@@ -452,21 +452,21 @@ class EventBasedCalculator(base.HazardCalculator):
             hstats = oq.hazard_stats()
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
-                for kind, stat in hstats:
+                for statname, stat in hstats:
                     pmap = compute_pmap_stats(result.values(), [stat], weights)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
-                    self.datastore['hcurves/' + kind] = arr
+                    self.datastore['hcurves/' + statname] = arr
                     if oq.poes:
                         P = len(oq.poes)
                         I = len(oq.imtls)
                         self.datastore.create_dset(
-                            'hmaps/' + kind, F32, (N, P * I))
+                            'hmaps/' + statname, F32, (N, P * I))
                         self.datastore.set_attrs(
-                            'hmaps/' + kind, nbytes=N * P * I * 4)
+                            'hmaps/' + statname, nbytes=N * P * I * 4)
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
-                        ds = self.datastore['hmaps/' + kind]
+                        ds = self.datastore['hmaps/' + statname]
                         for sid in hmap:
                             ds[sid] = hmap[sid].array[:, 0]
 
