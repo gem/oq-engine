@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the algorithm assigning the seeds: they are now generated before
+    the source splitting; also, a seed-related bug in the splitting was fixed
   * For event based, moved the rupture generation in the prefiltering phase
 
   [Daniele Viganò]
