@@ -70,8 +70,9 @@ def split_sources(srcs, min_mag):
             splits = list(src)
         split_time[src.source_id] = time.time() - t0
         sources.extend(splits)
+        has_serial = hasattr(src, 'serial')
+        has_samples = hasattr(src, 'samples')
         if len(splits) > 1:
-            has_serial = hasattr(src, 'serial')
             start = 0
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
@@ -82,9 +83,15 @@ def split_sources(srcs, min_mag):
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
                     start += nr
+                if has_samples:
+                    split.samples = src.samples
         elif splits:  # single source
             splits[0].ngsims = src.ngsims
             splits[0].ndists = src.ndists
+            if has_serial:
+                splits[0].serial = src.serial
+            if has_samples:
+                splits[0].samples = src.samples
     return sources, split_time
 
 
@@ -466,8 +473,9 @@ class CompositionInfo(object):
         :returns: a dictionary src_group_id -> gsim -> rlzs
         """
         self.rlzs_assoc = self.get_rlzs_assoc(sm_lt_path, trts)
-        return {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
-                for sm in self.source_models for grp in sm.src_groups}
+        dic = {grp.id: self.rlzs_assoc.get_rlzs_by_gsim(grp.id)
+               for sm in self.source_models for grp in sm.src_groups}
+        return dic
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -527,7 +535,7 @@ class CompositionInfo(object):
                     name=get_field(data, 'name', ''),
                     eff_ruptures=data['effrup'],
                     tot_ruptures=get_field(data, 'totrup', 0))
-                for data in tdata if data['effrup']]
+                for data in tdata]
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             sm = logictree.LtSourceModel(
@@ -718,8 +726,12 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                if getattr(src_group, 'src_interdep', None) != 'mutex':
-                    # mutex sources cannot be split
+                if getattr(src_group, 'src_interdep', None) == 'mutex':
+                    # mutex sources cannot be split, just set the mutex_weight
+                    for src, sw in zip(src_group, src_group.srcs_weights):
+                        src.mutex_weight = sw
+                else:
+                    # split regular sources
                     srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
                         s = src.source_id
@@ -767,19 +779,13 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def pfilter(self, src_filter, concurrent_tasks,
-                monitor=performance.Monitor()):
+    def new(self, sources_by_grp):
         """
-        Generate a new CompositeSourceModel by filtering the sources on
-        the given site collection.
+        Generate a new CompositeSourceModel from the given dictionary.
 
-        :param src_filter: a SourceFilter instance
-        :param concurrent_tasks: how many tasks to generate
-        :param monitor: a Monitor instance
+        :param sources_by_group: a dictionary grp_id -> sources
         :returns: a new CompositeSourceModel instance
         """
-        sources_by_grp = src_filter.pfilter(
-            self.get_sources(), concurrent_tasks, monitor)
         source_models = []
         for sm in self.source_models:
             src_groups = []
@@ -794,6 +800,7 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
         new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
+        new.infos = self.infos
         return new
 
     def get_weight(self, weight):
@@ -860,9 +867,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         assert kind in ('all', 'indep', 'mutex'), kind
         sources = []
-        for src_group in self.src_groups:
-            if kind in ('all', src_group.src_interdep):
-                sources.extend(src_group)
+        for sm in self.source_models:
+            for src_group in sm.src_groups:
+                if kind in ('all', src_group.src_interdep):
+                    for src in src_group:
+                        if sm.samples > 1:
+                            src.samples = sm.samples
+                        sources.append(src)
         if kind == 'all' and not sources:
             raise RuntimeError('All sources were filtered away!')
         return sources
@@ -907,19 +918,19 @@ class CompositeSourceModel(collections.Sequence):
         return {grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.src_groups}
 
-    def init_serials(self):
+    def init_serials(self, ses_seed):
         """
         Generate unique seeds for each rupture with numpy.arange.
         This should be called only in event based calculators
         """
-        n = sum(sg.tot_ruptures for sg in self.src_groups)
-        rup_serial = numpy.arange(n, dtype=numpy.uint32)
+        sources = self.get_sources()
+        n = sum(src.num_ruptures for src in sources)
+        rup_serial = numpy.arange(ses_seed, ses_seed + n, dtype=numpy.uint32)
         start = 0
-        for sg in self.src_groups:
-            for src in sg:
-                nr = src.num_ruptures
-                src.serial = rup_serial[start:start + nr]
-                start += nr
+        for src in sources:
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
 
     def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
         """
@@ -1001,3 +1012,7 @@ class SourceInfo(object):
         self.split_time = split_time
         self.num_split = num_split
         self.events = 0  # set in event based
+
+    def __repr__(self):
+        return '<%s>' % ' '.join('%s=%s' % (name, getattr(self, name))
+                                 for name in self.dt.names)
