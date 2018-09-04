@@ -17,6 +17,9 @@ for ini in $(find $1 -name job.ini | sort); do
     oq engine --run $ini --exports xml,hdf5
 done
 
+# test the --eos option
+oq engine --eos -1 /tmp
+
 # test generation of statistical hazard curves from previous calculation;
 # -7 is LogicTreeCase3ClassicalPSHA; FIXME: this is fragile
 oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -7
