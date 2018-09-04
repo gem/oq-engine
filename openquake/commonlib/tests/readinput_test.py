@@ -805,7 +805,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [])
+        readinput.reduce_source_model(smlt, [], False)
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
