@@ -462,9 +462,8 @@ class FakeSmlt(object):
         self.seed = seed
         self.num_samples = num_samples
         self.tectonic_region_types = set()
-
-    def on_each_source(self):
-        return False
+        self.on_each_source = False
+        self.num_paths = 1
 
     def gen_source_models(self, gsim_lt):
         """
@@ -593,9 +592,10 @@ class SourceModelLogicTree(object):
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
 
+    @property
     def on_each_source(self):
         """
-        :returns: True if the logic tree is defined on each source
+        True if there is an applyToSources for each source.
         """
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
@@ -661,11 +661,14 @@ class SourceModelLogicTree(object):
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
             if self.root_branchset is None:  # not set yet
+                self.num_paths = 1
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
             for branch in branchset.branches:
                 new_open_ends.add(branch)
+            self.num_paths *= len(branchset.branches)
+
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -1040,7 +1043,7 @@ class SourceModelLogicTree(object):
         Converts "applyToSources" filter value by just splitting it to a list.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = ss = filters['applyToSources'].split()
+            filters['applyToSources'] = filters['applyToSources'].split()
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
@@ -1552,5 +1555,4 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
         nrml.pickle_source_models,
         (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
-    parallel.Starmap.shutdown()  # close the processpool
     return dic
