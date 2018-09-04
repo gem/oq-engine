@@ -986,16 +986,22 @@ def reduce_source_model(smlt_file, source_ids):
             for src_group in origmodel:
                 sg = copy.copy(src_group)
                 sg.nodes = []
-                for src_node in src_group:
+                weights = src_group['srcs_weights']
+                assert len(weights) == len(src_group.nodes)
+                src_group['srcs_weights'] = reduced_weigths = []
+                for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
                         sg.nodes.append(src_node)
+                        reduced_weigths.append(weight)
                 if sg.nodes:
                     model.nodes.append(sg)
+        shutil.copy(path, path + '.bak')
         if model:
-            shutil.copy(path, path + '.bak')
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
                 logging.warn('Reduced %s' % path)
+        else:
+            os.remove(path)
 
 
 def get_checksum32(oqparam):
