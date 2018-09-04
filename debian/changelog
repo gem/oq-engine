@@ -2,6 +2,8 @@
   * specified 'amd64' as the only architecture supported by ubuntu packages
 
   [Michele Simionato]
+  * Changed the source writer: now the `srcs_weights` are written in the XML
+    file only if they are nontrivial
   * Changed the algorithm assigning the seeds: they are now generated before
     the source splitting; also, a seed-related bug in the splitting was fixed
   * For event based, moved the rupture generation in the prefiltering phase
