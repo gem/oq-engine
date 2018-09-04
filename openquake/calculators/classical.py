@@ -27,6 +27,7 @@ from openquake.baselib.general import AccumDict, block_splitter, groupby
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
+from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -155,10 +156,11 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
-        param = dict(truncation_level=oq.truncation_level, imtls=oq.imtls,
-                     filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-                     floating_distance=oq.floating_distance,
-                     spinning_distance=oq.spinning_distance)
+        param = dict(
+            truncation_level=oq.truncation_level, imtls=oq.imtls,
+            filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
+            hypo_dist_collapsing_distance=oq.hypo_dist_collapsing_distance,
+            nodal_dist_collapsing_distance=oq.nodal_dist_collapsing_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
@@ -193,7 +195,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         :yields: pgetter, hstats, monitor
         """
-        monitor = self.monitor('build_hcurves_and_stats')
+        monitor = self.monitor('build_hazard_stats')
         hstats = self.oqparam.hazard_stats()
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
@@ -202,27 +204,26 @@ class ClassicalCalculator(base.HazardCalculator):
                 pgetter.init()
             yield pgetter, hstats, monitor
 
-    def save_hcurves(self, acc, pmap_by_kind):
+    def save_hazard_stats(self, acc, pmap_by_kind):
         """
-        Works by side effect by saving statistical hcurves on the
-        datastore; the accumulator stores the number of bytes saved.
+        Works by side effect by saving statistical hcurves and hmaps on the
+        datastore.
 
-        :param acc: dictionary kind -> nbytes
+        :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
+
+        kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistical hcurves', autoflush=True):
-            for kind in pmap_by_kind:
+        with self.monitor('saving statistics', autoflush=True):
+            for kind in pmap_by_kind:  # i.e. kind == ('hcurves', 'mean')
                 pmap = pmap_by_kind[kind]
                 if pmap:
-                    key = 'hcurves/%s' % kind
+                    key = '%s/%s' % kind
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
-                        dset[sid] = pmap[sid].array[:, 0]
-                    # in the datastore we save 4 byte floats, thus we
-                    # divide the memory consumption by 2: pmap.nbytes / 2
-                    acc += {kind: pmap.nbytes // 2}
+                        arr = pmap[sid].array[:, 0]
+                        dset[sid] = arr
             self.datastore.flush()
-            return acc
 
     def post_execute(self, pmap_by_grp_id):
         """
@@ -265,8 +266,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.calc_stats(self.hdf5cache)
             else:
                 self.calc_stats(self.datastore)
-        self.datastore.open('r+')
-        self.save_hmaps()
 
     def calc_stats(self, parent):
         oq = self.oqparam
@@ -280,22 +279,19 @@ class ClassicalCalculator(base.HazardCalculator):
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        nbytes = N * L * 4  # bytes per realization (32 bit floats)
-        totbytes = 0
+        P = len(oq.poes)
+        I = len(oq.imtls)
         for name, stat in oq.hazard_stats():
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
-            self.datastore.set_attrs('hcurves/%s' % name)
-            totbytes += nbytes
-        if 'hcurves' in self.datastore:
-            self.datastore.set_attrs('hcurves', nbytes=totbytes)
+            self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
+            if oq.poes:
+                self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
+                self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
         self.datastore.flush()
         with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            ires = parallel.Starmap(
-                build_hcurves_and_stats, self.gen_getters(parent),
-                self.monitor()
-            ).submit_all()
-        for kind, nbytes in ires.reduce(self.save_hcurves).items():
-            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
+            parallel.Starmap(
+                build_hazard_stats, self.gen_getters(parent), self.monitor()
+            ).reduce(self.save_hazard_stats)
 
 
 # used in PreClassicalCalculator
@@ -348,7 +344,7 @@ def fix_ones(pmap):
         array[array == 1.] = .9999999999999999
 
 
-def build_hcurves_and_stats(pgetter, hstats, monitor):
+def build_hazard_stats(pgetter, hstats, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param hstats: a list of pairs (statname, statfunc)
@@ -367,8 +363,11 @@ def build_hcurves_and_stats(pgetter, hstats, monitor):
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
     pmap_by_kind = {}
-    for kind, stat in hstats:
-        with monitor('compute ' + kind):
+    for statname, stat in hstats:
+        with monitor('compute ' + statname):
             pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
-        pmap_by_kind[kind] = pmap
+        pmap_by_kind['hcurves', statname] = pmap
+        if pgetter.poes:
+            pmap_by_kind['hmaps', statname] = calc.make_hmap(
+                pmap, pgetter.imtls, pgetter.poes)
     return pmap_by_kind

@@ -82,8 +82,10 @@ class ContextMaker(object):
         param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.floating_distance = param.get('floating_distance')
-        self.spinning_distance = param.get('spinning_distance')
+        self.hypo_dist_collapsing_distance = param.get(
+            'hypo_dist_collapsing_distance')
+        self.nodal_dist_collapsing_distance = param.get(
+            'nodal_dist_collapsing_distance')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -215,12 +217,12 @@ class ContextMaker(object):
         with self.ir_mon:
             if hasattr(src, 'location'):
                 dist = src.location.distance_to_mesh(sites).min()
-                if (self.floating_distance is not None and
-                        dist > self.floating_distance):
+                if (self.hypo_dist_collapsing_distance is not None and
+                        dist > self.hypo_dist_collapsing_distance):
                     # disable floating
                     src.hypocenter_distribution.reduce()
-                if (self.spinning_distance is not None and
-                        dist > self.spinning_distance):
+                if (self.nodal_dist_collapsing_distance is not None and
+                        dist > self.nodal_dist_collapsing_distance):
                     # disable spinning
                     src.nodal_plane_distribution.reduce()
             rups = list(src.iter_ruptures())

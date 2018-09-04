@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter, rtree
+from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -661,40 +661,6 @@ class HazardCalculator(BaseCalculator):
                 'source_info', nbytes=array.nbytes,
                 has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
-
-    def save_hmaps(self):
-        """
-        Save hazard maps generated from the hazard curves
-        """
-        oq = self.oqparam
-        if oq.poes:
-            mon = self.monitor('computing hazard maps')
-            logging.info('Computing hazard maps for PoEs=%s', oq.poes)
-            with mon:
-                N = len(self.sitecol.complete)
-                ct = oq.concurrent_tasks or 1
-                if 'hcurves' in self.datastore:
-                    kinds = list(self.datastore['hcurves'])
-                    hmaps_dt = numpy.dtype(
-                        [('%s-%s' % (imt, poe), F32)
-                         for imt in oq.imtls for poe in oq.poes])
-                    for kind in kinds:
-                        self.datastore.create_dset(
-                            'hmaps/' + kind, hmaps_dt, (N,), fillvalue=None)
-                    allargs = []
-                    for slc in general.split_in_slices(N, ct):
-                        hcurves_by_kind = {
-                            kind: self.datastore['hcurves/' + kind][slc]
-                            for kind in kinds}
-                        allargs.append((hcurves_by_kind, slc,
-                                        oq.imtls, oq.poes, mon))
-                    for dic, slc in Starmap(build_hmaps, allargs, mon):
-                        for kind, hmaps in dic.items():
-                            self.datastore['hmaps/' + kind][slc] = hmaps
-                else:  # single realization
-                    pg = PmapGetter(self.datastore, self.rlzs_assoc)
-                    self.datastore['hmaps/mean'] = calc.make_hmap_array(
-                        pg.get_mean(), oq.imtls, oq.poes, N)
 
     def post_process(self):
         """For compatibility with the engine"""
