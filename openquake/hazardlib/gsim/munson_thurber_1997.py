@@ -175,9 +175,9 @@ class MunsonThurber1997Hawaii(GMPE):
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
         
-        #define SA 0.1 sec and 0.2 sec
+        #define SA 0.3 sec and 0.2 sec
         if isinstance(imt, SA):
-            if imt.period == 0.1:
+            if imt.period == 0.3:
                 mean = np.log10(np.e) * np.log(2.2 * np.exp(mean / np.log10(np.e)))
             if imt.period == 0.2:
                 mean = np.log10(np.e) * np.log(2.5 * np.exp(mean / np.log10(np.e)))
