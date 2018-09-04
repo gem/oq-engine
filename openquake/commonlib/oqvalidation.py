@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009','HM2018']
 TWO16 = 2 ** 16  # 65536
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -86,6 +86,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
+    individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
@@ -468,9 +469,9 @@ class OqParam(valid.ParamSet):
         if self.mean_hazard_curves:
             names.append('mean')
             funcs.append(stats.mean_curve)
-        if self.std_hazard_curves:
-            names.append('std')
-            funcs.append(stats.std_curve)
+            if self.std_hazard_curves:
+                names.append('std')
+                funcs.append(stats.std_curve)
         for q in self.quantile_hazard_curves:
             names.append('quantile-%s' % q)
             funcs.append(functools.partial(stats.quantile_curve, q))

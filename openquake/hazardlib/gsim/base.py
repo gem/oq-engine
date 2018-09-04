@@ -64,16 +64,16 @@ class MetaGSIM(abc.ABCMeta):
     instantiated. A subclass with an attribute non_verified=True will
     print a UserWarning.
     """
-    deprecated = False
+    superseded_by = None
     non_verified = False
 
     def __init__(cls, name, bases, dct):
         registry[name] = cls
 
     def __call__(cls, **kwargs):
-        if cls.deprecated:
+        if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.__base__.__name__)
+                cls.__name__, cls.superseded_by.__name__)
             warnings.warn(msg, DeprecationWarning)
         if cls.non_verified:
             msg = ('%s is not independently verified - the user is liable '

@@ -620,7 +620,7 @@ def view_task_hazard(token, dstore):
     elif 'count_eff_ruptures' in tasks:
         data = dstore['task_info/count_eff_ruptures'].value
     else:
-        data = dstore['task_info/compute_hazard'].value
+        data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -752,6 +752,16 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('global_gmfs')
+def view_global_gmfs(token, dstore):
+    """
+    Display GMFs averaged on everything for debugging purposes
+    """
+    imtls = dstore['oqparam'].imtls
+    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    return rst_table([row], header=imtls)
 
 
 @view.add('mean_disagg')

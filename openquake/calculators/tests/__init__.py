@@ -107,6 +107,7 @@ class CalculatorTestCase(unittest.TestCase):
                 result.update(exported)
             duration[inis[1]] = calc._monitor.duration
             self.calc = calc
+
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
