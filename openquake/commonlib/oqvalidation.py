@@ -685,6 +685,20 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_optimize_same_id_sources(self):
+        """
+        The `optimize_same_id_sources` can be true only in the classical
+        calculators.
+        """
+        if (self.optimize_same_id_sources and
+                'classical' in self.calculation_mode or
+                'disagg' in self.calculation_mode):
+            return True
+        elif self.optimize_same_id_sources:
+            return False
+        else:
+            return True
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
