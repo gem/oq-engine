@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * specified 'amd64' as the only architecture supported by ubuntu packages
+
   [Michele Simionato]
   * Changed the algorithm assigning the seeds: they are now generated before
     the source splitting; also, a seed-related bug in the splitting was fixed
