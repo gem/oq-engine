@@ -27,7 +27,7 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import performance
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -520,7 +520,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             logging.info('%s has been considered %d times', fname, hits)
             if not psr.changed_sources:
                 dupl += hits
-    if dupl and not oqparam.optimize_same_id_sources:
+    if (dupl and not oqparam.optimize_same_id_sources and
+            'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
@@ -553,7 +554,10 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
-    if source_model_lt.on_each_source():
+    if oqparam.number_of_logic_tree_samples == 0:
+        logging.info('Potential number of logic tree paths = {:,d}'.format(
+            source_model_lt.num_paths * gsim_lt.get_num_paths()))
+    if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
@@ -586,6 +590,11 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+
+    if 'event_based' in oqparam.calculation_mode:
+        # initialize the rupture serial numbers before filtering; in
+        # this way the serials are independent from the site collection
+        csm.init_serials(oqparam.ses_seed)
     return csm
 
 
@@ -965,7 +974,7 @@ def get_mesh_hcurves(oqparam):
 
 
 # used in utils/reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids):
+def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
     """
@@ -981,16 +990,25 @@ def reduce_source_model(smlt_file, source_ids):
             for src_group in origmodel:
                 sg = copy.copy(src_group)
                 sg.nodes = []
-                for src_node in src_group:
+                weights = src_group.get('srcs_weights')
+                if weights:
+                    assert len(weights) == len(src_group.nodes)
+                else:
+                    weights = [1] * len(src_group.nodes)
+                src_group['srcs_weights'] = reduced_weigths = []
+                for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
                         sg.nodes.append(src_node)
+                        reduced_weigths.append(weight)
                 if sg.nodes:
                     model.nodes.append(sg)
+        shutil.copy(path, path + '.bak')
         if model:
-            shutil.copy(path, path + '.bak')
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
                 logging.warn('Reduced %s' % path)
+        elif remove:  # remove the files completely reduced
+            os.remove(path)
 
 
 def get_checksum32(oqparam):

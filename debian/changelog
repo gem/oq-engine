@@ -1,4 +1,35 @@
+  [Matteo Nastasi]
+  * specified 'amd64' as the only architecture supported by ubuntu packages
+
   [Michele Simionato]
+  * Changed the source writer: now the `srcs_weights` are written in the XML
+    file only if they are nontrivial
+  * Changed the algorithm assigning the seeds: they are now generated before
+    the source splitting; also, a seed-related bug in the splitting was fixed
+  * For event based, moved the rupture generation in the prefiltering phase
+
+  [Daniele Viganò]
+  * Fixed a bug with CTRL-C when using the `processpool` distribution
+
+  [Robin Gee]
+  * Raised the source ID length limit in the validation from 60 to 75 characters
+    to allow sources with longer IDs
+
+  [Michele Simionato]
+  * Introduced a `multi_node` flag in `openquake.cfg` and used it to
+    fully parallelize the prefiltering in a cluster
+  * Used the rupture seed as rupture ID in event based calculations
+  * Changed the deprecation mechanism of GSIMs to use a class attribute
+    `superseded_by=NewGsimClass`
+  * Solved the pickling bug in event based hazard by using generator tasks
+  * Improved the distribution of the risk tasks by changing the weight
+
+  [Pablo Heresi]
+  * Contributed the HM2018CorrelationModel
+
+  [Michele Simionato]
+  * Restored the `individual_curves` flag that for the moment is used for the
+    risk curves
   * Introduced two experimental new parameters `floating_distance` and
     `spinning_distance` to reduce hypocenter distributions and nodal plane
     distributions of ruptures over the corresponding distances

@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009','HM2018']
 TWO16 = 2 ** 16  # 65536
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -86,6 +86,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
+    individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
@@ -142,8 +143,8 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
-    spinning_distance = valid.Param(valid.positivefloat, None)
-    floating_distance = valid.Param(valid.positivefloat, None)
+    nodal_dist_collapsing_distance = valid.Param(valid.positivefloat, None)
+    hypo_dist_collapsing_distance = valid.Param(valid.positivefloat, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -683,6 +684,20 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
+
+    def is_valid_optimize_same_id_sources(self):
+        """
+        The `optimize_same_id_sources` can be true only in the classical
+        calculators.
+        """
+        if (self.optimize_same_id_sources and
+                'classical' in self.calculation_mode or
+                'disagg' in self.calculation_mode):
+            return True
+        elif self.optimize_same_id_sources:
+            return False
+        else:
+            return True
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

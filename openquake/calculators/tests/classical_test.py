@@ -189,12 +189,12 @@ class ClassicalTestCase(CalculatorTestCase):
         # test recomputing the hazard maps, i.e. with --hc
         # must be run sequentially to avoid the usual heisenbug
         self.run_calc(
-            case_13.__file__, 'job.ini', exports='csv', poes='0.2',
+            case_13.__file__, 'job.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
             concurrent_tasks='0', gsim_logic_tree_file='',
             source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
         # test extract/hazard/rlzs
@@ -209,10 +209,10 @@ class ClassicalTestCase(CalculatorTestCase):
                                    'hcurves/SA(0.2)/rlz-001',
                                    'hcurves/SA(0.2)/rlz-002',
                                    'hcurves/SA(0.2)/rlz-003'])
-        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
-                                 'hmaps/poe-0.2/rlz-001',
-                                 'hmaps/poe-0.2/rlz-002',
-                                 'hmaps/poe-0.2/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.1/rlz-000',
+                                 'hmaps/poe-0.1/rlz-001',
+                                 'hmaps/poe-0.1/rlz-002',
+                                 'hmaps/poe-0.1/rlz-003'])
 
         # test extract/hcurves/rlz-0 also works, used by the npz exports
         haz = dict(extract(self.calc.datastore, 'hcurves'))
@@ -336,9 +336,7 @@ hazard_uhs-mean.csv
 
         # extracting hmaps
         hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
-        self.assertEqual(
-            hmaps.dtype.names,
-            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
+        self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
