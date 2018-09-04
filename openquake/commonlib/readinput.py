@@ -970,7 +970,7 @@ def get_mesh_hcurves(oqparam):
 
 
 # used in utils/reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids):
+def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
     """
@@ -986,8 +986,11 @@ def reduce_source_model(smlt_file, source_ids):
             for src_group in origmodel:
                 sg = copy.copy(src_group)
                 sg.nodes = []
-                weights = src_group['srcs_weights']
-                assert len(weights) == len(src_group.nodes)
+                weights = src_group.get('srcs_weights')
+                if weights:
+                    assert len(weights) == len(src_group.nodes)
+                else:
+                    weights = [1] * len(src_group.nodes)
                 src_group['srcs_weights'] = reduced_weigths = []
                 for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
@@ -1000,7 +1003,7 @@ def reduce_source_model(smlt_file, source_ids):
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
                 logging.warn('Reduced %s' % path)
-        else:
+        elif remove:  # remove the files completely reduced
             os.remove(path)
 
 
