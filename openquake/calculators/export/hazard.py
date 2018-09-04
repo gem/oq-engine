@@ -246,22 +246,22 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
+def export_hmaps_csv(key, dest, sitemesh, array, pdic, comment):
     """
     Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
-    :param pmap: a ProbabilityMap
+    :param array: an array of shape (N, P * I)
     :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
-    if isinstance(pmap, dict):  # old format
-        array = calc.convert_to_array(pmap, len(sitemesh), pdic)
-    else:  # new format for engine >= 3.2
-        array = pmap
-    curves = util.compose_arrays(sitemesh, array)
+    imts = list(pdic)
+    poes = pdic[imts[0]]
+    dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
+                      for imt in imts for poe in poes])
+    curves = util.compose_arrays(sitemesh, array.view(dt)[:, 0])
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -301,7 +301,7 @@ def export_hcurves_by_imt_csv(
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             if isinstance(array, dict):  # is a pmap, for old versions
-                poes = array.setdefault(sid, 0).array[slc]
+                poes = array.setdefault(sid, 0, F32).array[slc]
             else:  # is an array for recent versions of the engine
                 poes = array[sid, slc]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
@@ -391,9 +391,9 @@ def export_hcurves_csv(ekey, dstore):
                 comment=comment)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = dstore['hmaps/' + kind]
+            hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':
             fnames.extend(
                 export_hcurves_by_imt_csv(
@@ -483,15 +483,15 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        for imt in oq.imtls:
-            slc = oq.imtls(imt)
-            imt = from_string(imt)
+        for im in oq.imtls:
+            slc = oq.imtls(im)
+            imt = from_string(im)
             fname = name[:-len_ext] + '-' + imt.name + '.' + fmt
             data = [HazardCurve(Location(site), poes[slc])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
-                               imls=oq.imtls[imt.name], imt=imt.name,
+                               imls=oq.imtls[im], imt=imt.name,
                                sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)

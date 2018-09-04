@@ -26,6 +26,8 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SInter,
                                                       AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
+                                                    MontalvaEtAl2017SSlab)
 
 
 class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
@@ -45,7 +47,7 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     model, however this version is retained for reproducibility of previous
     hazard models using this implementation
     """
-    deprecated = True
+    superseded_by = MontalvaEtAl2017SInter
     
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -144,7 +146,7 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     model, however this version is retained for reproducibility of previous
     hazard models using this implementation
     """
-    deprecated = True
+    superseded_by = MontalvaEtAl2017SSlab
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

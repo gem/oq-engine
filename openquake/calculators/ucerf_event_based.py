@@ -247,9 +247,11 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
     res['ruptures'] = {src.src_group_id: ebruptures}
-    if not param['save_ruptures']:
-        res.events_by_grp = {grp_id: event_based.get_events(ebruptures)
-                             for grp_id in res}
+    if param['save_ruptures']:
+        res.ruptures_by_grp = {src.src_group_id: ebruptures}
+    else:
+        res.events_by_grp = {
+            src.src_group_id: event_based.get_events(ebruptures)}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
@@ -431,11 +433,12 @@ class UCERFRiskCalculator(EbrCalculator):
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            if hasattr(res, 'eff_ruptures'):  # for UCERF
+            if hasattr(res, 'eff_ruptures'):
                 self.eff_ruptures += res.eff_ruptures
-            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
-                save_ruptures(self, res.ruptures_by_grp)
-            elif hasattr(res, 'events_by_grp'):  # for UCERF
+            if hasattr(res, 'ruptures_by_grp'):
+                for ruptures in res.ruptures_by_grp.values():
+                    save_ruptures(self, ruptures)
+            elif hasattr(res, 'events_by_grp'):
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
                     self.datastore.extend('events', events)
