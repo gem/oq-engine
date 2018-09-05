@@ -19,6 +19,7 @@ import logging
 import operator
 import numpy
 
+from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats
@@ -165,6 +166,10 @@ class EbrCalculator(base.RiskCalculator):
         parent = self.datastore.parent
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwriter
+
+        # save memory in the fork
+        Starmap.shutdown()
+        Starmap.init()
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
