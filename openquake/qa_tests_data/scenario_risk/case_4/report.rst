@@ -2,9 +2,9 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ============== ===================
-checksum32     2,254,713,843      
-date           2018-03-26T15:57:42
-engine_version 2.10.0-git543cfb0  
+checksum32     3,157,733,199      
+date           2018-09-05T10:03:39
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -43,11 +43,11 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-========= ====== =============== ================
-smlt_path weight gsim_logic_tree num_realizations
-========= ====== =============== ================
-b_1       1.000  trivial(1)      1/1             
-========= ====== =============== ================
+========= ======= =============== ================
+smlt_path weight  gsim_logic_tree num_realizations
+========= ======= =============== ================
+b_1       1.00000 trivial(1)      1/1             
+========= ======= =============== ================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -66,24 +66,39 @@ deductibile     relative
 insurance_limit relative
 =============== ========
 
-========================== ===== ====== === === ========= ==========
-taxonomy                   mean  stddev min max num_sites num_assets
-Wood                       1.000 0.0    1   1   8         8         
-Adobe                      1.000 0.0    1   1   3         3         
-Stone-Masonry              1.000 0.0    1   1   4         4         
-Unreinforced-Brick-Masonry 1.000 0.0    1   1   5         5         
-*ALL*                      1.000 0.0    1   1   20        20        
-========================== ===== ====== === === ========= ==========
+========================== ======= ====== === === ========= ==========
+taxonomy                   mean    stddev min max num_sites num_assets
+Wood                       1.00000 0.0    1   1   8         8         
+Adobe                      1.00000 0.0    1   1   3         3         
+Stone-Masonry              1.00000 0.0    1   1   4         4         
+Unreinforced-Brick-Masonry 1.00000 0.0    1   1   5         5         
+*ALL*                      1.00000 0.0    1   1   20        20        
+========================== ======= ====== === === ========= ==========
+
+Information about the tasks
+---------------------------
+================== ======= ========= ======= ======= =========
+operation-duration mean    stddev    min     max     num_tasks
+scenario_risk      0.00560 6.723E-04 0.00455 0.00703 20       
+================== ======= ========= ======= ======= =========
+
+Data transfer
+-------------
+============= ===================================================================== ========
+task          sent                                                                  received
+scenario_risk riskinputs=150.31 KB riskmodel=47.15 KB monitor=6.04 KB param=2.15 KB 16.02 KB
+============= ===================================================================== ========
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-building riskinputs     0.092     0.0       1     
-reading exposure        0.019     0.0       1     
-saving gmfs             0.017     0.0       1     
-computing gmfs          0.003     0.0       1     
-building epsilons       0.002     0.0       1     
-reading site collection 4.792E-05 0.0       1     
-======================= ========= ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+total scenario_risk 0.11209  0.19531   20    
+computing risk      0.06780  0.19531   20    
+building riskinputs 0.03583  0.05859   1     
+getting hazard      0.01920  0.0       40    
+saving gmfs         0.01000  0.0       1     
+computing gmfs      0.00233  0.0       1     
+reading exposure    0.00146  0.0       1     
+=================== ======== ========= ======
