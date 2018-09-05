@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2018-06-26T14:57:50
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-05T10:04:33
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -100,11 +100,11 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-5         AreaSource   425          0.02702   0.00454    1.00000   168       0     
-3         AreaSource   510          0.02372   0.00633    1.00000   163       0     
-4         AreaSource   425          0.01652   0.00604    1.00000   127       0     
-2         AreaSource   510          0.01645   0.00640    1.00000   241       0     
-1         AreaSource   425          0.00954   0.00598    1.00000   225       0     
+5         AreaSource   425          0.01429   0.00362    1.00000   168       0     
+3         AreaSource   510          0.00976   0.00481    1.00000   163       0     
+2         AreaSource   510          0.00962   0.00542    1.00000   241       0     
+4         AreaSource   425          0.00861   0.00454    1.00000   127       0     
+1         AreaSource   425          0.00526   0.00485    1.00000   225       0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -112,7 +112,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   0.09324   5     
+AreaSource   0.04754   5     
 ============ ========= ======
 
 Duplicated sources
@@ -121,15 +121,16 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00561 0.00202 0.00217 0.01115 57       
-count_eff_ruptures 0.01477 0.00380 0.00998 0.02295 11       
-================== ======= ======= ======= ======= =========
+==================== ======= ======= ======= ======= =========
+operation-duration   mean    stddev  min     max     num_tasks
+pickle_source_models 0.02519 NaN     0.02519 0.02519 1        
+count_eff_ruptures   0.00678 0.00218 0.00411 0.01027 11       
+preprocess           0.00982 0.00392 0.00259 0.01502 20       
+==================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=6, weight=99, duration=0 s, sources="3 4 5"
+taskno=1, weight=99, duration=0 s, sources="1 2 3"
 
 ======== ======= ====== ======= ======= ==
 variable mean    stddev min     max     n 
@@ -151,25 +152,23 @@ weight   1.50000 0.0    1.50000 1.50000 66
 
 Data transfer
 -------------
-================== =============================================================================== =========
-task               sent                                                                            received 
-RtreeFilter        srcs=182.63 KB monitor=17.92 KB srcfilter=15.53 KB                              213.08 KB
-count_eff_ruptures sources=188.51 KB param=4.63 KB monitor=3.53 KB srcfilter=2.64 KB gsims=1.41 KB 5.46 KB  
-================== =============================================================================== =========
+==================== ============================================================================== =========
+task                 sent                                                                           received 
+pickle_source_models monitor=0 B fnames=0 B converter=0 B                                           156 B    
+count_eff_ruptures   sources=179.38 KB param=5.44 KB monitor=3.3 KB srcfilter=2.36 KB gsims=1.41 KB 5.46 KB  
+preprocess           srcs=149.87 KB monitor=6.23 KB srcfilter=4.94 KB param=720 B                   179.83 KB
+==================== ============================================================================== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.36955   0.0       1     
-total prefilter                0.31968   3.15625   57    
-reading composite source model 0.17893   0.0       1     
-total count_eff_ruptures       0.16243   6.50391   11    
-splitting sources              0.14611   0.0       1     
-unpickling prefilter           0.03003   0.0       57    
-store source_info              0.00733   0.0       1     
-aggregate curves               0.00319   0.0       11    
-unpickling count_eff_ruptures  0.00277   0.0       11    
-reading site collection        3.469E-04 0.0       1     
-============================== ========= ========= ======
+========================== ======== ========= ======
+operation                  time_sec memory_mb counts
+========================== ======== ========= ======
+total preprocess           0.19644  0.0       20    
+splitting sources          0.11542  0.0       1     
+managing sources           0.10045  0.0       1     
+total count_eff_ruptures   0.07454  0.0       11    
+total pickle_source_models 0.02519  0.0       1     
+store source_info          0.00458  0.0       1     
+aggregate curves           0.00279  0.0       11    
+========================== ======== ========= ======
