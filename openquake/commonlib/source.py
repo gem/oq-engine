@@ -717,6 +717,7 @@ class CompositeSourceModel(collections.Sequence):
         :param samples_factor: if given, sample the sources
         :returns: a dictionary source_id -> split_time
         """
+        logging.info('Splitting the sources')
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
         n = 0
         for sm in self.source_models:

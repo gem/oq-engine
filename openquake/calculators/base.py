@@ -337,7 +337,6 @@ class HazardCalculator(BaseCalculator):
         dist = os.environ['OQ_DISTRIBUTE']
         isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
         if oq.prefilter_sources == 'no':
-            logging.info('Splitting the sources')
             for src in isources:
                 pass  # invoked purely for side effects
             csm = self.csm
