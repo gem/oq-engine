@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-06-26T14:57:29
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-05T10:04:32
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -188,8 +188,8 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-SFLT2     SimpleFaultSource 89           0.16200   1.884E-05  1.00000   61        0     
-SFLT1     SimpleFaultSource 132          0.08860   2.861E-06  1.00000   32        0     
+SFLT2     SimpleFaultSource 89           0.14695   1.836E-05  1.00000   61        0     
+SFLT1     SimpleFaultSource 132          0.06808   2.384E-06  1.00000   32        0     
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -197,7 +197,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.25060   2     
+SimpleFaultSource 0.21504   2     
 ================= ========= ======
 
 Duplicated sources
@@ -206,55 +206,54 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00748 0.00364 0.00257 0.01876 41       
-count_eff_ruptures 0.00514 0.00219 0.00220 0.01021 65       
-================== ======= ======= ======= ======= =========
+==================== ======= ======= ======= ======= =========
+operation-duration   mean    stddev  min     max     num_tasks
+pickle_source_models 0.01879 NaN     0.01879 0.01879 1        
+count_eff_ruptures   0.00398 0.00189 0.00164 0.00993 65       
+preprocess           0.00345 0.00189 0.00125 0.01183 68       
+==================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=63, weight=58, duration=0 s, sources="SFLT2"
+taskno=61, weight=132, duration=0 s, sources="SFLT1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   1.00000 NaN    1   1   1
-weight   58      NaN    58  58  1
+weight   132     NaN    132 132 1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=27, weight=83, duration=0 s, sources="SFLT1 SFLT2"
+taskno=9, weight=210, duration=0 s, sources="SFLT2"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   2
-weight   41      23     25  58  2
+nsites   1.00000 NaN    1   1   1
+weight   210     NaN    210 210 1
 ======== ======= ====== === === =
 
 Data transfer
 -------------
-================== ================================================================================= ========
-task               sent                                                                              received
-RtreeFilter        srcs=55.52 KB monitor=12.89 KB srcfilter=11.17 KB                                 61.48 KB
-count_eff_ruptures sources=83.28 KB param=27.87 KB monitor=20.88 KB srcfilter=15.62 KB gsims=7.62 KB 23.51 KB
-================== ================================================================================= ========
+==================== ================================================================================ ========
+task                 sent                                                                             received
+pickle_source_models monitor=0 B fnames=0 B converter=0 B                                             156 B   
+count_eff_ruptures   sources=83.4 KB param=32.63 KB monitor=19.49 KB srcfilter=13.96 KB gsims=7.62 KB 23.51 KB
+preprocess           srcs=74.51 KB monitor=21.18 KB srcfilter=16.8 KB param=2.39 KB                   80.35 KB
+==================== ================================================================================ ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.63428   0.0       1     
-total count_eff_ruptures       0.33386   6.50391   65    
-total prefilter                0.30656   4.23828   41    
-managing sources               0.30462   0.0       1     
-aggregate curves               0.02380   0.0       65    
-unpickling prefilter           0.01666   0.0       41    
-unpickling count_eff_ruptures  0.01623   0.0       65    
-store source_info              0.00966   0.0       1     
-splitting sources              0.00123   0.0       1     
-reading site collection        3.638E-04 0.0       1     
-============================== ========= ========= ======
+========================== ======== ========= ======
+operation                  time_sec memory_mb counts
+========================== ======== ========= ======
+total count_eff_ruptures   0.25842  4.67969   65    
+managing sources           0.25779  0.0       1     
+total preprocess           0.23433  0.87109   68    
+total pickle_source_models 0.01879  0.0       1     
+aggregate curves           0.01499  0.0       65    
+store source_info          0.00710  0.0       1     
+splitting sources          0.00143  0.0       1     
+========================== ======== ========= ======

@@ -127,7 +127,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
+        mon = self._monitor(operation, hdf5=self.datastore.hdf5)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -329,29 +329,33 @@ class HazardCalculator(BaseCalculator):
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
+        isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
         param = dict(concurrent_tasks=oq.concurrent_tasks)
         if 'EventBased' in self.__class__.__name__:
             param['filter_distance'] = oq.filter_distance
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['gsims_by_trt'] = self.csm.gsim_lt.values
-        dist = os.environ['OQ_DISTRIBUTE']
-        isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
-        if oq.prefilter_sources == 'no':
-            for src in isources:
-                pass  # invoked purely for side effects
-            csm = self.csm
-        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        else:
+            # use processpool in classical
+            param['distribute'] = 'processpool'
+            if oq.prefilter_sources == 'no':
+                logging.info('Not prefiltering the sources')
+                for src in isources:
+                    pass  # invoked purely for side effects
+                return src_filter, self.csm
+        dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
+        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            logging.info('Prefiltering the sources with rtree')
+            logging.info('Preprocessing the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
             sources_by_grp = prefilter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         else:
-            logging.info('Prefiltering the sources with numpy')
+            logging.info('Preprocessing the sources')
             sources_by_grp = src_filter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
@@ -534,18 +538,19 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_riskmodel()  # must be called first
-        with self.monitor('reading site collection', autoflush=True):
-            if oq.hazard_calculation_id:
-                with datastore.read(oq.hazard_calculation_id) as dstore:
-                    haz_sitecol = dstore['sitecol'].complete
-            else:
-                haz_sitecol = readinput.get_site_collection(oq)
-                if hasattr(self, 'rup'):
-                    # for scenario we reduce the site collection to the sites
-                    # within the maximum distance from the rupture
-                    haz_sitecol, _dctx = self.cmaker.filter(
-                        haz_sitecol, self.rup)
-                    haz_sitecol.make_complete()
+
+        if oq.hazard_calculation_id:
+            with datastore.read(oq.hazard_calculation_id) as dstore:
+                haz_sitecol = dstore['sitecol'].complete
+        else:
+            haz_sitecol = readinput.get_site_collection(oq)
+            if hasattr(self, 'rup'):
+                # for scenario we reduce the site collection to the sites
+                # within the maximum distance from the rupture
+                haz_sitecol, _dctx = self.cmaker.filter(
+                    haz_sitecol, self.rup)
+                haz_sitecol.make_complete()
+
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:

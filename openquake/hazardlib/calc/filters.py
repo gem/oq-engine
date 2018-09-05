@@ -316,6 +316,7 @@ class SourceFilter(object):
             maxweight=10000,  # hard-coded
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'),
+            distribute=param.pop('distribute', None),
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
             # log the preprocessing phase in an event based calculation
         ).reduce()

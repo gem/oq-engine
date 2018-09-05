@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 11
 
 ============== ===================
 checksum32     3,151,174,296      
-date           2018-06-26T14:57:48
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-05T10:04:41
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -92,7 +92,7 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  2,500        0.01504   1.192E-06  1.00000   3         0     
+1         PointSource  2,500        0.00716   1.192E-06  1.00000   3         0     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  0.01504   1     
+PointSource  0.00716   1     
 ============ ========= ======
 
 Duplicated sources
@@ -109,11 +109,12 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.01414 0.00200   0.01296 0.01645 3        
-count_eff_ruptures 0.00666 8.237E-04 0.00573 0.00727 3        
-================== ======= ========= ======= ======= =========
+==================== ======= ========= ======= ======= =========
+operation-duration   mean    stddev    min     max     num_tasks
+pickle_source_models 0.00524 NaN       0.00524 0.00524 1        
+count_eff_ruptures   0.00298 7.405E-04 0.00212 0.00342 3        
+preprocess           0.00751 0.00187   0.00542 0.00904 3        
+==================== ======= ========= ======= ======= =========
 
 Fastest task
 ------------
@@ -139,25 +140,23 @@ weight   350     NaN    350 350 1
 
 Data transfer
 -------------
-================== ====================================================================== ========
-task               sent                                                                   received
-RtreeFilter        srcs=3.42 KB monitor=966 B srcfilter=837 B                             3.76 KB 
-count_eff_ruptures sources=3.9 KB param=1.29 KB monitor=987 B srcfilter=738 B gsims=360 B 1.05 KB 
-================== ====================================================================== ========
+==================== ======================================================================= ========
+task                 sent                                                                    received
+pickle_source_models monitor=0 B fnames=0 B converter=0 B                                    156 B   
+count_eff_ruptures   sources=3.93 KB param=1.51 KB monitor=921 B srcfilter=660 B gsims=360 B 1.05 KB 
+preprocess           srcs=3.45 KB monitor=957 B srcfilter=759 B param=108 B                  3.71 KB 
+==================== ======================================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.23151   0.0       1     
-total prefilter                0.04242   2.48047   3     
-reading composite source model 0.02070   0.0       1     
-total count_eff_ruptures       0.01999   6.50391   3     
-store source_info              0.00710   0.0       1     
-unpickling prefilter           9.875E-04 0.0       3     
-unpickling count_eff_ruptures  8.311E-04 0.0       3     
-aggregate curves               8.168E-04 0.0       3     
-reading site collection        3.574E-04 0.0       1     
-splitting sources              2.983E-04 0.0       1     
-============================== ========= ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+managing sources           0.02410   0.0       1     
+total preprocess           0.02252   0.0       3     
+total count_eff_ruptures   0.00894   0.0       3     
+total pickle_source_models 0.00524   0.0       1     
+store source_info          0.00423   0.0       1     
+aggregate curves           5.732E-04 0.0       3     
+splitting sources          2.913E-04 0.0       1     
+========================== ========= ========= ======
