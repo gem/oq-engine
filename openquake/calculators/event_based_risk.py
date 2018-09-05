@@ -168,8 +168,9 @@ class EbrCalculator(base.RiskCalculator):
             return  # this happens in the reportwriter
 
         # save memory in the fork
-        Starmap.shutdown()
-        Starmap.init()
+        if not parent:
+            Starmap.shutdown()
+            Starmap.init()
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
