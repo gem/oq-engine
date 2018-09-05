@@ -337,11 +337,11 @@ class HazardCalculator(BaseCalculator):
         else:
             # use processpool in classical
             param['distribute'] = 'processpool'
+            if oq.prefilter_sources == 'no':
+                logging.info('Not prefiltering the sources')
+                csm = self.csm
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
-        if oq.prefilter_sources == 'no':
-            logging.info('Not prefiltering the sources')
-            csm = self.csm
-        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
