@@ -127,7 +127,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         :returns: a new Monitor instance
         """
-        mon = self._monitor(operation, hdf5path=self.datastore.hdf5path)
+        mon = self._monitor(operation, hdf5=self.datastore.hdf5)
         self._monitor.calc_id = mon.calc_id = self.datastore.calc_id
         vars(mon).update(kw)
         return mon
@@ -535,18 +535,19 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_riskmodel()  # must be called first
-        with self.monitor('reading site collection', autoflush=True):
-            if oq.hazard_calculation_id:
-                with datastore.read(oq.hazard_calculation_id) as dstore:
-                    haz_sitecol = dstore['sitecol'].complete
-            else:
-                haz_sitecol = readinput.get_site_collection(oq)
-                if hasattr(self, 'rup'):
-                    # for scenario we reduce the site collection to the sites
-                    # within the maximum distance from the rupture
-                    haz_sitecol, _dctx = self.cmaker.filter(
-                        haz_sitecol, self.rup)
-                    haz_sitecol.make_complete()
+
+        if oq.hazard_calculation_id:
+            with datastore.read(oq.hazard_calculation_id) as dstore:
+                haz_sitecol = dstore['sitecol'].complete
+        else:
+            haz_sitecol = readinput.get_site_collection(oq)
+            if hasattr(self, 'rup'):
+                # for scenario we reduce the site collection to the sites
+                # within the maximum distance from the rupture
+                haz_sitecol, _dctx = self.cmaker.filter(
+                    haz_sitecol, self.rup)
+                haz_sitecol.make_complete()
+
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
