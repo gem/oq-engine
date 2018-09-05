@@ -167,8 +167,9 @@ class EbrCalculator(base.RiskCalculator):
         if not self.oqparam.ground_motion_fields:
             return  # this happens in the reportwriter
 
-        # save memory in the fork
         if not parent:
+            # hazard + risk were done in the same calculation
+            # save memory by resetting the processpool (if any)
             Starmap.shutdown()
             Starmap.init()
 
