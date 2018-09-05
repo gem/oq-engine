@@ -334,23 +334,26 @@ class HazardCalculator(BaseCalculator):
             param['filter_distance'] = oq.filter_distance
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['gsims_by_trt'] = self.csm.gsim_lt.values
-        dist = os.environ['OQ_DISTRIBUTE']
-        if oq.prefilter_sources == 'no':
-            logging.info('Not prefiltering the sources')
-            csm = self.csm
-        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        else:
+            # use processpool in classical
+            param['distribute'] = 'processpool'
+            if oq.prefilter_sources == 'no':
+                logging.info('Not prefiltering the sources')
+                return src_filter, self.csm
+        dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
+        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            logging.info('Prefiltering the sources with rtree')
+            logging.info('Preprocessing the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
             sources_by_grp = prefilter.pfilter(
                 self.csm.get_sources(), param, mon)
             csm = self.csm.new(sources_by_grp)
         else:
-            logging.info('Prefiltering the sources with numpy')
+            logging.info('Preprocessing the sources')
             sources_by_grp = src_filter.pfilter(
                 self.csm.get_sources(), param, mon)
             csm = self.csm.new(sources_by_grp)
