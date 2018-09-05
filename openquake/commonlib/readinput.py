@@ -520,7 +520,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             logging.info('%s has been considered %d times', fname, hits)
             if not psr.changed_sources:
                 dupl += hits
-    if dupl and not oqparam.optimize_same_id_sources:
+    if (dupl and not oqparam.optimize_same_id_sources and
+            'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
