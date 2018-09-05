@@ -339,7 +339,7 @@ class HazardCalculator(BaseCalculator):
             param['distribute'] = 'processpool'
             if oq.prefilter_sources == 'no':
                 logging.info('Not prefiltering the sources')
-                csm = self.csm
+                return src_filter, self.csm
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
         if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
