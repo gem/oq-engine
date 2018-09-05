@@ -346,14 +346,14 @@ class HazardCalculator(BaseCalculator):
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            logging.info('Prefiltering the sources with rtree')
+            logging.info('Preprocessing the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
             sources_by_grp = prefilter.pfilter(
                 self.csm.get_sources(), param, mon)
             csm = self.csm.new(sources_by_grp)
         else:
-            logging.info('Prefiltering the sources with numpy')
+            logging.info('Preprocessing the sources')
             sources_by_grp = src_filter.pfilter(
                 self.csm.get_sources(), param, mon)
             csm = self.csm.new(sources_by_grp)
