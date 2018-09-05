@@ -111,7 +111,7 @@ def _get_catalogue_bin_limits(catalogue, dmag):
         dmag)
     counter = np.histogram(catalogue.data['magnitude'], mag_bins)[0]
     idx = np.where(counter > 0)[0]
-    mag_bins = mag_bins[idx[0]:idx[-1] + 3]
+    mag_bins = mag_bins[idx[0]:(idx[-1] + 2)]
     return mag_bins
 
 
@@ -267,8 +267,8 @@ def plot_magnitude_time_scatter(
 
 def plot_magnitude_time_density(
         catalogue, mag_int, time_int, completeness=None,
-        normalisation=False, logscale=True, bootstrap=None, filename=None,
-        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
+        normalisation=False, logscale=True, bootstrap=None, xlim=[], ylim=[],
+        filename=None, figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a plot of magnitude-time density
 
@@ -328,13 +328,20 @@ def plot_magnitude_time_density(
                    norm=norm_data)
     ax.set_xlabel('Time (year)')
     ax.set_ylabel('Magnitude')
-    ax.set_xlim(time_bins[0], time_bins[-1])
+    if len(xlim) == 2:
+        ax.set_xlim(xlim[0], xlim[1])
+    else:
+        ax.set_xlim(time_bins[0], time_bins[-1])
+    if len(ylim) == 2:
+        ax.set_ylim(ylim[0], ylim[1])
+    else:
+        ax.set_ylim(mag_bins[0], mag_bins[-1] + (mag_bins[-1] - mag_bins[-2]))
     # Fix the title
     if normalisation:
         fig.colorbar(im, label='Event Density', shrink=0.9, ax=ax)
     else:
         fig.colorbar(im, label='Event Count', shrink=0.9, ax=ax)
-
+    ax.grid(True)
     # Plot completeness
     if completeness is not None:
         _plot_completeness(ax, completeness, time_bins[0], time_bins[-1])
@@ -364,6 +371,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
     # Find the natural bin limits
     mag_bins = _get_catalogue_bin_limits(catalogue, dmag)
     obs_time = end_year - completeness[:, 0] + 1.
+    print(obs_time)
     obs_rates = np.zeros_like(mag_bins)
     n_comp = np.shape(completeness)[0]
     for iloc in range(0, n_comp, 1):
@@ -373,7 +381,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
             idx = np.logical_and(
                 catalogue.data['magnitude'] >= low_mag - (dmag / 2.),
                 catalogue.data['year'] >= comp_year)
-            high_mag = mag_bins[-1] + dmag
+            high_mag = mag_bins[-1]
             obs_idx = mag_bins >= (low_mag - dmag / 2.)
         else:
             high_mag = completeness[iloc + 1, 1]
@@ -388,14 +396,15 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
         temp_rates = temp_rates.astype(float) / obs_time[iloc]
-        if iloc == n_comp - 1:
+        if iloc == (n_comp - 1):
             # TODO This hack seems to fix the error in Numpy v.1.8.1
             obs_rates[np.where(obs_idx)[0]] = temp_rates
         else:
             obs_rates[obs_idx[:-1]] = temp_rates
+    print(obs_rates, mag_bins)
     selector = np.where(obs_rates > 0.)[0]
-    mag_bins = mag_bins[selector[0]:selector[-1] + 1]
-    obs_rates = obs_rates[selector[0]:selector[-1] + 1]
+    mag_bins = mag_bins[selector[0]:selector[-1] + 2]
+    obs_rates = obs_rates[selector[0]:selector[-1] + 2]
     # Get cumulative rates
     cum_rates = np.array([sum(obs_rates[iloc:])
                           for iloc in range(0, len(obs_rates))])
