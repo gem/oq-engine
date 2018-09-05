@@ -137,6 +137,7 @@ class Catalogue(object):
 
     def _get_row_str(self, i):
         """
+        Returns a string representation of the key information in a row
         """
         row_data = ["{:s}".format(self.data['eventID'][i]),
                     "{:g}".format(self.data['year'][i]),
@@ -151,7 +152,39 @@ class Catalogue(object):
                     "{:.1f}".format(self.data['magnitude'][i])]
         return " ".join(row_data)
 
-                    
+    def __getitem__(self, key):
+        """
+        If the key is provided as an int, return a data for that index,
+        otherwise if it is a string then return the data column
+        """
+        if isinstance(key, int):
+            # Gets the row specied
+            row =[]
+            for key in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[key]):
+                    row.append(self.data[key][i])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            return row
+        elif isinstance(key, str):
+            return self.data[key]
+        else:
+            raise ValueError("__getitem__ requires integer or string")
+
+    def __iter__(self):
+        """
+        Iteration yields for each event a list of data
+        """
+        for i in len(self):
+            row =[]
+            for key in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[key]):
+                    row.append(self.data[key][i])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            yield row
 
     def add_event(self):
         raise NotImplementedError
