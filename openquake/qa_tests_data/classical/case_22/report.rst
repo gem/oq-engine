@@ -2,9 +2,9 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ============== ===================
-checksum32     1,554,747,528      
-date           2018-06-26T14:57:31
-engine_version 3.2.0-gitb0cd949   
+checksum32     3,294,662,884      
+date           2018-09-05T10:04:30
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -55,6 +55,7 @@ Required parameters per tectonic region type
 ====== ======================================================================================================= ========= ========== =======================
 grp_id gsims                                                                                                   distances siteparams ruptparams             
 ====== ======================================================================================================= ========= ========== =======================
+0      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
 1      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
 ====== ======================================================================================================= ========= ========== =======================
 
@@ -82,8 +83,8 @@ Slowest sources
 ========= ================ ============ ========= ========== ========= ========= ======
 source_id source_class     num_ruptures calc_time split_time num_sites num_split events
 ========= ================ ============ ========= ========== ========= ========= ======
-2         MultiPointSource 1,104        0.00614   4.699E-04  1.25000   4         0     
-1         MultiPointSource 160          0.0       1.643E-04  0.0       0         0     
+2         MultiPointSource 1,104        0.00295   3.891E-04  1.25000   4         0     
+1         MultiPointSource 160          0.0       1.619E-04  0.0       0         0     
 ========= ================ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -91,7 +92,7 @@ Computation times by source typology
 ================ ========= ======
 source_class     calc_time counts
 ================ ========= ======
-MultiPointSource 0.00614   2     
+MultiPointSource 0.00295   2     
 ================ ========= ======
 
 Duplicated sources
@@ -100,11 +101,12 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00325 9.220E-04 0.00182 0.00443 14       
-count_eff_ruptures 0.00928 NaN       0.00928 0.00928 1        
-================== ======= ========= ======= ======= =========
+==================== ======= ========= ========= ======= =========
+operation-duration   mean    stddev    min       max     num_tasks
+pickle_source_models 0.00583 7.098E-05 0.00578   0.00588 2        
+count_eff_ruptures   0.00358 NaN       0.00358   0.00358 1        
+preprocess           0.00387 0.00153   9.978E-04 0.00541 14       
+==================== ======= ========= ========= ======= =========
 
 Fastest task
 ------------
@@ -130,25 +132,23 @@ weight   40      7.62153 36  52  4
 
 Data transfer
 -------------
-================== ======================================================================= ========
-task               sent                                                                    received
-RtreeFilter        srcs=21.95 KB monitor=4.4 KB srcfilter=3.81 KB                          7.04 KB 
-count_eff_ruptures sources=4.04 KB param=1.64 KB gsims=422 B monitor=329 B srcfilter=246 B 359 B   
-================== ======================================================================= ========
+==================== ====================================================================== ========
+task                 sent                                                                   received
+pickle_source_models monitor=618 B converter=578 B fnames=383 B                             350 B   
+count_eff_ruptures   sources=4.1 KB param=1.72 KB gsims=422 B monitor=307 B srcfilter=220 B 359 B   
+preprocess           srcs=22.62 KB monitor=4.36 KB srcfilter=3.46 KB param=504 B            6.85 KB 
+==================== ====================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.23360   0.0       1     
-total prefilter                0.04549   1.71094   14    
-total count_eff_ruptures       0.00928   6.56641   1     
-store source_info              0.00726   0.0       1     
-reading composite source model 0.00515   0.0       1     
-unpickling prefilter           0.00307   0.0       14    
-splitting sources              9.668E-04 0.0       1     
-reading site collection        5.791E-04 0.0       1     
-unpickling count_eff_ruptures  2.720E-04 0.0       1     
-aggregate curves               2.656E-04 0.0       1     
-============================== ========= ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+total preprocess           0.05418   2.88281   14    
+managing sources           0.05351   0.0       1     
+total pickle_source_models 0.01166   1.04688   2     
+store source_info          0.00427   0.0       1     
+total count_eff_ruptures   0.00358   0.0       1     
+splitting sources          8.438E-04 0.0       1     
+aggregate curves           1.771E-04 0.0       1     
+========================== ========= ========= ======

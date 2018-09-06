@@ -252,13 +252,13 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        oq = self.oqparam
         self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
+        gmf_size = 0
         for src in self.csm.get_sources():
-            if oq.save_ruptures and not oq.ground_motion_fields:
-                self.gmf_size += max_gmf_size(
+            if hasattr(src, 'eb_ruptures'):  # except UCERF
+                gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     rlzs_assoc.get_rlzs_by_gsim,
                     samples_by_grp, len(self.oqparam.imtls))
@@ -275,6 +275,12 @@ class EventBasedCalculator(base.HazardCalculator):
             if hasattr(src, 'eb_ruptures'):
                 self.save_ruptures(src.eb_ruptures)
         self.rupser.close()
+        if gmf_size:
+            self.datastore.set_attrs('events', max_gmf_size=gmf_size)
+            msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
+            logging.info('Estimating %s%s of GMFs',
+                         msg, humansize(gmf_size))
+
         with self.monitor('store source_info', autoflush=True):
             acc = mock.Mock(eff_ruptures={
                 grp.id: sum(src.num_ruptures for src in grp)
@@ -365,7 +371,6 @@ class EventBasedCalculator(base.HazardCalculator):
             from openquake.calculators.classical import saving_sources_by_task
         self.gmdata = {}
         self.offset = 0
-        self.gmf_size = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         acc = self.zerodict()
         with self.monitor('managing sources', autoflush=True):
@@ -434,12 +439,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 numpy.random.seed(self.oqparam.ses_seed)
                 set_random_years(self.datastore, 'events',
                                  int(self.oqparam.investigation_time))
-
-        if self.gmf_size:
-            self.datastore.set_attrs('events', max_gmf_size=self.gmf_size)
-            msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
-            logging.info('Generating %s%s of GMFs',
-                         msg, humansize(self.gmf_size))
 
         if oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.rlzs_assoc.realizations

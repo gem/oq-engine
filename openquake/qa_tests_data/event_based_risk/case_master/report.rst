@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     3,029,642,047      
-date           2018-06-05T06:38:37
-engine_version 3.2.0-git65c4735   
+checksum32     571,516,522        
+date           2018-09-05T10:04:23
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -42,7 +42,7 @@ gsim_logic_tree                     `gsim_logic_tree.xml <gsim_logic_tree.xml>`_
 job_ini                             `job.ini <job.ini>`_                                                            
 nonstructural_vulnerability         `nonstructural_vulnerability_model.xml <nonstructural_vulnerability_model.xml>`_
 occupants_vulnerability             `occupants_vulnerability_model.xml <occupants_vulnerability_model.xml>`_        
-source                              `6.05.xml <6.05.xml>`_                                                          
+source                              `6.05.hdf5 <6.05.hdf5>`_                                                        
 source                              `source_model_1.xml <source_model_1.xml>`_                                      
 source                              `source_model_2.xml <source_model_2.xml>`_                                      
 source_model_logic_tree             `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                    
@@ -96,7 +96,7 @@ source_model_1.xml 0      Active Shallow Crust 482          482
 source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
 source_model_2.xml 3      Stable Shallow Crust 1            1           
-6.05.xml           4      Deep Seismicity      2            2           
+6.05.hdf5          4      Deep Seismicity      2            2           
 ================== ====== ==================== ============ ============
 
 ============= ===
@@ -132,9 +132,9 @@ Slowest sources
 ========= ========================== ============ ========= ========== ========= ========= ======
 source_id source_class               num_ruptures calc_time split_time num_sites num_split events
 ========= ========================== ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource          482          0.53386   1.440E-04  7.00000   30        1     
-2         CharacteristicFaultSource  1            0.03193   2.146E-06  7.00000   2         9     
-buc06pt05 NonParametricSeismicSource 2            0.00291   1.526E-05  7.00000   2         2     
+1         SimpleFaultSource          482          0.49136   4.039E-04  7.00000   30        1     
+2         CharacteristicFaultSource  1            0.01853   1.454E-05  7.00000   2         9     
+buc06pt05 NonParametricSeismicSource 2            0.00163   3.529E-05  7.00000   2         1     
 ========= ========================== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -142,9 +142,9 @@ Computation times by source typology
 ========================== ========= ======
 source_class               calc_time counts
 ========================== ========= ======
-CharacteristicFaultSource  0.03193   1     
-NonParametricSeismicSource 0.00291   1     
-SimpleFaultSource          0.53386   1     
+CharacteristicFaultSource  0.01853   1     
+NonParametricSeismicSource 0.00163   1     
+SimpleFaultSource          0.49136   1     
 ========================== ========= ======
 
 Duplicated sources
@@ -153,37 +153,42 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00600 0.00325 0.00221 0.01136 34       
-compute_ruptures   0.04700 0.01973 0.00596 0.07674 15       
-================== ======= ======= ======= ======= =========
+==================== ======= ======= ======= ======= =========
+operation-duration   mean    stddev  min     max     num_tasks
+pickle_source_models 0.01648 0.00507 0.01264 0.02222 3        
+preprocess           0.03040 0.01376 0.00456 0.05587 31       
+compute_gmfs         0.03609 0.01965 0.02051 0.05816 3        
+==================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-================ ================================================================================ ========
-task             sent                                                                             received
-RtreeFilter      srcs=53.47 KB monitor=11.49 KB srcfilter=9.26 KB                                 55.63 KB
-compute_ruptures sources=42.59 KB param=16.92 KB monitor=5.17 KB src_filter=3.41 KB gsims=3.13 KB 15.7 KB 
-================ ================================================================================ ========
+==================== ================================================================================================= ========
+task                 sent                                                                                              received
+pickle_source_models monitor=1.01 KB converter=867 B fnames=576 B                                                      495 B   
+preprocess           srcs=51.23 KB param=19.28 KB monitor=10.81 KB srcfilter=7.66 KB                                   64.89 KB
+compute_gmfs         param=17.09 KB sources_or_ruptures=13.62 KB rlzs_by_gsim=1.12 KB monitor=1.01 KB src_filter=660 B 57.45 KB
+==================== ================================================================================================= ========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-total compute_ruptures          0.70497   8.71875   15    
-EventBasedRuptureCalculator.run 0.52510   0.0       1     
-managing sources                0.28227   0.0       1     
-total prefilter                 0.20412   4.75781   34    
-making contexts                 0.03095   0.0       6     
-reading composite source model  0.02243   0.0       1     
-saving ruptures                 0.01284   0.0       15    
-unpickling prefilter            0.00849   0.0       34    
-store source_info               0.00639   0.0       1     
-reading site collection         0.00415   0.0       1     
-unpickling compute_ruptures     0.00381   0.0       15    
-reading exposure                0.00169   0.0       1     
-setting event years             0.00140   0.0       1     
-splitting sources               6.709E-04 0.0       1     
-=============================== ========= ========= ======
+========================== ======== ========= ======
+operation                  time_sec memory_mb counts
+========================== ======== ========= ======
+total preprocess           0.94243  9.18750   31    
+total compute_gmfs         0.10827  1.16797   3     
+building hazard            0.07512  1.16016   3     
+total pickle_source_models 0.04945  6.08203   3     
+building hazard curves     0.01827  0.0       63    
+making contexts            0.01682  0.0       6     
+saving ruptures            0.01098  0.0       3     
+building ruptures          0.00852  0.0       3     
+saving gmfs                0.00678  0.0       3     
+store source_info          0.00627  0.0       1     
+managing sources           0.00474  0.0       1     
+saving gmf_data/indices    0.00392  0.0       1     
+aggregating hcurves        0.00343  0.0       3     
+GmfGetter.init             0.00277  0.06250   3     
+splitting sources          0.00172  0.0       1     
+setting event years        0.00149  0.0       1     
+reading exposure           0.00132  0.0       1     
+========================== ======== ========= ======
