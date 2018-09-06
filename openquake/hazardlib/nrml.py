@@ -124,14 +124,16 @@ class SourceModel(collections.Sequence):
 
     def __toh5__(self):
         dic = {}
+        nbytes = 0
         for i, grp in enumerate(self.src_groups):
             grpname = grp.name or 'group-%d' % i
             array = numpy.zeros(len(grp), hdf5.vuint8)
             for i, src in enumerate(grp):
                 array[i] = numpy.uint8(memoryview(
                     pickle.dumps(src, pickle.HIGHEST_PROTOCOL)))
+                nbytes += len(array[i]) + 8
             dic[grpname] = hdf5.ArrayWrapper(array, dict(trt=grp.trt))
-        attrs = dict(name=self.name,
+        attrs = dict(name=self.name, nbytes=nbytes,
                      investigation_time=self.investigation_time or 'NA',
                      start_time=self.start_time or 'NA')
         return dic, attrs
