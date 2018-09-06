@@ -143,8 +143,14 @@ class SourceModel(collections.Sequence):
         for grp_name, grp in dic.items():
             trt = grp.attrs['trt']
             srcs = []
-            for row in grp:
-                srcs.append(pickle.loads(memoryview(row)))
+            if isinstance(grp, hdf5.ArrayWrapper):
+                for row in grp:
+                    srcs.append(pickle.loads(memoryview(row)))
+            else:  # hdf5.Group
+                for src_id in sorted(grp):
+                    src = grp[src_id]
+                    src.num_ruptures = src.count_ruptures()
+                    srcs.append(src)
             grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
             self.src_groups.append(grp)
 
@@ -162,19 +168,6 @@ class SourceModel(collections.Sequence):
         if not dic:
             raise ValueError('There are no serializable sources in %s' % self)
         return dic, attrs
-
-    def __fromh5old__(self, dic, attrs):
-        vars(self).update(attrs)
-        self.src_groups = []
-        for grp_name, grp in dic.items():
-            trt = grp.attrs['trt']
-            srcs = []
-            for src_id in sorted(grp):
-                src = grp[src_id]
-                src.num_ruptures = src.count_ruptures()
-                srcs.append(src)
-            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
-            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):
