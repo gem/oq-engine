@@ -222,6 +222,9 @@ We added an extra check on the source model logic tree parser; a logic tree
 like the following
 
 ```xml
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="1"
+                                branchSetID="bs7">
                 <logicTreeBranch branchID="b71">
                     <uncertaintyModel> 7.7 </uncertaintyModel>
                     <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -234,6 +237,7 @@ like the following
                     <uncertaintyModel> 7.7 </uncertaintyModel>
                     <uncertaintyWeight>0.334</uncertaintyWeight>
                 </logicTreeBranch>
+            </logicTreeBranchSet>
 ```
 will be rejected because it makes no sense to have the same value (7.7)
 repeated twice. The `uncertaintyModel` values must be unique within
