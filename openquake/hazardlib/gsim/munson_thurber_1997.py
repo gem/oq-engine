@@ -64,7 +64,6 @@ class MunsonThurber1997(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = set(('rjb', ))
 
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -82,8 +81,8 @@ class MunsonThurber1997(GMPE):
         # we use this upper value as class separator
         S = np.zeros(R.shape)
         S[sites.vs30 <= 200] = 1
-        
-        #Mean ground motion (log10)
+
+        # Mean ground motion (log10)
         mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
 
         # Converting to natural log
@@ -95,15 +94,14 @@ class MunsonThurber1997(GMPE):
 
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
-
         return mean, stddevs
+
 
 class MunsonThurber1997Hawaii(GMPE):
     """
-	Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic 
-	hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG. Seismic-
-	hazard maps for Hawaii. US Geological Survey; 2000.
-    
+    Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic
+    hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG.
+    Seismic-hazard maps for Hawaii. US Geological Survey; 2000.
     """
 
     #: Supported tectonic region type is volcanic,
@@ -134,11 +132,11 @@ class MunsonThurber1997Hawaii(GMPE):
     #: see page 18 in Atkinson and Boore's manuscript
     REQUIRES_DISTANCES = set(('rjb', ))
 
-
-    # Verification values for the mean PGA (magnitude > 7) and all PSA 
+    # Verification values for the mean PGA (magnitude > 7) and all PSA
     # were computed manually, since this implementation is a modified
     # GMPE for which a verification was not provided.
 
+    non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -157,16 +155,17 @@ class MunsonThurber1997Hawaii(GMPE):
         # we use this upper value as class separator
         S = np.zeros(R.shape)
         S[sites.vs30 <= 200] = 1
-        
-        #Mean ground motion (log10)
+
+        # Mean ground motion (log10)
         if rup.mag <= 7.:
             mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
         elif rup.mag > 7. and rup.mag <= 7.7:
-            mean = (0.518 + 0.387 + 0.216*(M-1) - np.log10(R) - 0.00256*R + 0.335*S)
+            mean = (0.518 + 0.387 + 0.216*(M-1)
+                    - np.log10(R) - 0.00256*R + 0.335*S)
 
         else:
-            mean = (0.518 + 0.387 + (0.216*0.7) - np.log10(R) - 0.00256*R + 0.335*S)
-
+            mean = (0.518 + 0.387 + (0.216*0.7)
+                    - np.log10(R) - 0.00256*R + 0.335*S)
 
         # Check for standard deviation type
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
@@ -174,13 +173,15 @@ class MunsonThurber1997Hawaii(GMPE):
 
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
-        
-        #define SA 0.3 sec and 0.2 sec
+
+        # define SA 0.3 sec and 0.2 sec
         if isinstance(imt, SA):
             if imt.period == 0.3:
-                mean = np.log10(np.e) * np.log(2.2 * np.exp(mean / np.log10(np.e)))
+                mean = np.log10(np.e) * \
+                       np.log(2.2 * np.exp(mean / np.log10(np.e)))
             if imt.period == 0.2:
-                mean = np.log10(np.e) * np.log(2.5 * np.exp(mean / np.log10(np.e)))
+                mean = np.log10(np.e) * \
+                       np.log(2.5 * np.exp(mean / np.log10(np.e)))
 
         # Converting to natural log
         mean /= np.log10(np.e)
@@ -206,4 +207,3 @@ class MunsonThurber1997Vector(MunsonThurber1997):
         mean += np.log(1.1)
 
         return mean, stddevs
-
