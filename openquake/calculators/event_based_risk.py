@@ -196,9 +196,10 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
-        if not oq.ignore_covs:
-            logging.info('Generating %s of epsilons',
-                         humansize(self.A * self.E * 4))
+        # FIXME: commented because it can be misleading
+        # if not oq.ignore_covs:
+        #     logging.info('Generating %s of epsilons',
+        #                  humansize(self.A * self.E * 4))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
