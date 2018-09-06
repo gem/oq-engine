@@ -132,12 +132,13 @@ Pablo Heresi, as well as three new IMTs needed for this model.
 WebUI/QGIS plugin
 -----------------
 
-There were various improvements to the WebUI. The most important one is
-that all the WebUI outputs are streamed, so that the QGIS plugin can
+There were various improvements to the WebUI. For instance now
+all the WebUI outputs are streamed, so that the QGIS plugin can
 display a nice progress bar while downloading them.
 
-The download performance of hazard curves and maps has improved
-drastically. For instance, for a continental scale calculation, with
+The biggest improvement is in the performance of extracting the
+hazard curves (or maps) from the WebUI or the QGIS plugin.
+For instance, for a continental scale calculation, with
 engine 3.1 you could wait 20 minutes to prepare the hazard curves (or
 maps) plus 20 seconds to download them. Now you will just wait the 20
 seconds of download time, depending on the speed of your Internet connection.
@@ -147,18 +148,20 @@ format of hazard curves and hazard maps. That means that you cannot
 export calculations performed with previous version of the engine, as
 it commonly happens.
 
-The WebUI now displays some information on the size of the stored
+Moreover, now the WebUI now displays some information on the size of the stored
 output, when possible. This is not the same as the size of the file that
-you will download, which depends on the chosen output format (XML
+will be downloaded, since ti depends on the chosen output format (XML
 outputs will be larger than CSV outputs) but it is still an useful information.
 For instance if you see that the stored GMFs are 100 GB you will think twice
 before trying to dowload them. The size appears as a tooltip when hovering
 with the mouse over the output name in the WebUI and it is also available
 in the QGIS plugin and in calls to the URL `/v1/calc/list`.
 
-We added some additional information to the agg_curves risk output
+We added some additional information to the "Aggregate Loss Curves" output
 (`units`, `return_periods` and `stats`) so that they can be plotted
-nicely in the QGIS plugin. There is now a new entry point in the REST
+nicely in the QGIS plugin.
+
+There is now a new entry point in the REST
 API `/v1/calc/XXX/extract/event_based_mfd` to extract the magnitude-frequency
 distribution of the ruptures of an event based calculation. This entry
 point will be accessible in the future to the QGIS plugin.
@@ -333,7 +336,7 @@ nonparametric gridded sources. The benefits will be visible only
 in the future.
 
 We improved the documentation and the [FAQ page](
-https://github.com/gem/oq-engine/blob/master/doc/faq.md)
+https://github.com/gem/oq-engine/blob/master/doc/faq.md).
 
 Finally, there was a lot of work on the packaging (new Python 3.6,
 new h5py 2.8, work on Windows, MacOS and Linux packages).
