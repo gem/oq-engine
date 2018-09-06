@@ -1551,8 +1551,15 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
         for name in sm.names.split():
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+
+    def save_sm(acc, dic):
+        for sm in dic.values():
+            monitor.hdf5['csm/' + sm.relpath] = sm
+        return acc + dic
+
     dic = parallel.Starmap.apply(
         nrml.pickle_source_models,
         (sorted(fnames), converter, monitor),
-        distribute=dist).reduce()
+        distribute=dist,
+    ).reduce(save_sm)
     return dic
