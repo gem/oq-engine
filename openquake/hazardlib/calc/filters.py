@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
+import time
 import logging
 import operator
 import collections
@@ -186,6 +187,51 @@ class IntegrationDistance(collections.Mapping):
 
     def __repr__(self):
         return repr(self.dic)
+
+
+def split_source(src, min_mag):
+    """
+    :param src: a source
+    :param min_mag: if passed, discard ruptures below the minimum
+    :returns: a pair (split sources, split time)
+    """
+    t0 = time.time()
+    if min_mag and src.get_min_max_mag()[0] < min_mag:
+        splits = []
+        for s in src:
+            if min_mag and s.get_min_max_mag()[0] < min_mag:
+                # discard some ruptures
+                s.min_mag = min_mag
+                s.num_ruptures = s.count_ruptures()
+                if s.num_ruptures:
+                    splits.append(s)
+            else:
+                splits.append(s)
+    else:
+        splits = list(src)
+    has_serial = hasattr(src, 'serial')
+    has_samples = hasattr(src, 'samples')
+    if len(splits) > 1:
+        start = 0
+        for i, split in enumerate(splits):
+            split.source_id = '%s:%s' % (src.source_id, i)
+            split.src_group_id = src.src_group_id
+            split.ngsims = src.ngsims
+            split.ndists = src.ndists
+            if has_serial:
+                nr = split.num_ruptures
+                split.serial = src.serial[start:start + nr]
+                start += nr
+            if has_samples:
+                split.samples = src.samples
+    elif splits:  # single source
+        splits[0].ngsims = src.ngsims
+        splits[0].ndists = src.ndists
+        if has_serial:
+            splits[0].serial = src.serial
+        if has_samples:
+            splits[0].samples = src.samples
+    return splits, time.time() - t0
 
 
 def preprocess(srcs, srcfilter, param, monitor):
