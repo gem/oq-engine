@@ -13,12 +13,12 @@ Improvements to the calculators
 As always, there was a lot of work on the event based calculators,
 both on the hazard side and on the risk side. Some simplification was
 made and now the only way to run an event based risk calculation
-is by reading ground motion fields stored in the datastore. Before
-in the case of an event based risk calculation with a single job.ini
-file the GMFs were kept in memory, but the approach had strong
+is by reading the ground motion fields stored in the datastore. Before,
+in the case of an event based risk calculation with a single `job.ini`
+file, the GMFs were kept in memory, but the approach had strong
 limitations and a bad performance. The recommended way to run an
-event based risk calculation is still to use two different job.ini
-files, one for hazard and one for risk and to run one calculation
+event based risk calculation is to use two different `job.ini`
+files, one for hazard part and one for risk part and to run one calculation
 after the other. If you use a single file the GMFs will have to
 be transferred to the workers and this is less efficient than
 reading them from the datastore (plus, on a cluster, rabbitmq/celery
@@ -27,7 +27,7 @@ may run out of memory or fail in strange ways).
 The improvements to the event based calculators were motivated by
 the Global Risk Mosaic project, which required to be able to run
 calculations of unprecedented size. Since the calculations may become so
-huge, there is nwo a limit on the size of the stored GMFs: the
+huge, there is a limit on the size of the stored GMFs: the
 `gmf_data` dataset cannot contain more than 4 billions of rows. The
 limit forbids the users from running hazard calculations which are
 too big and would be impossible to run on the risk side anyway. If
@@ -35,17 +35,14 @@ you are reaching the limit, you must reduce your calculation,
 preferably by reducing the number of realizations in the logic tree.
 
 The source prefiltering phase and the rupture-generation phase have
-been merged into a single preprocessing phase that can use all the
-cores of your cluster, if you have one (before the prefiltering was
-using only the cores in the master node of the cluster).
-
-At the end of the preprocessing phase, an upper limit for the
-estimated size of the GMFs is printed: it means that you can kill a
-calculation if see you that the estimated GMFs size is of the order of
-terabytes. It should be noticed that the estimated size is an upper
-limit: if there is a `minimum_intensity` parameter the GMFs below the
-threshold are discarded and therefore the actual size of the GMFs can
-be a lot less than the estimate, even orders of magnitude less.
+been merged into a single preprocessing phase. At the end of it, an
+upper limit for the estimated size of the GMFs is printed: it means
+that you can kill a calculation if see you that the estimated GMFs
+size is of the order of terabytes. It should be noticed that the
+estimated size is an upper limit: if there is a `minimum_intensity`
+parameter the GMFs below the threshold are discarded and therefore the
+actual size of the GMFs can be a lot less than the estimate, even
+orders of magnitude less.
 
 There was an *huge* improvement in the algorithm used to compute the
 loss curves and maps: they do not require storing the the asset loss table
@@ -63,14 +60,15 @@ this release of the engine are slightly different than before.
 This is expected.
 
 The way data have been stored in the datastore has changed, in
-particular for the indices of the GMFs and the event based ruptures. The change
-has been forced by a bug in HDFView 3.0 which is unable to visualize
+particular for the indices of the GMFs and the event based ruptures. The changes
+have been forced by a bug in HDFView 3.0 which is unable to visualize
 variable-lenght structured arrays, so we had to simplify the data
-structure used to store the indices.
+structures.
 
 During the calculation of the statistical hazard curves we now also compute
 the statistical hazard maps and we store them. This makes the export of the
-hazard maps extremely fast.
+hazard maps extremely fast at the cost of making the main computation slightly
+slower.
 
 We implemented the equivalent epicentre distance approximation. This is
 useful if you want to compare the results of a hazard calculation made
@@ -112,19 +110,21 @@ that it is deprecated and supersed by the new GSIM.
 
 We used this mechanism to deprecate the GSIMs of Montalva et al (2016),
 since there are new versions of them published in 2017 with revised
-coefficients.
+coefficients and implemented in hazardlib in this release.
 
 We fixed the source group XML writer so that the `srcs_weights` attribute
-is written only if they weights are nontrivial (it the attribute is missing
-the weights are assumed to be trivial, i.e. equal to 1).
+is written only if they weights are nontrivial. If the attribute is missing
+the weights are assumed to be trivial, i.e. equal to 1. This is always the
+case except in the case of mutually exclusive sources which are used
+in the Japan model.
 
 We added the new scaling relationship: Thingbaijam et al. (2017).
 
-We introduced validation to the dates in
-`openquake.htmk.seismicity.utils.decimal_time`.
+We added date validation in `openquake.htmk.seismicity.utils.decimal_time`.
 
 We removed excessive validation in the HMTK source model parser: now
-when the name is missing the source model is still accepted.
+when the name is missing the source model is still accepted, since this
+is a common case and the name is not used by the calculators anyway.
 
 A new correlation model `HM2018CorrelationModel` was contributed by
 Pablo Heresi, as well as three new IMTs needed for this model.
@@ -132,13 +132,9 @@ Pablo Heresi, as well as three new IMTs needed for this model.
 WebUI/QGIS plugin
 -----------------
 
-There were various improvements to the WebUI. In particular now all the
-WebUI outputs are streamed, so that the QGIS plugin can display a nice
-progress bar while downloading them.
-
-We added indexes to the engine database and now the queries on it are
-a lot faster: this makes a difference if you have a database with
-thousands of calculations.
+There were various improvements to the WebUI. The most important one is
+that all the WebUI outputs are streamed, so that the QGIS plugin can
+display a nice progress bar while downloading them.
 
 The download performance of hazard curves and maps has improved
 drastically. For instance, for a continental scale calculation, with
@@ -167,11 +163,12 @@ API `/v1/calc/XXX/extract/event_based_mfd` to extract the magnitude-frequency
 distribution of the ruptures of an event based calculation. This entry
 point will be accessible in the future to the QGIS plugin.
 
+We added indexes to the engine database and now the queries on it are
+a lot faster: this makes a difference if you have a database with
+thousands of calculations.
+
 Bug fixes
 ---------
-
-Exporting the GMFs from a scenario calculation could fail in presence
-of a filtered SiteCollection: this has been fixed now.
 
 We fixed a bug with the CTRL-C: now you can kill a calculation with a
 single CTRL-C, before you had to press it multiple times.
@@ -185,6 +182,9 @@ fixed since the encoding is known (UTF-8).
 There was a long standing bug in `classical_damage` calculations: even
 if fragility functions for multiple loss types were defined, only the
 `structural` loss type was computed. Now it is fixed.
+
+Exporting the GMFs from a scenario calculation could fail in presence
+of a filtered SiteCollection: this has been fixed now.
 
 We fixed a bug in the command `oq engine --delete-calculation` which now
 removes the calculation correctly.
@@ -203,15 +203,15 @@ Additional checks
 -----------------
 
 We added a check so that the flag `optimize_same_id_sources` can be turned on
-only for classical and disaggregation calculations, since it was not meant
-for event based calculatons at all.
+for classical and disaggregation calculations only.
 
-We improved the exposure XML parser: now an incorrect exposure with a node
+We improved the exposure XML parser: now an incorrect exposure with an invalid
+node
 
 ```xml
 <costTypes name="structural" type="aggregated" unit="USD"/>
 ```
-will raise a clear error mesage.
+will raise a clear error message.
 
 We added a `LargeExposureGrid` error, to avoid mistakes when the engine
 automatically determines the grid from the exposure. For instance the
@@ -244,9 +244,10 @@ We added a check for duplicated branch IDs in the GSIM logic tree file.
 We raised the length limit in the source IDs from 60 characters to 75
 characters: this was needed to run the US14 collapsed model.
 
-We moved the check on the number of sites (65,536) and IMTs (256) in
-event_based calculations right at the beginning, to avoid performing
-any calculation in unsupported situations.
+We moved the check on the maximum number of sites (65,536) and maximum
+number of IMTs (256) in event_based calculations right at the
+beginning, to avoid performing any calculation in unsupported
+situations.
 
 We removed a check on the Uniform Hazard Spectra: now UHS curves with a
 single period are valid, but a warning will be logged. This was requested
@@ -261,8 +262,8 @@ New configuration parameters
 
 In the section `[distribution]` of the global configuration file
 `openquake.cfg` there is a new parameter `multi_node` which by
-default is false. You should change it to `true` if you are installing
-the engine on a cluster.
+default is `false`. You should change it to `true` if you are installing
+the engine on a cluster, otherwise you will get a warning.
 
 There are three new parameters in the `job.ini` file.
 
@@ -305,7 +306,9 @@ configuration parameters.
 
 Since the source models are read in parallel, the command `oq info
 --report` will be a lot faster than before in large source models
-split in several files.
+split in several files. It will also use less memory. This makes it
+possible to estimate the size of extra-large models without running
+them.
 
 Internals
 ---------
