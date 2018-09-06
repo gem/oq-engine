@@ -79,7 +79,6 @@ import pickle
 import decimal
 import logging
 import operator
-import tempfile
 import collections
 
 import numpy
@@ -110,8 +109,8 @@ class SourceModel(collections.Sequence):
     >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
     ..    f['/'] = source_model
     """
-    def __init__(self, src_groups, name=None, investigation_time=None,
-                 start_time=None):
+    def __init__(self, src_groups, name='', investigation_time='',
+                 start_time=''):
         self.src_groups = src_groups
         self.name = name
         self.investigation_time = investigation_time
@@ -141,12 +140,13 @@ class SourceModel(collections.Sequence):
         vars(self).update(attrs)
         self.src_groups = []
         for grp_name, grp in dic.items():
-            trt = grp.attrs['trt']
             srcs = []
             if isinstance(grp, hdf5.ArrayWrapper):
+                trt = grp.trt
                 for row in grp:
                     srcs.append(pickle.loads(memoryview(row)))
             else:  # hdf5.Group
+                trt = grp.attrs['trt']
                 for src_id in sorted(grp):
                     src = grp[src_id]
                     src.num_ruptures = src.count_ruptures()
@@ -219,7 +219,7 @@ def get_source_model_04(node, fname, converter=default):
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
                         for trt, srcs in groups.items())
-    return SourceModel(src_groups, node.get('name'))
+    return SourceModel(src_groups, node.get('name', ''))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -239,7 +239,7 @@ def get_source_model_05(node, fname, converter=default):
     stime = node.get('start_time')
     if stime is not None:
         stime = valid.positivefloat(stime)
-    return SourceModel(sorted(groups), node.get('name'), itime, stime)
+    return SourceModel(sorted(groups), node.get('name', ''), itime, stime)
 
 
 validators = {
@@ -332,10 +332,9 @@ def pickle_source_models(fnames, converter,  monitor):
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
     :returns:
-        a dictionary fname -> fname.pik
+        a dictionary fname -> SourceModel instance
     """
-    fname2pik = {}
-    dtemp = tempfile.mkdtemp(prefix='calc_%s' % monitor.calc_id)
+    fname2sm = {}
     prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
     P = len(prefix) + 1
     for fname in fnames:
@@ -345,11 +344,9 @@ def pickle_source_models(fnames, converter,  monitor):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        pikname = os.path.join(dtemp, '%s.pik' % fname[P:])
-        fname2pik[fname] = pikname
-        with open(pikname, 'wb') as f:
-            pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
-    return fname2pik
+        sm.relpath = fname[P:]
+        fname2sm[fname] = sm
+    return fname2sm
 
 
 def check_nonparametric_sources(fname, smodel, investigation_time):
@@ -389,19 +386,21 @@ class SourceModelParser(object):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse(self, fname, pik, apply_uncertainties, investigation_time):
+    def parse(self, fname, relpath, apply_uncertainties, investigation_time,
+              monitor):
         """
         :param fname:
             the full pathname of a source model file
-        :param pik:
-            the pathname of the corresponding pickled file
+        :param relpath:
+            the relative path on the datastore
         :param apply_uncertainties:
             a function modifying the sources
         :param investigation_time:
             the investigation_time in the job.ini file
+        :param monitor:
+            a monitor with an .hdf5 file
         """
-        with open(pik, 'rb') as f:
-            sm = pickle.load(f)
+        sm = monitor.hdf5[relpath]
         check_nonparametric_sources(fname, sm, investigation_time)
         for group in sm:
             for src in group:
