@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     2,048,857,716      
-date           2018-06-26T14:56:58
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-05T10:03:49
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 7, num_levels = 26
@@ -75,24 +75,26 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =========
 operation-duration mean    stddev min     max     num_tasks
-scenario_damage    0.01062 NaN    0.01062 0.01062 1        
+scenario_damage    0.00408 NaN    0.00408 0.00408 1        
 ================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-=============== ================================================= ========
-task            sent                                              received
-scenario_damage riskmodel=0 B riskinput=0 B param=0 B monitor=0 B 5.27 KB 
-=============== ================================================= ========
+=============== ================================================== ========
+task            sent                                               received
+scenario_damage riskmodel=0 B riskinputs=0 B param=0 B monitor=0 B 5.27 KB 
+=============== ================================================== ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total scenario_damage      0.01062   0.0       1     
-getting hazard             0.00721   0.0       2     
-building riskinputs        0.00258   0.0       1     
-computing risk             0.00213   0.0       1     
-unpickling scenario_damage 3.414E-04 0.0       1     
-========================== ========= ========= ======
+===================== ========= ========= ======
+operation             time_sec  memory_mb counts
+===================== ========= ========= ======
+total scenario_damage 0.00408   0.0       1     
+computing risk        0.00236   0.0       1     
+building riskinputs   0.00189   0.0       1     
+saving gmfs           0.00157   0.0       1     
+computing gmfs        0.00152   0.0       1     
+reading exposure      5.209E-04 0.0       1     
+getting hazard        4.966E-04 0.0       2     
+===================== ========= ========= ======
