@@ -145,8 +145,9 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        src.src_group_id = [0]
+        src.src_group_id = 0
         src.mutex_weight = 1
+        src.mutex_ruptures = True
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls, filter_distance='rjb')
