@@ -1,3 +1,8 @@
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
+
   [Matteo Nastasi]
   * specified 'amd64' as the only architecture supported by ubuntu packages
 
