@@ -341,7 +341,7 @@ nonparametric gridded sources. The benefits will be visible only
 in the future.
 
 We improved the documentation and the [FAQ page](
-https://github.com/gem/oq-engine/blob/master/doc/faq.md).
+https://github.com/gem/oq-engine/blob/engine-3.2/doc/faq.md).
 
 Finally, there was a lot of work on the packaging (new Python 3.6,
 new h5py 2.8, work on Windows, MacOS and Linux packages).
