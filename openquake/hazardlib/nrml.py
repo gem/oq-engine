@@ -127,6 +127,31 @@ class SourceModel(collections.Sequence):
         dic = {}
         for i, grp in enumerate(self.src_groups):
             grpname = grp.name or 'group-%d' % i
+            array = numpy.zeros(len(grp), hdf5.vuint8)
+            for i, src in enumerate(grp):
+                array[i] = numpy.uint8(memoryview(
+                    pickle.dumps(src, pickle.HIGHEST_PROTOCOL)))
+            dic[grpname] = hdf5.ArrayWrapper(array, dict(trt=grp.trt))
+        attrs = dict(name=self.name,
+                     investigation_time=self.investigation_time or 'NA',
+                     start_time=self.start_time or 'NA')
+        return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for row in grp:
+                srcs.append(pickle.loads(memoryview(row)))
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
+
+    def __toh5old__(self):
+        dic = {}
+        for i, grp in enumerate(self.src_groups):
+            grpname = grp.name or 'group-%d' % i
             srcs = [(src.source_id, src) for src in grp
                     if hasattr(src, '__toh5__')]
             if srcs:
@@ -138,7 +163,7 @@ class SourceModel(collections.Sequence):
             raise ValueError('There are no serializable sources in %s' % self)
         return dic, attrs
 
-    def __fromh5__(self, dic, attrs):
+    def __fromh5old__(self, dic, attrs):
         vars(self).update(attrs)
         self.src_groups = []
         for grp_name, grp in dic.items():
@@ -318,15 +343,16 @@ def pickle_source_models(fnames, converter,  monitor):
     """
     fname2pik = {}
     dtemp = tempfile.mkdtemp(prefix='calc_%s' % monitor.calc_id)
-    for i, fname in enumerate(fnames, 1):
+    prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
+    P = len(prefix) + 1
+    for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
         elif fname.endswith('.hdf5'):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        pikname = os.path.join(dtemp, '%s-%d.pik' %
-                               (os.path.basename(fname), i))
+        pikname = os.path.join(dtemp, '%s.pik' % fname[P:])
         fname2pik[fname] = pikname
         with open(pikname, 'wb') as f:
             pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
