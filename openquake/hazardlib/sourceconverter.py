@@ -755,6 +755,11 @@ class SourceConverter(RuptureConverter):
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
         sg = SourceGroup(trt)
+        sg.name = node.attrib.get('name')
+        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
+        sg.grp_probability = grp_probability
+        mutex_ruptures = sg.rup_interdep == 'mutex'
         for src_node in node:
             src = self.convert_node(src_node)
             # transmit the group attributes to the underlying source
@@ -773,11 +778,7 @@ class SourceConverter(RuptureConverter):
                     % (len(srcs_weights), len(node), self.fname))
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
-
-        sg.name = node.attrib.get('name')
-        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
-        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = grp_probability
+                src.mutex_ruptures = mutex_ruptures
         return sg
 
 # ################### MultiPointSource conversion ######################## #
