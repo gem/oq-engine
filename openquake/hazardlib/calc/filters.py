@@ -188,7 +188,7 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def prefilter(srcs, srcfilter, param, monitor):
+def preprocess(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
     """
@@ -312,12 +312,13 @@ class SourceFilter(object):
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, param, monitor),
+            preprocess, (sources, self, param, monitor),
             concurrent_tasks=param['concurrent_tasks'],
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'),
+            distribute=param.pop('distribute', None),
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
-            # log the prefiltering phase in an event based calculation
+            # log the preprocessing phase in an event based calculation
         ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
