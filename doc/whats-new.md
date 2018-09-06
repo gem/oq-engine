@@ -11,27 +11,32 @@ Improvements to the calculators
 -------------------------------
 
 As always, there was a lot of work on the event based calculators,
-both on the hazard side and on the risk side. Some simplification was
-made and now the only way to run an event based risk calculation
-is by reading the ground motion fields stored in the datastore. Before,
-in the case of an event based risk calculation with a single `job.ini`
-file, the GMFs were kept in memory, but the approach had strong
-limitations and a bad performance. The recommended way to run an
+both on the hazard side and on the risk side. Some simplifications were
+made, and now the only way to run an event based risk calculation
+is by reading the ground motion fields stored in the datastore. In
+previous versions of the engine, in the case of an event based risk
+calculation with a single `job.ini` file, the GMFs were calculated 
+on the fly and kept in memory to compute the losses, but this approach had strong
+limitations and a bad performance. Now, the recommended way to run an
 event based risk calculation is to use two different `job.ini`
-files, one for hazard part and one for risk part and to run one calculation
-after the other. If you use a single file the GMFs will have to
+files, one for the hazard part (generating the ruptures and producing the 
+ground motion fields) and one for the risk part (computing the losses),
+and to run the risk calculation after the hazard. 
+If you use a single job file, the GMFs will have to
 be transferred to the workers and this is less efficient than
-reading them from the datastore (plus, on a cluster, rabbitmq/celery
-may run out of memory or fail in strange ways).
+reading them from the datastore. Furthermore, on a cluster, rabbitmq/celery
+may run out of memory or fail in strange ways.
 
 The improvements to the event based calculators were motivated by
-the Global Risk Mosaic project, which required to be able to run
+the Global Risk Model project, which requires to be able to run
 calculations of unprecedented size. Since the calculations may become so
-huge, there is a limit on the size of the stored GMFs: the
-`gmf_data` dataset cannot contain more than 4 billions of rows. The
+huge as to be unmanagable, there is now a limit on the maximum size of the 
+GMFs that can be stored in the datastore: the
+`gmf_data` dataset cannot contain more than 4 billion rows. This
 limit forbids the users from running hazard calculations which are
 too big and would be impossible to run on the risk side anyway. If
-you are reaching the limit, you must reduce your calculation,
+you are reaching the limit, you must revisit your calculation 
+configuration and try to reduce your calculation,
 preferably by reducing the number of realizations in the logic tree.
 
 The source prefiltering phase and the rupture-generation phase have
@@ -40,33 +45,33 @@ upper limit for the estimated size of the GMFs is printed: it means
 that you can kill a calculation if see you that the estimated GMFs
 size is of the order of terabytes. It should be noticed that the
 estimated size is an upper limit: if there is a `minimum_intensity`
-parameter the GMFs below the threshold are discarded and therefore the
+parameter, the GMFs below the threshold are discarded and therefore the
 actual size of the GMFs can be a lot less than the estimate, even
 orders of magnitude less.
 
-There was an *huge* improvement in the algorithm used to compute the
-loss curves and maps: they do not require storing the the asset loss table
-anymore, so a lot of calculations that were technically impossible on the
-past are now possible and often even easy. Thanks to the breakthrough,
+There was a *huge* improvement in the algorithm used to compute the
+loss curves and loss maps: they do not require storing the entire asset loss table
+anymore, so a lot of calculations that were technically impossible in the
+past are now possible and often even easy. Thanks to this breakthrough,
 the loss curves and maps are no more experimental outputs but *bona fide*
-outputs, they appear in the Web UI and are exportable as all the other
-outputs.
+outputs, they appear in the Web UI and are exportable like all the other
+risk outputs.
 
-Due to the many changes in the event based calculators (changes in the
+Due to the many changes in the event based calculators — changes in the
 source splitting procedure, changes in the the source weights, changes
 in the seeds generation algorithm, changes in some outputs from
-64 bit floats to 32 bit floats and others) the numbers generated with
+64 bit floats to 32 bit floats and others — the numbers generated with
 this release of the engine are slightly different than before.
 This is expected.
 
-The way data have been stored in the datastore has changed, in
-particular for the indices of the GMFs and the event based ruptures. The changes
-have been forced by a bug in HDFView 3.0 which is unable to visualize
-variable-lenght structured arrays, so we had to simplify the data
-structures.
+The way data is stored in the datastore has also changed, in
+particular, for the indices of the GMFs and the event based ruptures.
+These changes have been forced by a bug in HDFView 3.0 which is unable to visualize
+variable-length structured arrays, so we had to simplify the data
+structures used by the engine.
 
 During the calculation of the statistical hazard curves we now also compute
-the statistical hazard maps and we store them. This makes the export of the
+the statistical hazard maps and store them. This makes the export of the
 hazard maps extremely fast at the cost of making the main computation slightly
 slower.
 
@@ -75,7 +80,7 @@ useful if you want to compare the results of a hazard calculation made
 with the OpenQuake engine with some other code using that approximation
 (i.e. USGS Fortran code).
 
-There was also some minor change in the risk calculators, in particular
+There were also some minor changes in the risk calculators, in particular
 in the number of risk inputs generated.
 
 We changed the `dmg_by_event` exporter which now produces a single .csv with
@@ -83,7 +88,7 @@ all realizations instead of one file per realization. This is more convenient
 and more consistent with the way the GMF exporter works.
 
 Finally the memory consumption in UCERF classical calculations has been
-reduced drastically and the calculator optimized and simplified.
+reduced drastically and the calculator is now optimized and simplified.
 
 Changes to hazardlib/HMTK
 -------------------------
@@ -139,27 +144,27 @@ display a nice progress bar while downloading them.
 The biggest improvement is in the performance of extracting the
 hazard curves (or maps) from the WebUI or the QGIS plugin.
 For instance, for a continental scale calculation, with
-engine 3.1 you could wait 20 minutes to prepare the hazard curves (or
-maps) plus 20 seconds to download them. Now you will just wait the 20
-seconds of download time, depending on the speed of your Internet connection.
+engine 3.1 you might have been required to wait around 20 minutes 
+for the preparation of the hazard curves (or maps) plus 20 seconds 
+to download them. Now you will just need to wait the 20
+seconds of download time, depending on the speed of your internet connection.
 
-Implementing such improvement required changing the internal storage
+Implementing such improvements required changing the internal storage
 format of hazard curves and hazard maps. That means that you cannot
-export calculations performed with previous version of the engine, as
-it commonly happens.
+export calculations performed with previous version of the engine.
 
 Moreover, now the WebUI now displays some information on the size of the stored
 output, when possible. This is not the same as the size of the file that
-will be downloaded, since ti depends on the chosen output format (XML
-outputs will be larger than CSV outputs) but it is still an useful information.
-For instance if you see that the stored GMFs are 100 GB you will think twice
-before trying to dowload them. The size appears as a tooltip when hovering
+will be downloaded, since it depends on the chosen output format (XML
+outputs will be larger than CSV outputs) but it is still useful information.
+For instance if you see that the stored GMFs are 100 GB you might think twice
+before trying to download them. The size appears as a tooltip when hovering
 with the mouse over the output name in the WebUI and it is also available
 in the QGIS plugin and in calls to the URL `/v1/calc/list`.
 
 We added some additional information to the "Aggregate Loss Curves" output
 (`units`, `return_periods` and `stats`) so that they can be plotted
-nicely in the QGIS plugin.
+nicely using the QGIS plugin.
 
 There is now a new entry point in the REST
 API `/v1/calc/XXX/extract/event_based_mfd` to extract the magnitude-frequency
@@ -180,17 +185,17 @@ Some users reported an annoying permission error on Windows, when trying to
 remove a temporary file after the end of a calculation. We fixed it.
 
 There was an encoding error on Windows when reading the exposure: we
-fixed since the encoding is known (UTF-8).
+fixed this, since the encoding is known (UTF-8).
 
 There was a long standing bug in `classical_damage` calculations: even
 if fragility functions for multiple loss types were defined, only the
-`structural` loss type was computed. Now it is fixed.
+`structural` loss type was computed. Now this has been fixed.
 
-Exporting the GMFs from a scenario calculation could fail in presence
+Exporting the GMFs from a scenario calculation would sometimes fail in the presence
 of a filtered SiteCollection: this has been fixed now.
 
 We fixed a bug in the command `oq engine --delete-calculation` which now
-removes the calculation correctly.
+removes the specified calculation correctly.
 
 There was a rare splitting bug causing some event based calculations to
 fail for sources splitting into a single subsource.
@@ -285,14 +290,14 @@ hypocenter distribution and discarding all the ruptures except the first one.
 The `nodal_dist_collapsing_distance` parameter works similarly to the
 `hypo_dist_collapsing_distance`, but it acts on the nodal plane distribution.
 
-By discarding all the rupture over the collapsing distances
+By discarding all the ruptures over the collapsing distances,
 a calculation can become a lot faster without losing precision.
-For instance, we had a real life calculation for Canada with area sources
+For instance, we had a real calculation for Canada with area sources
 with a nodal plane distribution of length 12 and an hypocenter distribution
 of length 4: this approximation made the calculation 12 x 4 = 48 times
 faster.
 
-Notice that we do not provide any facility to determine the right
+Note that we do not provide any facility to determine the appropriate
 collapsing distances to use: this is not easy and it is left for the
 future.
 
@@ -353,6 +358,6 @@ release.
 
 Ubuntu Trusty (14.04) is deprecated and from the next release we will
 stop providing packages for it. The reason is that Trusty is reaching
-the end of the line and will not be supported even by Canonical. It
+the [end of its life](https://wiki.ubuntu.com/Releases) and will not be supported even by Canonical. It
 will still be possible to install and use the engine on Trusty, but
 not with the packages.
