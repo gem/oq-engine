@@ -750,7 +750,6 @@ class SourceConverter(RuptureConverter):
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
-        grp_probability = node.attrib.get('grp_probability')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
@@ -758,8 +757,7 @@ class SourceConverter(RuptureConverter):
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = grp_probability
-        mutex_ruptures = sg.rup_interdep == 'mutex'
+        sg.grp_probability = node.attrib.get('grp_probability')
         for src_node in node:
             src = self.convert_node(src_node)
             # transmit the group attributes to the underlying source
@@ -778,7 +776,6 @@ class SourceConverter(RuptureConverter):
                     % (len(srcs_weights), len(node), self.fname))
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
-                src.mutex_ruptures = mutex_ruptures
         return sg
 
 # ################### MultiPointSource conversion ######################## #

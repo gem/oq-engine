@@ -201,7 +201,7 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def poe_map(self, src, sites, imtls, trunclevel, rup_indep):
+    def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
         :param sites: a filtered SiteCollection
