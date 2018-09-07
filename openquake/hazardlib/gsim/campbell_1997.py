@@ -56,7 +56,9 @@ class Campbell1997(GMPE):
     #: Required rupture parameters are magnitude and top of rupture depth
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
-    #: Required distance measure is closest distance to rupture
+    #: Required distance measure is closest distance to rupture. In the
+    #: publication, Rseis is used. We assume Rrup=Rseis, justified by 
+    #: our calculations matching the verification tables
     REQUIRES_DISTANCES = set(('rrup', ))
 
     #: Verification of the mean value was done by digitizing Figs. 9 and 10

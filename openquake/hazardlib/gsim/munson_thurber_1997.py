@@ -160,7 +160,7 @@ class MunsonThurber1997Hawaii(GMPE):
 
         # Mean ground motion (log10)
         if rup.mag <= 7.:
-            mean = (0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S)
+            mean = 0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S
         elif rup.mag > 7. and rup.mag <= 7.7:
             mean = (0.518 + 0.387 + 0.216*(M-1)
                     - np.log10(R) - 0.00256*R + 0.335*S)
