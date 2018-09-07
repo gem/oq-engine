@@ -113,7 +113,7 @@ class Catalogue(object):
     def __len__(self):
         return self.get_number_events()
     
-    def __repr__(self):
+    def __str__(self):
         """
         Returns a shortened print of the catalogue
         """
