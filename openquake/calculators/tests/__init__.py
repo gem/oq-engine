@@ -69,7 +69,8 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.duration = general.AccumDict()
-        parallel.Starmap.shutdown = lambda: None  # avoid restarting the pool
+        # avoid restarting the pool in the tests
+        parallel.Starmap.shutdown = classmethod(lambda cls: None)
 
     def get_calc(self, testfile, job_ini, **kw):
         """
