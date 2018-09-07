@@ -93,31 +93,32 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
     pmap.calc_times = AccumDict(accum=numpy.zeros(4))
     pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
+    src_mutex = param.get('src_interdep') == 'mutex'
+    rup_mutex = param.get('rup_interdep') == 'mutex'
     for src, s_sites in src_filter(group):  # filter now
-        mutex_weight = getattr(src, 'mutex_weight', None)
         t0 = time.time()
-        indep = group.rup_interdep == 'indep' if mutex_weight else True
         try:
-            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel, indep)
+            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
+                                    not rup_mutex)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = '%s (source id=%s)' % (str(err), src.source_id)
             raise etype(msg).with_traceback(tb)
-        if mutex_weight:  # mutex sources
+        if src_mutex:  # mutex sources, there is a single group
             for sid in poemap:
-                pcurve = pmap[group.id].setdefault(sid, 0)
-                pcurve += poemap[sid] * mutex_weight
+                pcurve = pmap[src.src_group_id].setdefault(sid, 0)
+                pcurve += poemap[sid] * src.mutex_weight
         elif poemap:
-            for grp_id in src.src_group_ids:
-                pmap[grp_id] |= poemap
+            for gid in src.src_group_ids:
+                pmap[gid] |= poemap
         src_id = src.source_id.split(':', 1)[0]
         pmap.calc_times[src_id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0, 1])
         # storing the number of contributing ruptures too
-        pmap.eff_ruptures += {grp_id: getattr(poemap, 'eff_ruptures', 0)
-                              for grp_id in src.src_group_ids}
-    if mutex_weight and group.grp_probability is not None:
-        pmap[group.id] *= group.grp_probability
+        pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                              for gid in src.src_group_ids}
+    if src_mutex and param.get('grp_probability') is not None:
+        pmap[src.source_group_id] *= param['grp_probability']
     return pmap
 
 
@@ -184,7 +185,11 @@ def calc_hazard_curves(
     mon = Monitor()
     for group in groups:
         if group.src_interdep == 'mutex':  # do not split the group
-            it = [classical(group, ss_filter, [gsim], param, mon)]
+            par = param.copy()
+            par['src_interdep'] = group.src_interdep
+            par['rup_interdep'] = group.rup_interdep
+            par['grp_probability'] = group.grp_probability
+            it = [classical(group, ss_filter, [gsim], par, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
                 classical, (group, ss_filter, [gsim], param, mon),

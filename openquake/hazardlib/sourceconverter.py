@@ -88,29 +88,17 @@ class SourceGroup(collections.Sequence):
         # return SourceGroups, ordered by TRT string
         return sorted(source_stats_dict.values())
 
-    @property
-    def srcs_weights(self):
-        """
-        The weights of the underlying sources. If not specified, returns
-        an array of 1s.
-        """
-        if self._srcs_weights is None:
-            return list(numpy.ones(len(self.sources)))
-        return self._srcs_weights
-
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None, grp_probability=None,
+                 rup_interdep='indep', grp_probability=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1,
                  tot_ruptures=0):
         # checks
         self.trt = trt
-        self._check_init_variables(sources, name, src_interdep, rup_interdep,
-                                   srcs_weights)
+        self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.sources = []
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
-        self._srcs_weights = srcs_weights
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
@@ -122,8 +110,8 @@ class SourceGroup(collections.Sequence):
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
 
-    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
-                              srcs_weights):
+    def _check_init_variables(self, src_list, name,
+                              src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):
             raise ValueError('source interdependence incorrect %s ' %
                              src_interdep)
@@ -781,11 +769,14 @@ class SourceConverter(RuptureConverter):
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
-        grp_probability = node.attrib.get('grp_probability')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
         sg = SourceGroup(trt)
+        sg.name = node.attrib.get('name')
+        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
+        sg.grp_probability = node.attrib.get('grp_probability')
         for src_node in node:
             src = self.convert_node(src_node)
             # transmit the group attributes to the underlying source
@@ -802,11 +793,8 @@ class SourceConverter(RuptureConverter):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
                     % (len(srcs_weights), len(node), self.fname))
-        sg.name = node.attrib.get('name')
-        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
-        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg._srcs_weights = srcs_weights
-        sg.grp_probability = grp_probability
+            for src, sw in zip(sg, srcs_weights):
+                src.mutex_weight = sw
         return sg
 
 # ################### MultiPointSource conversion ######################## #
