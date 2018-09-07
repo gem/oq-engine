@@ -539,6 +539,7 @@ class Starmap(object):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             # we use spawn here to avoid deadlocks with logging, see
+            # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
                 poolsize, init_workers)
