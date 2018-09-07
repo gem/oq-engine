@@ -538,7 +538,10 @@ class Starmap(object):
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            # we use spawn here to avoid deadlocks with logging, see
+            # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
+            cls.pool = multiprocessing.get_context('spawn').Pool(
+                poolsize, init_workers)
             signal.signal(signal.SIGINT, orig_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
