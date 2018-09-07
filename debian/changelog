@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Replaced the forking processpool with a spawning processpool
+
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
 
   [Matteo Nastasi]
