@@ -27,7 +27,7 @@ import sys
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import datastore, general
+from openquake.baselib import datastore, general, parallel
 from openquake.commonlib import readinput, oqvalidation
 
 
@@ -69,6 +69,7 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.duration = general.AccumDict()
+        parallel.Starmap.shutdown = lambda: None  # avoid restarting the pool
 
     def get_calc(self, testfile, job_ini, **kw):
         """
