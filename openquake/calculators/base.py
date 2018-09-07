@@ -374,7 +374,6 @@ class HazardCalculator(BaseCalculator):
             return hdf5cache
         elif (self.oqparam.hazard_calculation_id and read_access and
                 'gmf_data' not in self.datastore.hdf5):
-            self.datastore.parent.close()  # make sure it is closed
             return self.datastore.parent
         logging.warn('With a parent calculation reading the hazard '
                      'would be faster')
@@ -775,9 +774,6 @@ class RiskCalculator(HazardCalculator):
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 getter.init()
-            else:
-                # the datastore must be closed to avoid the HDF5 fork bug
-                assert dstore.hdf5 == (), '%s is not closed!' % dstore
             for block in general.block_splitter(assets, 1000):
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = {ass.ordinal: eps[ass.ordinal]
