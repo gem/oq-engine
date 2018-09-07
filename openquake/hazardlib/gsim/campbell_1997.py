@@ -66,8 +66,6 @@ class Campbell1997(GMPE):
     #: (web.stanford.edu/~bakerjw/GMPEs/C_1997_horiz.m), which also has no
     #: verification tables.
 
-    non_verified = True
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
