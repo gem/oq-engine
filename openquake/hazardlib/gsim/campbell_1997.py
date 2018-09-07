@@ -83,11 +83,11 @@ class Campbell1997(GMPE):
         F = self.get_fault_term(rake)
 
         # compute mean
-        mean = (-3.512 + (0.904 * M) - (1.328 * np.log(np.sqrt(R**2
-                + (0.149 * np.exp(0.647 * M))**2)))
-                + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F
-                + (0.440 - 0.171 * np.log(R)) * Ssr
-                + (0.405 - 0.222 * np.log(R)) * Shr)
+        mean = -3.512 + (0.904 * M) - (1.328 * np.log(np.sqrt(R**2
+               + (0.149 * np.exp(0.647 * M))**2))) \
+               + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
+               + (0.440 - 0.171 * np.log(R)) * Ssr \
+               + (0.405 - 0.222 * np.log(R)) * Shr
         stddevs = self.get_stddevs(mean)
         return mean, stddevs
 
@@ -111,7 +111,7 @@ class Campbell1997(GMPE):
         """
         ssr = []
         for v in vs30:
-            if ((v >= 760.) & (v < 1500.)):
+            if (v >= 760.) & (v < 1500.):
                 ss = 1.
             else:
                 ss = 0.
@@ -122,14 +122,7 @@ class Campbell1997(GMPE):
         """
         Returns site term for hard rock (pg 157)
         """
-        shr = []
-        for v in vs30:
-            if v >= 1500.:
-                sh = 1
-            else:
-                sh = 0
-            shr.append(sh)
-        return shr
+        return vs30 >= 1500
 
     def get_stddevs(self, mean):
         """
