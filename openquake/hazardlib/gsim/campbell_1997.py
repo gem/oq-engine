@@ -109,14 +109,7 @@ class Campbell1997(GMPE):
         """
         Returns site term for soft rock (pg 157)
         """
-        ssr = []
-        for v in vs30:
-            if (v >= 760.) & (v < 1500.):
-                ss = 1.
-            else:
-                ss = 0.
-            ssr.append(ss)
-        return ssr
+        return (vs30 >= 760) & (vs30 < 1500)
 
     def get_Shr_term(self, vs30):
         """
@@ -136,7 +129,7 @@ class Campbell1997(GMPE):
             if np.exp(m) < 0.068:
                 sig = 0.55
             elif (np.exp(m) >= 0.068) & (np.exp(m) <= 0.21):
-                sig = 0.173 - 0.140 * np.log(np.exp(m))
+                sig = 0.173 - 0.140 * m
             else:
                 sig = 0.39
             sig_n[i] = (sig)
