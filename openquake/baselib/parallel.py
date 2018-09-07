@@ -553,7 +553,7 @@ class Starmap(object):
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
+    def shutdown(cls):
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
