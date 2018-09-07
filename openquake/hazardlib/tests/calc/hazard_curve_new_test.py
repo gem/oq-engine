@@ -147,7 +147,6 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                                          data)
         src.src_group_id = 0
         src.mutex_weight = 1
-        src.mutex_ruptures = True
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls, filter_distance='rjb',
