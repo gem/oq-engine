@@ -201,15 +201,15 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def poe_map(self, src, sites, imtls, trunclevel):
+    def poe_map(self, src, sites, imtls, trunclevel, rup_indep):
         """
         :param src: a source object
         :param sites: a filtered SiteCollection
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
+        :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
-        rup_indep = not getattr(src, 'mutex_ruptures', 0)
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), sites.sids,
             initvalue=rup_indep)
