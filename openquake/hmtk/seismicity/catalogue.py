@@ -160,9 +160,9 @@ class Catalogue(object):
         if isinstance(key, int):
             # Gets the row specied
             row =[]
-            for key in self.SORTED_ATTRIBUTE_LIST:
-                if len(self.data[key]):
-                    row.append(self.data[key][i])
+            for attr in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[attr]):
+                    row.append(self.data[attr][key])
                 else:
                     # For empty columns just append None
                     row.append(None)
@@ -176,7 +176,7 @@ class Catalogue(object):
         """
         Iteration yields for each event a list of data
         """
-        for i in len(self):
+        for i in range(len(self)):
             row =[]
             for key in self.SORTED_ATTRIBUTE_LIST:
                 if len(self.data[key]):
