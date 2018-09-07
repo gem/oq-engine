@@ -179,8 +179,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
         for sg in csm.src_groups:
             if sg.src_interdep == 'mutex' and len(sg) > 0:
+                par = param.copy()
+                par['src_interdep'] = sg.src_interdep
+                par['rup_interdep'] = sg.rup_interdep
+                par['grp_probability'] = sg.grp_probability
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                yield sg, src_filter, gsims, param, monitor
+                yield sg, src_filter, gsims, par, monitor
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
