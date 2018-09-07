@@ -88,7 +88,7 @@ class Campbell1997(GMPE):
                + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
                + (0.440 - 0.171 * np.log(R)) * Ssr \
                + (0.405 - 0.222 * np.log(R)) * Shr
-        stddevs = self.get_stddevs(mean)
+        stddevs = self.get_stddevs(mean, stddev_types)
         return mean, stddevs
 
     def get_fault_term(self, rake):
@@ -117,22 +117,18 @@ class Campbell1997(GMPE):
         """
         return vs30 >= 1500
 
-    def get_stddevs(self, mean):
+    def get_stddevs(self, mean, stddev_types):
         """
         Returns the standard deviations from mean (pg 164; more robust than
         estimate using magnitude)
         """
-        sig_n = np.zeros(len(mean))
+        mean = np.exp(mean)
+        sigma = 0.39 + np.zeros(mean.shape)
+        sigma[mean < 0.068] = 0.55
+        idx = np.logical_and(mean >= 0.068, mean <= 0.21)
+        sigma[idx] = 0.173- 0.140 * np.log(mean[idx])
         stddevs = []
-        i = 0
-        for m in mean:
-            if np.exp(m) < 0.068:
-                sig = 0.55
-            elif (np.exp(m) >= 0.068) & (np.exp(m) <= 0.21):
-                sig = 0.173 - 0.140 * m
-            else:
-                sig = 0.39
-            sig_n[i] = (sig)
-            i += 1
-        stddevs.append(sig_n)
+        for stddev in stddev_types:
+            if stddev == const.StdDev.TOTAL:
+                stddevs.append(sigma)
         return stddevs
