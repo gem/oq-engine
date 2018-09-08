@@ -360,6 +360,7 @@ def safely_call(func, args, monitor=dummy_mon):
     :param func: the function to call
     :param args: the arguments
     """
+    print('------------------------------------------', func)
     isgenfunc = inspect.isgeneratorfunction(func)
     monitor.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
@@ -381,6 +382,7 @@ def safely_call(func, args, monitor=dummy_mon):
         return Result.new(newfunc, args, mon, splice=True)
     elif monitor.backurl is None:  # regular function
         return Result.new(func, args, mon)
+ 
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         if inspect.isgeneratorfunction(func):
             gfunc = func
@@ -392,6 +394,7 @@ def safely_call(func, args, monitor=dummy_mon):
             res = Result.new(next, (gobj,), mon, count=count)
             # StopIteration -> TASK_ENDED
             try:
+                print('sending', res)
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
@@ -697,16 +700,15 @@ class Starmap(object):
             yield from self._loop(results, iter(socket), len(allargs))
 
     def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        for res in self.pool.imap_unordered(safefunc, allargs):
-            yield res
-            self.log_percent()
-            self.todo -= 1
-        self.log_percent()
-
+        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, socket.port)
+            results = []
+            for args in self._genargs(pickle=False):
+                res = self.pool.apply_async(
+                    safely_call, self.task_func, args, self.monitor)
+                results.append(res)
+            yield from self._loop(iter(results), iter(socket), len(results))
     _iter_threadpool = _iter_processpool
 
     def _loop(self, ierr, isocket, num_tasks):
