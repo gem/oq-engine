@@ -147,7 +147,7 @@ class SourceModel(collections.Sequence):
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
         self.src_groups = []
-        for grp_name, grp in dic.items():
+        for grp in dic.values():
             srcs = []
             if isinstance(grp, hdf5.ArrayWrapper):
                 trt = grp.trt
@@ -159,10 +159,10 @@ class SourceModel(collections.Sequence):
                     src = grp[src_id]
                     src.num_ruptures = src.count_ruptures()
                     srcs.append(src)
-            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            sg = sourceconverter.SourceGroup(trt, srcs)
             if isinstance(grp, hdf5.ArrayWrapper):
-                vars(grp).update(grp)
-            self.src_groups.append(grp)
+                vars(sg).update(vars(grp))
+            self.src_groups.append(sg)
 
     def __toh5old__(self):
         dic = {}
