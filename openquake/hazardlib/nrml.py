@@ -359,69 +359,6 @@ def pickle_source_models(fnames, converter,  monitor):
     return fname2sm
 
 
-def check_nonparametric_sources(fname, smodel, investigation_time):
-    """
-    :param fname:
-        full path to a source model file
-    :param smodel:
-        source model object
-    :param investigation_time:
-        investigation_time to compare with in the case of
-        nonparametric sources
-    :returns:
-        the nonparametric sources in the model
-    :raises:
-        a ValueError if the investigation_time is different from the expected
-    """
-    # NonParametricSeismicSources
-    np = [src for sg in smodel.src_groups for src in sg
-          if hasattr(src, 'data')]
-    if np and smodel.investigation_time != investigation_time:
-        raise ValueError(
-            'The source model %s contains an investigation_time '
-            'of %s, while the job.ini has %s' % (
-                fname, smodel.investigation_time, investigation_time))
-    return np
-
-
-class SourceModelParser(object):
-    """
-    A source model parser featuring a cache.
-
-    :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
-    """
-    def __init__(self, converter):
-        self.converter = converter
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
-
-    def parse(self, fname, relpath, apply_uncertainties, investigation_time,
-              monitor):
-        """
-        :param fname:
-            the full pathname of a source model file
-        :param relpath:
-            the relative path on the datastore
-        :param apply_uncertainties:
-            a function modifying the sources
-        :param investigation_time:
-            the investigation_time in the job.ini file
-        :param monitor:
-            a monitor with an .hdf5 file
-        """
-        sm = monitor.hdf5[relpath]
-        check_nonparametric_sources(fname, sm, investigation_time)
-        for group in sm:
-            for src in group:
-                changed = apply_uncertainties(src)
-                if changed:
-                    # redo count_ruptures which can be slow
-                    src.num_ruptures = src.count_ruptures()
-                    self.changed_sources += 1
-        self.fname_hits[fname] += 1
-        return sm
-
 
 def read(source, chatty=True, stop=None):
     """
