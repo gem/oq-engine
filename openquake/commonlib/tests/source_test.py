@@ -17,21 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
 import unittest
 from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
 
+from openquake.baselib.general import assert_close
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, readinput
 from openquake.commonlib.source import CompositionInfo
 from openquake.hazardlib import nrml
-from openquake.baselib.general import assert_close
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)
