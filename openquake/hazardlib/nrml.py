@@ -132,7 +132,13 @@ class SourceModel(collections.Sequence):
                 array[i] = numpy.uint8(memoryview(
                     pickle.dumps(src, pickle.HIGHEST_PROTOCOL)))
                 nbytes += len(array[i]) + 8
-            dic[grpname] = hdf5.ArrayWrapper(array, dict(trt=grp.trt))
+            attrs = dict(
+                trt=grp.trt,
+                name=grpname,
+                src_interdep=grp.src_interdep,
+                rup_interdep=grp.rup_interdep,
+                grp_probability=grp.grp_probability or '')
+            dic[grpname] = hdf5.ArrayWrapper(array, attrs)
         attrs = dict(name=self.name, nbytes=nbytes,
                      investigation_time=self.investigation_time or 'NA',
                      start_time=self.start_time or 'NA')
@@ -154,6 +160,8 @@ class SourceModel(collections.Sequence):
                     src.num_ruptures = src.count_ruptures()
                     srcs.append(src)
             grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            if isinstance(grp, hdf5.ArrayWrapper):
+                vars(grp).update(grp)
             self.src_groups.append(grp)
 
     def __toh5old__(self):
