@@ -28,6 +28,7 @@ import collections
 import numpy
 
 from openquake.baselib import performance
+from openquake.baselib.datastore import hdf5new
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -527,6 +528,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
     # file cleanup
+    if monitor.operation == 'temp':  # temporary monitor
+        monitor.hdf5.close()
+        os.remove(monitor.hdf5.path)
     for pikfile in pik.values():
         os.remove(pikfile)
 
@@ -538,8 +542,7 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=performance.Monitor(),
-                               in_memory=True):
+def get_composite_source_model(oqparam, monitor=None, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -560,6 +563,8 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
+    if monitor is None:
+        monitor = performance.Monitor('temp', hdf5=hdf5new())
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
