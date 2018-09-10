@@ -106,12 +106,17 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
     Seismic-hazard maps for Hawaii. US Geological Survey; 2000.
     """
 
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+
+        # assign constant
+        log10e = np.log10(np.e)
 
         # Distance term
         R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
@@ -124,35 +129,25 @@ class MunsonThurber1997Hawaii(MunsonThurber1997):
         S = np.zeros(R.shape)
         S[sites.vs30 <= 200] = 1
 
-        # Mean ground motion (log10)
-        if rup.mag <= 7.:
-            mean = 0.518 + 0.387*M - np.log10(R) - 0.00256*R + 0.335*S
-        elif rup.mag > 7. and rup.mag <= 7.7:
-            mean = (0.518 + 0.387 + 0.216*(M-1)
-                    - np.log10(R) - 0.00256*R + 0.335*S)
+        # Mean ground motion (natural log)
+        # call super
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
+                                                     imt, stddev_types)
 
-        else:
-            mean = (0.518 + 0.387 + (0.216*0.7)
-                    - np.log10(R) - 0.00256*R + 0.335*S)
+        if rup.mag > 7. and rup.mag <= 7.7:
+            mean = (0.171 * (1 - M)) / log10e + mean
 
-        # Check for standard deviation type
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
+        elif rup.mag > 7.7:
+            mean = (0.1512 + 0.387 * (1 - M)) / log10e + mean
 
-        # Constant (total) standard deviation
-        stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
-
-        # define SA 0.3 sec and 0.2 sec
+        # define natural log of SA 0.3 sec and 0.2 sec
         if isinstance(imt, SA):
             if imt.period == 0.3:
-                mean = np.log10(np.e) * \
-                       np.log(2.2 * np.exp(mean / np.log10(np.e)))
-            if imt.period == 0.2:
-                mean = np.log10(np.e) * \
-                       np.log(2.5 * np.exp(mean / np.log10(np.e)))
+                mean = np.log(2.2) + mean
 
-        # Converting to natural log
-        mean /= np.log10(np.e)
+            if imt.period == 0.2:
+                mean = np.log(2.5) + mean
+
         return mean, stddevs
 
 
