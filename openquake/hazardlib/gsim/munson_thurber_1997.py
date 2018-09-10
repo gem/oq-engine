@@ -99,46 +99,12 @@ class MunsonThurber1997(GMPE):
         return mean, stddevs
 
 
-class MunsonThurber1997Hawaii(GMPE):
+class MunsonThurber1997Hawaii(MunsonThurber1997):
     """
     Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic
     hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG.
     Seismic-hazard maps for Hawaii. US Geological Survey; 2000.
     """
-
-    #: Supported tectonic region type is volcanic,
-    #: see paragraph 'Introduction', page 99.
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
-    #: Supported intensity measure types is spectral acceleration,
-    #: see table 3, pag. 110
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
-
-    #: Supported intensity measure component is maximum horizontal
-    #: :attr:`~openquake.hazardlib.const.IMC.VECTORIAL`,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
-
-    #: Supported standard deviation type is total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
-
-    #: Required site parameters is Vs30.
-    #: See paragraph 'Predictor Variables', pag 103
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
-
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
-
-    #: Required distance measure is hypocentral distance
-    #: see page 18 in Atkinson and Boore's manuscript
-    REQUIRES_DISTANCES = set(('rjb', ))
-
-    # Verification values for the mean PGA (magnitude > 7) and all PSA
-    # were computed manually, since this implementation is a modified
-    # GMPE for which a verification was not provided.
-
-    non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
