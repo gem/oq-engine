@@ -678,13 +678,9 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                if getattr(src_group, 'src_interdep', None) == 'mutex':
-                    # mutex sources cannot be split, just set the mutex_weight
-                    for src, sw in zip(src_group, src_group.srcs_weights):
-                        src.mutex_weight = sw
+                if getattr(src_group, 'src_interdep', None) != 'mutex':
                         yield src
                         n += 1
-                else:
                     # split regular sources
                     srcs = []
                     for src in src_group:
