@@ -400,7 +400,8 @@ class HazardCalculator(BaseCalculator):
                 self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
                 logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
+                for split in self.csm.split_all(oq.minimum_magnitude):
+                    pass
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
