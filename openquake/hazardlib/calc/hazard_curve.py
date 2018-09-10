@@ -189,10 +189,10 @@ def calc_hazard_curves(
             par['src_interdep'] = group.src_interdep
             par['rup_interdep'] = group.rup_interdep
             par['grp_probability'] = group.grp_probability
-            it = [classical(group, ss_filter, [gsim], par, mon)]
+            it = [classical(group.sources, ss_filter, [gsim], par, mon)]
         else:  # split the group and apply `classical` in parallel
             it = apply(
-                classical, (group, ss_filter, [gsim], param, mon),
+                classical, (group.sources, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
         for res in it:
             for grp_id in res:
