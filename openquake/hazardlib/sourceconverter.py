@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
 import collections
+import pickle
 import time
 import os
 import logging
@@ -173,6 +174,24 @@ class SourceGroup(collections.Sequence):
 
     def __len__(self):
         return len(self.sources)
+
+    def __toh5__(self):
+        array = numpy.zeros(len(self), hdf5.vuint8)
+        for i, src in enumerate(self.sources):
+            array[i] = memoryview(pickle.dumps(src, pickle.HIGHEST_PROTOCOL))
+        attrs = dict(
+            trt=self.trt,
+            name=self.name,
+            src_interdep=self.src_interdep,
+            rup_interdep=self.rup_interdep,
+            grp_probability=self.grp_probability or '')
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.sources = []
+        for row in array:
+            self.sources.append(pickle.loads(memoryview(row)))
 
 
 def get_set_num_ruptures(src):

@@ -110,8 +110,8 @@ class SourceModel(collections.Sequence):
     >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
     ..    f['/'] = source_model
     """
-    def __init__(self, src_groups, name=None, investigation_time=None,
-                 start_time=None):
+    def __init__(self, src_groups, name='', investigation_time='',
+                 start_time=''):
         self.src_groups = src_groups
         self.name = name
         self.investigation_time = investigation_time
@@ -201,7 +201,7 @@ def get_source_model_04(node, fname, converter=default):
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
                         for trt, srcs in groups.items())
-    return SourceModel(src_groups, node.get('name'))
+    return SourceModel(src_groups, node.get('name', ''))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -305,7 +305,7 @@ validators = {
 }
 
 
-def pickle_source_models(fnames, converter,  monitor):
+def read_source_models(fnames, converter,  monitor):
     """
     :param fnames:
         list of source model files
@@ -314,23 +314,22 @@ def pickle_source_models(fnames, converter,  monitor):
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
     :returns:
-        a dictionary fname -> fname.pik
+        a dictionary fname -> SourceModel instance
     """
-    fname2pik = {}
-    dtemp = tempfile.mkdtemp(prefix='calc_%s' % monitor.calc_id)
-    for i, fname in enumerate(fnames, 1):
+    fname2sm = {}
+    prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
+    P = len(prefix) + 1
+    for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
         elif fname.endswith('.hdf5'):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        pikname = os.path.join(dtemp, '%s-%d.pik' %
-                               (os.path.basename(fname), i))
-        fname2pik[fname] = pikname
-        with open(pikname, 'wb') as f:
-            pickle.dump(sm, f, pickle.HIGHEST_PROTOCOL)
-    return fname2pik
+        sm.relpath = fname[P:]
+        fname2sm[fname] = sm
+    return fname2sm
+
 
 
 def read(source, chatty=True, stop=None):
