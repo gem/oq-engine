@@ -487,8 +487,8 @@ class SourceModelFactory(object):
         :returns:
             a copy of the original source model with possibly changed sources
         """
+        check_nonparametric_sources(fname, sm, investigation_time)
         if apply_uncertainties:
-            check_nonparametric_sources(fname, sm, investigation_time)
             sm = copy.deepcopy(sm)
             for group in sm:
                 for src in group:
