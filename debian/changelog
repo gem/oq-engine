@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
   * Replaced the forking processpool with a spawning processpool
 
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
