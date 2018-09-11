@@ -479,18 +479,17 @@ class _SourceModelParser(object):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse(self, fname, relpath, apply_uncertainties, monitor):
+    def parse(self, fname, sm, apply_uncertainties, monitor):
         """
         :param fname:
             the full pathname of a source model file
-        :param relpath:
-            the relative path to the pickled source model
+        :param sm:
+            the source model
         :param apply_uncertainties:
             a function modifying the sources
         :param monitor:
             a Monitor instance with an .hdf5 attribute
         """
-        sm = monitor.hdf5[relpath]
         check_nonparametric_sources(
             fname, sm, self.converter.investigation_time)
         for group in sm:
@@ -536,7 +535,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
         logging.info('Reading the source model(s)')
-        dic = logictree.parallel_pickle_source_models(
+        dic = logictree.parallel_read_source_models(
             gsim_lt, source_model_lt, converter, monitor)
 
     # consider only the effective realizations
@@ -553,7 +552,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 src_groups.extend(psr.parse(
-                    fname, 'csm/' + dic[fname].relpath, apply_unc, monitor))
+                    fname, dic[fname], apply_unc, monitor))
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
