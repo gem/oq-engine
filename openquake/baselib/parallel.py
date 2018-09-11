@@ -375,12 +375,6 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    if monitor.backurl is None and isgenfunc:
-        def newfunc(*args):
-            return list(func(*args))
-        return Result.new(newfunc, args, mon, splice=True)
-    elif monitor.backurl is None:  # regular function
-        return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         if inspect.isgeneratorfunction(func):
             gfunc = func
