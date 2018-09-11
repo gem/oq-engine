@@ -117,8 +117,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         # storing the number of contributing ruptures too
         pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
                               for gid in src.src_group_ids}
-    if src_mutex and param.get('grp_probability') is not None:
-        pmap[src.source_group_id] *= param['grp_probability']
+    if src_mutex and param.get('grp_probability'):
+        pmap[src.src_group_id] *= param['grp_probability']
     return pmap
 
 
