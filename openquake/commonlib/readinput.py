@@ -489,8 +489,7 @@ class SourceModelFactory(object):
         """
         check_nonparametric_sources(fname, sm, investigation_time)
         if apply_uncertainties:
-            sm = copy.deepcopy(sm)
-            for group in sm:
+            for group in copy.deepcopy(sm):
                 for src in group:
                     apply_uncertainties(src)
                     self.changed_sources += 1
@@ -580,6 +579,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
+    if make_sm.changed_sources:
+        logging.info('Modified %d sources in the composite source model',
+                     make_sm.changed_sources)
 
 
 def getid(src):
