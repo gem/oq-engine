@@ -19,7 +19,6 @@ import os
 import csv
 import copy
 import zlib
-import pickle
 import shutil
 import zipfile
 import logging
@@ -479,7 +478,7 @@ class _SourceModelParser(object):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse(self, fname, sm, apply_uncertainties, monitor):
+    def parse(self, fname, sm, apply_uncertainties):
         """
         :param fname:
             the full pathname of a source model file
@@ -490,6 +489,7 @@ class _SourceModelParser(object):
         :param monitor:
             a Monitor instance with an .hdf5 attribute
         """
+        sm = copy.deepcopy(sm)
         check_nonparametric_sources(
             fname, sm, self.converter.investigation_time)
         for group in sm:
@@ -551,8 +551,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 src_groups.append(sg)
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                src_groups.extend(psr.parse(
-                    fname, dic[fname], apply_unc, monitor))
+                src_groups.extend(psr.parse(fname, dic[fname], apply_unc))
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)

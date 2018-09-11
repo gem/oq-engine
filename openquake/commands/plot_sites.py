@@ -51,11 +51,12 @@ def plot_sites(calc_id=-1):
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
     srcfilter = SourceFilter(sitecol.complete, oq.maximum_distance)
-    sources = []
-    for relpath in dstore['csm']:
-        sm = dstore['csm/' + relpath]
-        for sg in sm:
-            sources.extend(sg)
+    csm = readinput.get_composite_source_model(oq)
+    sources_by_grp = srcfilter.pfilter(
+        csm.get_sources(), dict(concurrent_tasks=oq.concurrent_tasks),
+        performance.Monitor())
+    csm = csm.new(sources_by_grp)
+    sources = csm.get_sources()
     if len(sources) > 100:
         logging.info('Sampling 100 sources of %d', len(sources))
         sources = random.Random(42).sample(sources, 100)
