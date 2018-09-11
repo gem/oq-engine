@@ -360,7 +360,6 @@ def safely_call(func, args, monitor=dummy_mon):
     :param func: the function to call
     :param args: the arguments
     """
-    print('------------------------------------------', func)
     isgenfunc = inspect.isgeneratorfunction(func)
     monitor.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
@@ -382,7 +381,6 @@ def safely_call(func, args, monitor=dummy_mon):
         return Result.new(newfunc, args, mon, splice=True)
     elif monitor.backurl is None:  # regular function
         return Result.new(func, args, mon)
- 
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         if inspect.isgeneratorfunction(func):
             gfunc = func
@@ -394,7 +392,6 @@ def safely_call(func, args, monitor=dummy_mon):
             res = Result.new(next, (gobj,), mon, count=count)
             # StopIteration -> TASK_ENDED
             try:
-                print('sending to %s %s' % (monitor.backurl, res))
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
@@ -706,7 +703,7 @@ class Starmap(object):
             results = []
             for args in self._genargs(pickle=False):
                 res = self.pool.apply_async(
-                    safely_call, self.task_func, args, self.monitor)
+                    safely_call, (self.task_func, args, self.monitor))
                 results.append(res)
             yield from self._loop(iter(results), iter(socket), len(results))
     _iter_threadpool = _iter_processpool
