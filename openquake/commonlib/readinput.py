@@ -583,12 +583,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
-    # file cleanup
-    if monitor.operation == 'temp':  # temporary monitor
-        monitor.hdf5.close()
-        os.remove(monitor.hdf5.path)
-    for pikfile in pik.values():
-        os.remove(pikfile)
 
 
 def getid(src):
@@ -620,7 +614,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     if monitor is None:
-        monitor = performance.Monitor('temp', hdf5=hdf5new())
+        monitor = performance.Monitor()
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
