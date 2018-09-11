@@ -284,7 +284,8 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_14(self):
         # sampling of a logic tree of kind `on_each_source`
-        out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_14.__file__, 'job.ini', exports='csv',
+                            concurrent_tasks='0')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
