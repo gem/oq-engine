@@ -421,7 +421,7 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.seed = oqparam.random_seed
+    rup.serial = oqparam.random_seed
     return rup
 
 
