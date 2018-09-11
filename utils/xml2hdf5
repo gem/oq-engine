@@ -26,8 +26,10 @@ def xml2hdf5(fname):
     sc = sourceconverter.SourceConverter(
         area_source_discretization=10, width_of_mfd_bin=.1)
     sm = nrml.to_python(fname, sc)
-    with hdf5.File(fname.replace('.xml', '.hdf5'), 'w') as f:
+    hdf5path = fname.replace('.xml', '.hdf5')
+    with hdf5.File(hdf5path, 'w') as f:
         f['/'] = sm
+    print('Saved %s' % hdf5path)
 
 
 xml2hdf5.arg('fname', 'source model file in XML format')
