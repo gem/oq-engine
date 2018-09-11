@@ -539,7 +539,6 @@ class RuptureGetter(object):
             rupture.surface = object.__new__(surface_cls)
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
-            rupture.seed = rec['seed']
             rupture.hypocenter = geo.Point(*rec['hypo'])
             rupture.occurrence_rate = rec['occurrence_rate']
             rupture.tectonic_region_type = grp_trt[rec['grp_id']]
