@@ -17,9 +17,8 @@
 Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
-import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.geo import mesh, NodalPlane
+from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
