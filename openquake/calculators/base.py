@@ -452,6 +452,11 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+            missing_imts = set(oq.imtls) - set(oqp.imtls)
+            if missing_imts:
+                raise ValueError(
+                    'The parent calculation is missing the IMT(s) %s' %
+                    ', '.join(missing_imts))
         elif pre_calculator:
             calc = calculators[pre_calculator](
                 self.oqparam, self.datastore.calc_id)
