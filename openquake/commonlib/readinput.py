@@ -28,7 +28,6 @@ import collections
 import numpy
 
 from openquake.baselib import performance
-from openquake.baselib.datastore import hdf5new
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -470,35 +469,33 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
     return np
 
 
-class _SourceModelParser(object):
-    # a source model parser featuring a cache based on an
-    # openquake.commonlib.source.SourceConverter
-    def __init__(self, converter):
-        self.converter = converter
+class SourceModelFactory(object):
+    def __init__(self):
         self.fname_hits = collections.Counter()  # fname -> number of calls
         self.changed_sources = 0
 
-    def parse(self, fname, sm, apply_uncertainties):
+    def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
         :param fname:
             the full pathname of a source model file
         :param sm:
-            the source model
+            the original source model
         :param apply_uncertainties:
             a function modifying the sources
-        :param monitor:
-            a Monitor instance with an .hdf5 attribute
+        :param investigation_time:
+            the investigation_time in the job.ini
+        :returns:
+            a copy of the original source model with possibly changed sources
         """
         sm = copy.deepcopy(sm)
-        check_nonparametric_sources(
-            fname, sm, self.converter.investigation_time)
+        check_nonparametric_sources(fname, sm, investigation_time)
         for group in sm:
             for src in group:
                 changed = apply_uncertainties(src)
                 if changed:
-                    # redo count_ruptures which can be slow
-                    src.num_ruptures = src.count_ruptures()
                     self.changed_sources += 1
+                    # NB: redoing count_ruptures which can be slow
+                    src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
         return sm
 
@@ -522,15 +519,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
+    make_sm = SourceModelFactory()
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-
-    psr = _SourceModelParser(converter)
-    pik = {}
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
@@ -551,7 +546,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 src_groups.append(sg)
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                src_groups.extend(psr.parse(fname, dic[fname], apply_unc))
+                newsm = make_sm(fname, dic[fname], apply_unc,
+                                oqparam.investigation_time)
+                src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
@@ -573,10 +570,10 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
 
     # log if some source file is being used more than once
     dupl = 0
-    for fname, hits in psr.fname_hits.items():
+    for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not psr.changed_sources:
+            if not make_sm.changed_sources:
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             'event_based' not in oqparam.calculation_mode):
