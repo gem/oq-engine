@@ -110,8 +110,8 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        try:  # read the seed from self.rupture.rupture if possible
-            seed = seed or self.rupture.rupture.seed
+        try:  # read the seed from self.rupture.serial
+            seed = seed or self.rupture.serial
         except AttributeError:
             pass
         if seed is not None:
