@@ -487,12 +487,12 @@ class SourceModelFactory(object):
         :returns:
             a copy of the original source model with possibly changed sources
         """
-        sm = copy.deepcopy(sm)
-        check_nonparametric_sources(fname, sm, investigation_time)
-        for group in sm:
-            for src in group:
-                changed = apply_uncertainties(src)
-                if changed:
+        if apply_uncertainties:
+            check_nonparametric_sources(fname, sm, investigation_time)
+            sm = copy.deepcopy(sm)
+            for group in sm:
+                for src in group:
+                    apply_uncertainties(src)
                     self.changed_sources += 1
                     # NB: redoing count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
