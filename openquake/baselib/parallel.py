@@ -394,7 +394,7 @@ def safely_call(func, args, monitor=dummy_mon):
             res = Result.new(next, (gobj,), mon, count=count)
             # StopIteration -> TASK_ENDED
             try:
-                print('sending', res)
+                print('sending to %s %s' % (monitor.backurl, res))
                 zsocket.send(res)
             except Exception:  # like OverflowError
                 _etype, exc, tb = sys.exc_info()
