@@ -79,6 +79,7 @@ import pickle
 import decimal
 import logging
 import operator
+import tempfile
 import collections
 
 import numpy
@@ -124,48 +125,6 @@ class SourceModel(collections.Sequence):
 
     def __toh5__(self):
         dic = {}
-        nbytes = 0
-        for i, grp in enumerate(self.src_groups):
-            grpname = grp.name or 'group-%d' % i
-            array = numpy.zeros(len(grp), hdf5.vuint8)
-            for i, src in enumerate(grp):
-                array[i] = numpy.uint8(memoryview(
-                    pickle.dumps(src, pickle.HIGHEST_PROTOCOL)))
-                nbytes += len(array[i]) + 8
-            attrs = dict(
-                trt=grp.trt,
-                name=grpname,
-                src_interdep=grp.src_interdep,
-                rup_interdep=grp.rup_interdep,
-                grp_probability=grp.grp_probability or '')
-            dic[grpname] = hdf5.ArrayWrapper(array, attrs)
-        attrs = dict(name=self.name, nbytes=nbytes,
-                     investigation_time=self.investigation_time or 'NA',
-                     start_time=self.start_time or 'NA')
-        return dic, attrs
-
-    def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
-        self.src_groups = []
-        for grp in dic.values():
-            srcs = []
-            if isinstance(grp, hdf5.ArrayWrapper):
-                trt = grp.trt
-                for row in grp:
-                    srcs.append(pickle.loads(memoryview(row)))
-            else:  # hdf5.Group
-                trt = grp.attrs['trt']
-                for src_id in sorted(grp):
-                    src = grp[src_id]
-                    src.num_ruptures = src.count_ruptures()
-                    srcs.append(src)
-            sg = sourceconverter.SourceGroup(trt, srcs)
-            if isinstance(grp, hdf5.ArrayWrapper):
-                vars(sg).update(vars(grp))
-            self.src_groups.append(sg)
-
-    def __toh5old__(self):
-        dic = {}
         for i, grp in enumerate(self.src_groups):
             grpname = grp.name or 'group-%d' % i
             srcs = [(src.source_id, src) for src in grp
@@ -178,6 +137,19 @@ class SourceModel(collections.Sequence):
         if not dic:
             raise ValueError('There are no serializable sources in %s' % self)
         return dic, attrs
+
+    def __fromh5__(self, dic, attrs):
+        vars(self).update(attrs)
+        self.src_groups = []
+        for grp_name, grp in dic.items():
+            trt = grp.attrs['trt']
+            srcs = []
+            for src_id in sorted(grp):
+                src = grp[src_id]
+                src.num_ruptures = src.count_ruptures()
+                srcs.append(src)
+            grp = sourceconverter.SourceGroup(trt, srcs, grp_name)
+            self.src_groups.append(grp)
 
 
 def get_tag_version(nrml_node):
@@ -249,7 +221,7 @@ def get_source_model_05(node, fname, converter=default):
     stime = node.get('start_time')
     if stime is not None:
         stime = valid.positivefloat(stime)
-    return SourceModel(sorted(groups), node.get('name', ''), itime, stime)
+    return SourceModel(sorted(groups), node.get('name'), itime, stime)
 
 
 validators = {
@@ -333,7 +305,7 @@ validators = {
 }
 
 
-def pickle_source_models(fnames, converter,  monitor):
+def read_source_models(fnames, converter,  monitor):
     """
     :param fnames:
         list of source model files

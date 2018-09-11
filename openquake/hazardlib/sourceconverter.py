@@ -184,7 +184,7 @@ class SourceGroup(collections.Sequence):
             name=self.name,
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability)
+            grp_probability=self.grp_probability or '')
         return array, attrs
 
     def __fromh5__(self, array, attrs):
