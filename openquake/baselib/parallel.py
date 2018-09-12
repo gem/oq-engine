@@ -697,8 +697,7 @@ class Starmap(object):
     def _iter_celery(self):
         tasks = []
         for piks in self._genargs():
-            task = safetask.delay(self.task_func, piks, self.monitor,
-                                  ignore_result=True)
+            task = safetask.delay(self.task_func, piks, self.monitor)
             # populating Starmap.task_ids, used in celery_cleanup
             self.task_ids.append(task.task_id)
             tasks.append(task)
