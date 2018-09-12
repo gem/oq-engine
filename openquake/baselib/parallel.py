@@ -395,11 +395,9 @@ def safely_call(func, args, monitor=dummy_mon):
             if res.tb_str == 'TASK_ENDED':
                 break
             mon.duration = 0
-    return zsocket.num_sent
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
-    from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
 
@@ -699,7 +697,8 @@ class Starmap(object):
     def _iter_celery(self):
         tasks = []
         for piks in self._genargs():
-            task = safetask.delay(self.task_func, piks, self.monitor)
+            task = safetask.delay(self.task_func, piks, self.monitor,
+                                  ignore_result=True)
             # populating Starmap.task_ids, used in celery_cleanup
             self.task_ids.append(task.task_id)
             tasks.append(task)
