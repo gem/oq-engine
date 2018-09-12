@@ -322,3 +322,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         return SimpleFaultSurface.surface_projection_from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip)
+
+    def geom(self):
+        return [(p.x, p.y, p.z) for p in self.fault_trace]
