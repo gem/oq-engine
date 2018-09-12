@@ -702,6 +702,7 @@ class Starmap(object):
             self.task_ids.append(task.task_id)
             tasks.append(task)
         yield from self._loop(len(tasks))
+        self.task_ids.clear()
 
     def _iter_zmq(self):
         task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
