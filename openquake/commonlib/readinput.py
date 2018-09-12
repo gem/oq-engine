@@ -481,18 +481,19 @@ class SourceModelFactory(object):
         :param sm:
             the original source model
         :param apply_uncertainties:
-            a function modifying the sources
+            a function modifying the sources (or None)
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
-            a copy of the original source model with possibly changed sources
+            a copy of the original source model with changed sources (if any)
+            or the original model with unchanged sources
         """
-        sm = copy.deepcopy(sm)
         check_nonparametric_sources(fname, sm, investigation_time)
-        for group in sm:
-            for src in group:
-                changed = apply_uncertainties(src)
-                if changed:
+        if apply_uncertainties:
+            sm = copy.deepcopy(sm)
+            for group in sm:
+                for src in group:
+                    apply_uncertainties(src)
                     self.changed_sources += 1
                     # NB: redoing count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
@@ -580,6 +581,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
+    if make_sm.changed_sources:
+        logging.info('Modified %d sources in the composite source model',
+                     make_sm.changed_sources)
 
 
 def getid(src):
