@@ -181,7 +181,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # save the used concurrent_tasks
                 self.oqparam.concurrent_tasks = ct
             self.save_params(**kw)
-            Starmap.init(distribute=os.environ['OQ_DISTRIBUTE'])
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -207,7 +206,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
-                Starmap.shutdown()
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
@@ -452,6 +450,11 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using minimum_intensity=%s'
                     ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
+            missing_imts = set(oq.imtls) - set(oqp.imtls)
+            if missing_imts:
+                raise ValueError(
+                    'The parent calculation is missing the IMT(s) %s' %
+                    ', '.join(missing_imts))
         elif pre_calculator:
             calc = calculators[pre_calculator](
                 self.oqparam, self.datastore.calc_id)

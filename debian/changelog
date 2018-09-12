@@ -1,3 +1,15 @@
+  [Michele Simionato]
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
+  * Replaced the forking processpool with a spawning processpool
+
+python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
+
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
+
   [Matteo Nastasi]
   * specified 'amd64' as the only architecture supported by ubuntu packages
 
@@ -121,6 +133,8 @@
   * Optimized the memory consumption in the UCERF classical calculator
   * Added a parameter `minimum_magnitude` in the job.ini
   * Added an utility `utils/combine_mean_curves.py`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 06 Sep 2018 12:27:53 +0000
 
 python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
 
