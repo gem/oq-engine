@@ -574,11 +574,12 @@ class Starmap(object):
         arg0 = args[0]  # this is assumed to be a sequence
         args = args[1:]
         mon = args[-1]
-        if maxweight:
-            chunks = block_splitter(arg0, maxweight, weight, key)
-        else:
-            chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
-        task_args = [(ch,) + args for ch in chunks]
+        if maxweight:  # block_splitter is lazy
+            task_args = ((blk,) + args for blk in block_splitter(
+                arg0, maxweight, weight, key))
+        else:  # split_in_blocks is eager
+            task_args = [(blk,) + args for blk in split_in_blocks(
+                arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, task_args, mon, distribute, progress).submit_all()
 
     def __init__(self, task_func, task_args, monitor=None, distribute=None,
