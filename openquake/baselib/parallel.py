@@ -708,7 +708,9 @@ class Starmap(object):
             # populating Starmap.task_ids, used in celery_cleanup
             self.task_ids.append(task.task_id)
             tasks.append(task)
-        yield from self._loop(_iter_native(self.task_ids, tasks), len(tasks))
+        for _ in _iter_native(self.task_ids, tasks):
+            pass
+        yield from self._loop(iter(range(len(tasks))), len(tasks))
 
     def _iter_zmq(self):
         task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
