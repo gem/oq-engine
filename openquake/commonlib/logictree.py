@@ -1230,12 +1230,13 @@ class SourceModelLogicTree(object):
                 branchsets_and_uncertainties.append((branchset, branch.value))
             branchset = branch.child_branchset
 
+        if not branchsets_and_uncertainties:
+            return  # nothing changed
+
         def apply_uncertainties(source):
-            if not branchsets_and_uncertainties:
-                return False  # nothing changed
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
-            return True  # the source was changed
+
         return apply_uncertainties
 
     def samples_by_lt_path(self):
