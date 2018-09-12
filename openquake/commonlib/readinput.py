@@ -485,7 +485,7 @@ class SourceModelFactory(object):
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
-            a copy of the original source model with changed sources if any,
+            a copy of the original source model with changed sources (if any)
             or the original model with unchanged sources
         """
         check_nonparametric_sources(fname, sm, investigation_time)
