@@ -686,7 +686,9 @@ class CompositeSourceModel(collections.Sequence):
                     srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
                         s = src.source_id
-                        self.infos[s].split_time = stime[s]
+                        self.infos[s].split_time = st = stime[s]
+                        if st > 10:
+                            logging.info('Split %s in %d seconds', s, st)
                     for split in srcs:
                         yield split
                         n += 1
