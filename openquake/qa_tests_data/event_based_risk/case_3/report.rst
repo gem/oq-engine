@@ -2,9 +2,9 @@ Event Based Risk Lisbon
 =======================
 
 ============== ===================
-checksum32     2,968,384,188      
-date           2018-06-05T06:38:31
-engine_version 3.2.0-git65c4735   
+checksum32     3,187,009,563      
+date           2018-09-05T10:04:27
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -120,17 +120,17 @@ Slowest sources
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-0         AreaSource   6,075        9.14229   0.04723    1.00000   270       63    
-2         AreaSource   4,901        4.93022   0.04278    1.00000   228       162   
-10        AreaSource   1,116        1.80049   0.02252    1.00000   124       0     
-1         AreaSource   989          1.58030   0.01110    1.00000   86        66    
-6         AreaSource   1,054        1.33715   0.01307    1.00000   68        102   
-9         AreaSource   612          0.93096   0.01560    1.00000   98        49    
-3         AreaSource   812          0.88397   0.00764    1.00000   56        0     
-5         AreaSource   551          0.80051   0.01104    1.00000   38        41    
-7         AreaSource   429          0.65461   0.00872    1.00000   66        27    
-8         AreaSource   342          0.59101   0.00723    1.00000   38        19    
-4         AreaSource   310          0.55689   0.01702    1.00000   62        42    
+0         AreaSource   6,075        7.77293   0.03563    1.00000   270       3     
+2         AreaSource   4,901        5.04155   0.03750    1.00000   228       2     
+6         AreaSource   1,054        1.66050   0.01039    1.00000   68        0     
+10        AreaSource   1,116        1.46914   0.01833    1.00000   124       0     
+1         AreaSource   989          1.38556   0.00862    1.00000   86        4     
+3         AreaSource   812          0.95298   0.00617    1.00000   56        0     
+5         AreaSource   551          0.89295   0.00877    1.00000   38        1     
+9         AreaSource   612          0.85858   0.01237    1.00000   98        0     
+8         AreaSource   342          0.52416   0.00549    1.00000   38        0     
+7         AreaSource   429          0.36218   0.00695    1.00000   66        1     
+4         AreaSource   310          0.35079   0.01313    1.00000   62        2     
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -138,7 +138,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-AreaSource   23        11    
+AreaSource   21        11    
 ============ ========= ======
 
 Duplicated sources
@@ -147,37 +147,38 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.01083 0.00484 0.00364 0.02409 60       
-compute_ruptures   1.30234 0.29166 0.58776 1.58284 18       
-================== ======= ======= ======= ======= =========
+==================== ======= ======= ======= ======= =========
+operation-duration   mean    stddev  min     max     num_tasks
+pickle_source_models 0.18841 0.00387 0.18568 0.19115 2        
+preprocess           1.23482 0.35495 0.58263 1.63217 18       
+compute_gmfs         0.00537 0.00255 0.00288 0.00768 4        
+==================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-================ ================================================================================ =========
-task             sent                                                                             received 
-RtreeFilter      srcs=463.61 KB monitor=20.27 KB srcfilter=16.35 KB                               475.29 KB
-compute_ruptures sources=465.75 KB param=15.86 KB monitor=6.21 KB src_filter=4.1 KB gsims=3.87 KB 80.64 KB 
-================ ================================================================================ =========
+==================== ================================================================================================= =========
+task                 sent                                                                                              received 
+pickle_source_models monitor=692 B converter=578 B fnames=382 B                                                        336 B    
+preprocess           srcs=427.68 KB param=8.14 KB monitor=6.28 KB srcfilter=4.45 KB                                    516.97 KB
+compute_gmfs         sources_or_ruptures=26.61 KB param=16.57 KB rlzs_by_gsim=1.66 KB monitor=1.35 KB src_filter=880 B 17.86 KB 
+==================== ================================================================================================= =========
 
 Slowest operations
 ------------------
-=============================== ======== ========= ======
-operation                       time_sec memory_mb counts
-=============================== ======== ========= ======
-total compute_ruptures          23       7.23438   18    
-EventBasedRuptureCalculator.run 3.12104  2.61719   1     
-managing sources                2.08111  2.22266   1     
-total prefilter                 0.64959  3.46875   60    
-reading composite source model  0.40735  0.0       1     
-splitting sources               0.40727  0.05469   1     
-unpickling prefilter            0.04170  0.15625   60    
-saving ruptures                 0.02465  0.94922   18    
-making contexts                 0.01724  0.0       15    
-unpickling compute_ruptures     0.00729  0.0       18    
-store source_info               0.00545  0.33984   1     
-reading site collection         0.00274  0.0       1     
-reading exposure                0.00164  0.0       1     
-setting event years             0.00125  0.0       1     
-=============================== ======== ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+total preprocess           22        7.91797   18    
+total pickle_source_models 0.37683   4.76172   2     
+splitting sources          0.32552   0.0       1     
+saving ruptures            0.03459   0.0       13    
+total compute_gmfs         0.02148   4.59375   4     
+building ruptures          0.01497   4.42969   4     
+making contexts            0.01304   0.0       15    
+managing sources           0.00501   0.0       1     
+store source_info          0.00472   0.0       1     
+GmfGetter.init             0.00325   0.06250   4     
+setting event years        0.00130   0.0       1     
+reading exposure           9.277E-04 0.0       1     
+aggregating hcurves        8.509E-04 0.0       4     
+========================== ========= ========= ======

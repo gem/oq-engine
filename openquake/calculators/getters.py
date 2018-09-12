@@ -71,7 +71,9 @@ class PmapGetter(object):
             self.dstore.open('r')  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
-        self.imtls = self.dstore['oqparam'].imtls
+        oq = self.dstore['oqparam']
+        self.imtls = oq.imtls
+        self.poes = oq.poes
         self.data = collections.OrderedDict()
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
@@ -537,7 +539,6 @@ class RuptureGetter(object):
             rupture.surface = object.__new__(surface_cls)
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
-            rupture.seed = rec['seed']
             rupture.hypocenter = geo.Point(*rec['hypo'])
             rupture.occurrence_rate = rec['occurrence_rate']
             rupture.tectonic_region_type = grp_trt[rec['grp_id']]

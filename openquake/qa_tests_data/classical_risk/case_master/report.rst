@@ -3,8 +3,8 @@ classical risk
 
 ============== ===================
 checksum32     2,559,514,760      
-date           2018-06-05T06:38:20
-engine_version 3.2.0-git65c4735   
+date           2018-09-05T10:03:33
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 7, num_levels = 40
@@ -123,8 +123,8 @@ Slowest sources
 ========= ========================= ============ ========= ========== ========= ========= ======
 source_id source_class              num_ruptures calc_time split_time num_sites num_split events
 ========= ========================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource         482          0.10702   1.457E-04  7.00000   30        0     
-2         CharacteristicFaultSource 1            0.00310   1.907E-06  7.00000   4         0     
+1         SimpleFaultSource         482          0.12988   2.825E-04  7.00000   30        0     
+2         CharacteristicFaultSource 1            0.00218   3.338E-06  7.00000   4         0     
 ========= ========================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -132,8 +132,8 @@ Computation times by source typology
 ========================= ========= ======
 source_class              calc_time counts
 ========================= ========= ======
-CharacteristicFaultSource 0.00310   1     
-SimpleFaultSource         0.10702   1     
+CharacteristicFaultSource 0.00218   1     
+SimpleFaultSource         0.12988   1     
 ========================= ========= ======
 
 Duplicated sources
@@ -142,59 +142,56 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00607 0.00244 0.00273 0.01093 32       
-count_eff_ruptures 0.00605 0.00231 0.00257 0.00941 25       
-================== ======= ======= ======= ======= =========
+==================== ======= ======= ========= ======= =========
+operation-duration   mean    stddev  min       max     num_tasks
+pickle_source_models 0.01818 0.00805 0.01249   0.02387 2        
+count_eff_ruptures   0.00608 0.00222 0.00184   0.00855 25       
+preprocess           0.00602 0.00294 7.141E-04 0.00974 30       
+==================== ======= ======= ========= ======= =========
 
 Fastest task
 ------------
-taskno=19, weight=238, duration=0 s, sources="1"
+taskno=24, weight=126, duration=0 s, sources="1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   7.00000 NaN    7   7   1
-weight   238     NaN    238 238 1
+weight   126     NaN    126 126 1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=3, weight=238, duration=0 s, sources="1"
+taskno=9, weight=211, duration=0 s, sources="1"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
-nsites   7.00000 0.0    7   7   3
-weight   79      15     63  95  3
+nsites   7.00000 NaN    7   7   1
+weight   211     NaN    211 211 1
 ======== ======= ====== === === =
 
 Data transfer
 -------------
-================== =============================================================================== ========
-task               sent                                                                            received
-RtreeFilter        srcs=42.48 KB monitor=10.81 KB srcfilter=8.72 KB                                46.67 KB
-count_eff_ruptures sources=42.94 KB param=23.05 KB monitor=8.62 KB srcfilter=5.69 KB gsims=5.37 KB 8.75 KB 
-================== =============================================================================== ========
+==================== =============================================================================== ========
+task                 sent                                                                            received
+pickle_source_models monitor=692 B converter=578 B fnames=386 B                                      338 B   
+count_eff_ruptures   sources=42.75 KB param=24.88 KB monitor=8.42 KB srcfilter=5.37 KB gsims=5.37 KB 8.75 KB 
+preprocess           srcs=41.02 KB monitor=10.46 KB srcfilter=7.41 KB param=1.05 KB                  44.15 KB
+==================== =============================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-ClassicalCalculator.run        0.64298   0.02344   1     
-PSHACalculator.run             0.59526   0.02344   1     
-managing sources               0.28884   0.02344   1     
-total prefilter                0.19427   5.19141   32    
-total count_eff_ruptures       0.15135   5.75781   25    
-reading composite source model 0.02088   0.0       1     
-unpickling prefilter           0.01289   0.0       32    
-aggregate curves               0.00723   0.0       25    
-unpickling count_eff_ruptures  0.00641   0.0       25    
-store source_info              0.00620   0.0       1     
-reading site collection        0.00374   0.0       1     
-reading exposure               0.00263   0.0       1     
-splitting sources              7.074E-04 0.0       1     
-saving probability maps        1.941E-04 0.0       1     
-============================== ========= ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+total preprocess           0.18065   4.68359   30    
+total count_eff_ruptures   0.15206   5.15234   25    
+managing sources           0.10794   0.0       1     
+total pickle_source_models 0.03636   2.72656   2     
+aggregate curves           0.00472   0.0       25    
+store source_info          0.00434   0.0       1     
+splitting sources          0.00143   0.0       1     
+reading exposure           0.00135   0.06250   1     
+saving probability maps    1.619E-04 0.0       1     
+========================== ========= ========= ======

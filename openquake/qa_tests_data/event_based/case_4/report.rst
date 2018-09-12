@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 4
 ==================================
 
 ============== ===================
-checksum32     530,652,814        
-date           2018-06-26T14:58:21
-engine_version 3.2.0-gitb0cd949   
+checksum32     336,991,371        
+date           2018-09-05T10:03:58
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -77,7 +77,7 @@ Slowest sources
 ========= ================= ============ ========= ========== ========= ========= ======
 source_id source_class      num_ruptures calc_time split_time num_sites num_split events
 ========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 5            0.00789   0.0        1.00000   1         56    
+1         SimpleFaultSource 5            0.00384   7.629E-06  1.00000   1         56    
 ========= ================= ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -85,7 +85,7 @@ Computation times by source typology
 ================= ========= ======
 source_class      calc_time counts
 ================= ========= ======
-SimpleFaultSource 0.00789   1     
+SimpleFaultSource 0.00384   1     
 ================= ========= ======
 
 Duplicated sources
@@ -94,41 +94,40 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-RtreeFilter        0.00243 NaN    0.00243 0.00243 1        
-compute_hazard     0.02132 NaN    0.02132 0.02132 1        
-================== ======= ====== ======= ======= =========
+==================== ======= ====== ======= ======= =========
+operation-duration   mean    stddev min     max     num_tasks
+pickle_source_models 0.00254 NaN    0.00254 0.00254 1        
+preprocess           0.00711 NaN    0.00711 0.00711 1        
+compute_gmfs         0.00910 NaN    0.00910 0.00910 1        
+==================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-============== ========================================================================================== ========
-task           sent                                                                                       received
-RtreeFilter    srcs=0 B srcfilter=0 B monitor=0 B                                                         1.22 KB 
-compute_hazard param=2.3 KB sources_or_ruptures=1.26 KB monitor=322 B rlzs_by_gsim=290 B src_filter=246 B 7.67 KB 
-============== ========================================================================================== ========
+==================== =========================================================================================== ========
+task                 sent                                                                                        received
+pickle_source_models monitor=0 B fnames=0 B converter=0 B                                                        157 B   
+preprocess           srcs=0 B srcfilter=0 B param=0 B monitor=0 B                                                6.54 KB 
+compute_gmfs         sources_or_ruptures=6.18 KB param=2.26 KB monitor=307 B rlzs_by_gsim=290 B src_filter=220 B 6.83 KB 
+==================== =========================================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.05517   0.0       1     
-total compute_hazard           0.02132   7.67969   1     
-building ruptures              0.01427   6.80469   1     
-store source_info              0.00596   0.0       1     
-saving ruptures                0.00595   0.0       1     
-reading composite source model 0.00404   0.0       1     
-building hazard                0.00284   0.0       1     
-saving gmfs                    0.00245   0.0       1     
-total prefilter                0.00243   0.0       1     
-saving gmf_data/indices        0.00175   0.0       1     
-making contexts                0.00126   0.0       5     
-unpickling compute_hazard      8.960E-04 0.0       1     
-GmfGetter.init                 6.049E-04 0.0       1     
-reading site collection        3.407E-04 0.0       1     
-aggregating hcurves            2.964E-04 0.0       1     
-splitting sources              2.944E-04 0.0       1     
-unpickling prefilter           2.890E-04 0.0       1     
-building hazard curves         2.222E-04 0.0       1     
-============================== ========= ========= ======
+========================== ========= ========= ======
+operation                  time_sec  memory_mb counts
+========================== ========= ========= ======
+total compute_gmfs         0.00910   0.0       1     
+total preprocess           0.00711   0.0       1     
+building hazard            0.00398   0.0       1     
+saving ruptures            0.00398   0.0       1     
+store source_info          0.00358   0.0       1     
+building ruptures          0.00310   0.0       1     
+total pickle_source_models 0.00254   0.0       1     
+managing sources           0.00251   0.0       1     
+saving gmfs                0.00194   0.0       1     
+saving gmf_data/indices    0.00108   0.0       1     
+GmfGetter.init             7.594E-04 0.0       1     
+making contexts            5.829E-04 0.0       5     
+aggregating hcurves        2.460E-04 0.0       1     
+splitting sources          2.379E-04 0.0       1     
+building hazard curves     2.089E-04 0.0       1     
+========================== ========= ========= ======

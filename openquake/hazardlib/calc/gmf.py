@@ -110,8 +110,8 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        try:  # read the seed from self.rupture.rupture if possible
-            seed = seed or self.rupture.rupture.seed
+        try:  # read the seed from self.rupture.serial
+            seed = seed or self.rupture.serial
         except AttributeError:
             pass
         if seed is not None:
@@ -183,7 +183,7 @@ class GmfComputer(object):
 
             if self.correlation_model is not None:
                 ir = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual)
+                    self.sites, imt, intra_residual, stddev_intra)
                 # this fixes a mysterious bug: ir[row] is actually
                 # a matrix of shape (E, 1) and not a vector of size E
                 intra_residual = numpy.zeros(ir.shape)
