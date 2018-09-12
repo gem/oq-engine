@@ -27,7 +27,7 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import performance
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -421,7 +421,7 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.seed = oqparam.random_seed
+    rup.serial = oqparam.random_seed
     return rup
 
 
@@ -444,6 +444,63 @@ def get_source_model_lt(oqparam):
                               oqparam.number_of_logic_tree_samples)
 
 
+def check_nonparametric_sources(fname, smodel, investigation_time):
+    """
+    :param fname:
+        full path to a source model file
+    :param smodel:
+        source model object
+    :param investigation_time:
+        investigation_time to compare with in the case of
+        nonparametric sources
+    :returns:
+        the nonparametric sources in the model
+    :raises:
+        a ValueError if the investigation_time is different from the expected
+    """
+    # NonParametricSeismicSources
+    np = [src for sg in smodel.src_groups for src in sg
+          if hasattr(src, 'data')]
+    if np and smodel.investigation_time != investigation_time:
+        raise ValueError(
+            'The source model %s contains an investigation_time '
+            'of %s, while the job.ini has %s' % (
+                fname, smodel.investigation_time, investigation_time))
+    return np
+
+
+class SourceModelFactory(object):
+    def __init__(self):
+        self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
+
+    def __call__(self, fname, sm, apply_uncertainties, investigation_time):
+        """
+        :param fname:
+            the full pathname of a source model file
+        :param sm:
+            the original source model
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        :param investigation_time:
+            the investigation_time in the job.ini
+        :returns:
+            a copy of the original source model with changed sources (if any)
+            or the original model with unchanged sources
+        """
+        check_nonparametric_sources(fname, sm, investigation_time)
+        if apply_uncertainties:
+            sm = copy.deepcopy(sm)
+            for group in sm:
+                for src in group:
+                    apply_uncertainties(src)
+                    self.changed_sources += 1
+                    # NB: redoing count_ruptures which can be slow
+                    src.num_ruptures = src.count_ruptures()
+        self.fname_hits[fname] += 1
+        return sm
+
+
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                       in_memory=True):
     """
@@ -463,20 +520,18 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
+    make_sm = SourceModelFactory()
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-
-    psr = nrml.SourceModelParser(converter)
-    pik = {}
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
-        logging.info('Pickling the source model(s)')
-        pik = logictree.parallel_pickle_source_models(
+        logging.info('Reading the source model(s)')
+        dic = logictree.parallel_read_source_models(
             gsim_lt, source_model_lt, converter, monitor)
 
     # consider only the effective realizations
@@ -492,8 +547,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 src_groups.append(sg)
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                src_groups.extend(psr.parse(
-                    fname, pik[fname], apply_unc, oqparam.investigation_time))
+                newsm = make_sm(fname, dic[fname], apply_unc,
+                                oqparam.investigation_time)
+                src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
         num_sources = sum(len(sg.sources) for sg in src_groups)
@@ -515,18 +571,19 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
 
     # log if some source file is being used more than once
     dupl = 0
-    for fname, hits in psr.fname_hits.items():
+    for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not psr.changed_sources:
+            if not make_sm.changed_sources:
                 dupl += hits
-    if dupl and not oqparam.optimize_same_id_sources:
+    if (dupl and not oqparam.optimize_same_id_sources and
+            'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
-    # file cleanup
-    for pikfile in pik.values():
-        os.remove(pikfile)
+    if make_sm.changed_sources:
+        logging.info('Modified %d sources in the composite source model',
+                     make_sm.changed_sources)
 
 
 def getid(src):
@@ -536,8 +593,7 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=performance.Monitor(),
-                               in_memory=True):
+def get_composite_source_model(oqparam, monitor=None, in_memory=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -553,8 +609,13 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
     idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
-    if source_model_lt.on_each_source():
+    if oqparam.number_of_logic_tree_samples == 0:
+        logging.info('Potential number of logic tree paths = {:,d}'.format(
+            source_model_lt.num_paths * gsim_lt.get_num_paths()))
+    if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
+    if monitor is None:
+        monitor = performance.Monitor()
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
@@ -586,6 +647,11 @@ def get_composite_source_model(oqparam, monitor=performance.Monitor(),
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+
+    if 'event_based' in oqparam.calculation_mode:
+        # initialize the rupture serial numbers before filtering; in
+        # this way the serials are independent from the site collection
+        csm.init_serials(oqparam.ses_seed)
     return csm
 
 
@@ -965,7 +1031,7 @@ def get_mesh_hcurves(oqparam):
 
 
 # used in utils/reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids):
+def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
     """
@@ -981,16 +1047,25 @@ def reduce_source_model(smlt_file, source_ids):
             for src_group in origmodel:
                 sg = copy.copy(src_group)
                 sg.nodes = []
-                for src_node in src_group:
+                weights = src_group.get('srcs_weights')
+                if weights:
+                    assert len(weights) == len(src_group.nodes)
+                else:
+                    weights = [1] * len(src_group.nodes)
+                src_group['srcs_weights'] = reduced_weigths = []
+                for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
                         sg.nodes.append(src_node)
+                        reduced_weigths.append(weight)
                 if sg.nodes:
                     model.nodes.append(sg)
+        shutil.copy(path, path + '.bak')
         if model:
-            shutil.copy(path, path + '.bak')
             with open(path, 'wb') as f:
                 nrml.write([model], f, xmlns=root['xmlns'])
                 logging.warn('Reduced %s' % path)
+        elif remove:  # remove the files completely reduced
+            os.remove(path)
 
 
 def get_checksum32(oqparam):

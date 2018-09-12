@@ -76,7 +76,7 @@ class GetMinDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0, 0), Point(-0.3, 0.4)])
         dists = surface.get_min_distance(sites)
         expected_dists = [7.01186301, 55.58568427]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists)
 
 
 class GetJoynerBooreDistanceTestCase(unittest.TestCase):
@@ -88,7 +88,7 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
                                        Point(0.01, 0.03)])
         dists = surface.get_joyner_boore_distance(sites)
         expected_dists = [0] * 3
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists)
 
     def test_point_on_the_border(self):
         corners = [[(0.1, -0.1, 1), (-0.1, -0.1, 1)],
@@ -97,10 +97,8 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(-0.1, 0.04), Point(0.1, 0.03)])
         dists = surface.get_joyner_boore_distance(sites)
         expected_dists = [0] * 2
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=1e-4))
+        numpy.testing.assert_allclose(dists, expected_dists, atol=1e-4)
 
-    # FIXME https://github.com/gem/oq-engine/issues/3891
-    @unittest.skip('See https://github.com/gem/oq-engine/issues/3891')
     def test_point_outside(self):
         corners = [[(0.1, -0.1, 1), (-0.1, -0.1, 1)],
                    [(0.1, 0.1, 2), (-0.1, 0.1, 2)]]
@@ -116,7 +114,7 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
             Point(8, 10.4).distance(Point(0.1, 0.1)),
             Point(0.05, 0.15).distance(Point(0.05, 0.1))
         ]
-        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=0.01)
 
 
 class GetRY0DistanceTestCase(unittest.TestCase):
@@ -130,8 +128,8 @@ class GetRY0DistanceTestCase(unittest.TestCase):
         surface = self._test_rectangular_surface()
         sites = Mesh.from_points_list([Point(0.0, 0.05), Point(0.0, -0.05)])
         dists = surface.get_ry0_distance(sites)
-        expected_dists = [0.0]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        expected_dists = [0, 0]
+        numpy.testing.assert_allclose(dists, expected_dists)
 
     def test2_sites_at_one_degree_distance(self):
         surface = self._test_rectangular_surface()
@@ -141,7 +139,7 @@ class GetRY0DistanceTestCase(unittest.TestCase):
         dists = surface.get_ry0_distance(sites)
         expected_dists = [111.19505230826488, 111.177990689, 111.177990689,
                           111.19505230826488, 111.177990689, 111.177990689]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=.01)
 
 
 class GetRXDistanceTestCase(unittest.TestCase):
@@ -156,14 +154,14 @@ class GetRXDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0.05, 0.05), Point(40.0, 0.05)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [5.559752615413244] * 2
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=.01)
 
     def test2_site_on_the_foot_wall(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, -0.05), Point(-140, -0.05)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [-5.559752615413244] * 2
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=.01)
 
     def test3_site_on_centroid(self):
         surface = self._test1to7surface()
@@ -176,7 +174,7 @@ class GetRXDistanceTestCase(unittest.TestCase):
                                        Point(90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists)
 
     def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
@@ -184,21 +182,21 @@ class GetRXDistanceTestCase(unittest.TestCase):
                                        Point(-90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists)
 
     def test6_one_degree_distance(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, -1), Point(20, 1)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [-111.19505230826488, +111.19505230826488]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=.01)
 
     def test7_ten_degrees_distance(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0, -10), Point(-15, 10)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [-1111.9505230826488, +1111.9505230826488]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        numpy.testing.assert_allclose(dists, expected_dists, rtol=.01)
 
     def test8_strike_of_255_degrees(self):
         corners = [[(0.05, 0.05, 8), (-0.05, -0.05, 8)],

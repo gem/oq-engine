@@ -3,8 +3,8 @@ Event-based PSHA producing hazard curves only
 
 ============== ===================
 checksum32     3,219,914,866      
-date           2018-06-26T14:58:15
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-05T10:03:51
+engine_version 3.2.0-gitb4ef3a4b6c
 ============== ===================
 
 num_sites = 1, num_levels = 5
@@ -81,19 +81,19 @@ source_model1.xml 0      Active Shallow Crust 2,456        2,456
 source_model2.xml 1      Active Shallow Crust 2,456        2,456       
 ================= ====== ==================== ============ ============
 
-============= ======
-#TRT models   2     
-#eff_ruptures 4,912 
-#tot_ruptures 4,912 
-#tot_weight   14,736
-============= ======
+============= =====
+#TRT models   2    
+#eff_ruptures 4,912
+#tot_ruptures 4,912
+#tot_weight   0    
+============= =====
 
 Slowest sources
 ---------------
 ========= ============ ============ ========= ========== ========= ========= ======
 source_id source_class num_ruptures calc_time split_time num_sites num_split events
 ========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  8            14        0.0        1.00000   614       87,747
+1         AreaSource   2,456        13        0.05692    1.00000   614       16,186
 ========= ============ ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -101,7 +101,7 @@ Computation times by source typology
 ============ ========= ======
 source_class calc_time counts
 ============ ========= ======
-PointSource  14        1     
+AreaSource   13        1     
 ============ ========= ======
 
 Duplicated sources
@@ -110,41 +110,40 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00514 0.00175 0.00212 0.00888 56       
-compute_hazard     0.58219 0.21357 0.23551 0.91865 62       
-================== ======= ======= ======= ======= =========
+==================== ======= ========= ======= ======= =========
+operation-duration   mean    stddev    min     max     num_tasks
+pickle_source_models 0.06979 4.983E-04 0.06944 0.07014 2        
+preprocess           0.22679 0.03585   0.11687 0.30604 62       
+compute_gmfs         0.32593 0.05134   0.09480 0.40984 64       
+==================== ======= ========= ======= ======= =========
 
 Data transfer
 -------------
-============== ======================================================================================================= ========
-task           sent                                                                                                    received
-RtreeFilter    srcs=209.74 KB monitor=17.61 KB srcfilter=15.26 KB                                                      235.8 KB
-compute_hazard sources_or_ruptures=275.21 KB param=160.33 KB rlzs_by_gsim=33.54 KB monitor=19.5 KB src_filter=14.89 KB 5.13 MB 
-============== ======================================================================================================= ========
+==================== ====================================================================================================== ========
+task                 sent                                                                                                   received
+pickle_source_models monitor=618 B converter=578 B fnames=368 B                                                             318 B   
+preprocess           srcs=219.21 KB param=29.43 KB monitor=19.31 KB srcfilter=15.32 KB                                      3.95 MB 
+compute_gmfs         sources_or_ruptures=3.97 MB param=164.69 KB rlzs_by_gsim=34.62 KB monitor=19.19 KB src_filter=13.75 KB 4.52 MB 
+==================== ====================================================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_hazard           36        8.33203   62    
-building hazard                20        0.53125   62    
-building ruptures              14        6.95312   62    
-making contexts                3.45594   0.0       3,081 
-managing sources               2.37770   0.25000   1     
-saving ruptures                0.43243   0.0       62    
-total prefilter                0.28758   1.26562   56    
-GmfGetter.init                 0.25789   0.06250   62    
-unpickling compute_hazard      0.23026   0.0       62    
-saving gmfs                    0.12980   0.0       62    
-splitting sources              0.11860   0.0       1     
-reading composite source model 0.11578   0.0       1     
-unpickling prefilter           0.02712   0.0       56    
-building hazard curves         0.02470   0.0       186   
-aggregating hcurves            0.01662   0.0       62    
-store source_info              0.00458   0.0       1     
-saving gmf_data/indices        0.00124   0.0       1     
-reading site collection        2.620E-04 0.0       1     
-============================== ========= ========= ======
+========================== ======== ========= ======
+operation                  time_sec memory_mb counts
+========================== ======== ========= ======
+total compute_gmfs         20       0.48438   64    
+building hazard            20       0.48438   64    
+total preprocess           14       0.46094   62    
+making contexts            3.22762  0.0       3,081 
+saving ruptures            2.22989  1.02734   613   
+GmfGetter.init             0.27155  0.12109   64    
+managing sources           0.25419  3.85938   1     
+building ruptures          0.17543  0.0       64    
+saving gmfs                0.14207  0.0       64    
+total pickle_source_models 0.13958  1.01953   2     
+splitting sources          0.11546  0.0       1     
+building hazard curves     0.02538  0.0       192   
+aggregating hcurves        0.01961  0.0       64    
+store source_info          0.00448  0.0       1     
+saving gmf_data/indices    0.00118  1.02734   1     
+========================== ======== ========= ======
