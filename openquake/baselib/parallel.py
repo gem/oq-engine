@@ -375,12 +375,6 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    if monitor.backurl is None and isgenfunc:
-        def newfunc(*args):
-            return list(func(*args))
-        return Result.new(newfunc, args, mon, splice=True)
-    elif monitor.backurl is None:  # regular function
-        return Result.new(func, args, mon)
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
         if inspect.isgeneratorfunction(func):
             gfunc = func
@@ -538,7 +532,11 @@ class Starmap(object):
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
             orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
+            # we use spawn here to avoid deadlocks with logging, see
+            # https://github.com/gem/oq-engine/pull/3923 and
+            # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
+            cls.pool = multiprocessing.get_context('spawn').Pool(
+                poolsize, init_workers)
             signal.signal(signal.SIGINT, orig_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
@@ -549,7 +547,7 @@ class Starmap(object):
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
+    def shutdown(cls):
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
@@ -666,6 +664,10 @@ class Starmap(object):
         """
         :returns: an IterResult object
         """
+        self.socket = Socket(self.receiver, zmq.PULL, 'bind')
+        self.socket.__enter__()
+        self.monitor.backurl = 'tcp://%s:%s' % (
+            config.dbserver.host, self.socket.port)
         if self.num_tasks == 1 or self.distribute == 'no':
             it = self._iter_sequential()
         else:
@@ -684,28 +686,42 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def _iter_sequential(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, socket.port)
-            allargs = list(self._genargs(pickle=False))
-            results = (safely_call(self.task_func, args, self.monitor)
-                       for args in allargs)
-            yield from self._loop(results, iter(socket), len(allargs))
+        allargs = list(self._genargs(pickle=False))
+        results = (safely_call(self.task_func, args, self.monitor)
+                   for args in allargs)
+        yield from self._loop(results, len(allargs))
 
     def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        for res in self.pool.imap_unordered(safefunc, allargs):
-            yield res
-            self.log_percent()
-            self.todo -= 1
-        self.log_percent()
+        results = []
+        for args in self._genargs(pickle=False):
+            res = self.pool.apply_async(
+                safely_call, (self.task_func, args, self.monitor))
+            results.append(res)
+        yield from self._loop(iter(results), len(results))
 
     _iter_threadpool = _iter_processpool
 
-    def _loop(self, ierr, isocket, num_tasks):
+    def _iter_celery(self):
+        tasks = []
+        for piks in self._genargs():
+            task = safetask.delay(self.task_func, piks, self.monitor)
+            # populating Starmap.task_ids, used in celery_cleanup
+            self.task_ids.append(task.task_id)
+            tasks.append(task)
+        yield from self._loop(_iter_native(self.task_ids, tasks), len(tasks))
+
+    def _iter_zmq(self):
+        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+                                       config.zworkers.task_in_port)
+        with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
+            num_tasks = 0
+            for args in self._genargs():
+                sender.send((self.task_func, args, self.monitor))
+                num_tasks += 1
+        yield from self._loop(iter(range(num_tasks)), num_tasks)
+
+    def _loop(self, ierr, num_tasks):
+        isocket = iter(self.socket)
         self.total = self.todo = num_tasks
         yield num_tasks
         while self.todo:
@@ -727,42 +743,7 @@ class Starmap(object):
             else:
                 yield res
         self.log_percent()
-
-    def _iter_celery(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, socket.port)
-            tasks = []
-            for piks in self._genargs():
-                task = safetask.delay(self.task_func, piks, self.monitor)
-                # populating Starmap.task_ids, used in celery_cleanup
-                self.task_ids.append(task.task_id)
-                tasks.append(task)
-            yield from self._loop(_iter_native(self.task_ids, tasks),
-                                  iter(socket), len(tasks))
-
-    def _iter_zmq(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, socket.port)
-            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                           config.zworkers.task_in_port)
-            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                num_tasks = 0
-                for args in self._genargs():
-                    sender.send((self.task_func, args, self.monitor))
-                    num_tasks += 1
-            yield from self._loop(iter(range(num_tasks)), iter(socket),
-                                  num_tasks)
-
-    def _iter_dask(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        cl = self.dask_client
-        for fut in as_completed(cl.map(safefunc, cl.scatter(allargs))):
-            yield fut.result()
+        self.socket.__exit__(None, None, None)
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,

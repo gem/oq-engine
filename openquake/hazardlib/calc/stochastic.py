@@ -168,8 +168,8 @@ def _sample_ruptures(src, prob, num_ses, num_samples):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = src.serial[rup_no]
-        numpy.random.seed(rup.seed)
+        rup.serial = src.serial[rup_no]
+        numpy.random.seed(rup.serial)
         for sam_idx in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
                 # sampling of mutex sources if prob < 1
@@ -188,7 +188,6 @@ def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        rup.serial = rup.seed
         if cmaker.maximum_distance:
             with rup_mon:
                 try:

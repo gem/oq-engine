@@ -18,6 +18,7 @@
 import os
 import re
 import math
+import unittest
 from nose.plugins.attrib import attr
 
 import numpy.testing
@@ -34,7 +35,8 @@ from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_10, case_12, case_13, case_14, case_17, case_18, mutex)
+    case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_17,
+    case_18, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -286,6 +288,15 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_14.__file__, 'job.ini', exports='csv')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_15(self):
+        # an example for Japan exhibiting the error
+        # "top and bottom edges have different lengths"
+        raise unittest.SkipTest('Not fixed yet')
+        out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
+        fname = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures

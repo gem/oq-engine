@@ -19,7 +19,6 @@ import os
 import re
 import copy
 import math
-import time
 import logging
 import operator
 import collections
@@ -29,6 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
     groupby, group_array, gettemp, AccumDict, random_filter, cached_property)
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib import (
     source, sourceconverter, probability_map, stats, contexts)
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
@@ -44,51 +44,6 @@ F32 = numpy.float32
 weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
-
-
-def split_source(src, min_mag):
-    """
-    :param src: a source
-    :param min_mag: if passed, discard ruptures below the minimum
-    :returns: a pair (split sources, split time)
-    """
-    t0 = time.time()
-    if min_mag and src.get_min_max_mag()[0] < min_mag:
-        splits = []
-        for s in src:
-            if min_mag and s.get_min_max_mag()[0] < min_mag:
-                # discard some ruptures
-                s.min_mag = min_mag
-                s.num_ruptures = s.count_ruptures()
-                if s.num_ruptures:
-                    splits.append(s)
-            else:
-                splits.append(s)
-    else:
-        splits = list(src)
-    has_serial = hasattr(src, 'serial')
-    has_samples = hasattr(src, 'samples')
-    if len(splits) > 1:
-        start = 0
-        for i, split in enumerate(splits):
-            split.source_id = '%s:%s' % (src.source_id, i)
-            split.src_group_id = src.src_group_id
-            split.ngsims = src.ngsims
-            split.ndists = src.ndists
-            if has_serial:
-                nr = split.num_ruptures
-                split.serial = src.serial[start:start + nr]
-                start += nr
-            if has_samples:
-                split.samples = src.samples
-    elif splits:  # single source
-        splits[0].ngsims = src.ngsims
-        splits[0].ndists = src.ndists
-        if has_serial:
-            splits[0].serial = src.serial
-        if has_samples:
-            splits[0].samples = src.samples
-    return splits, time.time() - t0
 
 
 def gsim_names(rlz):
@@ -723,22 +678,19 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                if getattr(src_group, 'src_interdep', None) == 'mutex':
-                    # mutex sources cannot be split, just set the mutex_weight
-                    for src, sw in zip(src_group, src_group.srcs_weights):
-                        src.mutex_weight = sw
+                if src_group.src_interdep == 'mutex':
+                    for src in src_group:
                         yield src
                         n += 1
                 else:
                     # split regular sources
-                    srcs = []
+                    srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
-                        splits, stime = split_source(src, min_mag)
-                        self.infos[src.source_id].split_time = stime
-                        for split in splits:
-                            srcs.append(split)
-                            yield split
-                            n += 1
+                        s = src.source_id
+                        self.infos[s].split_time = stime[s]
+                    for split in srcs:
+                        yield split
+                        n += 1
                     if sample_factor:
                         # debugging tip to reduce the size of a calculation
                         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini

@@ -232,7 +232,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
             with filt_mon:
                 for rup, n_occ in zip(rups, n_occs):
                     rup.serial = serial
-                    rup.seed = seed
                     try:
                         rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
                         indices = rup.sctx.sids
