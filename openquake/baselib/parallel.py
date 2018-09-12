@@ -407,11 +407,6 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
-    def _iter_native(task_ids, results):  # helper
-        for task_id, result_dict in ResultSet(results).iter_native():
-            task_ids.remove(task_id)
-            yield result_dict['result']
-
 elif OQ_DISTRIBUTE == 'dask':
     from dask.distributed import Client, as_completed
 
@@ -687,9 +682,9 @@ class Starmap(object):
 
     def _iter_sequential(self):
         allargs = list(self._genargs(pickle=False))
-        results = (safely_call(self.task_func, args, self.monitor)
-                   for args in allargs)
-        yield from self._loop(results, len(allargs))
+        for args in allargs:
+            safely_call(self.task_func, args, self.monitor)
+        yield from self._loop(len(allargs))
 
     def _iter_processpool(self):
         results = []
@@ -697,7 +692,7 @@ class Starmap(object):
             res = self.pool.apply_async(
                 safely_call, (self.task_func, args, self.monitor))
             results.append(res)
-        yield from self._loop(iter(results), len(results))
+        yield from self._loop(len(results))
 
     _iter_threadpool = _iter_processpool
 
@@ -708,9 +703,7 @@ class Starmap(object):
             # populating Starmap.task_ids, used in celery_cleanup
             self.task_ids.append(task.task_id)
             tasks.append(task)
-        for _ in _iter_native(self.task_ids, tasks):
-            pass
-        yield from self._loop(iter(range(len(tasks))), len(tasks))
+        yield from self._loop(len(tasks))
 
     def _iter_zmq(self):
         task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
@@ -720,20 +713,13 @@ class Starmap(object):
             for args in self._genargs():
                 sender.send((self.task_func, args, self.monitor))
                 num_tasks += 1
-        yield from self._loop(iter(range(num_tasks)), num_tasks)
+        yield from self._loop(num_tasks)
 
-    def _loop(self, ierr, num_tasks):
+    def _loop(self, num_tasks):
         isocket = iter(self.socket)
         self.total = self.todo = num_tasks
         yield num_tasks
         while self.todo:
-            try:
-                err = next(ierr)
-            except StopIteration:  # sent everything already
-                pass
-            else:
-                if isinstance(err, Exception):  # TaskRevokedError
-                    raise err
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
                 logging.warn('Discarding a result from job %s, since this '
