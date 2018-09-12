@@ -196,3 +196,9 @@ class AreaSource(ParametricSeismicSource):
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt.num_ruptures = pt.count_ruptures()
             yield pt
+
+    def geom(self):
+        """
+        :returns: the geometry as a list of vertices
+        """
+        return [(lon, lat, 0) for lon, lat in zip(self.lons, self.lats)]

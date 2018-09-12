@@ -116,3 +116,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         The underlying polygon, as a convex hull
         """
         return self.surface.mesh.get_convex_hull()
+
+    def geom(self):
+        """
+        :returns: the geometry as a list with a single location
+        """
+        # TODO: case of MultiSurface
+        return [(p.x, p.y, p.z) for p in self.surface.mesh]
