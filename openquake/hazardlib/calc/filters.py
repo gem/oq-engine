@@ -363,8 +363,8 @@ class SourceFilter(object):
         """
         sources_by_grp = Starmap.apply(
             preprocess, (sources, self, param, monitor),
-            #maxweight=10000,  # hard-coded
-            concurrent_tasks=param['concurrent_tasks'],
+            maxweight=10000,  # hard-coded
+            # concurrent_tasks=param['concurrent_tasks'],
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'),
             distribute=param.pop('distribute', None),
