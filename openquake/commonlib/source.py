@@ -683,15 +683,15 @@ class CompositeSourceModel(collections.Sequence):
                         n += 1
                 else:
                     # split regular sources
-                    srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
+                        srcs, stime = split_sources([src], min_mag)
                         s = src.source_id
                         self.infos[s].split_time = st = stime[s]
                         if st > 10:
                             logging.info('Split %s in %d seconds', s, st)
-                    for split in srcs:
-                        yield split
-                        n += 1
+                        for split in srcs:
+                            yield split
+                            n += 1
                     if sample_factor:
                         # debugging tip to reduce the size of a calculation
                         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
