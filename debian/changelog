@@ -1,4 +1,50 @@
   [Michele Simionato]
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
+  * Replaced the forking processpool with a spawning processpool
+
+python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
+
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
+
+  [Matteo Nastasi]
+  * specified 'amd64' as the only architecture supported by ubuntu packages
+
+  [Michele Simionato]
+  * Changed the source writer: now the `srcs_weights` are written in the XML
+    file only if they are nontrivial
+  * Changed the algorithm assigning the seeds: they are now generated before
+    the source splitting; also, a seed-related bug in the splitting was fixed
+  * For event based, moved the rupture generation in the prefiltering phase
+
+  [Daniele Viganò]
+  * Fixed a bug with CTRL-C when using the `processpool` distribution
+
+  [Robin Gee]
+  * Raised the source ID length limit in the validation from 60 to 75 characters
+    to allow sources with longer IDs
+
+  [Michele Simionato]
+  * Introduced a `multi_node` flag in `openquake.cfg` and used it to
+    fully parallelize the prefiltering in a cluster
+  * Used the rupture seed as rupture ID in event based calculations
+  * Changed the deprecation mechanism of GSIMs to use a class attribute
+    `superseded_by=NewGsimClass`
+  * Solved the pickling bug in event based hazard by using generator tasks
+  * Improved the distribution of the risk tasks by changing the weight
+
+  [Pablo Heresi]
+  * Contributed the HM2018CorrelationModel
+
+  [Michele Simionato]
+  * Restored the `individual_curves` flag that for the moment is used for the
+    risk curves
+  * Introduced two experimental new parameters `floating_distance` and
+    `spinning_distance` to reduce hypocenter distributions and nodal plane
+    distributions of ruptures over the corresponding distances
   * Optimized the parsing of the logic tree when there is no "applyToSources"
   * Made the IMT classes extensible in client code
   * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
@@ -87,6 +133,8 @@
   * Optimized the memory consumption in the UCERF classical calculator
   * Added a parameter `minimum_magnitude` in the job.ini
   * Added an utility `utils/combine_mean_curves.py`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 06 Sep 2018 12:27:53 +0000
 
 python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
 

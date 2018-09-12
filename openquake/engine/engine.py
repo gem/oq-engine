@@ -149,6 +149,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         exportable.remove('ruptures')  # do not export, as requested by Vitor
     if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
         dskeys.remove('rup_loss_table')
+    if 'hmaps' in dskeys and not oq.hazard_maps:
+        dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
         # the calculation has not been imported in the db yet
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
@@ -199,7 +201,6 @@ def raiseMasterKilled(signum, _stack):
             else:
                 msg = 'The openquake master lost its controlling terminal'
 
-    parallel.Starmap.shutdown()
     raise MasterKilled(msg)
 
 

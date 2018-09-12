@@ -33,7 +33,7 @@ from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
                                           DistancesContext)
 from openquake.hazardlib.imt import registry
-
+from openquake.hazardlib.imt import from_string
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
@@ -296,11 +296,11 @@ def _parse_csv_line(headers, values, req_site_params):
             value = float(value)
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
-            imtclass = registry.get(param.upper(), None)
-            if imtclass:
-                imt = imtclass()
-            else:  # assume the IMT is a Spectral Acceleration
+            try:    # The title of the column should be IMT(args)
+                imt = from_string(param.upper())
+            except KeyError:  # Then it is just a period for SA
                 imt = registry['SA'](float(param), damping)
+
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
