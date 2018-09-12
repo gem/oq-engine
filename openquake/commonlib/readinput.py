@@ -27,7 +27,7 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import performance
+from openquake.baselib import performance, hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -501,6 +501,26 @@ class SourceModelFactory(object):
         return sm
 
 
+source_dt = numpy.dtype([('source_id', 'S75'), ('shape', U16)])
+
+
+def store_sm(smodel, h5):
+    if 'sources' not in h5:
+        dset = hdf5.create(h5, 'sources', source_dt, shape=(None,),
+                           fillvalue=None)
+    if 'srcgeoms' not in h5:
+        hdf5.create(h5, 'srcgeoms', hdf5.vfloat32, shape=(None, 3),
+                    fillvalue=None)
+    srcs = []
+    geoms = []
+    for sg in smodel:
+        for src in sg:
+            srcs.append((src.source_id, 1))
+            geoms.append(numpy.array(src.geom()).reshape(3, -1))
+    hdf5.extend(dset, numpy.array(srcs, source_dt))
+    h5.save_vlen('srcgeoms', geoms)
+
+
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                       in_memory=True):
     """
@@ -549,6 +569,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
+                store_sm(newsm, monitor.hdf5)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))

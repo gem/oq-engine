@@ -343,3 +343,10 @@ class PointSource(ParametricSeismicSource):
         a1 = (maxdist + maxradius) * KM_TO_DEGREES
         a2 = angular_distance(maxdist + maxradius, lat)
         return lon - a2, lat - a1, lon + a2, lat + a1
+
+    def geom(self):
+        """
+        :returns: the geometry as a list with a single location
+        """
+        loc = self.location
+        return [(loc.x, loc.y, loc.z)]
