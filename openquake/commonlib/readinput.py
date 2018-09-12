@@ -481,7 +481,7 @@ class SourceModelFactory(object):
         :param sm:
             the original source model
         :param apply_uncertainties:
-            a function modifying the sources
+            a function modifying the sources (or None)
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
