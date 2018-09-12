@@ -290,16 +290,16 @@ class File(h5py.File):
         except KeyError:
             dset = create(self, key, vdt, shape, fillvalue=None)
         nbytes = 0
-        totlen = 0
+        #totlen = 0
         for i, val in enumerate(data):
             nbytes += val.nbytes
-            totlen += len(val)
+            #totlen += len(val)
         length = len(dset)
         dset.resize((length + len(data),) + shape[1:])
         for i, arr in enumerate(data):
             dset[length + i] = arr
         dset.attrs['nbytes'] = nbytes
-        dset.attrs['avg_len'] = totlen / len(data)
+        #dset.attrs['avg_len'] = totlen / len(data)
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
