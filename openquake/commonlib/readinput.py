@@ -485,11 +485,13 @@ class SourceModelFactory(object):
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
-            a copy of the original source model with possibly changed sources
+            a copy of the original source model with changed sources if any,
+            or the original model with unchanged sources
         """
         check_nonparametric_sources(fname, sm, investigation_time)
         if apply_uncertainties:
-            for group in copy.deepcopy(sm):
+            sm = copy.deepcopy(sm)
+            for group in sm:
                 for src in group:
                     apply_uncertainties(src)
                     self.changed_sources += 1
