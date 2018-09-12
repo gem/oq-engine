@@ -69,5 +69,6 @@ else:
     task_acks_late = True
     worker_prefetch_multiplier = 1
     result_cache_max = 1
+    task_ignore_result = True
 
     imports = ["openquake.baselib.parallel"]
