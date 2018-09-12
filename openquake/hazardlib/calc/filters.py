@@ -15,9 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
 import sys
+import time
 import logging
 import operator
 import collections
@@ -30,7 +29,7 @@ except ImportError:
 from scipy.interpolate import interp1d
 from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import gettemp, groupby
+from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -190,18 +189,79 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def prefilter(srcs, srcfilter, monitor):
+def split_sources(srcs, min_mag):
+    """
+    :param srcs: sources
+    :returns: a pair (split sources, split time)
+    """
+    sources = []
+    split_time = {}  # src_id -> deltat
+    for src in srcs:
+        t0 = time.time()
+        if min_mag and src.get_min_max_mag()[0] < min_mag:
+            splits = []
+            for s in src:
+                if min_mag and s.get_min_max_mag()[0] < min_mag:
+                    # discard some ruptures
+                    s.min_mag = min_mag
+                    s.num_ruptures = s.count_ruptures()
+                    if s.num_ruptures:
+                        splits.append(s)
+                else:
+                    splits.append(s)
+        else:
+            splits = list(src)
+        split_time[src.source_id] = time.time() - t0
+        sources.extend(splits)
+        has_serial = hasattr(src, 'serial')
+        has_samples = hasattr(src, 'samples')
+        if len(splits) > 1:
+            start = 0
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
+                split.src_group_id = src.src_group_id
+                split.ngsims = src.ngsims
+                split.ndists = src.ndists
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+                if has_samples:
+                    split.samples = src.samples
+        elif splits:  # single source
+            splits[0].ngsims = src.ngsims
+            splits[0].ndists = src.ndists
+            if has_serial:
+                splits[0].serial = src.serial
+            if has_samples:
+                splits[0].samples = src.samples
+    return sources, split_time
+
+
+def preprocess(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
     """
-    return groupby(srcfilter.filter(srcs), src_group_id)
+    src = srcs[0]
+    if 'ses_per_logic_tree_path' in param:  # from event based
+        # keep only the sources producing ruptures
+        from openquake.hazardlib.calc.stochastic import sample_ruptures
+        ok = []
+        for src in srcfilter.filter(srcs):
+            gsims = param['gsims_by_trt'][src.tectonic_region_type]
+            dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
+            vars(src).update(dic)
+            ok.append(src)
+    else:  # from classical
+        ok = list(srcfilter.filter(srcs))
+    return {src.src_group_id: ok}
 
 
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,
     i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .pfilter method
+    within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
     src_group_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
@@ -222,10 +282,6 @@ class SourceFilter(object):
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if os.environ.get('OQ_DISTRIBUTE') == 'no':
-            self.distribute = 'no'
-        else:
-            self.distribute = 'processpool'
 
     @property
     def sitecol(self):
@@ -296,21 +352,24 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, concurrent_tasks, monitor):
+    def pfilter(self, sources, param, monitor):
         """
         Filter the sources in parallel by using Starmap.apply
 
         :param sources: a sequence of sources
-        :param concurrent_tasks: how many tasks to generate
+        :param param: a dictionary of parameters including concurrent_tasks
         :param monitor: a Monitor instance
         :returns: a dictionary src_group_id -> sources
         """
         sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor),
-            concurrent_tasks=concurrent_tasks, distribute=self.distribute,
-            progress=logging.debug).reduce()
-        Starmap.shutdown()  # close the processpool
-        Starmap.init()  # reopen it when necessary
+            preprocess, (sources, self, param, monitor),
+            concurrent_tasks=param['concurrent_tasks'],
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'),
+            distribute=param.pop('distribute', None),
+            progress=logging.info if 'gsims_by_trt' in param else logging.debug
+            # log the preprocessing phase in an event based calculation
+        ).reduce()
         # avoid task ordering issues
         for sources in sources_by_grp.values():
             sources.sort(key=operator.attrgetter('source_id'))

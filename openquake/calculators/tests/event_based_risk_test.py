@@ -22,6 +22,7 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
+from openquake.calculators import event_based
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -146,7 +147,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1911)
+        self.assertEqual(nbytes, 1859)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -168,6 +169,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # check that individual_curves = false is honored
+        self.assertFalse('curves-rlzs' in self.calc.datastore)
+        self.assertTrue('curves-stats' in self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
@@ -221,6 +226,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
+        event_based.RUPTURES_PER_BLOCK = 20
+
         # this is a case with a grid and asset-hazard association
         self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
 
