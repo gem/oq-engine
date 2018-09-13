@@ -587,7 +587,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         idx += 1
                     sg.id = grp_id
                     grp_id += 1
-                store_sm(newsm, monitor.hdf5)
+                if monitor.hdf5:
+                    store_sm(newsm, monitor.hdf5)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
