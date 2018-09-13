@@ -288,6 +288,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         self.precomputed_gmfs = False
 
     def filter_csm(self):
+        self.init()
         return UcerfFilter(
             self.sitecol, self.oqparam.maximum_distance), self.csm
 

@@ -327,6 +327,7 @@ class HazardCalculator(BaseCalculator):
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
+        isources = self.csm.split_all(oq.minimum_magnitude)  # source iterator
         param = dict(concurrent_tasks=oq.concurrent_tasks)
         if 'EventBased' in self.__class__.__name__:
             param['filter_distance'] = oq.filter_distance
@@ -337,6 +338,8 @@ class HazardCalculator(BaseCalculator):
             param['distribute'] = 'processpool'
             if oq.prefilter_sources == 'no':
                 logging.info('Not prefiltering the sources')
+                for src in isources:
+                    pass  # invoked purely for side effects
                 return src_filter, self.csm
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
         if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
@@ -347,13 +350,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Preprocessing the sources with rtree')
             prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
                                     self.hdf5cache)
-            sources_by_grp = prefilter.pfilter(
-                self.csm.get_sources(), param, mon)
+            sources_by_grp = prefilter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         else:
             logging.info('Preprocessing the sources')
-            sources_by_grp = src_filter.pfilter(
-                self.csm.get_sources(), param, mon)
+            sources_by_grp = src_filter.pfilter(isources, param, mon)
             csm = self.csm.new(sources_by_grp)
         logging.info('There are %d realizations', csm.info.get_num_rlzs())
         return src_filter, csm
@@ -398,13 +399,9 @@ class HazardCalculator(BaseCalculator):
             self.csm = readinput.get_composite_source_model(oq, self.monitor())
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()
-            with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
-        self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
         """
@@ -417,6 +414,7 @@ class HazardCalculator(BaseCalculator):
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
             self.read_inputs()
+            self.init()  # store csm_info
             save_gmfs(self)
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
@@ -468,6 +466,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+
+        self.init()  # do this at the end of pre-execute
 
     def init(self):
         """

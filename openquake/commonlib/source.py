@@ -673,21 +673,33 @@ class CompositeSourceModel(collections.Sequence):
         :returns: a dictionary source_id -> split_time
         """
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
+        n = 0
         for sm in self.source_models:
             for src_group in sm.src_groups:
                 self.add_infos(src_group)
-                if src_group.src_interdep != 'mutex':
-                    # split regular sources
-                    srcs, stime = split_sources(src_group, min_mag)
+                if src_group.src_interdep == 'mutex':
                     for src in src_group:
+                        yield src
+                        n += 1
+                else:
+                    # split regular sources
+                    for src in src_group:
+                        srcs, stime = split_sources([src], min_mag)
                         s = src.source_id
-                        self.infos[s].split_time = stime[s]
+                        self.infos[s].split_time = st = stime[s]
+                        if st > 10:
+                            logging.info('Split %s in %d seconds', s, st)
+                        for split in srcs:
+                            yield split
+                            n += 1
                     if sample_factor:
                         # debugging tip to reduce the size of a calculation
                         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
                         # will run a computation 100 times smaller
                         srcs = random_filter(srcs, float(sample_factor))
                     src_group.sources = srcs
+        if n == 0:
+            raise RuntimeError('All sources were filtered away!')
 
     def grp_by_src(self):
         """
@@ -818,8 +830,6 @@ class CompositeSourceModel(collections.Sequence):
                         if sm.samples > 1:
                             src.samples = sm.samples
                         sources.append(src)
-        if kind == 'all' and not sources:
-            raise RuntimeError('All sources were filtered away!')
         return sources
 
     @cached_property
