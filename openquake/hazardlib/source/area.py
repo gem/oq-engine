@@ -201,4 +201,5 @@ class AreaSource(ParametricSeismicSource):
         """
         :returns: the geometry as a list of vertices
         """
-        return [(lon, lat, 0) for lon, lat in zip(self.lons, self.lats)]
+        return [(lon, lat, 0) for lon, lat in zip(
+            self.polygon.lons, self.polygon.lats)]
