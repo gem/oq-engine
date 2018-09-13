@@ -274,7 +274,10 @@ class ComplexFaultSource(ParametricSeismicSource):
             self.edges)
 
     def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
         points = []
         for edge in self.edges:
             points.extend((p.x, p.y, p.z) for p in edge)
-        return points
+        return numpy.array(points, numpy.float32)

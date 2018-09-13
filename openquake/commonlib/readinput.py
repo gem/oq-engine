@@ -526,7 +526,7 @@ def store_sm(smodel, h5):
     for sg in smodel:
         for src in sg:
             srcs.append((sg.id, src.source_id, src.__class__.__name__, 0))
-            geoms.append(numpy.array(src.geom()).reshape(3, -1))
+            geoms.append(src.geom().reshape(3, -1))
     hdf5.extend(dset, numpy.array(srcs, source_dt))
     h5.save_vlen('srcgeoms', geoms)
 
