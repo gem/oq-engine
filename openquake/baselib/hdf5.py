@@ -294,7 +294,7 @@ class File(h5py.File):
         for i, arr in enumerate(data):
             dset[length + i] = arr
         dset.attrs['nbytes'] = nbytes
-        dset.attrs['avg_len'] = totlen
+        dset.attrs['totlen'] = totlen
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())
