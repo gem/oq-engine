@@ -501,10 +501,11 @@ class SourceModelFactory(object):
         return sm
 
 
-source_dt = numpy.dtype([('grp_id', numpy.uint16),
-                         ('source_id', hdf5.vstr),
-                         ('class', hdf5.vstr),
-                         ('filtered', numpy.bool)])
+source_dt = numpy.dtype([
+    ('grp_id', numpy.uint16),
+    ('source_id', hdf5.vstr),
+    ('class', hdf5.vstr),
+    ('filtered', numpy.bool)])
 
 
 def store_sm(smodel, h5):
