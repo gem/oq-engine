@@ -666,7 +666,6 @@ class Starmap(object):
             it = self._iter_sequential()
         else:
             it = getattr(self, '_iter_' + self.distribute)()
-        self.todo = self.total = next(it)
         return IterResult(it, self.name, self.argnames,
                           self.sent, self.monitor.hdf5)
 
@@ -712,7 +711,6 @@ class Starmap(object):
     def _loop(self):
         isocket = iter(self.socket)
         self.total = self.todo = len(self.tasks)
-        yield len(self.tasks)
         while self.todo:
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
