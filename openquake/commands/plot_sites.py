@@ -69,12 +69,12 @@ def plot_sites(calc_id=-1):
     idl = cross_idl(min(lonset), max(lonset))
     if idl:
         lons = lons % 360
-    for src, ((lon, lat), width, height) in zip(sources, rects):
+    for ((lon, lat), width, height) in rects:
         lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
-        if hasattr(src.__class__, 'polygon'):
-            xs, ys = fix_polygon(src.polygon, idl)
-            p.plot(xs, ys, marker='.')
+        # if hasattr(src.__class__, 'polygon'):
+        #    xs, ys = fix_polygon(src.polygon, idl)
+        #    p.plot(xs, ys, marker='.')
 
     p.scatter(lons, lats, marker='+')
     p.show()
