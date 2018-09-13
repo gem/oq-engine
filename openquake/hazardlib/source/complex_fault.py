@@ -275,10 +275,6 @@ class ComplexFaultSource(ParametricSeismicSource):
 
     def geom(self):
         points = []
-        prevlen = None
         for edge in self.edges:
-            if prevlen:
-                assert len(edge) == prevlen, (len(edge), prevlen)
-            prevlen = len(edge)
             points.extend((p.x, p.y, p.z) for p in edge)
         return points
