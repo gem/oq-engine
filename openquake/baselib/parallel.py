@@ -662,11 +662,11 @@ class Starmap(object):
         self.socket.__enter__()
         self.monitor.backurl = 'tcp://%s:%s' % (
             config.dbserver.host, self.socket.port)
-        if self.num_tasks == 1 or self.distribute == 'no':
-            it = self._iter_sequential()
-        else:
-            it = getattr(self, '_iter_' + self.distribute)()
-        return IterResult(it, self.name, self.argnames,
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        submit = getattr(self, dist + '_submit')
+        for args in self._genargs():
+            submit(args)
+        return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.monitor.hdf5)
 
     def reduce(self, agg=operator.add, acc=None):
@@ -678,37 +678,31 @@ class Starmap(object):
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _iter_sequential(self):
-        allargs = list(self._genargs(pickle=False))
-        for args in allargs:
-            self.tasks.append(safely_call(self.task_func, args, self.monitor))
-        yield from self._loop()
+    def no_submit(self, args):
+        self.tasks.append(safely_call(self.task_func, args, self.monitor))
 
-    def _iter_processpool(self):
-        for args in self._genargs(pickle=False):
-            res = self.pool.apply_async(
-                safely_call, (self.task_func, args, self.monitor))
-            self.tasks.append(res)
-        yield from self._loop()
+    def processpool_submit(self, args):
+        res = self.pool.apply_async(
+            safely_call, (self.task_func, args, self.monitor))
+        self.tasks.append(res)
 
-    _iter_threadpool = _iter_processpool
+    threadpool_submit = processpool_submit
 
-    def _iter_celery(self):
-        for piks in self._genargs():
-            task = safetask.delay(self.task_func, piks, self.monitor)
-            self.tasks.append(task)
-        yield from self._loop()
+    def celery_submit(self, args):
+        task = safetask.delay(self.task_func, args, self.monitor)
+        self.tasks.append(task)
 
-    def _iter_zmq(self):
-        task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
-                                       config.zworkers.task_in_port)
-        with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-            for args in self._genargs():
-                res = sender.send((self.task_func, args, self.monitor))
-                self.tasks.append(res)
-        yield from self._loop()
+    def zmq_submit(self, args):
+        if not hasattr(self, 'sender'):
+            task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
+                                           config.zworkers.task_in_port)
+            self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+        res = self.sender.send((self.task_func, args, self.monitor))
+        self.tasks.append(res)
 
     def _loop(self):
+        if hasattr(self, 'sender'):
+            self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
         self.total = self.todo = len(self.tasks)
         while self.todo:
