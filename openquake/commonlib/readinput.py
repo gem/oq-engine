@@ -507,6 +507,10 @@ source_dt = numpy.dtype([('grp_id', numpy.uint16),
 
 
 def store_sm(smodel, h5):
+    """
+    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    """
     if 'sources' not in h5:
         dset = hdf5.create(h5, 'sources', source_dt, shape=(None,),
                            fillvalue=None)
