@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
+import numpy
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
@@ -199,7 +200,7 @@ class AreaSource(ParametricSeismicSource):
 
     def geom(self):
         """
-        :returns: the geometry as a list of vertices
+        :returns: the geometry as an array of shape (N, 3)
         """
-        return [(lon, lat, 0) for lon, lat in zip(
-            self.polygon.lons, self.polygon.lats)]
+        return numpy.array([(lon, lat, 0) for lon, lat in zip(
+            self.polygon.lons, self.polygon.lats)])
