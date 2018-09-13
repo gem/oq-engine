@@ -160,7 +160,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
 
     def geom(self):
-        arr = numpy.concatenate([rup.surface.mesh.array
+        # the rupture can have a faultSurface which is a 3D array
+        # or can be a griddedSurface which is a 2D array or others
+        arr = numpy.concatenate([rup.surface.mesh.array.reshape(3, -1)
                                  for rup, pmf in self.data],
                                 axis=1)  # shape (3, n)
         return arr.T   # shape (N, 3)
