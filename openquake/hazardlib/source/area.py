@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
+import numpy
 from copy import deepcopy
 from openquake.hazardlib import geo, mfd
 from openquake.hazardlib.source.point import PointSource
@@ -196,3 +197,10 @@ class AreaSource(ParametricSeismicSource):
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt.num_ruptures = pt.count_ruptures()
             yield pt
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(lon, lat, 0) for lon, lat in zip(
+            self.polygon.lons, self.polygon.lats)])

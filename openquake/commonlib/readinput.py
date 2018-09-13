@@ -27,7 +27,7 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import performance
+from openquake.baselib import performance, hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
@@ -501,6 +501,44 @@ class SourceModelFactory(object):
         return sm
 
 
+source_dt = numpy.dtype([
+    ('grp_id', numpy.uint16),
+    ('source_id', hdf5.vstr),
+    ('class', hdf5.vstr),
+    ('filtered', numpy.bool)])
+
+
+def store_sm(smodel, h5):
+    """
+    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    """
+    if 'sources' not in h5:
+        dset = hdf5.create(h5, 'sources', source_dt, shape=(None,),
+                           fillvalue=None)
+    else:
+        dset = h5['sources']
+    if 'src/lons' not in h5:
+        hdf5.create(h5, 'src/lons', hdf5.vfloat32, shape=(None,))
+        hdf5.create(h5, 'src/lats', hdf5.vfloat32, shape=(None,))
+        hdf5.create(h5, 'src/deps', hdf5.vfloat32, shape=(None,))
+    srcs = []
+    lons = []
+    lats = []
+    deps = []
+    for sg in smodel:
+        for src in sg:
+            srcs.append((sg.id, src.source_id, src.__class__.__name__, 0))
+            arr = src.geom().T  # shape (3, N)
+            lons.append(arr[0])
+            lats.append(arr[1])
+            deps.append(arr[2])
+    hdf5.extend(dset, numpy.array(srcs, source_dt))
+    h5.save_vlen('src/lons', lons)
+    h5.save_vlen('src/lats', lats)
+    h5.save_vlen('src/deps', deps)
+
+
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                       in_memory=True):
     """
@@ -536,22 +574,39 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
+    idx = 0
+    grp_id = 0
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
                 sg = copy.copy(grp)
-                sg.id = sm.ordinal
+                sg.id = grp_id
                 sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
                 src_groups.append(sg)
+                grp_id += 1
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
+                for sg in newsm:
+                    for src in sg:
+                        src.src_group_id = grp_id
+                        src.id = idx
+                        idx += 1
+                    sg.id = grp_id
+                    grp_id += 1
+                if monitor.hdf5:
+                    store_sm(newsm, monitor.hdf5)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
+
+        if grp_id >= TWO16:
+            # the limit is really needed only for event based calculations
+            raise ValueError('There is a limit of %d src groups!' % TWO16)
+
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -605,8 +660,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
         if False, just parse the XML without instantiating the sources
     """
     smodels = []
-    grp_id = 0
-    idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
     if oqparam.number_of_logic_tree_samples == 0:
@@ -620,7 +673,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            src_group.id = grp_id
             for src in src_group:
                 # there are two cases depending on the flag in_memory:
                 # 1) src is a hazardlib source and has a src_group_id
@@ -628,13 +680,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
                 # 2) src is a Node object, then nothing must be done
                 if isinstance(src, Node):
                     continue
-                src.src_group_id = grp_id
-                src.id = idx
-                idx += 1
-            grp_id += 1
-            if grp_id >= TWO16:
-                # the limit is really needed only for event based calculations
-                raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
                                       oqparam.optimize_same_id_sources)

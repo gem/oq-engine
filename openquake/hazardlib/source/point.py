@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -343,3 +344,10 @@ class PointSource(ParametricSeismicSource):
         a1 = (maxdist + maxradius) * KM_TO_DEGREES
         a2 = angular_distance(maxdist + maxradius, lat)
         return lon - a2, lat - a1, lon + a2, lat + a1
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (1, 3)
+        """
+        loc = self.location
+        return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)

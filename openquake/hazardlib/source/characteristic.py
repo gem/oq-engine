@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
+import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -116,3 +117,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         The underlying polygon, as a convex hull
         """
         return self.surface.mesh.get_convex_hull()
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.surface.mesh],
+                           numpy.float32)
