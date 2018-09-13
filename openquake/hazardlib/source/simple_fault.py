@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
+import numpy
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -324,4 +325,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             self.lower_seismogenic_depth, self.dip)
 
     def geom(self):
-        return [(p.x, p.y, p.z) for p in self.fault_trace]
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.fault_trace],
+                           numpy.float32)
