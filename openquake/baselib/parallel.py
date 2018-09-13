@@ -519,7 +519,7 @@ class Starmap(object):
     calc_id = None
     hdf5 = None
     pids = ()
-    task_ids = []
+    tasks = []
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
@@ -654,7 +654,7 @@ class Starmap(object):
                 self.sent += numpy.array([len(p) for p in args])
             yield args
 
-    def submit_all(self, progress=logging.info):
+    def submit_all(self):
         """
         :returns: an IterResult object
         """
@@ -682,43 +682,37 @@ class Starmap(object):
     def _iter_sequential(self):
         allargs = list(self._genargs(pickle=False))
         for args in allargs:
-            safely_call(self.task_func, args, self.monitor)
-        yield from self._loop(len(allargs))
+            self.tasks.append(safely_call(self.task_func, args, self.monitor))
+        yield from self._loop()
 
     def _iter_processpool(self):
-        results = []
         for args in self._genargs(pickle=False):
             res = self.pool.apply_async(
                 safely_call, (self.task_func, args, self.monitor))
-            results.append(res)
-        yield from self._loop(len(results))
+            self.tasks.append(res)
+        yield from self._loop()
 
     _iter_threadpool = _iter_processpool
 
     def _iter_celery(self):
-        tasks = []
         for piks in self._genargs():
             task = safetask.delay(self.task_func, piks, self.monitor)
-            # populating Starmap.task_ids, used in celery_cleanup
-            self.task_ids.append(task.task_id)
-            tasks.append(task)
-        yield from self._loop(len(tasks))
-        self.task_ids.clear()
+            self.tasks.append(task)
+        yield from self._loop()
 
     def _iter_zmq(self):
         task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                        config.zworkers.task_in_port)
         with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-            num_tasks = 0
             for args in self._genargs():
-                sender.send((self.task_func, args, self.monitor))
-                num_tasks += 1
-        yield from self._loop(num_tasks)
+                res = sender.send((self.task_func, args, self.monitor))
+                self.tasks.append(res)
+        yield from self._loop()
 
-    def _loop(self, num_tasks):
+    def _loop(self):
         isocket = iter(self.socket)
-        self.total = self.todo = num_tasks
-        yield num_tasks
+        self.total = self.todo = len(self.tasks)
+        yield len(self.tasks)
         while self.todo:
             res = next(isocket)
             if self.calc_id and self.calc_id != res.mon.calc_id:
@@ -732,6 +726,7 @@ class Starmap(object):
                 yield res
         self.log_percent()
         self.socket.__exit__(None, None, None)
+        self.tasks.clear()
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
