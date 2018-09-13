@@ -518,17 +518,25 @@ def store_sm(smodel, h5):
                            fillvalue=None)
     else:
         dset = h5['sources']
-    if 'srcgeoms' not in h5:
-        hdf5.create(h5, 'srcgeoms', hdf5.vfloat32, shape=(None, 3),
-                    fillvalue=None)
+    if 'src/lons' not in h5:
+        hdf5.create(h5, 'src/lons', hdf5.vfloat32, shape=(None,))
+        hdf5.create(h5, 'src/lats', hdf5.vfloat32, shape=(None,))
+        hdf5.create(h5, 'src/deps', hdf5.vfloat32, shape=(None,))
     srcs = []
-    geoms = []
+    lons = []
+    lats = []
+    deps = []
     for sg in smodel:
         for src in sg:
             srcs.append((sg.id, src.source_id, src.__class__.__name__, 0))
-            geoms.append(src.geom().reshape(3, -1))
+            arr = src.geom().T  # shape (3, N)
+            lons.append(arr[0])
+            lats.append(arr[1])
+            deps.append(arr[2])
     hdf5.extend(dset, numpy.array(srcs, source_dt))
-    h5.save_vlen('srcgeoms', geoms)
+    h5.save_vlen('src/lons', lons)
+    h5.save_vlen('src/lats', lats)
+    h5.save_vlen('src/deps', deps)
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
