@@ -151,7 +151,6 @@ import pickle
 import inspect
 import logging
 import operator
-import functools
 import itertools
 import traceback
 import collections
@@ -582,7 +581,7 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, task_args, mon, distribute, progress).submit_all()
 
-    def __init__(self, task_func, task_args, monitor=None, distribute=None,
+    def __init__(self, task_func, task_args=(), monitor=None, distribute=None,
                  progress=logging.info):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
@@ -591,6 +590,10 @@ class Starmap(object):
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
         self.progress = progress
+        try:
+            self.num_tasks = len(self.task_args)
+        except TypeError:  # generators have no len
+            self.num_tasks = None
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
             self.argnames = inspect.getargspec(task_func).args
@@ -610,18 +613,6 @@ class Starmap(object):
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
 
-    @property
-    def num_tasks(self):
-        """
-        The number of tasks, if known, or the empty string otherwise.
-        """
-        try:
-            return len(self.task_args)
-        except TypeError:  # generators have no len
-            return ''
-        # NB: returning -1 breaks openquake.hazardlib.tests.calc.
-        # hazard_curve_new_test.HazardCurvesTestCase02 :-(
-
     def log_percent(self):
         """
         Log the progress of the computation in percentage
@@ -638,34 +629,31 @@ class Starmap(object):
                 self.prev_percent = percent
         return done
 
-    def _genargs(self, pickle=True):
+    def submit(self, args):
         """
-        Add .task_no and .weight to the monitor and yield back
-        the arguments by pickling them.
+        Submit the given arguments to the underlying task
         """
-        for task_no, args in enumerate(self.task_args, 1):
-            mon = args[-1]
-            assert isinstance(mon, Monitor), mon
-            # add incremental task number and task weight
-            mon.task_no = task_no
-            self.calc_id = getattr(mon, 'calc_id', None)
-            if pickle:
-                args = pickle_sequence(args)
-                self.sent += numpy.array([len(p) for p in args])
-            yield args
+        if not hasattr(self, 'socket'):  # first time
+            self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, self.socket.port)
+        mon = args[-1]
+        assert isinstance(mon, Monitor), mon
+        # add incremental task number and task weight
+        mon.task_no = len(self.tasks) + 1
+        self.calc_id = getattr(mon, 'calc_id', None)
+        args = pickle_sequence(args)
+        self.sent += numpy.array([len(p) for p in args])
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        res = getattr(self, dist + '_submit')(args)
+        self.tasks.append(res)
 
     def submit_all(self):
         """
         :returns: an IterResult object
         """
-        self.socket = Socket(self.receiver, zmq.PULL, 'bind')
-        self.socket.__enter__()
-        self.monitor.backurl = 'tcp://%s:%s' % (
-            config.dbserver.host, self.socket.port)
-        dist = 'no' if self.num_tasks == 1 else self.distribute
-        submit = getattr(self, dist + '_submit')
-        for args in self._genargs():
-            submit(args)
+        for args in self.task_args:
+            self.submit(args)
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.monitor.hdf5)
 
@@ -679,26 +667,23 @@ class Starmap(object):
         return iter(self.submit_all())
 
     def no_submit(self, args):
-        self.tasks.append(safely_call(self.task_func, args, self.monitor))
+        return safely_call(self.task_func, args, self.monitor)
 
     def processpool_submit(self, args):
-        res = self.pool.apply_async(
+        return self.pool.apply_async(
             safely_call, (self.task_func, args, self.monitor))
-        self.tasks.append(res)
 
     threadpool_submit = processpool_submit
 
     def celery_submit(self, args):
-        task = safetask.delay(self.task_func, args, self.monitor)
-        self.tasks.append(task)
+        return safetask.delay(self.task_func, args, self.monitor)
 
     def zmq_submit(self, args):
         if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
-        res = self.sender.send((self.task_func, args, self.monitor))
-        self.tasks.append(res)
+        return self.sender.send((self.task_func, args, self.monitor))
 
     def _loop(self):
         if hasattr(self, 'sender'):
