@@ -158,3 +158,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+
+    def geom(self):
+        points = []
+        for rup, pmf in self.data:
+            points.extend(rup.surface.mesh.array)
+        return points

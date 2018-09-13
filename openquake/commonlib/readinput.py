@@ -508,6 +508,8 @@ def store_sm(smodel, h5):
     if 'sources' not in h5:
         dset = hdf5.create(h5, 'sources', source_dt, shape=(None,),
                            fillvalue=None)
+    else:
+        dset = h5['sources']
     if 'srcgeoms' not in h5:
         hdf5.create(h5, 'srcgeoms', hdf5.vfloat32, shape=(None, 3),
                     fillvalue=None)
