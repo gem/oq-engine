@@ -501,7 +501,7 @@ class SourceModelFactory(object):
         return sm
 
 
-source_dt = numpy.dtype([('source_id', 'S75'), ('shape', U16)])
+source_dt = numpy.dtype([('source_id', hdf5.vstr), ])
 
 
 def store_sm(smodel, h5):
@@ -517,7 +517,7 @@ def store_sm(smodel, h5):
     geoms = []
     for sg in smodel:
         for src in sg:
-            srcs.append((src.source_id, 1))
+            srcs.append((src.source_id,))
             geoms.append(numpy.array(src.geom()).reshape(3, -1))
     hdf5.extend(dset, numpy.array(srcs, source_dt))
     h5.save_vlen('srcgeoms', geoms)
