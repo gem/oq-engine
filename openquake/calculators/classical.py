@@ -306,16 +306,15 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     dic = groupby(sources, lambda src: src.src_group_ids[0])
     acc = AccumDict({grp_id: {} for grp_id in dic})
     acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(3))
+    acc.calc_times = AccumDict(accum=numpy.zeros(3, F32))
     for grp_id in dic:
         for src in sources:
             t0 = time.time()
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
                 acc.calc_times[src.id] += numpy.array(
-                    [src.weight, len(sites), dt])
+                    [src.weight, len(sites), time.time() - t0])
     return acc
 
 
