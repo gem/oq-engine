@@ -95,6 +95,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap_by_grp[grp_id]:
                     acc[grp_id] |= pmap_by_grp[grp_id]
                 self.nsites.append(len(pmap_by_grp[grp_id]))
+        with self.monitor('store source_info', autoflush=True):
             self.store_source_info(pmap_by_grp.calc_times)
         return acc
 
@@ -140,8 +141,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.nsites:
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
-        with self.monitor('store source_info', autoflush=True):
-            self.store_csm_info(acc)
+        self.store_csm_info(acc)
         return acc
 
     def gen_args(self, monitor):
