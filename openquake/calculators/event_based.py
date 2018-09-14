@@ -292,7 +292,7 @@ class EventBasedCalculator(base.HazardCalculator):
             acc = mock.Mock(eff_ruptures={
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups})
-            self.store_source_info(acc)
+            self.store_csm_info(acc)
         return self.csm.info
 
     def agg_dicts(self, acc, result):

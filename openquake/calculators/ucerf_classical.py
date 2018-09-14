@@ -71,5 +71,5 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(acc)
+            self.store_csm_info(acc)
         return acc  # {grp_id: pmap}
