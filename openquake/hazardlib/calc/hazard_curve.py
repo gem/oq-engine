@@ -90,8 +90,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     cmaker = ContextMaker(gsims, maxdist, param, monitor)
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
-    # AccumDict of arrays with 4 elements weight, nsites, calc_time, split
-    pmap.calc_times = AccumDict(accum=numpy.zeros(4))
+    # AccumDict of arrays with 3 elements weight, nsites, calc_time
+    pmap.calc_times = AccumDict(accum=numpy.zeros(3))
     pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
@@ -112,7 +112,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
         pmap.calc_times[src.id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0, 1])
+            [src.weight, len(s_sites), time.time() - t0])
         # storing the number of contributing ruptures too
         pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
                               for gid in src.src_group_ids}

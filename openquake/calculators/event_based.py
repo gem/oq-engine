@@ -254,29 +254,19 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        try:
-            source_info = self.datastore['source_info']
-        except KeyError:  # UCERF
-            source_info = None
         self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
+        calc_times = AccumDict(accum=numpy.zeros(3))
         for src in self.csm.get_sources():
             if hasattr(src, 'eb_ruptures'):  # except UCERF
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     rlzs_assoc.get_rlzs_by_gsim,
                     samples_by_grp, len(self.oqparam.imtls))
-            # update source_info
-            if source_info and hasattr(src, 'calc_times'):
-                for srcid, nsites, eids, dt in src.calc_times:
-                    info = source_info[srcid]
-                    info['num_sites'] += nsites
-                    info['calc_time'] += dt
-                    info['num_split'] += 1
-                    info['events'] += len(eids)
-                    source_info[srcid] = info
+            if hasattr(src, 'calc_times'):
+                calc_times += src.calc_times
                 del src.calc_times
             # save the events always and the ruptures if oq.save_ruptures
             if hasattr(src, 'eb_ruptures'):
@@ -289,6 +279,7 @@ class EventBasedCalculator(base.HazardCalculator):
                          msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(calc_times)
             acc = mock.Mock(eff_ruptures={
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups})

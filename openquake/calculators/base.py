@@ -648,6 +648,19 @@ class HazardCalculator(BaseCalculator):
                 'source_info', has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
+    def store_source_info(self, calc_times):
+        try:
+            source_info = self.datastore['source_info']
+        except KeyError:  # for UCERF
+            pass
+        else:
+            for srcid, (weight, nsites, calc_time) in calc_times.items():
+                info = source_info[srcid]
+                info['weight'] = weight
+                info['num_sites'] = nsites
+                info['calc_time'] = calc_time
+                source_info[srcid] = info
+
     def post_process(self):
         """For compatibility with the engine"""
 

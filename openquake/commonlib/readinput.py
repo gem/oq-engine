@@ -515,7 +515,7 @@ class SourceInfo(object):
         ('split_time', numpy.float32),     # 7
         ('num_sites', numpy.float32),      # 8
         ('num_split',  numpy.uint32),      # 9
-        ('events', numpy.uint32),          # 10
+        ('weight', numpy.float32),         # 10
     ])
 
     def __init__(self, src, calc_time=0, split_time=0, num_split=0):
@@ -738,12 +738,17 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
 def _split_all(csm, h5, min_mag=0):
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
     split_time = []
+    num_split = []
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':
                 # split regular sources
-                srcs, stime = split_sources(src_group, min_mag)
-                split_time.extend(stime)
+                srcs = []
+                for src in src_group:
+                    ss, stime = split_sources([src], min_mag)
+                    srcs.extend(ss)
+                    split_time.extend(stime)
+                    num_split.append(len(ss))
                 if sample_factor:
                     # debugging tip to reduce the size of a calculation
                     # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
@@ -752,12 +757,14 @@ def _split_all(csm, h5, min_mag=0):
                 src_group.sources = srcs
             else:
                 split_time.extend([0] * len(src_group))
+                num_split.extend([1] * len(src_group))
     try:
         source_info = h5['source_info']
     except KeyError:  # UCERF
         pass
     else:
         source_info['split_time'] = F32(split_time)
+        source_info['num_split'] = U32(num_split)
 
 
 def get_imts(oqparam):
