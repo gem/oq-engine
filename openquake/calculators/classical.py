@@ -89,24 +89,13 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
         """
-        try:
-            source_info = self.datastore['source_info']
-        except KeyError:  # for UCERF
-            source_info = None
         with self.monitor('aggregate curves', autoflush=True):
             acc.eff_ruptures += pmap_by_grp.eff_ruptures
             for grp_id in pmap_by_grp:
                 if pmap_by_grp[grp_id]:
                     acc[grp_id] |= pmap_by_grp[grp_id]
                 self.nsites.append(len(pmap_by_grp[grp_id]))
-            if source_info:
-                for srcid, (srcweight, nsites, calc_time, split) in \
-                        pmap_by_grp.calc_times.items():
-                    info = source_info[srcid]
-                    info['num_sites'] += nsites
-                    info['calc_time'] += calc_time
-                    info['num_split'] += split
-                    source_info[srcid] = info
+            self.store_source_info(pmap_by_grp.calc_times)
         return acc
 
     def zerodict(self):
@@ -317,7 +306,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     dic = groupby(sources, lambda src: src.src_group_ids[0])
     acc = AccumDict({grp_id: {} for grp_id in dic})
     acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
+    acc.calc_times = AccumDict(accum=numpy.zeros(3))
     for grp_id in dic:
         for src in sources:
             t0 = time.time()
@@ -326,7 +315,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
                 acc.eff_ruptures[grp_id] += src.num_ruptures
                 dt = time.time() - t0
                 acc.calc_times[src.id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
+                    [src.weight, len(sites), dt])
     return acc
 
 
