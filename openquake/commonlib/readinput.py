@@ -723,14 +723,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
-
-    if split_all and monitor.hdf5:
-        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
-
     if 'event_based' in oqparam.calculation_mode:
-        # initialize the rupture serial numbers before filtering; in
+        # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+
+    if split_all and monitor.hdf5:
+        # it must bug after otherwise case_miriam breaks
+        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
+
     return csm
 
 
