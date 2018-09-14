@@ -173,8 +173,7 @@ def view_times_by_source_class(token, dstore):
     """
     Returns the calculation times depending on the source typology
     """
-    totals = sum_tbl(
-        dstore['source_info'], 'source_class', ['calc_time'])
+    totals = sum_tbl(dstore['source_info'], 'code', ['calc_time'])
     return rst_table(totals)
 
 
