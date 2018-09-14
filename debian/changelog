@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * We are now saving information about the source geometries in the datastore
+    (experimentally)
+  * Fixed a bug in event based with sampling causing incorrect GMFs
   * Unified all distribution mechanisms to returns the outputs via zmq
   * Added a check for inconsistent IMTs between hazard and risk
   * Replaced the forking processpool with a spawning processpool

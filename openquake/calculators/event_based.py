@@ -203,8 +203,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     ruptures = RuptureGetter(parent, slc, grp_id)
-                    param['samples'] = samples_by_grp[grp_id]
-                    yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
+                    par = param.copy()
+                    par['samples'] = samples_by_grp[grp_id]
+                    yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
             return
 
         maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
@@ -212,7 +213,8 @@ class EventBasedCalculator(base.HazardCalculator):
         num_tasks = 0
         num_sources = 0
         for sm in self.csm.source_models:
-            param['samples'] = sm.samples
+            par = param.copy()
+            par['samples'] = sm.samples
             for sg in sm.src_groups:
                 # ignore the sources not producing ruptures
                 sg.sources = [src for src in sg.sources if src.eb_ruptures]
@@ -220,12 +222,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
                 if sg.src_interdep == 'mutex':  # do not split
-                    yield sg, self.src_filter, rlzs_by_gsim, param, monitor
+                    yield sg, self.src_filter, rlzs_by_gsim, par, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
                     continue
                 for block in block_splitter(sg.sources, maxweight, weight):
-                    yield block, self.src_filter, rlzs_by_gsim, param, monitor
+                    yield block, self.src_filter, rlzs_by_gsim, par, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
