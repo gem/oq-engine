@@ -514,11 +514,13 @@ def init_workers():
         prctl.set_pdeathsig(signal.SIGKILL)
 
 
+running_tasks = []  # currently running tasks
+
+
 class Starmap(object):
     calc_id = None
     hdf5 = None
     pids = ()
-    tasks = []
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
@@ -605,6 +607,7 @@ class Starmap(object):
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
         self.monitor.backurl = None  # overridden later
+        self.tasks = []  # populated by .submit
         h5 = self.monitor.hdf5
         task_info = 'task_info/' + self.name
         if h5 and task_info not in h5:  # first time
@@ -633,7 +636,9 @@ class Starmap(object):
         """
         Submit the given arguments to the underlying task
         """
+        global running_tasks
         if not hasattr(self, 'socket'):  # first time
+            running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
