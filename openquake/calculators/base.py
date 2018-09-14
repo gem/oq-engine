@@ -393,15 +393,11 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self._read_risk_data()
-        self.check_overflow()  # check if self.sitecol is too large1
+        self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(oq, self.monitor())
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()
-            with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                if 'source_info' in self.datastore:  # not UCERF
-                    logging.info('Splitting sources')
-                    self.csm.split_all(self.datastore, oq.minimum_magnitude)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
