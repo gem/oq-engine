@@ -626,6 +626,9 @@ class HazardCalculator(BaseCalculator):
         return result_dict.eff_ruptures.get(src_group_id, 0)
 
     def store_csm_info(self, acc):
+        """
+        Save info about the composite source model inside the csm_info dataset
+        """
         self.csm.info.update_eff_ruptures(
             partial(self.count_eff_ruptures, acc))
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
@@ -649,6 +652,9 @@ class HazardCalculator(BaseCalculator):
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
+        """
+        Save (weight, num_sites, calc_time) inside the source_info dataset
+        """
         try:
             source_info = self.datastore['source_info']
         except KeyError:  # for UCERF
