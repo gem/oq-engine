@@ -151,7 +151,6 @@ import pickle
 import inspect
 import logging
 import operator
-import functools
 import itertools
 import traceback
 import collections
