@@ -655,11 +655,9 @@ class HazardCalculator(BaseCalculator):
             pass
         else:
             for srcid, (weight, nsites, calc_time) in calc_times.items():
-                info = source_info[srcid]
-                info['weight'] = weight
-                info['num_sites'] = nsites
-                info['calc_time'] = calc_time
-                source_info[srcid] = info
+                source_info[srcid, 'weight'] = weight
+                source_info[srcid, 'num_sites'] = nsites
+                source_info[srcid, 'calc_time'] = calc_time
 
     def post_process(self):
         """For compatibility with the engine"""
