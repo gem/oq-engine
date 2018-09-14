@@ -36,12 +36,11 @@ def fix_polygon(poly, idl):
 def get_rectangle(src, geom):
     """
     :param src: a source record
-    :param geom: an array of shape (N, 3)
+    :param geom: an array of shape N with fields lon, lat, depth
     :returns: ((min_lon, min_lat), width, height), useful for plotting
     """
-    lons, lats, deps = geom.T
-    min_lon, min_lat, max_lon, max_lat = (
-        lons.min(), lats.min(), lons.max(), lats.max())
+    min_lon, min_lat = geom['lon'].min(), geom['lat'].min()
+    max_lon, max_lat = geom['lon'].max(), geom['lat'].max()
     return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
 
@@ -74,6 +73,7 @@ def plot_sites(calc_id=-1):
     for ((lon, lat), width, height) in rects:
         lonlat = (lon % 360 if idl else lon, lat)
         ax.add_patch(Rectangle(lonlat, width, height, fill=False))
+        # NB: the code below could be restored in the future
         # if hasattr(src.__class__, 'polygon'):
         #    xs, ys = fix_polygon(src.polygon, idl)
         #    p.plot(xs, ys, marker='.')

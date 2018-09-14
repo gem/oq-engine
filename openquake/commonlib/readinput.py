@@ -37,6 +37,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.geo.mesh import point3d
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -523,17 +524,21 @@ def store_sm(smodel, h5):
     try:
         srcgeoms = h5['srcgeoms']
     except KeyError:
-        srcgeoms = hdf5.create(h5, 'srcgeoms', numpy.float32, shape=(None, 3))
+        srcgeoms = hdf5.create(h5, 'srcgeoms', point3d, shape=(None,))
     gid = 0
-    srcs = []
     for sg in smodel:
+        srcs = []
+        geoms = []
         for src in sg:
-            geom = src.geom().reshape(-1, 3)
-            n = geom.shape[1]
+            srcgeom = src.geom()
+            n = len(srcgeom)
+            geom = numpy.zeros(n, point3d)
+            geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
             srcs.append((sg.id, src.source_id, src.code, gid, gid + n, 0))
+            geoms.append(geom)
             gid += n
-            hdf5.extend(srcgeoms, geom)
-    hdf5.extend(sources, numpy.array(srcs, source_dt))
+        hdf5.extend(srcgeoms, numpy.concatenate(geoms))
+        hdf5.extend(sources, numpy.array(srcs, source_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
