@@ -283,7 +283,11 @@ class File(h5py.File):
         :param data: data to store as a list of arrays
         """
         shape = (None,) + data[0].shape[:-1]
-        dset = self[key]
+        try:
+            dset = self[key]
+        except KeyError:
+            vdt = h5py.special_dtype(vlen=data[0].dtype)
+            dset = create(self, key, vdt, shape, fillvalue=None)
         nbytes = dset.attrs.get('nbytes', 0)
         totlen = dset.attrs.get('totlen', 0)
         for i, val in enumerate(data):
