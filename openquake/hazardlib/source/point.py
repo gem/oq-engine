@@ -99,6 +99,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
+    code = b'P'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth location nodal_plane_distribution
     hypocenter_distribution

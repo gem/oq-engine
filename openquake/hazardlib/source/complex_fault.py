@@ -161,7 +161,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
         fails or if rake value is invalid.
     """
-
+    code = b'F'
     start = stop = None  # these will be set by the engine to extract
     # a slice of the rupture_slices, thus splitting the source
 

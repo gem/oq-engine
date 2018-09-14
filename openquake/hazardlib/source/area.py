@@ -42,6 +42,7 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
+    code = 'A'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth nodal_plane_distribution hypocenter_distribution
     polygon area_discretization'''.split()

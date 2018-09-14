@@ -50,6 +50,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         rupture to occur N times (the PMF must be defined from a minimum number
         of occurrences equal to 0)
     """
+    code = b'N'
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
