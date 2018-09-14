@@ -625,7 +625,7 @@ class HazardCalculator(BaseCalculator):
         """
         return result_dict.eff_ruptures.get(src_group_id, 0)
 
-    def store_source_info(self, acc):
+    def store_csm_info(self, acc):
         self.csm.info.update_eff_ruptures(
             partial(self.count_eff_ruptures, acc))
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
