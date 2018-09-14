@@ -504,7 +504,7 @@ class SourceModelFactory(object):
 source_dt = numpy.dtype([
     ('grp_id', numpy.uint16),
     ('source_id', hdf5.vstr),
-    ('class', hdf5.vstr),
+    ('code', (numpy.string_, 1)),
     ('gidx1', numpy.uint32),
     ('gidx2', numpy.uint32),
     ('filtered', numpy.bool)])
@@ -530,8 +530,7 @@ def store_sm(smodel, h5):
         for src in sg:
             geom = src.geom().reshape(-1, 3)
             n = geom.shape[1]
-            srcs.append((sg.id, src.source_id, src.__class__.__name__,
-                         gid, gid + n, 0))
+            srcs.append((sg.id, src.source_id, src.code, gid, gid + n, 0))
             gid += n
             hdf5.extend(srcgeoms, geom)
     hdf5.extend(sources, numpy.array(srcs, source_dt))

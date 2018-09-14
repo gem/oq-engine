@@ -54,6 +54,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     its attribute `surface_node` to an explicit representation of the surface
     as a LiteralNode object.
     """
+    code = b'C'
     _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
 
     MODIFICATIONS = set(('set_geometry',))
