@@ -33,12 +33,13 @@ def fix_polygon(poly, idl):
             numpy.append(poly.lats, poly.lats[0]))
 
 
-def get_rectangle(src, lons, lats, depths):
+def get_rectangle(src, geom):
     """
     :param src: a source record
-    :param geom: a list of points
+    :param geom: an array of shape (N, 3)
     :returns: ((min_lon, min_lat), width, height), useful for plotting
     """
+    lons, lats, deps = geom.T
     min_lon, min_lat, max_lon, max_lat = (
         lons.min(), lats.min(), lons.max(), lats.max())
     return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
@@ -61,7 +62,8 @@ def plot_sites(calc_id=-1):
     srcgeoms = dstore['srcgeoms'].value
     fig, ax = p.subplots()
     ax.grid(True)
-    rects = [get_rectangle(src, *geom) for src, geom in zip(sources, srcgeoms)]
+    rects = [get_rectangle(src, srcgeoms[src['gidx1']:src['gidx2']])
+             for src in sources]
     lonset = set(lons)
     for ((lon, lat), width, height) in rects:
         lonset.add(lon)
