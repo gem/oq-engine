@@ -660,10 +660,11 @@ class HazardCalculator(BaseCalculator):
         except KeyError:  # for UCERF
             pass
         else:
-            for srcid, (weight, nsites, calc_time) in calc_times.items():
-                source_info[srcid, 'weight'] = weight
-                source_info[srcid, 'num_sites'] = nsites
-                source_info[srcid, 'calc_time'] = calc_time
+            ids, vals = zip(*sorted(calc_times.items()))
+            vals = numpy.array(vals)  # shape (n, 3)
+            source_info[ids, 'weight'] = vals[:, 0]
+            source_info[ids, 'num_sites'] = vals[:, 1]
+            source_info[ids, 'calc_time'] = vals[:, 2]
 
     def post_process(self):
         """For compatibility with the engine"""
