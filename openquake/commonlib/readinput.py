@@ -33,6 +33,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -674,7 +675,8 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=None, in_memory=True):
+def get_composite_source_model(oqparam, monitor=None, in_memory=True,
+                               split_all=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -684,6 +686,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
          a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if False, just parse the XML without instantiating the sources
+    :param split_all:
+        if True, split all the sources in the models
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -723,9 +727,36 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
         # initialize the rupture serial numbers before filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+
+    if split_all and monitor.hdf5:
+        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
     return csm
 
 
+def _split_all(csm, h5, min_mag=0):
+    try:
+        source_info = h5['source_info']
+    except KeyError:  # UCERF
+        source_info = None
+    sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
+    for sm in csm.source_models:
+        for src_group in sm.src_groups:
+            if src_group.src_interdep != 'mutex':
+                # split regular sources
+                srcs, stime = split_sources(src_group, min_mag)
+                if source_info:
+                    for src in src_group:
+                        info = source_info[src.id]
+                        info['split_time'] = stime[src.id]
+                        source_info[src.id] = info
+                if sample_factor:
+                    # debugging tip to reduce the size of a calculation
+                    # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+                    # will run a computation 100 times smaller
+                    srcs = random_filter(srcs, float(sample_factor))
+                src_group.sources = srcs
+
+    
 def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects
