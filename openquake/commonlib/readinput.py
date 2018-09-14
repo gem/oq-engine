@@ -502,13 +502,34 @@ class SourceModelFactory(object):
         return sm
 
 
-source_dt = numpy.dtype([
-    ('grp_id', numpy.uint16),
-    ('source_id', hdf5.vstr),
-    ('code', (numpy.string_, 1)),
-    ('gidx1', numpy.uint32),
-    ('gidx2', numpy.uint32),
-    ('filtered', numpy.bool)])
+class SourceInfo(object):
+    dt = numpy.dtype([
+        ('grp_id', numpy.uint16),          # 0
+        ('source_id', hdf5.vstr),          # 1
+        ('code', (numpy.string_, 1)),      # 2
+        ('gidx1', numpy.uint32),           # 3
+        ('gidx2', numpy.uint32),           # 4
+        ('num_ruptures', numpy.uint32),    # 5
+        ('calc_time', numpy.float32),      # 6
+        ('split_time', numpy.float32),     # 7
+        ('num_sites', numpy.float32),      # 8
+        ('num_split',  numpy.uint32),      # 9
+        ('events', numpy.uint32),          # 10
+    ])
+
+    def __init__(self, src, calc_time=0, split_time=0, num_split=0):
+        self.source_id = src.source_id.rsplit(':', 1)[0]
+        self.source_class = src.__class__.__name__
+        self.num_ruptures = src.num_ruptures
+        self.num_sites = 0  # set later on
+        self.calc_time = calc_time
+        self.split_time = split_time
+        self.num_split = num_split
+        self.events = 0  # set in event based
+
+    def __repr__(self):
+        return '<%s>' % ' '.join('%s=%s' % (name, getattr(self, name))
+                                 for name in self.dt.names)
 
 
 def store_sm(smodel, h5):
@@ -517,14 +538,14 @@ def store_sm(smodel, h5):
     :param h5: a :class:`openquake.baselib.hdf5.File` instance
     """
     try:
-        sources = h5['sources']
+        sources = h5['source_info']
     except KeyError:
-        sources = hdf5.create(h5, 'sources', source_dt, shape=(None,),
+        sources = hdf5.create(h5, 'source_info', SourceInfo.dt, shape=(None,),
                               fillvalue=None)
     try:
-        srcgeoms = h5['srcgeoms']
+        source_geom = h5['source_geom']
     except KeyError:
-        srcgeoms = hdf5.create(h5, 'srcgeoms', point3d, shape=(None,))
+        source_geom = hdf5.create(h5, 'source_geom', point3d, shape=(None,))
     gid = 0
     for sg in smodel:
         srcs = []
@@ -534,11 +555,12 @@ def store_sm(smodel, h5):
             n = len(srcgeom)
             geom = numpy.zeros(n, point3d)
             geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-            srcs.append((sg.id, src.source_id, src.code, gid, gid + n, 0))
+            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                         src.num_ruptures, 0, 0, 0, 0, 0))
             geoms.append(geom)
             gid += n
-        hdf5.extend(srcgeoms, numpy.concatenate(geoms))
-        hdf5.extend(sources, numpy.array(srcs, source_dt))
+        hdf5.extend(source_geom, numpy.concatenate(geoms))
+        hdf5.extend(sources, numpy.array(srcs, SourceInfo.dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -586,7 +608,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                sg.sources[0].id = idx
                 src_groups.append(sg)
+                idx += 1
                 grp_id += 1
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)

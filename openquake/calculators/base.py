@@ -393,14 +393,15 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self._read_risk_data()
-        self.check_overflow()  # check if self.sitecol is too large
+        self.check_overflow()  # check if self.sitecol is too large1
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(oq, self.monitor())
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()
             with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
+                if 'source_info' in self.datastore:  # not UCERF
+                    logging.info('Splitting sources')
+                    self.csm.split_all(self.datastore, oq.minimum_magnitude)
             self.csm.info.gsim_lt.check_imts(oq.imtls)
             self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
             self.rup_data = {}
@@ -627,25 +628,7 @@ class HazardCalculator(BaseCalculator):
         """
         return result_dict.eff_ruptures.get(src_group_id, 0)
 
-    def store_source_info(self, infos, acc):
-        # save the calculation times per each source
-        if infos:
-            rows = sorted(
-                infos.values(),
-                key=operator.attrgetter('calc_time'),
-                reverse=True)
-            array = numpy.zeros(len(rows), source.SourceInfo.dt)
-            for i, row in enumerate(rows):
-                for name in array.dtype.names:
-                    value = getattr(row, name)
-                    if name == 'num_sites':
-                        value /= (row.num_split or 1)
-                    elif name == 'grp_id' and isinstance(value, list):
-                        # same ID sources; store only the first
-                        value = value[0]
-                    array[i][name] = value
-            self.datastore['source_info'] = array
-            infos.clear()
+    def store_source_info(self, acc):
         self.csm.info.update_eff_ruptures(
             partial(self.count_eff_ruptures, acc))
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
@@ -665,8 +648,7 @@ class HazardCalculator(BaseCalculator):
         if 'source_info' in self.datastore:
             # the table is missing for UCERF, we should fix that
             self.datastore.set_attrs(
-                'source_info', nbytes=array.nbytes,
-                has_dupl_sources=self.csm.has_dupl_sources)
+                'source_info', has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
     def post_process(self):

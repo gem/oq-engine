@@ -20,8 +20,6 @@ import operator
 
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib import source
-
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -41,7 +39,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             for src in grp:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
                 grp.tot_ruptures += src.num_ruptures
 
     def execute(self):
@@ -67,8 +64,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
             srcs = ucerf.get_background_sources(self.src_filter)
-            for src in srcs:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
             acc = parallel.Starmap.apply(
                 classical, (srcs, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
@@ -76,5 +71,5 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ).reduce(self.agg_dicts, acc)
 
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+            self.store_source_info(acc)
         return acc  # {grp_id: pmap}

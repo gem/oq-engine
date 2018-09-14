@@ -146,9 +146,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
                                        s_sites, rup_mon))
         eb_ruptures.extend(ebrs)
         eids = set_eids(ebrs)
-        src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
-        calc_times.append((src_id, src.nsites, eids, dt))
+        calc_times.append((src.id, src.nsites, eids, dt))
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
