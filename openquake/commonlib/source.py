@@ -26,9 +26,8 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, random_filter, cached_property)
-from openquake.hazardlib.calc.filters import split_sources
-from openquake.hazardlib import source, sourceconverter, contexts
+    groupby, group_array, gettemp, AccumDict, cached_property)
+from openquake.hazardlib import source, sourceconverter
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
 from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
@@ -386,31 +385,6 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             self.has_dupl_sources = len(dupl_sources)
-
-    def split_all(self, dstore, min_mag=0):
-        """
-        Split all sources in the composite source model.
-
-        :param samples_factor: if given, sample the sources
-        :returns: a dictionary source_id -> split_time
-        """
-        source_info = dstore['source_info']
-        sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        for sm in self.source_models:
-            for src_group in sm.src_groups:
-                if src_group.src_interdep != 'mutex':
-                    # split regular sources
-                    srcs, stime = split_sources(src_group, min_mag)
-                    for src in src_group:
-                        info = source_info[src.id]
-                        info['split_time'] = stime[src.id]
-                        source_info[src.id] = info
-                    if sample_factor:
-                        # debugging tip to reduce the size of a calculation
-                        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
-                        # will run a computation 100 times smaller
-                        srcs = random_filter(srcs, float(sample_factor))
-                    src_group.sources = srcs
 
     def grp_by_src(self):
         """
