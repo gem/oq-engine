@@ -128,7 +128,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     if not param:
         param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
     eb_ruptures = []
-    calc_times = []
+    # AccumDict of arrays with 3 elements weight, nsites, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(3))
     rup_mon = monitor('making contexts', measuremem=False)
     # Compute and save stochastic event sets
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
@@ -147,7 +148,7 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         eb_ruptures.extend(ebrs)
         eids = set_eids(ebrs)
         dt = time.time() - t0
-        calc_times.append((src.id, src.nsites, eids, dt))
+        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
