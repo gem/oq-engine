@@ -659,6 +659,12 @@ class Starmap(object):
         """
         for args in self.task_args:
             self.submit(args)
+        return self.get_results()
+
+    def get_results(self):
+        """
+        :returns: an :class:`IterResult` instance
+        """
         return IterResult(self._loop(), self.name, self.argnames,
                           self.sent, self.monitor.hdf5)
 
