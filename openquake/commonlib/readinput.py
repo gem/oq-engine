@@ -735,27 +735,28 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
 
 
 def _split_all(csm, h5, min_mag=0):
-    try:
-        source_info = h5['source_info']
-    except KeyError:  # UCERF
-        source_info = None
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
+    split_time = []
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':
                 # split regular sources
                 srcs, stime = split_sources(src_group, min_mag)
-                if source_info:
-                    for src in src_group:
-                        info = source_info[src.id]
-                        info['split_time'] = stime[src.id]
-                        source_info[src.id] = info
+                split_time.extend(stime)
                 if sample_factor:
                     # debugging tip to reduce the size of a calculation
                     # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
                     # will run a computation 100 times smaller
                     srcs = random_filter(srcs, float(sample_factor))
                 src_group.sources = srcs
+            else:
+                split_time.extend([0] * len(src_group))
+    try:
+        source_info = h5['source_info']
+    except KeyError:  # UCERF
+        pass
+    else:
+        source_info['split_time'] = F32(split_time)
 
 
 def get_imts(oqparam):
