@@ -161,7 +161,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
         fails or if rake value is invalid.
     """
-
+    code = b'C'
     start = stop = None  # these will be set by the engine to extract
     # a slice of the rupture_slices, thus splitting the source
 
@@ -272,3 +272,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         `"""
         return ComplexFaultSurface.surface_projection_from_fault_data(
             self.edges)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        points = []
+        for edge in self.edges:
+            points.extend((p.x, p.y, p.z) for p in edge)
+        return numpy.array(points, numpy.float32)
