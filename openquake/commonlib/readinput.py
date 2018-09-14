@@ -505,6 +505,8 @@ source_dt = numpy.dtype([
     ('grp_id', numpy.uint16),
     ('source_id', hdf5.vstr),
     ('class', hdf5.vstr),
+    ('gidx1', numpy.uint32),
+    ('gidx2', numpy.uint32),
     ('filtered', numpy.bool)])
 
 
@@ -513,22 +515,26 @@ def store_sm(smodel, h5):
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
     :param h5: a :class:`openquake.baselib.hdf5.File` instance
     """
-    if 'sources' not in h5:
-        dset = hdf5.create(h5, 'sources', source_dt, shape=(None,),
-                           fillvalue=None)
-    else:
-        dset = h5['sources']
-    if 'srcgeoms' not in h5:
-        hdf5.create(h5, 'srcgeoms', hdf5.vfloat32, shape=(None, 3),
-                    fillvalue=None)
+    try:
+        sources = h5['sources']
+    except KeyError:
+        sources = hdf5.create(h5, 'sources', source_dt, shape=(None,),
+                              fillvalue=None)
+    try:
+        srcgeoms = h5['srcgeoms']
+    except KeyError:
+        srcgeoms = hdf5.create(h5, 'srcgeoms', numpy.float32, shape=(None, 3))
+    gid = 0
     srcs = []
-    geoms = []
     for sg in smodel:
         for src in sg:
-            srcs.append((sg.id, src.source_id, src.__class__.__name__, 0))
-            geoms.append(src.geom().reshape(3, -1))
-    hdf5.extend(dset, numpy.array(srcs, source_dt))
-    h5.save_vlen('srcgeoms', geoms)
+            geom = src.geom().reshape(-1, 3)
+            n = geom.shape[1]
+            srcs.append((sg.id, src.source_id, src.__class__.__name__,
+                         gid, gid + n, 0))
+            gid += n
+            hdf5.extend(srcgeoms, geom)
+    hdf5.extend(sources, numpy.array(srcs, source_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
