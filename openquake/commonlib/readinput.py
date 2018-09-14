@@ -687,7 +687,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     :param split_all:
-        if True, split all the sources in the models
+        if True, split all the sources in the models; for disaggregation
+        it should be False
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -723,13 +724,13 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
 
+    if split_all and monitor.hdf5:
+        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
+
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
-
-    if split_all and monitor.hdf5:
-        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
     return csm
 
 
@@ -756,7 +757,7 @@ def _split_all(csm, h5, min_mag=0):
                     srcs = random_filter(srcs, float(sample_factor))
                 src_group.sources = srcs
 
-    
+
 def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects

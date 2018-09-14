@@ -228,6 +228,7 @@ def split_sources(srcs, min_mag):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
+            splits[0].id = src.id
             if has_serial:
                 splits[0].serial = src.serial
             if has_samples:
