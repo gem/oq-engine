@@ -83,6 +83,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
+    code = b'f'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
