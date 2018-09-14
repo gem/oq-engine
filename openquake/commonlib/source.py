@@ -379,9 +379,6 @@ class CompositeSourceModel(collections.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
-        # dictionary src_group_id, source_id -> SourceInfo,
-        # populated by the .split_in_blocks method
-        self.infos = {}
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
@@ -390,23 +387,24 @@ class CompositeSourceModel(collections.Sequence):
         else:
             self.has_dupl_sources = len(dupl_sources)
 
-    def split_all(self, min_mag=0):
+    def split_all(self, dstore, min_mag=0):
         """
         Split all sources in the composite source model.
 
         :param samples_factor: if given, sample the sources
         :returns: a dictionary source_id -> split_time
         """
+        source_info = dstore['source_info']
         sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
         for sm in self.source_models:
             for src_group in sm.src_groups:
-                self.add_infos(src_group)
                 if src_group.src_interdep != 'mutex':
                     # split regular sources
                     srcs, stime = split_sources(src_group, min_mag)
                     for src in src_group:
-                        s = src.source_id
-                        self.infos[s].split_time = stime[s]
+                        info = source_info[src.id]
+                        info['split_time'] = stime[src.id]
+                        source_info[src.id] = info
                     if sample_factor:
                         # debugging tip to reduce the size of a calculation
                         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
@@ -469,7 +467,6 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
         new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
-        new.infos = self.infos
         return new
 
     def get_weight(self, weight):
@@ -610,18 +607,6 @@ class CompositeSourceModel(collections.Sequence):
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)
 
-    def add_infos(self, sources):
-        """
-        Populate the .infos dictionary src_id -> <SourceInfo>
-        """
-        gsims = self.gsim_lt.values
-        for src in sources:
-            info = SourceInfo(src)
-            self.infos[info.source_id] = info
-            trt = src.tectonic_region_type
-            src.ngsims = len(gsims[trt])
-            src.ndists = contexts.get_num_distances(gsims[trt])
-
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
@@ -656,32 +641,3 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-# ########################## SourceManager ########################### #
-
-class SourceInfo(object):
-    dt = numpy.dtype([
-        ('source_id', (bytes, 100)),       # 0
-        ('source_class', (bytes, 30)),     # 1
-        ('num_ruptures', numpy.uint32),    # 2
-        ('calc_time', numpy.float32),      # 3
-        ('split_time', numpy.float32),     # 4
-        ('num_sites', numpy.float32),      # 5
-        ('num_split',  numpy.uint32),      # 6
-        ('events', numpy.uint32),          # 7
-    ])
-
-    def __init__(self, src, calc_time=0, split_time=0, num_split=0):
-        self.source_id = src.source_id.rsplit(':', 1)[0]
-        self.source_class = src.__class__.__name__
-        self.num_ruptures = src.num_ruptures
-        self.num_sites = 0  # set later on
-        self.calc_time = calc_time
-        self.split_time = split_time
-        self.num_split = num_split
-        self.events = 0  # set in event based
-
-    def __repr__(self):
-        return '<%s>' % ' '.join('%s=%s' % (name, getattr(self, name))
-                                 for name in self.dt.names)

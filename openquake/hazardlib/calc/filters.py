@@ -211,7 +211,7 @@ def split_sources(srcs, min_mag):
                     splits.append(s)
         else:
             splits = list(src)
-        split_time[src.source_id] = time.time() - t0
+        split_time[src.id] = time.time() - t0
         sources.extend(splits)
         has_serial = hasattr(src, 'serial')
         has_samples = hasattr(src, 'samples')
@@ -220,8 +220,7 @@ def split_sources(srcs, min_mag):
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
-                split.ngsims = src.ngsims
-                split.ndists = src.ndists
+                split.id = src.id
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
@@ -229,8 +228,6 @@ def split_sources(srcs, min_mag):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
-            splits[0].ngsims = src.ngsims
-            splits[0].ndists = src.ndists
             if has_serial:
                 splits[0].serial = src.serial
             if has_samples:

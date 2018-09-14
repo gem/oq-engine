@@ -111,8 +111,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         elif poemap:
             for gid in src.src_group_ids:
                 pmap[gid] |= poemap
-        src_id = src.source_id.split(':', 1)[0]
-        pmap.calc_times[src_id] += numpy.array(
+        pmap.calc_times[src.id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0, 1])
         # storing the number of contributing ruptures too
         pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
