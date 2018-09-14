@@ -258,7 +258,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
-        calc_times = AccumDict(accum=numpy.zeros(3))
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for src in self.csm.get_sources():
             if hasattr(src, 'eb_ruptures'):  # except UCERF
                 gmf_size += max_gmf_size(
