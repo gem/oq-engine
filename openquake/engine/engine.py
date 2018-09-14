@@ -341,7 +341,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             t0 = time.time()
             calc.run(exports=exports,
                      hazard_calculation_id=hazard_calculation_id,
-                     close=False, **kw)  # don't close the datastore too soon
+                     close=False, **kw)
             logs.LOG.info('Exposing the outputs to the database')
             expose_outputs(calc.datastore)
             duration = time.time() - t0
@@ -366,7 +366,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # taking further action, so that the real error can propagate
             try:
                 if OQ_DISTRIBUTE.startswith('celery'):
-                    celery_cleanup(TERMINATE, parallel.Starmap.tasks)
+                    celery_cleanup(TERMINATE, parallel.running_tasks)
             except BaseException:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
