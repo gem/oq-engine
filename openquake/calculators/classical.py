@@ -89,18 +89,24 @@ class ClassicalCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
         """
+        try:
+            source_info = self.datastore['source_info']
+        except KeyError:  # for UCERF
+            source_info = None
         with self.monitor('aggregate curves', autoflush=True):
             acc.eff_ruptures += pmap_by_grp.eff_ruptures
             for grp_id in pmap_by_grp:
                 if pmap_by_grp[grp_id]:
                     acc[grp_id] |= pmap_by_grp[grp_id]
                 self.nsites.append(len(pmap_by_grp[grp_id]))
-            for srcid, (srcweight, nsites, calc_time, split) in \
-                    pmap_by_grp.calc_times.items():
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += calc_time
-                info.num_split += split
+            if source_info:
+                for srcid, (srcweight, nsites, calc_time, split) in \
+                        pmap_by_grp.calc_times.items():
+                    info = source_info[srcid]
+                    info['num_sites'] += nsites
+                    info['calc_time'] += calc_time
+                    info['num_split'] += split
+                    source_info[srcid] = info
         return acc
 
     def zerodict(self):
@@ -146,7 +152,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+            self.store_source_info(acc)
         return acc
 
     def gen_args(self, monitor):
