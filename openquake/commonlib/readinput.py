@@ -729,7 +729,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.init_serials(oqparam.ses_seed)
 
     if split_all and monitor.hdf5:
-        # it must bug after otherwise case_miriam breaks
+        # splitting assumes that the serials have been initialized already
         _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
 
     return csm
