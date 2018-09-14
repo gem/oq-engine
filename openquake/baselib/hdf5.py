@@ -296,7 +296,7 @@ class File(h5py.File):
         length = len(dset)
         dset.resize((length + len(data),) + shape[1:])
         for i, arr in enumerate(data):
-            dset[length + i] = numpy.array(arr)  # the copy is needed
+            dset[length + i] = arr
         dset.attrs['nbytes'] = nbytes
         dset.attrs['totlen'] = totlen
 
