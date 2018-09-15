@@ -149,6 +149,9 @@ class MultiPointSource(ParametricSeismicSource):
         npd = dic.pop('nodal_plane_distribution').value
         hdd = dic.pop('hypocenter_distribution').value
         mesh = dic.pop('mesh').value
+        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio').value
+        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth').value
+        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth').value
         [(mfd_kind, mfd)] = dic.items()
         self.nodal_plane_distribution = PMF([
             (prob, NodalPlane(strike, dip, rake))
