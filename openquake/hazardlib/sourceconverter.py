@@ -801,32 +801,16 @@ class SourceConverter(RuptureConverter):
 # ################### MultiPointSource conversion ######################## #
 
 
-def _npd(nodes):
-    # convert the nodalPlaneDistributions into a tuple
-    lst = []
-    for node in nodes:
-        lst.append((node['probability'],
-                    node['rake'], node['strike'], node['dip']))
-    return tuple(lst)
-
-
-def _hd(nodes):
-    # convert the hypocenterDistributions into a tuple
-    lst = []
-    for node in nodes:
-        lst.append((node['probability'], node['depth']))
-    return tuple(lst)
-
-
-def get_key(node):
+def dists(node):
     """
-    Convert the given pointSource node into a tuple
+    :returns: hpdist, npdist and magScaleRel from the given pointSource node
     """
-    return (
-        ~node.magScaleRel, ~node.ruptAspectRatio,
-        ~node.pointGeometry.upperSeismoDepth,
-        ~node.pointGeometry.lowerSeismoDepth,
-        _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
+    hd = tuple((node['probability'], node['depth'])
+               for node in node.hypoDepthDist)
+    npd = tuple(
+        ((node['probability'], node['rake'], node['strike'], node['dip']))
+        for node in node.nodalPlaneDist)
+    return hd, npd, ~node.magScaleRel
 
 
 def collapse(array):
@@ -868,26 +852,34 @@ def mfds2multimfd(mfds):
 
 
 def _pointsources2multipoints(srcs, i):
+    # converts pointSources with the same hpdist, npdist and msr into a
+    # single multiPointSource.
     allsources = []
-    for key, sources in groupby(srcs, get_key).items():
+    for (hd, npd, msr), sources in groupby(srcs, dists).items():
         if len(sources) == 1:  # there is a single source
             allsources.extend(sources)
             continue
-        msr, rar, usd, lsd, hd, npd = key
         mfds = [src[3] for src in sources]
         points = []
+        usd = []
+        lsd = []
+        rar = []
         for src in sources:
-            points.extend(~src.pointGeometry.Point.pos)
+            pg = src.pointGeometry
+            points.extend(~pg.Point.pos)
+            usd.append(~pg.upperSeismoDepth)
+            lsd.append(~pg.lowerSeismoDepth)
+            rar.append(~src.ruptAspectRatio)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
-        geom.append(Node('upperSeismoDepth', text=usd))
-        geom.append(Node('lowerSeismoDepth', text=lsd))
+        geom.append(Node('upperSeismoDepth', text=collapse(usd)))
+        geom.append(Node('lowerSeismoDepth', text=collapse(lsd)))
         node = Node(
             'multiPointSource',
             dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
             nodes=[geom])
-        node.append(Node("magScaleRel", text=msr))
-        node.append(Node("ruptAspectRatio", text=rar))
+        node.append(Node("magScaleRel", text=collapse(msr)))
+        node.append(Node("ruptAspectRatio", text=collapse(rar)))
         node.append(mfds2multimfd(mfds))
         node.append(Node('nodalPlaneDist', nodes=[
             Node('nodalPlane', dict(probability=prob, rake=rake,
