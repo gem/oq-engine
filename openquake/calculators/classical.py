@@ -293,11 +293,10 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.poes:
                 self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
-        self.datastore.flush()
-        with self.monitor('sending pmaps', autoflush=True, measuremem=True):
-            parallel.Starmap(
-                build_hazard_stats, self.gen_getters(parent), self.monitor()
-            ).reduce(self.save_hazard_stats)
+        logging.info('Building hazard statistics')
+        parallel.Starmap(
+            build_hazard_stats, self.gen_getters(parent), self.monitor()
+        ).reduce(self.save_hazard_stats)
 
 
 # used in PreClassicalCalculator
