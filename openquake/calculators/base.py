@@ -397,6 +397,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), split_all=not oq.disagg_by_src)
+            self.src_filter, self.csm = self.filter_csm()
             if oq.disagg_by_src:
                 self.csm = self.csm.grp_by_src()  # one group per source
             self.csm.info.gsim_lt.check_imts(oq.imtls)
