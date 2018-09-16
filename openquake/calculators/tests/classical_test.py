@@ -186,13 +186,11 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
              'hazard_map-mean.csv'], case_13.__file__)
 
-        # test recomputing the hazard maps, i.e. with --hc
-        # must be run sequentially to avoid the usual heisenbug
+        # test recomputing the hazard maps
         self.run_calc(
             case_13.__file__, 'job.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
-            concurrent_tasks='0', gsim_logic_tree_file='',
-            source_model_logic_tree_file='')
+            gsim_logic_tree_file='', source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
@@ -228,6 +226,17 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
+        # test preclassical
+        self.run_calc(
+            case_14.__file__, 'job.ini', calculation_mode='preclassical')
+        rpt = view('ruptures_per_trt', self.calc.datastore)
+        self.assertEqual(rpt, """\
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+simple_fault.xml 0      Active Shallow Crust 447          447         
+================ ====== ==================== ============ ============""")
+        # test classical
         self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
