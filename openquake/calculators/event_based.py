@@ -254,7 +254,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
