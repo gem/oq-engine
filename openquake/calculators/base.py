@@ -339,7 +339,10 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Not prefiltering the sources')
                 return src_filter, self.csm
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
-        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        if 'ucerf' in oq.calculation_mode:
+            # do not prefilter
+            csm = self.csm
+        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
