@@ -95,12 +95,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 if pmap_by_grp[grp_id]:
                     acc[grp_id] |= pmap_by_grp[grp_id]
                 self.nsites.append(len(pmap_by_grp[grp_id]))
-            for srcid, (srcweight, nsites, calc_time, split) in \
-                    pmap_by_grp.calc_times.items():
-                info = self.csm.infos[srcid]
-                info.num_sites += nsites
-                info.calc_time += calc_time
-                info.num_split += split
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(pmap_by_grp.calc_times)
         return acc
 
     def zerodict(self):
@@ -145,8 +141,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.nsites:
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+        self.store_csm_info(acc.eff_ruptures)
         return acc
 
     def gen_args(self, monitor):
@@ -310,17 +305,15 @@ def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     dic = groupby(sources, lambda src: src.src_group_ids[0])
     acc = AccumDict({grp_id: {} for grp_id in dic})
     acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(4))
+    acc.calc_times = AccumDict(accum=numpy.zeros(3, F32))
     for grp_id in dic:
         for src in sources:
             t0 = time.time()
-            src_id = src.source_id.split(':')[0]
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 acc.eff_ruptures[grp_id] += src.num_ruptures
-                dt = time.time() - t0
-                acc.calc_times[src_id] += numpy.array(
-                    [src.weight, len(sites), dt, 1])
+                acc.calc_times[src.id] += numpy.array(
+                    [src.weight, len(sites), time.time() - t0])
     return acc
 
 
