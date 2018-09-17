@@ -746,6 +746,7 @@ def _split_all(csm, h5, min_mag=0):
                     srcs_by_grp_id[src_group.id] = random_filter(
                         src_group, float(sample_factor))
             else:
+                srcs_by_grp_id[src_group.id] = src_group.sources
                 split_time.extend([0] * len(src_group))
                 num_split.extend([1] * len(src_group))
 
