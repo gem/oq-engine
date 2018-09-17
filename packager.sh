@@ -599,7 +599,7 @@ celery_wait() {
     return 1
 }
 
-sudo systemctl status openquake\\*
+sudo systemctl status openquake-\\*
 sudo systemctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
