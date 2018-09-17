@@ -57,7 +57,7 @@ def plot_sites(calc_id=-1):
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    sources = dstore['sources'].value
+    sources = dstore['source_info'].value
     source_geom = dstore['source_geom'].value
     fig, ax = p.subplots()
     ax.grid(True)

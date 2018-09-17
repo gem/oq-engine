@@ -69,5 +69,5 @@ class UcerfClassicalCalculator(ClassicalCalculator):
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-        self.store_csm_info(acc)
+        self.store_csm_info(acc.eff_ruptures)
         return acc  # {grp_id: pmap}
