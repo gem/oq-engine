@@ -75,11 +75,9 @@ import io
 import os
 import re
 import sys
-import pickle
 import decimal
 import logging
 import operator
-import tempfile
 import collections
 
 import numpy
