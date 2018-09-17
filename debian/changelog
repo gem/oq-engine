@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Replace supervisord with systemd in Ubuntu packages
+
+    (experimentally)
   [Michele Simionato]
   * We are now saving information about the source geometries in the datastore
     (experimentally)

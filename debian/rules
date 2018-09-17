@@ -70,4 +70,4 @@ override_dh_gencontrol:
 	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
 
 %:
-	dh --with python3 --with quilt $@
+	dh --with python3 --with quilt,systemd $@
