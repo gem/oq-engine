@@ -397,7 +397,6 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), split_all=True)
-            self.rup_data = {}
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
