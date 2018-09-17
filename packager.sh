@@ -74,7 +74,6 @@ LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
 
 if [ "$LXC_VER" -lt 2 ]; then
     echo "LXC >= 2.0.0 is required." >&2
-    echo "Hint: LXC 2.0 is available for Trusty from backports."
     exit 1
 fi
 
@@ -176,8 +175,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <trusty|xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (trusty, xenial or bionic),"
+    echo "    $0 [<-s|--serie> <xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (xenial or bionic),"
     echo "           (default xenial)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
@@ -1142,7 +1141,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
+            if [ "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
