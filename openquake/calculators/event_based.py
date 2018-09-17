@@ -44,9 +44,8 @@ RUPTURES_PER_BLOCK = 200  # decided by MS
 
 
 def weight(src):
-    # heuristic weight
-    return len(src.eb_ruptures)  # this is the best
-    # return sum(ebr.multiplicity for ebr in src.eb_ruptures)
+    """The number of events produced by the source"""
+    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
