@@ -729,25 +729,30 @@ def _split_all(csm, h5, min_mag=0):
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
     split_time = []
     num_split = []
+    srcs_by_grp_id = collections.defaultdict(list)
     for sm in csm.source_models:
         for src_group in sm.src_groups:
+            print(src_group)
             if src_group.src_interdep != 'mutex':
                 # split regular sources
-                srcs = []
                 for src in src_group:
                     ss, stime = split_sources([src], min_mag)
-                    srcs.extend(ss)
+                    srcs_by_grp_id[src_group.id].extend(ss)
                     split_time.extend(stime)
                     num_split.append(len(ss))
                 if sample_factor:
                     # debugging tip to reduce the size of a calculation
                     # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
                     # will run a computation 100 times smaller
-                    srcs = random_filter(srcs, float(sample_factor))
-                src_group.sources = srcs
+                    srcs_by_grp_id[src_group.id] = random_filter(
+                        src_group, float(sample_factor))
             else:
                 split_time.extend([0] * len(src_group))
                 num_split.extend([1] * len(src_group))
+
+    for sm in csm.source_models:
+        for src_group in sm.src_groups:
+            src_group.sources = srcs_by_grp_id[src_group.id]
     try:
         source_info = h5['source_info']
     except KeyError:  # UCERF
