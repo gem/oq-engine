@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the way the rupture geometries are stored to be consistent with
+    the source geometries
   * We are now saving information about the source geometries in the datastore
     (experimentally)
   * Fixed a bug in event based with sampling causing incorrect GMFs
