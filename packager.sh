@@ -558,10 +558,10 @@ _pkgtest_innervm_run () {
             exit 1
         fi
 
-        # dbserver should be already started by supervisord. Let's have a check
+        # dbserver should be already started by systemd. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
         # the dbserver is alive
-        sleep 10; sudo /usr/bin/supervisorctl status
+        sleep 10; systemctl status openquake-dbserver
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
@@ -576,8 +576,6 @@ _pkgtest_innervm_run () {
         sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/; s/multi_node = false/multi_node = true/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
-# FIXME: the big sleep below is a temporary workaround to avoid races.
-#        No better solution because we will abandon supervisord at all early
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
@@ -601,9 +599,8 @@ celery_wait() {
     return 1
 }
 
-sleep 30
-sudo supervisorctl status
-sudo supervisorctl start openquake-celery
+sudo systemctl status openquake-\\*
+sudo systemctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
