@@ -18,7 +18,6 @@
 import os.path
 import logging
 import collections
-import mock
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -45,9 +44,8 @@ RUPTURES_PER_BLOCK = 200  # decided by MS
 
 
 def weight(src):
-    # heuristic weight
-    return len(src.eb_ruptures)  # this is the best
-    # return sum(ebr.multiplicity for ebr in src.eb_ruptures)
+    """The number of events produced by the source"""
+    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
@@ -279,10 +277,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-            acc = mock.Mock(eff_ruptures={
+            eff_ruptures = {
                 grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.csm.src_groups})
-            self.store_csm_info(acc)
+                for grp in self.csm.src_groups}
+            self.store_csm_info(eff_ruptures)
         return self.csm.info
 
     def agg_dicts(self, acc, result):

@@ -712,10 +712,16 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
 
+    if oqparam.disagg_by_src:
+        csm = csm.grp_by_src()  # one group per source
+
     if split_all and monitor.hdf5:
         # splitting assumes that the serials have been initialized already
         _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
 
+    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    if monitor.hdf5:
+        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
     return csm
 
 
