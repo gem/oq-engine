@@ -55,27 +55,6 @@ chown -R $ENGINE_USER.adm $DIR
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
-# setup supervisord
-# - if supervisord is running:
-#   - reload config and start the dbserver and the webui
-# - if supervisord is NOT running:
-#   - make sure it's started during boot
-#   - start it
-
-echo "Setup supervisord"
-
-if pgrep supervisord 2>&1 > /dev/null; then
-    supervisorctl reload
-else
-    if command -v systemctl 2>&1 > /dev/null; then
-        systemctl enable supervisor.service
-        systemctl start supervisor.service
-    else
-        update-rc.d supervisor defaults || true
-        /etc/init.d/supervisor start
-    fi
-fi
-
 #touch /tmp/mop-pause
 #while [ 1 ]; do
 #    if [ -f /tmp/mop-pause ]; then
