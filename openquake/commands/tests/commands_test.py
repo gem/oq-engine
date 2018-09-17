@@ -420,7 +420,6 @@ class CheckInputTestCase(unittest.TestCase):
             check_input.func(job_zip)
 
     def test_valid(self):
-        job_zip = os.path.join(list(test_data.__path__)[0],
+        job_ini = os.path.join(list(test_data.__path__)[0],
                                'event_based_hazard/job.ini')
-        with self.assertRaises(ValueError):
-            check_input.func(job_zip)
+        check_input.func(job_ini)
