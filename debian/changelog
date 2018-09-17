@@ -1,5 +1,6 @@
   [Daniele Viganò]
-  * Replace supervisord with systemd in Ubuntu packages
+  * Support for Ubuntu Trusty is removed
+  * Replaced supervisord with systemd in Ubuntu packages
 
   [Michele Simionato]
   * Changed the way the rupture geometries are stored to be consistent with
