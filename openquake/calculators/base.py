@@ -610,22 +610,11 @@ class HazardCalculator(BaseCalculator):
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
 
-    def count_eff_ruptures(self, result_dict, src_group_id):
-        """
-        Returns the number of ruptures in the src_group (after filtering)
-        or 0 if the src_group has been filtered away.
-
-        :param result_dict: a dictionary with keys (grp_id, gsim)
-        :param src_group_id: the source group ID
-        """
-        return result_dict.eff_ruptures.get(src_group_id, 0)
-
-    def store_csm_info(self, acc):
+    def store_csm_info(self, eff_ruptures):
         """
         Save info about the composite source model inside the csm_info dataset
         """
-        self.csm.info.update_eff_ruptures(
-            partial(self.count_eff_ruptures, acc))
+        self.csm.info.update_eff_ruptures(eff_ruptures)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')

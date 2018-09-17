@@ -298,7 +298,7 @@ class CompositionInfo(object):
             for sg in smodel.src_groups:
                 sg.eff_ruptures = (count_ruptures(sg.id)
                                    if callable(count_ruptures)
-                                   else count_ruptures[sg.id])
+                                   else count_ruptures.get(sg.id, 0))
 
     def get_source_model(self, src_group_id):
         """
