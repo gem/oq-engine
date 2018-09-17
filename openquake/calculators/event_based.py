@@ -18,7 +18,6 @@
 import os.path
 import logging
 import collections
-import mock
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -45,9 +44,8 @@ RUPTURES_PER_BLOCK = 200  # decided by MS
 
 
 def weight(src):
-    # heuristic weight
-    return len(src.eb_ruptures) * src.ndists  # this is the best
-    # return sum(ebr.multiplicity for ebr in src.eb_ruptures) * src.ndists
+    """The number of events produced by the source"""
+    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
@@ -258,20 +256,15 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for src in self.csm.get_sources():
             if hasattr(src, 'eb_ruptures'):  # except UCERF
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     rlzs_assoc.get_rlzs_by_gsim,
                     samples_by_grp, len(self.oqparam.imtls))
-            # update self.csm.infos
             if hasattr(src, 'calc_times'):
-                for srcid, nsites, eids, dt in src.calc_times:
-                    info = self.csm.infos[srcid]
-                    info.num_sites += nsites
-                    info.calc_time += dt
-                    info.num_split += 1
-                    info.events += len(eids)
+                calc_times += src.calc_times
                 del src.calc_times
             # save the events always and the ruptures if oq.save_ruptures
             if hasattr(src, 'eb_ruptures'):
@@ -284,10 +277,11 @@ class EventBasedCalculator(base.HazardCalculator):
                          msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
-            acc = mock.Mock(eff_ruptures={
+            self.store_source_info(calc_times)
+            eff_ruptures = {
                 grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.csm.src_groups})
-            self.store_source_info(self.csm.infos, acc)
+                for grp in self.csm.src_groups}
+            self.store_csm_info(eff_ruptures)
         return self.csm.info
 
     def agg_dicts(self, acc, result):

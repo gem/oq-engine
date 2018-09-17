@@ -280,7 +280,6 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         self.datastore['sitecol'] = self.sitecol
         self.datastore['csm_info'] = self.csm_info = self.csm.info
         self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
-        self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm_info.get_sm_by_grp()
         if not self.oqparam.imtls:

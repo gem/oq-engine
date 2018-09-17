@@ -57,11 +57,11 @@ def plot_sites(calc_id=-1):
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    sources = dstore['sources'].value
-    srcgeoms = dstore['srcgeoms'].value
+    sources = dstore['source_info'].value
+    source_geom = dstore['source_geom'].value
     fig, ax = p.subplots()
     ax.grid(True)
-    rects = [get_rectangle(src, srcgeoms[src['gidx1']:src['gidx2']])
+    rects = [get_rectangle(src, source_geom[src['gidx1']:src['gidx2']])
              for src in sources]
     lonset = set(lons)
     for ((lon, lat), width, height) in rects:
