@@ -18,7 +18,6 @@
 import os.path
 import logging
 import collections
-import mock
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -280,10 +279,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-            acc = mock.Mock(eff_ruptures={
+            eff_ruptures = {
                 grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.csm.src_groups})
-            self.store_csm_info(acc)
+                for grp in self.csm.src_groups}
+            self.store_csm_info(eff_ruptures)
         return self.csm.info
 
     def agg_dicts(self, acc, result):
