@@ -396,11 +396,7 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), split_all=not oq.disagg_by_src)
-            if oq.disagg_by_src:
-                self.csm = self.csm.grp_by_src()  # one group per source
-            self.csm.info.gsim_lt.check_imts(oq.imtls)
-            self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
+                oq, self.monitor(), split_all=True)
             self.rup_data = {}
         self.init()  # do this at the end of pre-execute
 
