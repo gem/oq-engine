@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter, groupby
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
@@ -300,12 +300,11 @@ class PreCalculator(ClassicalCalculator):
     ruptures
     """
     def execute(self):
-        acc = AccumDict()
-        acc.eff_ruptures = AccumDict(accum=0)
+        eff_ruptures = AccumDict(accum=0)
         for src in self.csm.get_sources():
-            acc.eff_ruptures[src.src_group_id] += src.num_ruptures
-        self.store_csm_info(acc)
-        return acc
+            eff_ruptures[src.src_group_id] += src.num_ruptures
+        self.store_csm_info(eff_ruptures)
+        return {}
 
 
 def fix_ones(pmap):
