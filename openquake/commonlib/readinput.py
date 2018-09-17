@@ -732,7 +732,6 @@ def _split_all(csm, h5, min_mag=0):
     srcs_by_grp_id = collections.defaultdict(list)
     for sm in csm.source_models:
         for src_group in sm.src_groups:
-            print(src_group)
             if src_group.src_interdep != 'mutex':
                 # split regular sources
                 for src in src_group:
