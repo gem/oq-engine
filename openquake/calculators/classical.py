@@ -141,7 +141,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not self.nsites:
             raise RuntimeError('All sources were filtered out!')
         logging.info('Effective sites per task: %d', numpy.mean(self.nsites))
-        self.store_csm_info(acc)
+        self.store_csm_info(acc.eff_ruptures)
         return acc
 
     def gen_args(self, monitor):
