@@ -339,7 +339,10 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Not prefiltering the sources')
                 return src_filter, self.csm
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
-        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        if 'ucerf' in oq.calculation_mode:
+            # do not prefilter
+            csm = self.csm
+        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
@@ -397,6 +400,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(), split_all=True)
+            self.src_filter, self.csm = self.filter_csm()
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
@@ -629,10 +633,6 @@ class HazardCalculator(BaseCalculator):
             logging.warn(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
-        if 'source_info' in self.datastore:
-            # the table is missing for UCERF, we should fix that
-            self.datastore.set_attrs(
-                'source_info', has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
