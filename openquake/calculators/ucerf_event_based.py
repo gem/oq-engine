@@ -278,6 +278,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
+        eff_ruptures = {sg.id: sum(src.num_ruptures for src in sg)
+                        for sg in self.csm.src_groups}
+        self.csm.info.update_eff_ruptures(eff_ruptures)
         self.datastore['csm_info'] = self.csm_info = self.csm.info
         self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
