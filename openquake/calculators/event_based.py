@@ -234,12 +234,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
-        if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.process_csm()
-        else:
-            self.datastore.parent = datastore.read(
-                self.oqparam.hazard_calculation_id)
-            self.csm_info = self.datastore.parent['csm_info']
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.L = len(self.oqparam.imtls.array)
         self.R = self.csm_info.get_num_rlzs()
@@ -411,6 +405,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
+        if self.oqparam.hazard_calculation_id is None:
+            self.csm_info = self.process_csm()
+        else:
+            self.datastore.parent = datastore.read(
+                self.oqparam.hazard_calculation_id)
+            self.csm_info = self.datastore.parent['csm_info']
 
     def post_execute(self, result):
         """
