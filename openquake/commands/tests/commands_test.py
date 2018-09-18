@@ -418,3 +418,8 @@ class CheckInputTestCase(unittest.TestCase):
                                'archive_err_1.zip')
         with self.assertRaises(ValueError):
             check_input.func(job_zip)
+
+    def test_valid(self):
+        job_ini = os.path.join(list(test_data.__path__)[0],
+                               'event_based_hazard/job.ini')
+        check_input.func(job_ini)
