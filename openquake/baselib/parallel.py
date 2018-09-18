@@ -632,7 +632,7 @@ class Starmap(object):
                 self.prev_percent = percent
         return done
 
-    def submit(self, args):
+    def submit(self, *args):
         """
         Submit the given arguments to the underlying task
         """
@@ -658,7 +658,7 @@ class Starmap(object):
         :returns: an IterResult object
         """
         for args in self.task_args:
-            self.submit(args)
+            self.submit(*args)
         return self.get_results()
 
     def get_results(self):
