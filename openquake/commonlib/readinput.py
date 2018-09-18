@@ -30,10 +30,11 @@ import numpy
 
 from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, deprecated, random_filter)
+    AccumDict, DictArray, deprecated, random_filter, block_splitter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.calc.filters import split_sources, preprocess
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -710,7 +711,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
-    if 'event_based' in oqparam.calculation_mode:
+    event_based = 'event_based' in oqparam.calculation_mode
+    if event_based:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
@@ -736,17 +738,46 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             dist = None
         else:
             dist = 'processpool'
-        sources_by_grp = parallel.Starmap.apply(
-            preprocess,
-            (csm.get_sources(), srcfilter, param, monitor('preprocess')),
+        weight = operator.attrgetter('num_ruptures')
+        pmap = parallel.Starmap.apply(
+            prefilter,
+            (csm.get_sources(), srcfilter, monitor('prefilter')),
             concurrent_tasks=oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'), distribute=dist,
-            progress=logging.info if 'gsims_by_trt' in param else logging.debug
-            # log the preprocessing phase in an event based calculation
-        ).reduce()
-        csm = csm.new(sources_by_grp)
+            progress=logging.info if event_based else logging.debug)
+        # log the preprocessing phase only in an event based calculation
+
+        if event_based:
+            smap = parallel.Starmap(sample_rupts)
+            mon = monitor('sample_ruptures')
+            for srcs in pmap:
+                if srcs:
+                    src = srcs[0]
+                    gsims = gsim_lt.values[src.tectonic_region_type]
+                    for block in block_splitter(srcs, 200, weight):
+                        smap.submit(block, srcfilter, gsims, param, mon)
+            srcs_by_grp = smap.get_results().reduce()
+        else:
+            srcs_by_grp = AccumDict(accum=[])
+            for srcs in pmap:
+                if srcs:
+                    srcs_by_grp[srcs[0].src_group_id].extend(srcs)
+        csm = csm.new(srcs_by_grp)
     return csm
+
+
+def prefilter(srcs, srcfilter, monitor):
+    return list(srcfilter.filter(srcs))
+
+
+def sample_rupts(srcs, srcfilter, gsims, param, monitor):
+    ok = []
+    for src in srcs:
+        dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
+        vars(src).update(dic)
+        ok.append(src)
+    return {srcs[0].src_group_id: ok}
 
 
 def _split_all(csm, h5, min_mag, seed):
