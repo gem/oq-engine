@@ -23,10 +23,8 @@ Utilities to build a report writer generating a .rst report for a calculation
 from openquake.baselib.python3compat import decode
 import os
 import sys
-import mock
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators import views
 
 
