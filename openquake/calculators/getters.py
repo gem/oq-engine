@@ -170,7 +170,7 @@ class PmapGetter(object):
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k].value
             elif num_rlzs == 1:
-                yield 'mean', self.get(0).array[:, 0]
+                yield 'mean', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlzi in range(num_rlzs):
