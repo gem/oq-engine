@@ -317,9 +317,9 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def preprocess(self):
+    def get_filter(self):
         """
-        :returns: a Starmap object or None
+        :returns: a SourceFilter of None
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
@@ -379,7 +379,7 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), preprocess=self.preprocess())
+                oq, self.monitor(), srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
