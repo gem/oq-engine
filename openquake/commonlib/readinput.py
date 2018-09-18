@@ -35,7 +35,7 @@ from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.calc.filters import split_sources, preprocess
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -49,6 +49,7 @@ from openquake.commonlib import logictree, source, writers
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
+RUP_BLOCK_SIZE = 10000
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 U16 = numpy.uint16
@@ -749,13 +750,13 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         # log the preprocessing phase only in an event based calculation
 
         if event_based:
-            smap = parallel.Starmap(sample_rupts)
             mon = monitor('sample_ruptures')
+            smap = parallel.Starmap(sample_rupts, monitor=mon)
             for srcs in pmap:
                 if srcs:
                     src = srcs[0]
                     gsims = gsim_lt.values[src.tectonic_region_type]
-                    for block in block_splitter(srcs, 200, weight):
+                    for block in block_splitter(srcs, RUP_BLOCK_SIZE, weight):
                         smap.submit(block, srcfilter, gsims, param, mon)
             srcs_by_grp = smap.get_results().reduce()
         else:
