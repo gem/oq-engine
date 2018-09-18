@@ -633,10 +633,6 @@ class HazardCalculator(BaseCalculator):
             logging.warn(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
-        if 'source_info' in self.datastore:
-            # the table is missing for UCERF, we should fix that
-            self.datastore.set_attrs(
-                'source_info', has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
 
     def store_source_info(self, calc_times):
