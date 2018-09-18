@@ -23,7 +23,6 @@ import logging
 import operator
 import itertools
 import traceback
-from functools import partial
 from datetime import datetime
 from shapely import wkt
 import numpy
@@ -318,14 +317,14 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def prefilter(self):
+    def preprocess(self):
         """
         :returns: a Starmap object or None
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         if 'ucerf' in oq.calculation_mode:
-            # do not prefilter
+            # do not preprocess
             return
         elif (oq.prefilter_sources == 'rtree' and 'event_based' not in
                 oq.calculation_mode):
@@ -380,7 +379,7 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), prefilter=self.prefilter())
+                oq, self.monitor(), preprocess=self.preprocess())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
