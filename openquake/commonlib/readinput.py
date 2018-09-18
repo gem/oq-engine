@@ -733,15 +733,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             param['filter_distance'] = oqparam.filter_distance
             param['ses_per_logic_tree_path'] = oqparam.ses_per_logic_tree_path
             param['gsims_by_trt'] = gsim_lt.values
+            dist = None
         else:
-            param['distribute'] = 'processpool'
+            dist = 'processpool'
         sources_by_grp = parallel.Starmap.apply(
             preprocess,
             (csm.get_sources(), srcfilter, param, monitor('preprocess')),
             concurrent_tasks=oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'),
-            distribute=param.pop('distribute', None),
+            key=operator.attrgetter('src_group_id'), distribute=dist,
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
             # log the preprocessing phase in an event based calculation
         ).reduce()
