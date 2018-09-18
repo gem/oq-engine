@@ -19,7 +19,9 @@
 from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002MblgAB1987NSHMP2008,
     SilvaEtAl2002MblgJ1996NSHMP2008,
-    SilvaEtAl2002MwNSHMP2008
+    SilvaEtAl2002MwNSHMP2008,
+    SilvaEtAl2002DoubleCornerSaturation,
+    SilvaEtAl2002SingleCornerSaturation
 )
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -53,3 +55,21 @@ class SilvaEtAl2002MwNSHMP2008TestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('SILVA02/SILVA02MwNSHMP_MEAN.csv',
                    max_discrep_percentage=0.4)
+
+# Test data obtained by digitizing curves in Silva et al. 2002
+
+
+class SilvaEtAl2002DoubleCornerSaturationTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SilvaEtAl2002DoubleCornerSaturation
+
+    def test_mean(self):
+        self.check('SILVA02/SilvaEtAl2002DoubleCornerSaturation_MEAN.csv',
+                   max_discrep_percentage=10.)
+
+
+class SilvaEtAl2002SingleCornerSaturationTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SilvaEtAl2002SingleCornerSaturation
+
+    def test_mean(self):
+        self.check('SILVA02/SilvaEtAl2002SingleCornerSaturation_MEAN.csv',
+                   max_discrep_percentage=10.)
