@@ -724,9 +724,16 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
-    if prefilter:
+    if oqparam.prefilter_sources != 'no' and prefilter:
+        param = dict(concurrent_tasks=oqparam.concurrent_tasks)
+        if 'event_based' in oqparam.calculation_mode:
+            param['filter_distance'] = oqparam.filter_distance
+            param['ses_per_logic_tree_path'] = oqparam.ses_per_logic_tree_path
+            param['gsims_by_trt'] = gsim_lt.values
+        else:
+            param['distribute'] = 'processpool'
         sources_by_grp = prefilter.pfilter(
-            csm.get_sources(), prefilter.param, monitor('preprocess'))
+            csm.get_sources(), param, monitor('preprocess'))
         csm = csm.new(sources_by_grp)
     return csm
 

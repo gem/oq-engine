@@ -324,24 +324,11 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  self.hdf5cache)
-        param = dict(concurrent_tasks=oq.concurrent_tasks)
-        if 'EventBased' in self.__class__.__name__:
-            param['filter_distance'] = oq.filter_distance
-            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
-            param['gsims_by_trt'] = self.csm.gsim_lt.values
-        else:
-            # use processpool in classical
-            param['distribute'] = 'processpool'
-            if oq.prefilter_sources == 'no':
-                logging.info('Not prefiltering the sources')
-                return src_filter, self.csm
-        dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
         if 'ucerf' in oq.calculation_mode:
             # do not prefilter
             return
-        elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        elif (oq.prefilter_sources == 'rtree' and 'event_based' not in
+                oq.calculation_mode):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
@@ -349,7 +336,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('Preprocessing the sources with rtree')
             src_filter = RtreeFilter(self.sitecol.complete,
                                      oq.maximum_distance, self.hdf5cache)
-        src_filter.param = param
+        else:
+            src_filter = SourceFilter(
+                self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
         self.src_filter = src_filter
         return src_filter
 
