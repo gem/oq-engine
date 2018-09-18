@@ -270,13 +270,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def calc_stats(self, parent):
         oq = self.oqparam
-        if not oq.hazard_stats():
-            if oq.hazard_maps or oq.uniform_hazard_spectra:
-                logging.warn('mean_hazard_curves was false in the job.ini, '
-                             'so no outputs were generated.\nYou can compute '
-                             'the statistics without repeating the calculation'
-                             ' with the --hc option')
-            return {}
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
