@@ -660,7 +660,7 @@ def getid(src):
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
-                               split_all=True):
+                               split_all=True, prefilter=None, param=()):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -723,6 +723,11 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
+
+    if prefilter:
+        sources_by_grp = prefilter.pfilter(
+            csm.get_sources(), prefilter.param, monitor('preprocess'))
+        csm = csm.new(sources_by_grp)
     return csm
 
 
