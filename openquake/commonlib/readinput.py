@@ -717,7 +717,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
 
     if split_all and monitor.hdf5:
         # splitting assumes that the serials have been initialized already
-        _split_all(csm, monitor.hdf5, oqparam.minimum_magnitude)
+        _split_all(csm, monitor.hdf5,
+                   oqparam.minimum_magnitude, oqparam.random_seed)
 
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
@@ -725,7 +726,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     return csm
 
 
-def _split_all(csm, h5, min_mag=0):
+def _split_all(csm, h5, min_mag, seed):
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
     split_time = []
     num_split = []
@@ -744,7 +745,8 @@ def _split_all(csm, h5, min_mag=0):
                     # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
                     # will run a computation 100 times smaller
                     srcs_by_grp_id[src_group.id] = random_filter(
-                        src_group, float(sample_factor))
+                        srcs_by_grp_id[src_group.id], float(sample_factor),
+                        seed)
             else:
                 srcs_by_grp_id[src_group.id] = src_group.sources
                 split_time.extend([0] * len(src_group))
