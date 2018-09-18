@@ -475,6 +475,8 @@ def export_hcurves_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
+        if hasattr(hcurves, 'array'):
+            hcurves = hcurves.array[:, 0]
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
