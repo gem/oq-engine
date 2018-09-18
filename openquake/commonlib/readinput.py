@@ -660,7 +660,7 @@ def getid(src):
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
-                               split_all=True, prefilter=None, param=()):
+                               split_all=True, preprocess=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -673,6 +673,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models; for disaggregation
         it should be False
+    :param preprocess:
+        if not None, perform a preprocess operation on the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -724,7 +726,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
-    if oqparam.prefilter_sources != 'no' and prefilter:
+    if preprocess:
         param = dict(concurrent_tasks=oqparam.concurrent_tasks)
         if 'event_based' in oqparam.calculation_mode:
             param['filter_distance'] = oqparam.filter_distance
@@ -732,7 +734,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             param['gsims_by_trt'] = gsim_lt.values
         else:
             param['distribute'] = 'processpool'
-        sources_by_grp = prefilter.pfilter(
+        sources_by_grp = preprocess.pfilter(
             csm.get_sources(), param, monitor('preprocess'))
         csm = csm.new(sources_by_grp)
     return csm
