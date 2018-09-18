@@ -366,9 +366,6 @@ class SourceFilter(object):
             progress=logging.info if 'gsims_by_trt' in param else logging.debug
             # log the preprocessing phase in an event based calculation
         ).reduce()
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
         return sources_by_grp
 
 
