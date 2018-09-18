@@ -22,11 +22,9 @@ import operator
 import collections
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
+import rtree
 from scipy.interpolate import interp1d
+
 from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp
@@ -401,8 +399,6 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)

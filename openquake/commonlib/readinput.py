@@ -762,6 +762,7 @@ def _split_all(csm, h5, min_mag, seed):
     else:
         source_info['split_time'] = F32(split_time)
         source_info['num_split'] = U32(num_split)
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
 
 
 def get_imts(oqparam):
