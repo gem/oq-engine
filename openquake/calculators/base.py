@@ -318,12 +318,11 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def filter_csm(self):
+    def prefilter(self):
         """
-        :returns: (filtered CompositeSourceModel, SourceFilter)
+        :returns: a Starmap object or None
         """
         oq = self.oqparam
-        mon = self.monitor('preprocess')
         self.hdf5cache = self.datastore.hdf5cache()
         src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
                                   self.hdf5cache)
@@ -341,25 +340,18 @@ class HazardCalculator(BaseCalculator):
         dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
         if 'ucerf' in oq.calculation_mode:
             # do not prefilter
-            csm = self.csm
+            return
         elif oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
             logging.info('Preprocessing the sources with rtree')
-            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    self.hdf5cache)
-            sources_by_grp = prefilter.pfilter(
-                self.csm.get_sources(), param, mon)
-            csm = self.csm.new(sources_by_grp)
-        else:
-            logging.info('Preprocessing the sources')
-            sources_by_grp = src_filter.pfilter(
-                self.csm.get_sources(), param, mon)
-            csm = self.csm.new(sources_by_grp)
-        logging.info('There are %d realizations', csm.info.get_num_rlzs())
-        return src_filter, csm
+            src_filter = RtreeFilter(self.sitecol.complete,
+                                     oq.maximum_distance, self.hdf5cache)
+        src_filter.param = param
+        self.src_filter = src_filter
+        return src_filter
 
     def can_read_parent(self):
         """
@@ -399,8 +391,7 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), split_all=True)
-            self.src_filter, self.csm = self.filter_csm()
+                oq, self.monitor(), prefilter=self.prefilter())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
