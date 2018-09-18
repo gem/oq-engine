@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
+    is accepted again, as requested by Laurentiu Danciu
   * We are now saving information about the source geometries in the datastore
     (experimentally)
   * Fixed a bug in event based with sampling causing incorrect GMFs
