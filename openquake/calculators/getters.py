@@ -519,23 +519,23 @@ class RuptureGetter(object):
         grp_trt = self.dstore['csm_info'].grp_by("trt")
         events = self.dstore['events']
         ruptures = self.dstore['ruptures'][self.mask]
-        rupgeoms = self.dstore['rupgeoms'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
         # this is way I am sorting with Python and not with numpy below
-        data = sorted((serial, ridx) for ridx, serial in enumerate(
-            ruptures['serial']))
-        for serial, ridx in data:
-            rec = ruptures[ridx]
+        rupgeoms = self.dstore['rupgeoms']
+        for rec in sorted(ruptures, key=operator.itemgetter('serial')):
             evs = events[rec['eidx1']:rec['eidx2']]
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
-            for i, arr in enumerate(rupgeoms[ridx]):  # i = 0, 1, 2
-                mesh[i] = arr.reshape(rec['sy'], rec['sz'])
+            geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
+                rec['sy'], rec['sz'])
+            mesh[0] = geom['lon']
+            mesh[1] = geom['lat']
+            mesh[2] = geom['depth']
             rupture_cls, surface_cls = code2cls[rec['code']]
             rupture = object.__new__(rupture_cls)
-            rupture.serial = serial
+            rupture.serial = rec['serial']
             rupture.surface = object.__new__(surface_cls)
             rupture.mag = rec['mag']
             rupture.rake = rec['rake']
