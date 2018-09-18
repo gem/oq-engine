@@ -26,7 +26,6 @@ import rtree
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
@@ -347,26 +346,6 @@ class SourceFilter(object):
             if len(indices):
                 src.indices = indices
                 yield src
-
-    def pfilter(self, sources, param, monitor):
-        """
-        Filter the sources in parallel by using Starmap.apply
-
-        :param sources: a sequence of sources
-        :param param: a dictionary of parameters including concurrent_tasks
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
-        """
-        sources_by_grp = Starmap.apply(
-            preprocess, (sources, self, param, monitor),
-            concurrent_tasks=param['concurrent_tasks'],
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'),
-            distribute=param.pop('distribute', None),
-            progress=logging.info if 'gsims_by_trt' in param else logging.debug
-            # log the preprocessing phase in an event based calculation
-        ).reduce()
-        return sources_by_grp
 
 
 class RtreeFilter(SourceFilter):
