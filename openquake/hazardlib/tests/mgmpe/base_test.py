@@ -17,7 +17,6 @@
 import unittest
 
 from openquake.hazardlib.mgmpe.base import MGMPE
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
@@ -25,10 +24,9 @@ class MGMPETestCase(unittest.TestCase):
 
     def test_instantiation_single_instance(self):
         """ Tests the instantiation using a single GMPE instance """
-        mgmpe = MGMPE(gmpe=[BooreEtAl2014])
+        mgmpe = MGMPE(mgmpe=['BooreEtAl2014'])
         expected = set(PGA, PGV, SA)
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPESl == expected)
-
 
     def test_instantiation_multiple_instances(self):
         """ Tests the instantiation using a single GMPE instance """
