@@ -595,8 +595,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
-                sources = hdf5.create(monitor.hdf5, 'source_info',
-                                      source_info_dt)
+                if 'source_info' not in monitor.hdf5:
+                    sources = hdf5.create(monitor.hdf5, 'source_info',
+                                          source_info_dt)
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
