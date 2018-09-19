@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter, groupby
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
@@ -161,36 +161,35 @@ class ClassicalCalculator(base.HazardCalculator):
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
-        src_filter, csm = self.filter_csm()
-        maxweight = csm.get_maxweight(weight, oq.concurrent_tasks, minweight)
+        maxweight = self.csm.get_maxweight(
+            weight, oq.concurrent_tasks, minweight)
         if maxweight == minweight:
             logging.info('Using minweight=%d', minweight)
         else:
             logging.info('Using maxweight=%d', maxweight)
 
-        if csm.has_dupl_sources and not opt:
+        if self.csm.has_dupl_sources and not opt:
             logging.warn('Found %d duplicated sources',
-                         csm.has_dupl_sources)
+                         self.csm.has_dupl_sources)
 
-        for sg in csm.src_groups:
+        for sg in self.csm.src_groups:
             if sg.src_interdep == 'mutex' and len(sg) > 0:
                 par = param.copy()
                 par['src_interdep'] = sg.src_interdep
                 par['rup_interdep'] = sg.rup_interdep
                 par['grp_probability'] = sg.grp_probability
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                yield sg.sources, src_filter, gsims, par, monitor
+                yield sg.sources, self.src_filter, gsims, par, monitor
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
-        for trt, sources in csm.sources_by_trt.items():
+        for trt, sources in self.csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in block_splitter(sources, maxweight, weight):
-                yield block, src_filter, gsims, param, monitor
+                yield block, self.src_filter, gsims, param, monitor
                 num_tasks += 1
                 num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
-        self.csm.info.tot_weight = csm.info.tot_weight
 
     def gen_getters(self, parent):
         """
@@ -270,13 +269,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def calc_stats(self, parent):
         oq = self.oqparam
-        if not oq.hazard_stats():
-            if oq.hazard_maps or oq.uniform_hazard_spectra:
-                logging.warn('mean_hazard_curves was false in the job.ini, '
-                             'so no outputs were generated.\nYou can compute '
-                             'the statistics without repeating the calculation'
-                             ' with the --hc option')
-            return {}
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
@@ -294,36 +286,18 @@ class ClassicalCalculator(base.HazardCalculator):
         ).reduce(self.save_hazard_stats)
 
 
-# used in PreClassicalCalculator
-def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
-    """
-    Count the number of ruptures contained in the given sources by applying a
-    raw source filtering on the integration distance. Return a dictionary
-    src_group_id -> {}.
-    All sources must belong to the same tectonic region type.
-    """
-    dic = groupby(sources, lambda src: src.src_group_ids[0])
-    acc = AccumDict({grp_id: {} for grp_id in dic})
-    acc.eff_ruptures = {grp_id: 0 for grp_id in dic}
-    acc.calc_times = AccumDict(accum=numpy.zeros(3, F32))
-    for grp_id in dic:
-        for src in sources:
-            t0 = time.time()
-            sites = srcfilter.get_close_sites(src)
-            if sites is not None:
-                acc.eff_ruptures[grp_id] += src.num_ruptures
-                acc.calc_times[src.id] += numpy.array(
-                    [src.weight, len(sites), time.time() - t0])
-    return acc
-
-
 @base.calculators.add('preclassical')
 class PreCalculator(ClassicalCalculator):
     """
     Calculator to filter the sources and compute the number of effective
     ruptures
     """
-    core_task = count_eff_ruptures
+    def execute(self):
+        eff_ruptures = AccumDict(accum=0)
+        for src in self.csm.get_sources():
+            eff_ruptures[src.src_group_id] += src.num_ruptures
+        self.store_csm_info(eff_ruptures)
+        return {}
 
 
 def fix_ones(pmap):
