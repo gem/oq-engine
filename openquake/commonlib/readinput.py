@@ -794,21 +794,25 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                         smap.submit(src, srcfilter, min_mag, seed,
                                     sample_factor, mon)
                     elif srcfilter and srcfilter.ok(src, min_mag):
-                        data.append((src.id, 0, [src]))
+                        data.append((src.id, [0], [src]))
             else:  # unsplittable sources
                 for src in src_group:
                     if srcfilter and srcfilter.ok(src, min_mag):
-                        data.append((src.id, 0, [src]))
+                        data.append((src.id, [0], [src]))
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    for idx, stime, splits in itertools.chain(data, smap):
-        if splits:
-            srcs_by_grp[splits[0].src_group_id].extend(splits)
-            if monitor.hdf5:
-                source_info[idx, 'split_time'] = stime
-                source_info[idx, 'num_split'] = len(splits)
+    with monitor('updating source_info'):
+        triples = []
+        for idx, stime, splits in itertools.chain(data, smap):
+            if splits:
+                srcs_by_grp[splits[0].src_group_id].extend(splits)
+                triples.append((idx, stime[0], len(splits)))
+        idxs, times, nsplits = zip(*sorted(triples))
+        if monitor.hdf5:
+            source_info[idxs, 'split_time'] = F32(times)
+            source_info[idxs, 'num_split'] = F32(nsplits)
     if sum(len(srcs) for srcs in srcs_by_grp.values()) == 0:
         RuntimeError('All sources were filtered away!')
     return csm.new(srcs_by_grp)
