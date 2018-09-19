@@ -697,6 +697,8 @@ class Starmap(object):
         return self.sender.send((self.task_func, args, self.monitor))
 
     def _loop(self):
+        if not hasattr(self, 'socket'):  # no submit was ever made
+            return []
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)
