@@ -677,8 +677,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param in_memory:
         if False, just parse the XML without instantiating the sources
     :param split_all:
-        if True, split all the sources in the models; for disaggregation
-        it should be False
+        if True, split all the sources in the models
     :param srcfilter:
         if not None, perform a preprocess operation on the sources
     """
@@ -715,6 +714,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+    if not in_memory:
+        return csm
+
     event_based = 'event_based' in oqparam.calculation_mode
     if event_based:
         # initialize the rupture serial numbers before splitting/filtering; in
@@ -735,7 +737,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     # splitting assumes that the serials have been initialized already
     if 'ucerf' not in oqparam.calculation_mode:
         csm = parallel_split_filter(
-            csm, srcfilter, dist, oqparam.minimum_magnitude,
+            csm, srcfilter, dist, split_all, oqparam.minimum_magnitude,
             oqparam.random_seed, monitor('prefilter'))
 
     if event_based:
@@ -777,7 +779,7 @@ def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
     return src.id, stime, splits
 
 
-def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
+def parallel_split_filter(csm, srcfilter, dist, split, min_mag, seed, monitor):
     mon = monitor('split_filter')
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
     smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist)
@@ -787,14 +789,14 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':  # regular sources
                 for src in src_group:
-                    if splittable(src):
+                    if split and splittable(src):
                         smap.submit(src, srcfilter, min_mag, seed,
                                     sample_factor, mon)
-                    elif srcfilter and srcfilter.ok(src, min_mag):
+                    elif srcfilter is None or srcfilter.ok(src, min_mag):
                         data.append((src.id, [0], [src]))
             else:  # unsplittable sources
                 for src in src_group:
-                    if srcfilter and srcfilter.ok(src, min_mag):
+                    if srcfilter is None or srcfilter.ok(src, min_mag):
                         data.append((src.id, [0], [src]))
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
