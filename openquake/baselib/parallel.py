@@ -433,7 +433,7 @@ class IterResult(object):
 
     def __iter__(self):
         if self.iresults == ():
-            return []
+            return ()
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
