@@ -590,6 +590,7 @@ class Starmap(object):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
+        self.calc_id = getattr(self.monitor, 'calc_id', None)
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
@@ -648,7 +649,6 @@ class Starmap(object):
         assert isinstance(mon, Monitor), mon
         # add incremental task number and task weight
         mon.task_no = len(self.tasks) + 1
-        self.calc_id = getattr(mon, 'calc_id', None)
         args = pickle_sequence(args)
         self.sent += numpy.array([len(p) for p in args])
         dist = 'no' if self.num_tasks == 1 else self.distribute
