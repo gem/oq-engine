@@ -432,6 +432,8 @@ class IterResult(object):
         self.received = []
 
     def __iter__(self):
+        if self.iresults == ():
+            return []
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -698,7 +700,7 @@ class Starmap(object):
 
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
-            return []
+            return ()
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)

@@ -764,13 +764,14 @@ def sample_rupts(srcs, srcfilter, param, monitor):
 
 def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
     splits, stime = split_sources([src], min_mag)
-    srcs = list(srcfilter.filter(splits))
+    if srcfilter:
+        splits = list(srcfilter.filter(splits))
     if sample_factor:
         # debugging tip to reduce the size of a calculation
         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
         # will run a computation 100 times smaller
-        srcs = random_filter(srcs, sample_factor, seed)
-    return src.id, stime, srcs
+        splits = random_filter(splits, sample_factor, seed)
+    return src.id, stime, splits
 
 
 def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
@@ -785,18 +786,18 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                     if splittable(src):
                         smap.submit(src, srcfilter, min_mag, seed,
                                     sample_factor, mon)
-                    elif srcfilter.ok(src):
+                    elif srcfilter.ok(src, min_mag):
                         data.append((src.id, 0, [src]))
             else:  # unsplittable sources
                 for src in src_group:
-                    if srcfilter.ok(src):
+                    if srcfilter.ok(src, min_mag):
                         data.append((src.id, 0, [src]))
     if not monitor.hdf5:
-        return
+        return csm
     try:
         source_info = monitor.hdf5['source_info']
     except KeyError:  # UCERF
-        return
+        return csm
     source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     for idx, stime, splits in itertools.chain(data, smap):
@@ -804,6 +805,8 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
             srcs_by_grp[splits[0].src_group_id].extend(splits)
             source_info[idx, 'split_time'] = stime
             source_info[idx, 'num_split'] = len(splits)
+    if sum(len(srcs) for srcs in srcs_by_grp.values()) == 0:
+        RuntimeError('All sources were filtered away!')
     return csm.new(srcs_by_grp)
 
 
