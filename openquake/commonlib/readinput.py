@@ -780,7 +780,7 @@ def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
 
 def parallel_split_filter(csm, srcfilter, dist, split, min_mag, seed, monitor):
     mon = monitor('split_filter')
-    sample_factor = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist)
     data = []  # (idx, split_time, num_splits)
     logging.info('Splitting/filtering sources')
