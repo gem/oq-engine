@@ -721,7 +721,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.init_serials(oqparam.ses_seed)
         dist = None
     else:
-        dist = 'processpool'
+        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                else 'processpool')
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
