@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
+    is accepted again, as requested by Laurentiu Danciu
+
   [Daniele Viganò]
   * Support for Ubuntu Trusty is removed
   * Replaced supervisord with systemd in Ubuntu packages
