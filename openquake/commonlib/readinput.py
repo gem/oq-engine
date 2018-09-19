@@ -749,14 +749,17 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             (csm.get_sources(), srcfilter, param, monitor('sample_rupts')),
             concurrent_tasks=oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'),
-            progress=logging.info if event_based else logging.debug).reduce()
+            key=operator.attrgetter('src_group_id')).reduce()
         # log the preprocessing phase only in an event based calculation
         csm = csm.new(srcs_by_grp)
     return csm
 
 
 def sample_rupts(srcs, srcfilter, param, monitor):
+    """
+    A small wrapper around :func:
+    `openquake.hazardlib.calc.stochastic.sample_ruptures`
+    """
     ok = []
     for src in srcs:
         gsims = param['gsims_by_trt'][src.tectonic_region_type]
@@ -767,6 +770,12 @@ def sample_rupts(srcs, srcfilter, param, monitor):
 
 
 def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
+    """
+    Split the given source and filter the subsources. Performe sampling
+    if a nontrivial sample_factor is passed.
+
+    :returns: a triple (src.id, split_times, splits)
+    """
     splits, stime = split_sources([src], min_mag)
     if srcfilter:
         splits = list(srcfilter.filter(splits))
@@ -779,9 +788,15 @@ def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
 
 
 def parallel_split_filter(csm, srcfilter, dist, split, min_mag, seed, monitor):
+    """
+    Apply :func:`split_filter` in parallel to the composite source model.
+
+    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
+    """
     mon = monitor('split_filter')
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist)
+    smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist,
+                            progress=logging.debug)
     data = []  # (idx, split_time, num_splits)
     logging.info('Splitting/filtering sources')
     for sm in csm.source_models:
