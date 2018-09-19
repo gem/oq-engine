@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009','HM2018']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 U16 = numpy.uint16
 U32 = numpy.uint32
