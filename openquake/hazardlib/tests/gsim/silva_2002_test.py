@@ -56,15 +56,21 @@ class SilvaEtAl2002MwNSHMP2008TestCase(BaseGSIMTestCase):
         self.check('SILVA02/SILVA02MwNSHMP_MEAN.csv',
                    max_discrep_percentage=0.4)
 
-# Test data obtained by digitizing curves in Silva et al. 2002
+# Test data obtained by from haz43
 
 
 class SilvaEtAl2002DoubleCornerSaturationTestCase(BaseGSIMTestCase):
+    """
+    We use a tolerance higher than usual since the coefficients in the
+    code used to generate the verification tables are slightly different
+    than the ones published in the 2002 report. Sigma values are also
+    different and therefore not independently tested.
+    """
     GSIM_CLASS = SilvaEtAl2002DoubleCornerSaturation
 
     def test_mean(self):
         self.check('SILVA02/SilvaEtAl2002DoubleCornerSaturation_MEAN.csv',
-                   max_discrep_percentage=10.)
+                   max_discrep_percentage=2.)
 
 
 class SilvaEtAl2002SingleCornerSaturationTestCase(BaseGSIMTestCase):
@@ -72,4 +78,4 @@ class SilvaEtAl2002SingleCornerSaturationTestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('SILVA02/SilvaEtAl2002SingleCornerSaturation_MEAN.csv',
-                   max_discrep_percentage=10.)
+                   max_discrep_percentage=4.)
