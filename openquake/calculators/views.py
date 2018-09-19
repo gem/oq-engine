@@ -616,8 +616,6 @@ def view_task_hazard(token, dstore):
         return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
-    elif 'count_eff_ruptures' in tasks:
-        data = dstore['task_info/count_eff_ruptures'].value
     else:
         data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
