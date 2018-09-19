@@ -118,7 +118,6 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
         stddevs = []
         for _ in stddev_types:
             stddevs.append(np.zeros(num_sites) + C['sigma'])
-
         return stddevs
 
     #: Coefficient table obtained from coefficient arrays (c1, c2, c4, c6,
