@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Parallelized the splitting of the sources, thus making the preprocessing
+    faster
   * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
     is accepted again, as requested by Laurentiu Danciu
 
