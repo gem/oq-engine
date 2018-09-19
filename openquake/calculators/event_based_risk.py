@@ -323,6 +323,8 @@ class EbrCalculator(base.RiskCalculator):
                  for e, losses in zip(self.eids, self.agglosses)
                  for r, loss in enumerate(losses) if loss.sum()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
+            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
     def postproc(self):
