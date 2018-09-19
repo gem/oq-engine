@@ -528,14 +528,8 @@ def store_sm(smodel, h5):
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
     :param h5: a :class:`openquake.baselib.hdf5.File` instance
     """
-    try:
-        sources = h5['source_info']
-    except KeyError:
-        sources = hdf5.create(h5, 'source_info', source_info_dt)
-    try:
-        source_geom = h5['source_geom']
-    except KeyError:
-        source_geom = hdf5.create(h5, 'source_geom', point3d)
+    sources = h5['source_info']
+    source_geom = h5['source_geom']
     gid = 0
     for sg in smodel:
         srcs = []
@@ -590,14 +584,13 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     smlt_dir = os.path.dirname(source_model_lt.filename)
     idx = 0
     grp_id = 0
+    sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
+    hdf5.create(monitor.hdf5, 'source_geom', point3d)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
-                if 'source_info' not in monitor.hdf5:
-                    sources = hdf5.create(monitor.hdf5, 'source_info',
-                                          source_info_dt)
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
@@ -738,9 +731,10 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    csm = parallel_split_filter(
-        csm, srcfilter, dist, oqparam.minimum_magnitude, oqparam.random_seed,
-        monitor('prefilter'))
+    if 'ucerf' not in oqparam.calculation_mode:
+        csm = parallel_split_filter(
+            csm, srcfilter, dist, oqparam.minimum_magnitude,
+            oqparam.random_seed, monitor('prefilter'))
 
     if event_based:
         param = {}
@@ -786,6 +780,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
     smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist)
     data = []
+    logging.info('Splitting sources')
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':  # regular sources
@@ -809,12 +804,12 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
             if splits:
                 srcs_by_grp[splits[0].src_group_id].extend(splits)
                 triples.append((idx, stime[0], len(splits)))
-        idxs, times, nsplits = zip(*sorted(triples))
-        if monitor.hdf5:
+        if not triples:
+            RuntimeError('All sources were filtered away!')
+        elif monitor.hdf5:
+            idxs, times, nsplits = zip(*sorted(triples))
             source_info[idxs, 'split_time'] = F32(times)
             source_info[idxs, 'num_split'] = F32(nsplits)
-    if sum(len(srcs) for srcs in srcs_by_grp.values()) == 0:
-        RuntimeError('All sources were filtered away!')
     return csm.new(srcs_by_grp)
 
 
