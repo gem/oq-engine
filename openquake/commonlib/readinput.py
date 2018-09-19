@@ -31,7 +31,7 @@ import numpy
 
 from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, deprecated, random_filter, block_splitter)
+    AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -595,13 +595,19 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
+                sources = hdf5.create(monitor.hdf5, 'source_info',
+                                      source_info_dt)
                 sg = copy.copy(grp)
                 sg.id = grp_id
-                sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
-                sg.sources[0].id = idx
+                src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.id = idx
+                sg.sources = [src]
                 src_groups.append(sg)
                 idx += 1
                 grp_id += 1
+                data = [((sg.id, src.source_id, src.code, 0, 0,
+                         src.num_ruptures, 0, 0, 0, 0, 0))]
+                hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
@@ -786,25 +792,22 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                     if splittable(src):
                         smap.submit(src, srcfilter, min_mag, seed,
                                     sample_factor, mon)
-                    elif srcfilter.ok(src, min_mag):
+                    elif srcfilter and srcfilter.ok(src, min_mag):
                         data.append((src.id, 0, [src]))
             else:  # unsplittable sources
                 for src in src_group:
-                    if srcfilter.ok(src, min_mag):
+                    if srcfilter and srcfilter.ok(src, min_mag):
                         data.append((src.id, 0, [src]))
-    if not monitor.hdf5:
-        return csm
-    try:
+    if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
-    except KeyError:  # UCERF
-        return csm
-    source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     for idx, stime, splits in itertools.chain(data, smap):
         if splits:
             srcs_by_grp[splits[0].src_group_id].extend(splits)
-            source_info[idx, 'split_time'] = stime
-            source_info[idx, 'num_split'] = len(splits)
+            if monitor.hdf5:
+                source_info[idx, 'split_time'] = stime
+                source_info[idx, 'num_split'] = len(splits)
     if sum(len(srcs) for srcs in srcs_by_grp.values()) == 0:
         RuntimeError('All sources were filtered away!')
     return csm.new(srcs_by_grp)

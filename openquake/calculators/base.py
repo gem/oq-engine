@@ -618,16 +618,12 @@ class HazardCalculator(BaseCalculator):
         """
         Save (weight, num_sites, calc_time) inside the source_info dataset
         """
-        try:
-            source_info = self.datastore['source_info']
-        except KeyError:  # for UCERF
-            pass
-        else:
-            ids, vals = zip(*sorted(calc_times.items()))
-            vals = numpy.array(vals)  # shape (n, 3)
-            source_info[ids, 'weight'] += vals[:, 0]
-            source_info[ids, 'num_sites'] += vals[:, 1]
-            source_info[ids, 'calc_time'] += vals[:, 2]
+        source_info = self.datastore['source_info']
+        ids, vals = zip(*sorted(calc_times.items()))
+        vals = numpy.array(vals)  # shape (n, 3)
+        source_info[ids, 'weight'] += vals[:, 0]
+        source_info[ids, 'num_sites'] += vals[:, 1]
+        source_info[ids, 'calc_time'] += vals[:, 2]
 
     def post_process(self):
         """For compatibility with the engine"""
