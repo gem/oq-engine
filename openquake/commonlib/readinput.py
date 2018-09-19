@@ -584,8 +584,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     smlt_dir = os.path.dirname(source_model_lt.filename)
     idx = 0
     grp_id = 0
-    sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
-    hdf5.create(monitor.hdf5, 'source_geom', point3d)
+    if monitor.hdf5:
+        sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
+        hdf5.create(monitor.hdf5, 'source_geom', point3d)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
