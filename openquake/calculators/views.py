@@ -323,12 +323,13 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         dset = dstore['task_info/' + task]
-        argnames = dset.attrs['argnames'].split()
-        totsent = dset.attrs['sent']
-        sent = ['%s=%s' % (a, humansize(s))
-                for s, a in sorted(zip(totsent, argnames), reverse=True)]
-        recv = dset['received'].sum()
-        data.append((task, ' '.join(sent), humansize(recv)))
+        if 'argnames' in dset.attrs:
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset.attrs['sent']
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 
@@ -585,7 +586,8 @@ def view_task_info(token, dstore):
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
         val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if len(val):
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
