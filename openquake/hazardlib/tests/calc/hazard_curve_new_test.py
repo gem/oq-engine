@@ -192,6 +192,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
 
 class NankaiTestCase(unittest.TestCase):
     # use a source model for the Nankai region provided by M. Pagani
+    # also tests the case of undefined rake
     def test(self):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
         groups = nrml.to_python(source_model, SourceConverter(
