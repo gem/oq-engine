@@ -770,19 +770,22 @@ def sample_rupts(srcs, srcfilter, param, monitor):
     return {srcs[0].src_group_id: ok}
 
 
-def split_filter(src, srcfilter,  min_mag, seed, sample_factor, monitor):
+def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
     """
     Split the given source and filter the subsources. Perform sampling
-    if a nontrivial sample_factor is passed. Do not split if the srcfilter
-    is None.
+    if a nontrivial sample_factor is passed.
 
     :returns: a triple (src.id, split_times, splits)
     """
-    if srcfilter:  # split first
+    if getattr(src, 'mutex_weight', 1) != 1:  # unsplittable
+        if min_mag and src.get_min_max_mag()[0] < min_mag:
+            splits, stime = [], []
+        else:
+            splits, stime = [src], [0]
+    else:
         splits, stime = split_sources([src], min_mag)
+    if srcfilter:
         splits = list(srcfilter.filter(splits))
-    else:  # don't split
-        splits, stime = [src], [0]
     if sample_factor:
         # debugging tip to reduce the size of a calculation
         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
@@ -813,14 +816,14 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                         smap.submit(src, srcfilter, min_mag, seed,
                                     sample_factor, mon)
                     else:  # sequential
-                        res = split_filter(src, None, min_mag, seed,
+                        res = split_filter(src, srcfilter, min_mag, seed,
                                            sample_factor, mon)
                         data.append(res)
                         seq += 1
                     tot += 1
-            else:  # unsplittable not filtered sources
+            else:  # unsplittable sources
                 for src in src_group:
-                    res = split_filter(src, None, min_mag, seed,
+                    res = split_filter(src, srcfilter, min_mag, seed,
                                        sample_factor, mon)
                     data.append(res)
                     seq += 1
