@@ -1,5 +1,6 @@
   [Marco Pagani]
   * Implemented two additional versions of the Silva et al. 2002 GMPE
+  * Added the possibility of setting rake to 'undefined'
 
   [Michele Simionato]
   * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
