@@ -158,7 +158,7 @@ class BooreAtkinson2008(GMPE):
         because rake is always given.
         """
         U, SS, NS, RS = 0, 0, 0, 0
-        if rup.rake is None:
+        if rup.rake == 'undefined':
             U = 1
         elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
