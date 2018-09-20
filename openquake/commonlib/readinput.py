@@ -777,7 +777,7 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
 
     :returns: a triple (src.id, split_times, splits)
     """
-    for src in srcs:
+    for i, src in enumerate(srcs):
         if getattr(src, 'mutex_weight', 1) != 1:  # unsplittable
             if min_mag and src.get_min_max_mag()[0] < min_mag:
                 splits, stime = [], []
@@ -791,8 +791,9 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
             # debugging tip to reduce the size of a calculation
             # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
             # will run a computation 100 times smaller
-            splits = random_filter(splits, sample_factor, seed)
-        yield src.id, stime, splits
+            splits = random_filter(splits, sample_factor, seed + i)
+        if splits:
+            yield src.id, stime, splits
 
 
 def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
@@ -810,7 +811,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
         (csm.get_sources(), srcfilter, min_mag, seed, sample_factor, mon),
         maxweight=10000,
         distribute=dist,
-        #progress=logging.debug,
+        progress=logging.debug,
         weight=operator.attrgetter('num_ruptures'),
         key=operator.attrgetter('src_group_id'))
     if monitor.hdf5:
@@ -820,9 +821,8 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     with monitor('updating source_info'):
         triples = []
         for idx, stime, splits in smap:
-            if splits:
-                srcs_by_grp[splits[0].src_group_id].extend(splits)
-                triples.append((idx, stime[0], len(splits)))
+            srcs_by_grp[splits[0].src_group_id].extend(splits)
+            triples.append((idx, stime[0], len(splits)))
         if not triples:
             RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
