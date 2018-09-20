@@ -784,13 +784,13 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
                 splits, stime = [src], [0]
         else:
             splits, stime = split_sources([src], min_mag)
-        if srcfilter:
-            splits = list(srcfilter.filter(splits))
-        if sample_factor:
+        if splits and sample_factor:
             # debugging tip to reduce the size of a calculation
             # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
             # will run a computation 100 times smaller
             splits = random_filter(splits, sample_factor, seed + i)
+        if splits and srcfilter:
+            splits = list(srcfilter.filter(splits))
         if splits:
             yield src.id, stime, splits
 
