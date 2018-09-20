@@ -24,7 +24,6 @@ import zipfile
 import logging
 import tempfile
 import operator
-import itertools
 import configparser
 import collections
 import numpy
@@ -734,10 +733,11 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    if 'ucerf' not in oqparam.calculation_mode:
+    if split_all and 'ucerf' not in oqparam.calculation_mode:
         csm = parallel_split_filter(
-            csm, srcfilter, dist, split_all, oqparam.minimum_magnitude,
-            oqparam.random_seed, monitor('prefilter'))
+            csm, srcfilter, dist,
+            oqparam.minimum_magnitude, oqparam.random_seed,
+            monitor('prefilter'))
 
     if event_based:
         param = {}
@@ -769,16 +769,19 @@ def sample_rupts(srcs, srcfilter, param, monitor):
     return {srcs[0].src_group_id: ok}
 
 
-def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
+def split_filter(src, srcfilter,  min_mag, seed, sample_factor, monitor):
     """
-    Split the given source and filter the subsources. Performe sampling
-    if a nontrivial sample_factor is passed.
+    Split the given source and filter the subsources. Perform sampling
+    if a nontrivial sample_factor is passed. Do not split if the srcfilter
+    is None.
 
     :returns: a triple (src.id, split_times, splits)
     """
-    splits, stime = split_sources([src], min_mag)
-    if srcfilter:
+    if srcfilter:  # split first
+        splits, stime = split_sources([src], min_mag)
         splits = list(srcfilter.filter(splits))
+    else:  # don't split
+        splits, stime = [src], [0]
     if sample_factor:
         # debugging tip to reduce the size of a calculation
         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
@@ -787,7 +790,7 @@ def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
     return src.id, stime, splits
 
 
-def parallel_split_filter(csm, srcfilter, dist, split, min_mag, seed, monitor):
+def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
@@ -797,28 +800,24 @@ def parallel_split_filter(csm, srcfilter, dist, split, min_mag, seed, monitor):
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist,
                             progress=logging.debug)
-    data = []  # (idx, split_time, num_splits)
     logging.info('Splitting/filtering sources')
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':  # regular sources
                 for src in src_group:
-                    if split and splittable(src):
-                        smap.submit(src, srcfilter, min_mag, seed,
-                                    sample_factor, mon)
-                    elif srcfilter is None or srcfilter.ok(src, min_mag):
-                        data.append((src.id, [0], [src]))
-            else:  # unsplittable sources
+                    smap.submit(src, srcfilter, min_mag, seed, sample_factor,
+                                mon, sequential=not splittable(src))
+            else:  # unsplittable not filtered sources
                 for src in src_group:
-                    if srcfilter is None or srcfilter.ok(src, min_mag):
-                        data.append((src.id, [0], [src]))
+                    smap.submit(src, None, min_mag, seed,
+                                sample_factor, mon, sequential=True)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     with monitor('updating source_info'):
         triples = []
-        for idx, stime, splits in itertools.chain(data, smap):
+        for idx, stime, splits in smap:
             if splits:
                 srcs_by_grp[splits[0].src_group_id].extend(splits)
                 triples.append((idx, stime[0], len(splits)))
