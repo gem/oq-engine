@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Implemented two additional versions of the Silva et al. 2002 GMPE
+
   [Michele Simionato]
   * Parallelized the splitting of the sources, thus making the preprocessing
     faster
