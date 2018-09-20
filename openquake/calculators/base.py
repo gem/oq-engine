@@ -319,7 +319,7 @@ class HazardCalculator(BaseCalculator):
 
     def get_filter(self):
         """
-        :returns: a SourceFilter/RtreeFilter of None
+        :returns: a SourceFilter/RtreeFilter or None
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
