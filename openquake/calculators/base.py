@@ -323,6 +323,8 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
+        self.src_filter = SourceFilter(
+            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
             # do not preprocess
             return
@@ -336,9 +338,7 @@ class HazardCalculator(BaseCalculator):
             src_filter = RtreeFilter(self.sitecol.complete,
                                      oq.maximum_distance, self.hdf5cache)
         else:
-            src_filter = SourceFilter(
-                self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
-        self.src_filter = src_filter
+            src_filter = self.src_filter
         return src_filter
 
     def can_read_parent(self):
