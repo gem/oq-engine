@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -98,6 +99,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
+    code = b'P'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth location nodal_plane_distribution
     hypocenter_distribution
@@ -343,3 +345,10 @@ class PointSource(ParametricSeismicSource):
         a1 = (maxdist + maxradius) * KM_TO_DEGREES
         a2 = angular_distance(maxdist + maxradius, lat)
         return lon - a2, lat - a1, lon + a2, lat + a1
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (1, 3)
+        """
+        loc = self.location
+        return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)

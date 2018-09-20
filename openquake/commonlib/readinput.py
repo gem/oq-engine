@@ -27,16 +27,18 @@ import configparser
 import collections
 import numpy
 
-from openquake.baselib import performance
+from openquake.baselib import performance, hdf5
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.geo.mesh import point3d
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -501,6 +503,51 @@ class SourceModelFactory(object):
         return sm
 
 
+source_info_dt = numpy.dtype([
+    ('grp_id', numpy.uint16),          # 0
+    ('source_id', hdf5.vstr),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('gidx1', numpy.uint32),           # 3
+    ('gidx2', numpy.uint32),           # 4
+    ('num_ruptures', numpy.uint32),    # 5
+    ('calc_time', numpy.float32),      # 6
+    ('split_time', numpy.float32),     # 7
+    ('num_sites', numpy.float32),      # 8
+    ('num_split',  numpy.uint32),      # 9
+    ('weight', numpy.float32),         # 10
+])
+
+
+def store_sm(smodel, h5):
+    """
+    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    """
+    try:
+        sources = h5['source_info']
+    except KeyError:
+        sources = hdf5.create(h5, 'source_info', source_info_dt)
+    try:
+        source_geom = h5['source_geom']
+    except KeyError:
+        source_geom = hdf5.create(h5, 'source_geom', point3d)
+    gid = 0
+    for sg in smodel:
+        srcs = []
+        geoms = []
+        for src in sg:
+            srcgeom = src.geom()
+            n = len(srcgeom)
+            geom = numpy.zeros(n, point3d)
+            geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                         src.num_ruptures, 0, 0, 0, 0, 0))
+            geoms.append(geom)
+            gid += n
+        hdf5.extend(source_geom, numpy.concatenate(geoms))
+        hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+
+
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                       in_memory=True):
     """
@@ -536,22 +583,41 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
+    idx = 0
+    grp_id = 0
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
                 sg = copy.copy(grp)
-                sg.id = sm.ordinal
+                sg.id = grp_id
                 sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                sg.sources[0].id = idx
                 src_groups.append(sg)
+                idx += 1
+                grp_id += 1
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
+                for sg in newsm:
+                    for src in sg:
+                        src.src_group_id = grp_id
+                        src.id = idx
+                        idx += 1
+                    sg.id = grp_id
+                    grp_id += 1
+                if monitor.hdf5:
+                    store_sm(newsm, monitor.hdf5)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
+
+        if grp_id >= TWO16:
+            # the limit is really needed only for event based calculations
+            raise ValueError('There is a limit of %d src groups!' % TWO16)
+
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -593,7 +659,8 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=None, in_memory=True):
+def get_composite_source_model(oqparam, monitor=None, in_memory=True,
+                               split_all=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -603,10 +670,11 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
          a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if False, just parse the XML without instantiating the sources
+    :param split_all:
+        if True, split all the sources in the models; for disaggregation
+        it should be False
     """
     smodels = []
-    grp_id = 0
-    idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
     if oqparam.number_of_logic_tree_samples == 0:
@@ -620,7 +688,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            src_group.id = grp_id
             for src in src_group:
                 # there are two cases depending on the flag in_memory:
                 # 1) src is a hazardlib source and has a src_group_id
@@ -628,13 +695,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
                 # 2) src is a Node object, then nothing must be done
                 if isinstance(src, Node):
                     continue
-                src.src_group_id = grp_id
-                src.id = idx
-                idx += 1
-            grp_id += 1
-            if grp_id >= TWO16:
-                # the limit is really needed only for event based calculations
-                raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
                                       oqparam.optimize_same_id_sources)
@@ -647,12 +707,62 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
-
     if 'event_based' in oqparam.calculation_mode:
-        # initialize the rupture serial numbers before filtering; in
+        # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+
+    if oqparam.disagg_by_src:
+        csm = csm.grp_by_src()  # one group per source
+
+    if split_all and monitor.hdf5:
+        # splitting assumes that the serials have been initialized already
+        _split_all(csm, monitor.hdf5,
+                   oqparam.minimum_magnitude, oqparam.random_seed)
+
+    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    if monitor.hdf5:
+        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
     return csm
+
+
+def _split_all(csm, h5, min_mag, seed):
+    sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
+    split_time = []
+    num_split = []
+    srcs_by_grp_id = collections.defaultdict(list)
+    for sm in csm.source_models:
+        for src_group in sm.src_groups:
+            if src_group.src_interdep != 'mutex':
+                # split regular sources
+                for src in src_group:
+                    ss, stime = split_sources([src], min_mag)
+                    srcs_by_grp_id[src_group.id].extend(ss)
+                    split_time.extend(stime)
+                    num_split.append(len(ss))
+                if sample_factor:
+                    # debugging tip to reduce the size of a calculation
+                    # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+                    # will run a computation 100 times smaller
+                    srcs_by_grp_id[src_group.id] = random_filter(
+                        srcs_by_grp_id[src_group.id], float(sample_factor),
+                        seed)
+            else:
+                srcs_by_grp_id[src_group.id] = src_group.sources
+                split_time.extend([0] * len(src_group))
+                num_split.extend([1] * len(src_group))
+
+    for sm in csm.source_models:
+        for src_group in sm.src_groups:
+            src_group.sources = srcs_by_grp_id[src_group.id]
+    try:
+        source_info = h5['source_info']
+    except KeyError:  # UCERF
+        pass
+    else:
+        source_info['split_time'] = F32(split_time)
+        source_info['num_split'] = U32(num_split)
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
 
 
 def get_imts(oqparam):
