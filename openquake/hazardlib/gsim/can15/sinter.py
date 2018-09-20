@@ -18,6 +18,8 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     """
     """
 
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc',))
+
     def _get_delta(dists):
         """
         Computes the additional delta to be used for the computation of the
