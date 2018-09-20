@@ -18,7 +18,6 @@
 import os.path
 import logging
 import collections
-import mock
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -45,9 +44,8 @@ RUPTURES_PER_BLOCK = 200  # decided by MS
 
 
 def weight(src):
-    # heuristic weight
-    return len(src.eb_ruptures) * src.ndists  # this is the best
-    # return sum(ebr.multiplicity for ebr in src.eb_ruptures) * src.ndists
+    """The number of events produced by the source"""
+    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
@@ -203,8 +201,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     ruptures = RuptureGetter(parent, slc, grp_id)
-                    param['samples'] = samples_by_grp[grp_id]
-                    yield ruptures, self.sitecol, rlzs_by_gsim, param, monitor
+                    par = param.copy()
+                    par['samples'] = samples_by_grp[grp_id]
+                    yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
             return
 
         maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
@@ -212,7 +211,8 @@ class EventBasedCalculator(base.HazardCalculator):
         num_tasks = 0
         num_sources = 0
         for sm in self.csm.source_models:
-            param['samples'] = sm.samples
+            par = param.copy()
+            par['samples'] = sm.samples
             for sg in sm.src_groups:
                 # ignore the sources not producing ruptures
                 sg.sources = [src for src in sg.sources if src.eb_ruptures]
@@ -220,12 +220,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
                 if sg.src_interdep == 'mutex':  # do not split
-                    yield sg, self.src_filter, rlzs_by_gsim, param, monitor
+                    yield sg, self.src_filter, rlzs_by_gsim, par, monitor
                     num_tasks += 1
                     num_sources += len(sg.sources)
                     continue
                 for block in block_splitter(sg.sources, maxweight, weight):
-                    yield block, self.src_filter, rlzs_by_gsim, param, monitor
+                    yield block, self.src_filter, rlzs_by_gsim, par, monitor
                     num_tasks += 1
                     num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
@@ -234,12 +234,6 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
-        if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.process_csm()
-        else:
-            self.datastore.parent = datastore.read(
-                self.oqparam.hazard_calculation_id)
-            self.csm_info = self.datastore.parent['csm_info']
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.L = len(self.oqparam.imtls.array)
         self.R = self.csm_info.get_num_rlzs()
@@ -252,24 +246,18 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        self.src_filter, self.csm = self.filter_csm()
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for src in self.csm.get_sources():
             if hasattr(src, 'eb_ruptures'):  # except UCERF
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     rlzs_assoc.get_rlzs_by_gsim,
                     samples_by_grp, len(self.oqparam.imtls))
-            # update self.csm.infos
             if hasattr(src, 'calc_times'):
-                for srcid, nsites, eids, dt in src.calc_times:
-                    info = self.csm.infos[srcid]
-                    info.num_sites += nsites
-                    info.calc_time += dt
-                    info.num_split += 1
-                    info.events += len(eids)
+                calc_times += src.calc_times
                 del src.calc_times
             # save the events always and the ruptures if oq.save_ruptures
             if hasattr(src, 'eb_ruptures'):
@@ -282,10 +270,11 @@ class EventBasedCalculator(base.HazardCalculator):
                          msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
-            acc = mock.Mock(eff_ruptures={
+            self.store_source_info(calc_times)
+            eff_ruptures = {
                 grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.csm.src_groups})
-            self.store_source_info(self.csm.infos, acc)
+                for grp in self.csm.src_groups}
+            self.store_csm_info(eff_ruptures)
         return self.csm.info
 
     def agg_dicts(self, acc, result):
@@ -416,6 +405,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
+        if self.oqparam.hazard_calculation_id is None:
+            self.csm_info = self.process_csm()
+        else:
+            self.datastore.parent = datastore.read(
+                self.oqparam.hazard_calculation_id)
+            self.csm_info = self.datastore.parent['csm_info']
 
     def post_execute(self, result):
         """
