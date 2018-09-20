@@ -801,16 +801,24 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist,
                             progress=logging.debug)
     logging.info('Splitting/filtering sources')
+    tot = 0
+    seq = 0
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':  # regular sources
                 for src in src_group:
+                    s = not splittable(src)
                     smap.submit(src, srcfilter, min_mag, seed, sample_factor,
-                                mon, sequential=not splittable(src))
+                                mon, sequential=s)
+                    seq += s
+                    tot += 1
             else:  # unsplittable not filtered sources
                 for src in src_group:
                     smap.submit(src, None, min_mag, seed,
                                 sample_factor, mon, sequential=True)
+                    seq += 1
+                    tot += 1
+    logging.info('Processed sequentially %d of %d sources', seq, tot)
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources

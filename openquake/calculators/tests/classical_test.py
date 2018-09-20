@@ -243,7 +243,8 @@ simple_fault.xml 0      Active Shallow Crust 447          447
         ], case_14.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_15(self):  # full enumeration
+    def test_case_15(self):
+        # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
