@@ -272,14 +272,21 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name=''):
+    def __init__(self, minrange, maxrange, name='', accept='undefined'):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
+        self.accept = accept
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float_(value)
+        try:
+            f = float_(value)
+        except ValueError:  # passed a string
+            if value == self.accept:
+                return value
+            else:
+                raise
         if f > self.maxrange:
             raise ValueError("%s %s is bigger than the maximum (%s)" %
                              (self.name, f, self.maxrange))
@@ -948,7 +955,7 @@ def point3d(value, lon, lat, depth):
 strike_range = FloatRange(0, 360)
 slip_range = strike_range
 dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180)
+rake_range = FloatRange(-180, 180, 'undefined')
 
 
 def ab_values(value):
@@ -1014,7 +1021,6 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
-
 
 
 # used for the exposure validation
