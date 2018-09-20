@@ -39,6 +39,7 @@ class MultiPointSource(ParametricSeismicSource):
     rupture_aspect_ratio, temporal_occurrence_model, upper_seismogenic_depth,
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
+    code = b'M'
     MODIFICATIONS = set(())
     RUPTURE_WEIGHT = 0.1
 
@@ -154,3 +155,10 @@ class MultiPointSource(ParametricSeismicSource):
         kw['size'] = len(mesh)
         kw['kind'] = mfd_kind
         self.mfd = MultiMFD(**kw)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.mesh],
+                           numpy.float32)
