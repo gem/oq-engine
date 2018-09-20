@@ -169,6 +169,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
         """
         f_faba = np.zeros_like(dists.rrup)
         # Term only applies to backarc sites (F_FABA = 0. for forearc)
+        print(sites.backarc, dists.rrup, sites.vs30)
         max_dist = dists.rrup[sites.backarc]
         max_dist[max_dist < 100.0] = 100.0
         f_faba[sites.backarc] = C['theta15'] + \
