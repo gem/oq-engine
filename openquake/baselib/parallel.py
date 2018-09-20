@@ -635,7 +635,7 @@ class Starmap(object):
                 self.prev_percent = percent
         return done
 
-    def submit(self, *args, sequential=False):
+    def submit(self, *args):
         """
         Submit the given arguments to the underlying task
         """
@@ -649,7 +649,7 @@ class Starmap(object):
         assert isinstance(mon, Monitor), mon
         # add incremental task number and task weight
         mon.task_no = len(self.tasks) + 1
-        dist = 'no' if sequential or self.num_tasks == 1 else self.distribute
+        dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
             self.sent += numpy.array([len(p) for p in args])
