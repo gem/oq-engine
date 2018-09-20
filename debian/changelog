@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Implemented two additional versions of the Silva et al. 2002 GMPE
+
   [Michele Simionato]
   * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
     is accepted again, as requested by Laurentiu Danciu
