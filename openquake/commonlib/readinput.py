@@ -24,6 +24,7 @@ import zipfile
 import logging
 import tempfile
 import operator
+import itertools
 import configparser
 import collections
 import numpy
@@ -803,19 +804,25 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     logging.info('Splitting/filtering sources')
     tot = 0
     seq = 0
+    data = []  # (idx, stime, splits)
     for sm in csm.source_models:
         for src_group in sm.src_groups:
             if src_group.src_interdep != 'mutex':  # regular sources
                 for src in src_group:
-                    s = not splittable(src)
-                    smap.submit(src, srcfilter, min_mag, seed, sample_factor,
-                                mon, sequential=s)
-                    seq += s
+                    if splittable(src):
+                        smap.submit(src, srcfilter, min_mag, seed,
+                                    sample_factor, mon)
+                    else:  # sequential
+                        res = split_filter(src, None, min_mag, seed,
+                                           sample_factor, mon)
+                        data.append(res)
+                        seq += 1
                     tot += 1
             else:  # unsplittable not filtered sources
                 for src in src_group:
-                    smap.submit(src, None, min_mag, seed,
-                                sample_factor, mon, sequential=True)
+                    res = split_filter(src, None, min_mag, seed,
+                                       sample_factor, mon)
+                    data.append(res)
                     seq += 1
                     tot += 1
     logging.info('Processed sequentially %d of %d sources', seq, tot)
@@ -825,7 +832,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     srcs_by_grp = collections.defaultdict(list)
     with monitor('updating source_info'):
         triples = []
-        for idx, stime, splits in smap:
+        for idx, stime, splits in itertools.chain(data, smap):
             if splits:
                 srcs_by_grp[splits[0].src_group_id].extend(splits)
                 triples.append((idx, stime[0], len(splits)))
