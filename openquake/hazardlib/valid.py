@@ -272,7 +272,7 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name='', accept='undefined'):
+    def __init__(self, minrange, maxrange, name='', accept=None):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
