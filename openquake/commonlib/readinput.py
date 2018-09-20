@@ -24,7 +24,6 @@ import zipfile
 import logging
 import tempfile
 import operator
-import itertools
 import configparser
 import collections
 import numpy
@@ -37,7 +36,6 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.calc.filters import split_sources
-from openquake.hazardlib.source import splittable
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -51,6 +49,7 @@ from openquake.commonlib import logictree, source, writers
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
+RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 U16 = numpy.uint16
@@ -808,7 +807,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     smap = parallel.Starmap.apply(
         split_filter,
         (csm.get_sources(), srcfilter, min_mag, seed, sample_factor, mon),
-        maxweight=10000,
+        maxweight=RUPTURES_PER_BLOCK,
         distribute=dist,
         progress=logging.debug,
         weight=operator.attrgetter('num_ruptures'),
