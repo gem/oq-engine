@@ -955,7 +955,7 @@ def point3d(value, lon, lat, depth):
 strike_range = FloatRange(0, 360)
 slip_range = strike_range
 dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180, 'undefined')
+rake_range = FloatRange(-180, 180, 'rake', 'undefined')
 
 
 def ab_values(value):
