@@ -23,17 +23,18 @@ import shutil
 import zipfile
 import logging
 import tempfile
+import operator
 import configparser
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5
+from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, preprocess
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -660,7 +661,7 @@ def getid(src):
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
-                               split_all=True):
+                               split_all=True, srcfilter=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -673,6 +674,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models; for disaggregation
         it should be False
+    :param srcfilter:
+        if not None, perform a preprocess operation on the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -723,6 +726,26 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
+
+    if srcfilter:
+        param = {}
+        if 'event_based' in oqparam.calculation_mode:
+            param['filter_distance'] = oqparam.filter_distance
+            param['ses_per_logic_tree_path'] = oqparam.ses_per_logic_tree_path
+            param['gsims_by_trt'] = gsim_lt.values
+            dist = None
+        else:
+            dist = 'processpool'
+        sources_by_grp = parallel.Starmap.apply(
+            preprocess,
+            (csm.get_sources(), srcfilter, param, monitor('preprocess')),
+            concurrent_tasks=oqparam.concurrent_tasks,
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'), distribute=dist,
+            progress=logging.info if 'gsims_by_trt' in param else logging.debug
+            # log the preprocessing phase in an event based calculation
+        ).reduce()
+        csm = csm.new(sources_by_grp)
     return csm
 
 
