@@ -805,7 +805,6 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     mon = monitor('split_filter')
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Splitting/filtering sources')
-
     smap = parallel.Starmap.apply(
         split_filter,
         (csm.get_sources(), srcfilter, min_mag, seed, sample_factor, mon),
@@ -819,16 +818,16 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     with monitor('updating source_info'):
-        triples = []
+        acc = AccumDict(accum=numpy.zeros(2, F32))
         for idx, stime, splits in smap:
+            acc[idx] += numpy.array([stime[0], len(splits)], F32)
             srcs_by_grp[splits[0].src_group_id].extend(splits)
-            triples.append((idx, stime[0], len(splits)))
-        if not triples:
+        if not acc:
             RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
-            idxs, times, nsplits = zip(*sorted(triples))
-            source_info[idxs, 'split_time'] = F32(times)
-            source_info[idxs, 'num_split'] = F32(nsplits)
+            idxs = sorted(acc)
+            source_info[idxs, 'split_time'] = [acc[idx][0] for idx in idxs]
+            source_info[idxs, 'num_split'] = [acc[idx][1] for idx in idxs]
     return csm.new(srcs_by_grp)
 
 
