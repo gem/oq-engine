@@ -770,28 +770,29 @@ def sample_rupts(srcs, srcfilter, param, monitor):
     return {srcs[0].src_group_id: ok}
 
 
-def split_filter(src, srcfilter, min_mag, seed, sample_factor, monitor):
+def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
     """
     Split the given source and filter the subsources. Perform sampling
     if a nontrivial sample_factor is passed.
 
     :returns: a triple (src.id, split_times, splits)
     """
-    if getattr(src, 'mutex_weight', 1) != 1:  # unsplittable
-        if min_mag and src.get_min_max_mag()[0] < min_mag:
-            splits, stime = [], []
+    for src in srcs:
+        if getattr(src, 'mutex_weight', 1) != 1:  # unsplittable
+            if min_mag and src.get_min_max_mag()[0] < min_mag:
+                splits, stime = [], []
+            else:
+                splits, stime = [src], [0]
         else:
-            splits, stime = [src], [0]
-    else:
-        splits, stime = split_sources([src], min_mag)
-    if srcfilter:
-        splits = list(srcfilter.filter(splits))
-    if sample_factor:
-        # debugging tip to reduce the size of a calculation
-        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
-        # will run a computation 100 times smaller
-        splits = random_filter(splits, sample_factor, seed)
-    return src.id, stime, splits
+            splits, stime = split_sources([src], min_mag)
+        if srcfilter:
+            splits = list(srcfilter.filter(splits))
+        if sample_factor:
+            # debugging tip to reduce the size of a calculation
+            # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+            # will run a computation 100 times smaller
+            splits = random_filter(splits, sample_factor, seed)
+        yield src.id, stime, splits
 
 
 def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
@@ -802,40 +803,23 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     """
     mon = monitor('split_filter')
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    smap = parallel.Starmap(split_filter, monitor=mon, distribute=dist,
-                            progress=logging.debug)
     logging.info('Splitting/filtering sources')
-    tot = 0
-    seq = 0
-    data = []  # (idx, stime, splits)
-    for sm in csm.source_models:
-        for src_group in sm.src_groups:
-            if src_group.src_interdep != 'mutex':  # regular sources
-                for src in src_group:
-                    if splittable(src):
-                        smap.submit(src, srcfilter, min_mag, seed,
-                                    sample_factor, mon)
-                    else:  # sequential
-                        res = split_filter(src, srcfilter, min_mag, seed,
-                                           sample_factor, mon)
-                        data.append(res)
-                        seq += 1
-                    tot += 1
-            else:  # unsplittable sources
-                for src in src_group:
-                    res = split_filter(src, srcfilter, min_mag, seed,
-                                       sample_factor, mon)
-                    data.append(res)
-                    seq += 1
-                    tot += 1
-    logging.info('Processed sequentially %d of %d sources', seq, tot)
+
+    smap = parallel.Starmap.apply(
+        split_filter,
+        (csm.get_sources(), srcfilter, min_mag, seed, sample_factor, mon),
+        maxweight=10000,
+        distribute=dist,
+        #progress=logging.debug,
+        weight=operator.attrgetter('num_ruptures'),
+        key=operator.attrgetter('src_group_id'))
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     with monitor('updating source_info'):
         triples = []
-        for idx, stime, splits in itertools.chain(data, smap):
+        for idx, stime, splits in smap:
             if splits:
                 srcs_by_grp[splits[0].src_group_id].extend(splits)
                 triples.append((idx, stime[0], len(splits)))
