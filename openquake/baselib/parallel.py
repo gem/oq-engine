@@ -457,7 +457,7 @@ class IterResult(object):
         if self.received and not self.name.startswith('_'):
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = ('Received %s from %d tasks, maximum per output %s')
+            msg = 'Received %s from %d outputs, maximum per output %s'
             logging.info(msg, humansize(tot), len(self.received),
                          humansize(max_per_output))
 
