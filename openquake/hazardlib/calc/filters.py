@@ -22,11 +22,9 @@ import operator
 import collections
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
+import rtree
 from scipy.interpolate import interp1d
+
 from openquake.baselib import hdf5, config
 from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp
@@ -195,7 +193,7 @@ def split_sources(srcs, min_mag):
     :returns: a pair (split sources, split time)
     """
     sources = []
-    split_time = {}  # src_id -> deltat
+    split_time = []
     for src in srcs:
         t0 = time.time()
         if min_mag and src.get_min_max_mag()[0] < min_mag:
@@ -211,7 +209,7 @@ def split_sources(srcs, min_mag):
                     splits.append(s)
         else:
             splits = list(src)
-        split_time[src.source_id] = time.time() - t0
+        split_time.append(time.time() - t0)
         sources.extend(splits)
         has_serial = hasattr(src, 'serial')
         has_samples = hasattr(src, 'samples')
@@ -220,8 +218,7 @@ def split_sources(srcs, min_mag):
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.src_group_id = src.src_group_id
-                split.ngsims = src.ngsims
-                split.ndists = src.ndists
+                split.id = src.id
                 if has_serial:
                     nr = split.num_ruptures
                     split.serial = src.serial[start:start + nr]
@@ -229,8 +226,7 @@ def split_sources(srcs, min_mag):
                 if has_samples:
                     split.samples = src.samples
         elif splits:  # single source
-            splits[0].ngsims = src.ngsims
-            splits[0].ndists = src.ndists
+            splits[0].id = src.id
             if has_serial:
                 splits[0].serial = src.serial
             if has_samples:
@@ -403,8 +399,6 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)
