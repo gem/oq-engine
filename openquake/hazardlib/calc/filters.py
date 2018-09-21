@@ -313,14 +313,6 @@ class SourceFilter(object):
         if source_sites:
             return source_sites[0][1]
 
-    def ok(self, source, min_mag=0):
-        """
-        :returns: 0 or 1 depending if the source is discarded or not
-        """
-        if min_mag and source.get_min_max_mag()[0] < min_mag:
-            return 0
-        return sum(1 for ss in self([source]))
-
     def __call__(self, sources):
         """
         :yields: pairs (src, sites)
