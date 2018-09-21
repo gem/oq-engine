@@ -323,6 +323,8 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
+        self.src_filter = SourceFilter(
+            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
             # do not preprocess
             return
@@ -336,9 +338,7 @@ class HazardCalculator(BaseCalculator):
             src_filter = RtreeFilter(self.sitecol.complete,
                                      oq.maximum_distance, self.hdf5cache)
         else:
-            src_filter = SourceFilter(
-                self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
-        self.src_filter = src_filter
+            src_filter = self.src_filter
         return src_filter
 
     def can_read_parent(self):
@@ -618,11 +618,8 @@ class HazardCalculator(BaseCalculator):
         """
         Save (weight, num_sites, calc_time) inside the source_info dataset
         """
-        try:
+        if calc_times:
             source_info = self.datastore['source_info']
-        except KeyError:  # for UCERF
-            pass
-        else:
             ids, vals = zip(*sorted(calc_times.items()))
             vals = numpy.array(vals)  # shape (n, 3)
             source_info[ids, 'weight'] += vals[:, 0]
