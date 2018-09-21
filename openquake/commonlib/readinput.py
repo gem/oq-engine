@@ -811,7 +811,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    with monitor('updating source_info'):
+    with monitor('updating source_info', autoflush=True):
         arr = numpy.zeros((len(sources), 2), F32)
         for splits, stime in smap:
             for split in splits:
