@@ -772,10 +772,9 @@ def sample_rupts(srcs, srcfilter, param, monitor):
 
 def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
     """
-    Split the given source and filter the subsources. Perform sampling
-    if a nontrivial sample_factor is passed.
-
-    :returns: a triple (src.id, split_times, splits)
+    Split the given source and filter the subsources by distance and by
+    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
+    Yields a pair (split_sources, split_time) if split_sources is non-empty.
     """
     splits, stime = split_sources(srcs, min_mag)
     if splits and sample_factor:
@@ -822,7 +821,7 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                 srcs_by_grp[split.src_group_id].append(split)
         if sample_factor and not srcs_by_grp:
             sys.stderr.write('Too much sampling, no sources\n')
-            sys.exit(0)  # error code of 0 on purpose
+            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
         elif not srcs_by_grp:
             # raise an exception in the regular case (no sample_factor)
             RuntimeError('All sources were filtered away!')
