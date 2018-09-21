@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import csv
 import copy
 import zlib
@@ -819,7 +820,11 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
                 arr[i, 0] += stime[i]
                 arr[i, 1] += 1
                 srcs_by_grp[split.src_group_id].append(split)
-        if not srcs_by_grp:
+        if sample_factor and not srcs_by_grp:
+            sys.stderr.write('Too much sampling, no sources\n')
+            sys.exit(0)  # error code of 0 on purpose
+        elif not srcs_by_grp:
+            # raise an exception in the regular case (no sample_factor)
             RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
             source_info[:, 'split_time'] = arr[:, 0]
