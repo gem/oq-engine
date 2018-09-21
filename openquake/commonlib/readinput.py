@@ -776,23 +776,17 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
 
     :returns: a triple (src.id, split_times, splits)
     """
-    for i, src in enumerate(srcs):
-        if getattr(src, 'mutex_weight', 1) != 1:  # unsplittable
-            if min_mag and src.get_min_max_mag()[0] < min_mag:
-                splits, stime = [], []
-            else:
-                splits, stime = [src], [0]
-        else:
-            splits, stime = split_sources([src], min_mag)
-        if splits and sample_factor:
-            # debugging tip to reduce the size of a calculation
-            # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
-            # will run a computation 100 times smaller
-            splits = random_filter(splits, sample_factor, seed + i)
-        if splits and srcfilter:
-            splits = list(srcfilter.filter(splits))
-        if splits:
-            yield src.id, stime, splits
+    splits, stime = split_sources(srcs, min_mag)
+    if splits and sample_factor:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+        # will run a computation 100 times smaller
+        splits = random_filter(splits, sample_factor, seed)
+        # NB: for performance, sample before splitting
+    if splits and srcfilter:
+        splits = list(srcfilter.filter(splits))
+    if splits:
+        yield splits, stime
 
 
 def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
@@ -804,9 +798,10 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     mon = monitor('split_filter')
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Splitting/filtering sources')
+    sources = csm.get_sources()
     smap = parallel.Starmap.apply(
         split_filter,
-        (csm.get_sources(), srcfilter, min_mag, seed, sample_factor, mon),
+        (sources, srcfilter, min_mag, seed, sample_factor, mon),
         maxweight=RUPTURES_PER_BLOCK,
         distribute=dist,
         progress=logging.debug,
@@ -817,16 +812,18 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
     with monitor('updating source_info'):
-        acc = AccumDict(accum=numpy.zeros(2, F32))
-        for idx, stime, splits in smap:
-            acc[idx] += numpy.array([stime[0], len(splits)], F32)
-            srcs_by_grp[splits[0].src_group_id].extend(splits)
-        if not acc:
+        arr = numpy.zeros((len(sources), 2), F32)
+        for splits, stime in smap:
+            for split in splits:
+                i = split.id
+                arr[i, 0] += stime[i]
+                arr[i, 1] += 1
+                srcs_by_grp[split.src_group_id].append(split)
+        if not srcs_by_grp:
             RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
-            idxs = sorted(acc)
-            source_info[idxs, 'split_time'] = [acc[idx][0] for idx in idxs]
-            source_info[idxs, 'num_split'] = [acc[idx][1] for idx in idxs]
+            source_info[:, 'split_time'] = arr[:, 0]
+            source_info[:, 'num_split'] = arr[:, 1]
     return csm.new(srcs_by_grp)
 
 
