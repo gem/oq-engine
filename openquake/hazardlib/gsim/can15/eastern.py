@@ -55,6 +55,9 @@ class EasternCan15Mid(PezeshkEtAl2011):
     # Set rake
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
+    # Distances to be excluded while checking this GMPE
+    DO_NOT_CHECK_DISTANCES = set(('rrup', 'rjb'))
+
     def apply_correction_to_BC(self, mean, imt, dists):
         """
         """
