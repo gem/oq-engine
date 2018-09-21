@@ -432,6 +432,8 @@ class IterResult(object):
         self.received = []
 
     def __iter__(self):
+        if self.iresults == ():
+            return ()
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -588,6 +590,7 @@ class Starmap(object):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
+        self.calc_id = getattr(self.monitor, 'calc_id', None)
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
@@ -632,7 +635,7 @@ class Starmap(object):
                 self.prev_percent = percent
         return done
 
-    def submit(self, args):
+    def submit(self, *args):
         """
         Submit the given arguments to the underlying task
         """
@@ -646,10 +649,10 @@ class Starmap(object):
         assert isinstance(mon, Monitor), mon
         # add incremental task number and task weight
         mon.task_no = len(self.tasks) + 1
-        self.calc_id = getattr(mon, 'calc_id', None)
-        args = pickle_sequence(args)
-        self.sent += numpy.array([len(p) for p in args])
         dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist != 'no':
+            args = pickle_sequence(args)
+            self.sent += numpy.array([len(p) for p in args])
         res = getattr(self, dist + '_submit')(args)
         self.tasks.append(res)
 
@@ -658,7 +661,7 @@ class Starmap(object):
         :returns: an IterResult object
         """
         for args in self.task_args:
-            self.submit(args)
+            self.submit(*args)
         return self.get_results()
 
     def get_results(self):
@@ -697,6 +700,8 @@ class Starmap(object):
         return self.sender.send((self.task_func, args, self.monitor))
 
     def _loop(self):
+        if not hasattr(self, 'socket'):  # no submit was ever made
+            return ()
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)

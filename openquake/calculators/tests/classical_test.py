@@ -15,6 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import mock
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
@@ -226,15 +229,16 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
-        # test preclassical
-        self.run_calc(
-            case_14.__file__, 'job.ini', calculation_mode='preclassical')
+        # test preclassical and OQ_SAMPLE_SOURCES
+        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='.1'):
+            self.run_calc(
+                case_14.__file__, 'job.ini', calculation_mode='preclassical')
         rpt = view('ruptures_per_trt', self.calc.datastore)
         self.assertEqual(rpt, """\
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 447          447         
+simple_fault.xml 0      Active Shallow Crust 66           447         
 ================ ====== ==================== ============ ============""")
         # test classical
         self.assert_curves_ok([
@@ -243,7 +247,8 @@ simple_fault.xml 0      Active Shallow Crust 447          447
         ], case_14.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_15(self):  # full enumeration
+    def test_case_15(self):
+        # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
