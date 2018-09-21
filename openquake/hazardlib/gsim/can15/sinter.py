@@ -5,6 +5,7 @@
 
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SInter
@@ -18,7 +19,11 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     """
     """
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc',))
+    #: Supported tectonic region type is subduction interface
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    #: Required site parameters
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
 
     def _get_delta(dists):
         """
