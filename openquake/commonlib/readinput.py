@@ -35,7 +35,6 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -739,35 +738,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
             csm, srcfilter, dist,
             oqparam.minimum_magnitude, oqparam.random_seed,
             monitor('prefilter'))
-
-    if event_based:
-        param = {}
-        param['filter_distance'] = oqparam.filter_distance
-        param['ses_per_logic_tree_path'] = oqparam.ses_per_logic_tree_path
-        param['gsims_by_trt'] = gsim_lt.values
-        srcs_by_grp = parallel.Starmap.apply(
-            sample_rupts,
-            (csm.get_sources(), srcfilter, param, monitor('sample_rupts')),
-            concurrent_tasks=oqparam.concurrent_tasks,
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id')).reduce()
-        # log the preprocessing phase only in an event based calculation
-        csm = csm.new(srcs_by_grp)
     return csm
-
-
-def sample_rupts(srcs, srcfilter, param, monitor):
-    """
-    A small wrapper around :func:
-    `openquake.hazardlib.calc.stochastic.sample_ruptures`
-    """
-    ok = []
-    for src in srcs:
-        gsims = param['gsims_by_trt'][src.tectonic_region_type]
-        dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
-        vars(src).update(dic)
-        ok.append(src)
-    return {srcs[0].src_group_id: ok}
 
 
 def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
