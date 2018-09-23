@@ -452,13 +452,12 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon, mem_gb)
+            self.save_task_info(result.mon, mem_gb)
             if result.splice:
                 yield from val
             else:
                 yield val
-        if self.received and not self.name.startswith('_'):
+        if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
             msg = 'Received %s from %d outputs in %d seconds, max_output=%s'
@@ -626,15 +625,14 @@ class Starmap(object):
         Log the progress of the computation in percentage
         """
         done = self.total - self.todo
-        if not self.name.startswith('_'):  # public task
-            percent = int(float(done) / self.total * 100)
-            if not hasattr(self, 'prev_percent'):  # first time
-                self.prev_percent = 0
-                self.progress('Sent %s of data in %d task(s)',
-                              humansize(self.sent.sum()), self.total)
-            elif percent > self.prev_percent:
-                self.progress('%s %3d%%', self.name, percent)
-                self.prev_percent = percent
+        percent = int(float(done) / self.total * 100)
+        if not hasattr(self, 'prev_percent'):  # first time
+            self.prev_percent = 0
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent.sum()), self.total)
+        elif percent > self.prev_percent:
+            self.progress('%s %3d%%', self.name, percent)
+            self.prev_percent = percent
         return done
 
     def submit(self, *args):
