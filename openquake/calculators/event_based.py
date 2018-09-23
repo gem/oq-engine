@@ -390,6 +390,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
     def execute(self):
+        if self.oqparam.ground_motion_fields is False:
+            return {}
         if self.oqparam.hazard_calculation_id:
             def saving_sources_by_task(allargs, dstore):
                 return allargs
@@ -408,8 +410,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            if self.oqparam.ground_motion_fields is False:
-                logging.info('Generating ruptures only')
             ires = parallel.Starmap(
                 self.core_task.__func__, iterargs, self.monitor()
             ).submit_all()
@@ -472,7 +472,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 set_random_years(self.datastore, 'events',
                                  int(self.oqparam.investigation_time))
 
-        if oq.hazard_curves_from_gmfs:
+        if result and oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.rlzs_assoc.realizations
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
