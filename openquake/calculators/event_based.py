@@ -258,7 +258,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def process_csm(self):
+    def build_ruptures(self):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -435,7 +435,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
         if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.process_csm()
+            self.csm_info = self.build_ruptures()
         else:
             self.datastore.parent = datastore.read(
                 self.oqparam.hazard_calculation_id)
@@ -445,7 +445,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Save the SES collection
         """
-        self.rupser.close()
+        self.rupser.close()  # called by ucerf_event_based
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
