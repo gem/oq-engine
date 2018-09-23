@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import re
 import abc
 import math
 import warnings
@@ -500,6 +501,12 @@ def _norm_sf(values):
     return ndtr(- values)
 
 
+ADM_STR = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADM_FLOAT = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADM_TAB = ['STRESS_COEFFS']
+
+
 class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
@@ -524,6 +531,37 @@ class GMPE(GroundShakingIntensityModel):
         Returns numpy array of exponents of ``values``.
         """
         return numpy.exp(values)
+
+    def set_parameters(self):
+        """
+        Combines the parameters of the GMPE provided at the construction level
+        with the ones originally assigned to the backbone modified GMPE.
+        """
+        # Creating the list of keys
+        keys = {}
+        for key in dir(self):
+            if not callable(getattr(self, key)) and not re.search('^_', key):
+                # keys[key] = set(())
+                keys[key] = getattr(self, key)
+        # Setting parameters
+        for key in dir(self.gmpe):
+            if key in keys and not callable(getattr(self.gmpe, key)):
+                if re.search('^[A-Z]', key) and not re.search('^C', key):
+                    tmps = getattr(self.gmpe, key)
+                    try:
+                        keys[key] |= tmps
+                    except TypeError:
+                        if key in ADM_STR:
+                            keys[key] = tmps
+                        elif key in ADM_TAB:
+                            pass
+                        else:
+                            print('This is not a recognized type ', key)
+                            raise
+                    else:
+                        keys[key] = tmps
+        for key in keys:
+            setattr(self, key, keys[key])
 
 
 class IPE(GroundShakingIntensityModel):
