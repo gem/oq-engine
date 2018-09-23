@@ -145,6 +145,7 @@ fast sources.
 """
 import os
 import sys
+import time
 import socket
 import signal
 import pickle
@@ -434,6 +435,7 @@ class IterResult(object):
     def __iter__(self):
         if self.iresults == ():
             return ()
+        t0 = time.time()
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -459,9 +461,9 @@ class IterResult(object):
         if self.received and not self.name.startswith('_'):
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = 'Received %s from %d outputs, maximum per output %s'
+            msg = 'Received %s from %d outputs in %d seconds, max_output=%s'
             logging.info(msg, humansize(tot), len(self.received),
-                         humansize(max_per_output))
+                         time.time() - t0, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
