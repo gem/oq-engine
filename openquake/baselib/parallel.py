@@ -405,7 +405,7 @@ if OQ_DISTRIBUTE.startswith('celery'):
     safetask = task(safely_call, queue='celery')  # has to be global
 
 elif OQ_DISTRIBUTE == 'dask':
-    from dask.distributed import Client, as_completed
+    from dask.distributed import Client
 
 
 class IterResult(object):
