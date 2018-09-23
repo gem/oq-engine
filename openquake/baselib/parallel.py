@@ -460,8 +460,8 @@ class IterResult(object):
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = 'Received %s from %d outputs in %d seconds, max_output=%s'
-            logging.info(msg, humansize(tot), len(self.received),
+            logging.info('Received %s from %d outputs in %d seconds, biggest '
+                         'output=%s', humansize(tot), len(self.received),
                          time.time() - t0, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):

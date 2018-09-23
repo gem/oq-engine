@@ -42,10 +42,10 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 200  # decided by MS
+RUPTURES_PER_BLOCK = 1000  # decided by MS
 
 
-def sample_rupts(srcs, srcfilter, param, monitor):
+def build_ruptures(srcs, srcfilter, param, monitor):
     """
     A small wrapper around :func:
     `openquake.hazardlib.calc.stochastic.sample_ruptures`
@@ -274,9 +274,10 @@ class EventBasedCalculator(base.HazardCalculator):
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         if 'ucerf' not in self.oqparam.calculation_mode:
-            mon = self.monitor('sample_rupts')
+            mon = self.monitor('build_ruptures')
+            logging.info('Building ruptures')
             srcs_by_grp = parallel.Starmap.apply(
-                sample_rupts,
+                build_ruptures,
                 (self.csm.get_sources(), self.src_filter, param, mon),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=operator.attrgetter('num_ruptures'),
