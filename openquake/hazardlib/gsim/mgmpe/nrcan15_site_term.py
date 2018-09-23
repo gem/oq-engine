@@ -49,23 +49,28 @@ class NRCan15SiteTerm(GMPE):
         self.gmpe = registry[gmpe]()
         self.set_parameters()
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        # Check if this GMPE can be used
+        assert (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
+                'vs30' in self.REQUIRES_SITES_PARAMETERS)
+        # Prepare sites
         sites_rock = copy.deepcopy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites=sites,
-                                                      rup=rup,
-                                                      dists=dists, imt=imt,
-                                                      stddev_types=stddev_types)
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites=sites_rock,
+                                                      rup=rup, dists=dists,
+                                                      imt=imt,
+                                                      stddev_types=stds_types)
         if not str(imt) == 'PGA':
             # compute mean and standard deviation on rock
-            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(sites, rup,
-                dists, imt, stddev_types)
+            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
+                sites=sites_rock, rup=rup, dists=dists, imt=imt,
+                stddev_types=stds_types)
         else:
             mean_rock = mean
         fa = self.BA08_AB06(sites.vs30, imt, np.exp(mean_rock))
@@ -92,7 +97,7 @@ class NRCan15SiteTerm(GMPE):
         fa = np.ones_like(vs30)
         if np.any(vs30 > 760.):
             # For values of Vs30 greater than 760 a linear interpolation is
-            # used
+            # used between the gm factor at 2000 m/s and 760 m/s
             C2 = self.COEFFS_AB06r[imt]
             fa[vs30 > 760.] = 10**(np.interp(np.log10(vs30[vs30 > 760.]),
                                              np.log10([760.0, 2000.0]),
@@ -100,7 +105,7 @@ class NRCan15SiteTerm(GMPE):
             fa = 1./fa
         else:
             # For values of Vs30 lower than 760 the amplification is computed
-            # using the site term of the Atkinson and Boore (2006)
+            # using the site term of Boore and Atkinson (2008)
             C = self.COEFFS_BA08[imt]
             nl = BooreAtkinson2008()._get_site_amplification_non_linear(
                 np.array([vs30]), np.array([pgar]), C)

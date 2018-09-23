@@ -551,7 +551,7 @@ class GMPE(GroundShakingIntensityModel):
                     try:
                         keys[key] |= tmps
                     except TypeError:
-                        if key in ADM_STR:
+                        if key in ADM_STR or key in ADM_FLOAT:
                             keys[key] = tmps
                         elif key in ADM_TAB:
                             pass

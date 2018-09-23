@@ -20,6 +20,7 @@ import unittest
 from openquake.hazardlib.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
@@ -68,6 +69,29 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
         # Compute the expected results
         gmpe = AtkinsonBoore2006()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected)
+        np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_gm_calculation_amplification(self):
+        """ Test mean and std calculation """
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe='BooreAtkinson2008')
+        # Set parameters
+        sites = Dummy.get_site_collection(4, vs30=400.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rjb = np.array([1., 10., 30., 70.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = BooreAtkinson2008()
         mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
                                                                  dists, imt,
                                                                  stdt)
