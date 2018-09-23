@@ -50,13 +50,20 @@ def sample_rupts(srcs, srcfilter, param, monitor):
     A small wrapper around :func:
     `openquake.hazardlib.calc.stochastic.sample_ruptures`
     """
-    ok = []
+    acc = AccumDict(accum=[])
+    n = 0
     for src in srcs:
         gsims = param['gsims_by_trt'][src.tectonic_region_type]
         dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
         vars(src).update(dic)
-        ok.append(src)
-    return {srcs[0].src_group_id: ok}
+        acc[src.src_group_id].append(src)
+        n += len(dic['eb_ruptures'])
+        if n > RUPTURES_PER_BLOCK:
+            yield acc
+            n = 0
+            acc.clear()
+    if acc:
+        yield acc
 
 
 def weight(src):
