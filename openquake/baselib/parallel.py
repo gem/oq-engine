@@ -699,6 +699,10 @@ class Starmap(object):
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
         return self.sender.send((self.task_func, args, self.monitor))
 
+    def dask_submit(self, args):
+        return self.dask_client.submit(safely_call, self.task_func, args,
+                                       self.monitor)
+
     def _loop(self):
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
