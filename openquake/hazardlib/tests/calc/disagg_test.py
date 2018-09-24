@@ -58,7 +58,7 @@ class BuildDisaggDataTestCase(unittest.TestCase):
                                            n_epsilons, mag_bin_width,
                                            dist_bin_width, coord_bin_width)
         tm = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
-        self.assertTrue(numpy.all(tm[2:] > 0))
+        numpy.testing.assert_array_less(numpy.zeros_like(tm[2:]), tm[2:])
 
 
 class DigitizeLonsTestCase(unittest.TestCase):
