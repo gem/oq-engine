@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Added first 'modified GMPE' implementing the site term for Canada 2015 model
+
   [Daniele Viganò]
   * Support for Ubuntu Trusty is removed
   * Replaced supervisord with systemd in Ubuntu packages
