@@ -185,7 +185,7 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def split_sources(srcs, min_mag):
+def split_sources(srcs):
     """
     :param srcs: sources
     :returns: a pair (split sources, split time)
@@ -195,6 +195,7 @@ def split_sources(srcs, min_mag):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        min_mag = getattr(src, 'min_mag', 0)
         small_mag = min_mag and src.get_min_max_mag()[0] < min_mag
         if not splittable(src):
             if not small_mag:
