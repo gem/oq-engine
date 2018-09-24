@@ -31,11 +31,11 @@ class NRCan15SiteTerm(GMPE):
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion.
 
-    :param gmpe:
-        An instance of the :class:`~openquake.hazardlib.gsim.base.GMPE`
+    :param gmpe_name:
+        The name of a GMPE class
     """
 
-    #
+    # Parameters
     REQUIRES_SITES_PARAMETERS = set(('vs30'))
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
@@ -45,8 +45,8 @@ class NRCan15SiteTerm(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe):
-        self.gmpe = registry[gmpe]()
+    def __init__(self, gmpe_name):
+        self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
