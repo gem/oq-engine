@@ -37,6 +37,8 @@ PRECISION = pmf.PRECISION
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
+GSIM = gsim.get_available_gsims()
+
 
 def disagg_outputs(value):
     """
