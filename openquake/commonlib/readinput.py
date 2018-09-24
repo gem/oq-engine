@@ -673,12 +673,13 @@ def set_min_mag(srcs, min_mag):
     """
     for src in srcs:
         try:
-            mag = min_mag[src.tectonic_region_type]
+            mmag = min_mag[src.tectonic_region_type]
         except KeyError:
-            mag = min_mag['default']
+            mmag = min_mag['default']
         except TypeError:
-            mag = min_mag
-        src.min_mag = mag
+            mmag = min_mag
+        if mmag:
+            src.min_mag = mmag
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
