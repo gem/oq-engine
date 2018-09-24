@@ -37,7 +37,7 @@ from mock import Mock
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib import valid
+from openquake.hazardlib.gsim import registry
 from openquake.commonlib import logictree, readinput, tests
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
@@ -2374,7 +2374,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             def __str__(self):
                 return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
 
-        valid.GSIM['FakeGMPETable'] = FakeGMPETable
+        registry['FakeGMPETable'] = FakeGMPETable
         try:
             xml = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -2396,7 +2396,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
 Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
         finally:
-            del valid.GSIM['FakeGMPETable']
+            del registry['FakeGMPETable']
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
