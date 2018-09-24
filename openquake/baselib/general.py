@@ -47,7 +47,7 @@ F64 = numpy.float64
 
 def duplicated(items):
     """
-    :returns: True if the items are duplicated, False, otherwise
+    :returns: True if the items are duplicated, False otherwise
     """
     return len(items) > len(set(items))
 
