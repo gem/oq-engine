@@ -36,7 +36,7 @@ from collections import namedtuple
 from decimal import Decimal
 import numpy
 from openquake.baselib import hdf5, node, parallel
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -54,8 +54,6 @@ from openquake.baselib.node import (
 MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
-
-GSIM_DICT = {}  # gsim_repr -> gsim
 
 
 class LtSourceModel(object):
@@ -1438,12 +1436,9 @@ class GsimLogicTree(object):
                                 raise InvalidLogicTree(
                                     'Found duplicated IMTs in gsimByImt')
                             gsim = MultiGMPE(gsim_by_imt=gsimdict)
-                    elif uncertainty.text.strip() in GSIM_DICT:
-                        gsim = GSIM_DICT[uncertainty.text.strip()]
                     else:
-                        gsim_name = uncertainty.text.strip()
-                        gsim = self.instantiate(gsim_name, uncertainty.attrib)
-                        GSIM_DICT[gsim_name] = gsim
+                        gsim = self.instantiate(uncertainty.text.strip(),
+                                                uncertainty.attrib)
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
@@ -1452,7 +1447,7 @@ class GsimLogicTree(object):
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
                 assert sum(weights) == 1, weights
-                if len(branch_ids) > len(set(branch_ids)):
+                if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
         if len(trts) > len(set(trts)):
