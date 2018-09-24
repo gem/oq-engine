@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the rupture generation to yield bunches of ruptures, thus avoiding
+    the 4GB pickle limit
   * Parallelized the splitting of the sources, thus making the preprocessing
     faster
 
