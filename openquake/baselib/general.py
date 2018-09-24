@@ -45,6 +45,13 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
+def duplicated(items):
+    """
+    :returns: True if the items are duplicated, False otherwise
+    """
+    return len(items) > len(set(items))
+
+
 def cached_property(method):
     """
     :param method: a method without arguments except self
