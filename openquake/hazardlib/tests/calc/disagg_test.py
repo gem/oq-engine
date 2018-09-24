@@ -27,6 +27,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import Site
 from openquake.hazardlib.gsim.bradley_2013 import Bradley2013
+from openquake.hazardlib import sourceconverter
 
 DATA_PATH = os.path.dirname(__file__)
 
@@ -36,30 +37,28 @@ class BuildDisaggDataTestCase(unittest.TestCase):
     def test_magnitude_bins(self):
         """ Testing build disaggregation matrix """
         fname = os.path.join(DATA_PATH, 'data', 'ssm.xml')
-        groups = to_python(fname)
+        converter = sourceconverter.SourceConverter(50., 1., 10, 0.1, 10)
+        groups = to_python(fname, converter)
         sources = []
         for g in groups:
             sources += g.sources
-        site = Site(Point(172.63, -43.53), vs30=250)
+        site = Site(Point(172.63, -43.53), vs30=250, vs30measured=False,
+                    z1pt0=330)
         imt = SA(3.0)
-        iml = 0.25612220 
+        iml = 0.25612220
         gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: Bradley2013()}
         truncation_level = 3.0
         n_epsilons = 1
         mag_bin_width = 0.1
         dist_bin_width = 100.
         coord_bin_width = 100.
- 
-
-        print(sources)
         # Compute the disaggregation matrix
         edges, mtx = disagg.disaggregation(sources, site, imt, iml,
                                            gsim_by_trt, truncation_level,
                                            n_epsilons, mag_bin_width,
                                            dist_bin_width, coord_bin_width)
-        print(mtx.shape)
-        print(numpy.amax(mtx))
-        self.assertTrue(0 == 1)
+        tm = disagg.mag_pmf(mtx[:, :, :, :, :, 0])
+        self.assertTrue(numpy.all(tm[2:] > 0))
 
 
 class DigitizeLonsTestCase(unittest.TestCase):
