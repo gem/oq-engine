@@ -201,7 +201,6 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
-            calc.datastore.open('r')  # if closed
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):

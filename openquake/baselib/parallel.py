@@ -145,6 +145,7 @@ fast sources.
 """
 import os
 import sys
+import time
 import socket
 import signal
 import pickle
@@ -405,7 +406,7 @@ if OQ_DISTRIBUTE.startswith('celery'):
     safetask = task(safely_call, queue='celery')  # has to be global
 
 elif OQ_DISTRIBUTE == 'dask':
-    from dask.distributed import Client, as_completed
+    from dask.distributed import Client
 
 
 class IterResult(object):
@@ -432,6 +433,9 @@ class IterResult(object):
         self.received = []
 
     def __iter__(self):
+        if self.iresults == ():
+            return ()
+        t0 = time.time()
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -448,18 +452,17 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon, mem_gb)
+            self.save_task_info(result.mon, mem_gb)
             if result.splice:
                 yield from val
             else:
                 yield val
-        if self.received and not self.name.startswith('_'):
+        if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = 'Received %s from %d outputs, maximum per output %s'
-            logging.info(msg, humansize(tot), len(self.received),
-                         humansize(max_per_output))
+            logging.info('Received %s from %d outputs in %d seconds, biggest '
+                         'output=%s', humansize(tot), len(self.received),
+                         time.time() - t0, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
@@ -588,6 +591,7 @@ class Starmap(object):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
+        self.calc_id = getattr(self.monitor, 'calc_id', None)
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
@@ -621,18 +625,17 @@ class Starmap(object):
         Log the progress of the computation in percentage
         """
         done = self.total - self.todo
-        if not self.name.startswith('_'):  # public task
-            percent = int(float(done) / self.total * 100)
-            if not hasattr(self, 'prev_percent'):  # first time
-                self.prev_percent = 0
-                self.progress('Sent %s of data in %d task(s)',
-                              humansize(self.sent.sum()), self.total)
-            elif percent > self.prev_percent:
-                self.progress('%s %3d%%', self.name, percent)
-                self.prev_percent = percent
+        percent = int(float(done) / self.total * 100)
+        if not hasattr(self, 'prev_percent'):  # first time
+            self.prev_percent = 0
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent.sum()), self.total)
+        elif percent > self.prev_percent:
+            self.progress('%s %3d%%', self.name, percent)
+            self.prev_percent = percent
         return done
 
-    def submit(self, args):
+    def submit(self, *args):
         """
         Submit the given arguments to the underlying task
         """
@@ -646,10 +649,10 @@ class Starmap(object):
         assert isinstance(mon, Monitor), mon
         # add incremental task number and task weight
         mon.task_no = len(self.tasks) + 1
-        self.calc_id = getattr(mon, 'calc_id', None)
-        args = pickle_sequence(args)
-        self.sent += numpy.array([len(p) for p in args])
         dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist != 'no':
+            args = pickle_sequence(args)
+            self.sent += numpy.array([len(p) for p in args])
         res = getattr(self, dist + '_submit')(args)
         self.tasks.append(res)
 
@@ -658,7 +661,7 @@ class Starmap(object):
         :returns: an IterResult object
         """
         for args in self.task_args:
-            self.submit(args)
+            self.submit(*args)
         return self.get_results()
 
     def get_results(self):
@@ -696,7 +699,13 @@ class Starmap(object):
             self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
         return self.sender.send((self.task_func, args, self.monitor))
 
+    def dask_submit(self, args):
+        return self.dask_client.submit(safely_call, self.task_func, args,
+                                       self.monitor)
+
     def _loop(self):
+        if not hasattr(self, 'socket'):  # no submit was ever made
+            return ()
         if hasattr(self, 'sender'):
             self.sender.__exit__(None, None, None)
         isocket = iter(self.socket)

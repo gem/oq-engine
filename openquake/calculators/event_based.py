@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os.path
 import logging
+import operator
 import collections
 import numpy
 
@@ -26,6 +27,7 @@ from openquake.baselib.general import (
     AccumDict, block_splitter, split_in_slices, humansize, get_array)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
@@ -40,7 +42,28 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 200  # decided by MS
+RUPTURES_PER_BLOCK = 1000  # decided by MS
+
+
+def build_ruptures(srcs, srcfilter, param, monitor):
+    """
+    A small wrapper around :func:
+    `openquake.hazardlib.calc.stochastic.sample_ruptures`
+    """
+    acc = AccumDict(accum=[])
+    n = 0
+    for src in srcs:
+        gsims = param['gsims_by_trt'][src.tectonic_region_type]
+        dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
+        vars(src).update(dic)
+        acc[src.src_group_id].append(src)
+        n += len(dic['eb_ruptures'])
+        if n > param['ruptures_per_block']:
+            yield acc
+            n = 0
+            acc.clear()
+    if acc:
+        yield acc
 
 
 def weight(src):
@@ -242,16 +265,33 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def process_csm(self):  # called after split_all
+    def build_ruptures(self):
         """
         Prefilter the composite source model and store the source_info
         """
+        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
+        param['filter_distance'] = self.oqparam.filter_distance
+        param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
+        param['gsims_by_trt'] = self.csm.gsim_lt.values
+        if 'ucerf' not in self.oqparam.calculation_mode:
+            mon = self.monitor('build_ruptures')
+            logging.info('Building ruptures')
+            srcs_by_grp = parallel.Starmap.apply(
+                build_ruptures,
+                (self.csm.get_sources(), self.src_filter, param, mon),
+                concurrent_tasks=self.oqparam.concurrent_tasks,
+                weight=operator.attrgetter('num_ruptures'),
+                key=operator.attrgetter('src_group_id')).reduce()
+            # log the preprocessing phase only in an event based calculation
+            self.csm = self.csm.new(srcs_by_grp)
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         samples_by_grp = self.csm.info.get_samples_by_grp()
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for src in self.csm.get_sources():
             if hasattr(src, 'eb_ruptures'):  # except UCERF
+                # save the events always and the ruptures if oq.save_ruptures
+                self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     rlzs_assoc.get_rlzs_by_gsim,
@@ -259,9 +299,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if hasattr(src, 'calc_times'):
                 calc_times += src.calc_times
                 del src.calc_times
-            # save the events always and the ruptures if oq.save_ruptures
-            if hasattr(src, 'eb_ruptures'):
-                self.save_ruptures(src.eb_ruptures)
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -353,6 +390,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
     def execute(self):
+        if self.oqparam.ground_motion_fields is False:
+            return {}
         if self.oqparam.hazard_calculation_id:
             def saving_sources_by_task(allargs, dstore):
                 return allargs
@@ -371,8 +410,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 # then the Starmap will understand the case of a single
                 # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
-            if self.oqparam.ground_motion_fields is False:
-                logging.info('Generating ruptures only')
             ires = parallel.Starmap(
                 self.core_task.__func__, iterargs, self.monitor()
             ).submit_all()
@@ -406,7 +443,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
         if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.process_csm()
+            self.csm_info = self.build_ruptures()
         else:
             self.datastore.parent = datastore.read(
                 self.oqparam.hazard_calculation_id)
@@ -416,7 +453,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Save the SES collection
         """
-        self.rupser.close()
+        self.rupser.close()  # called by ucerf_event_based
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
@@ -435,7 +472,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 set_random_years(self.datastore, 'events',
                                  int(self.oqparam.investigation_time))
 
-        if oq.hazard_curves_from_gmfs:
+        if result and oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.rlzs_assoc.realizations
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
