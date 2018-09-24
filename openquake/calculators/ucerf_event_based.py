@@ -274,10 +274,12 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         logging.warn('%s is still experimental', self.__class__.__name__)
         oq = self.oqparam
         self.read_inputs()  # read the site collection
-        self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
+        eff_ruptures = {sg.id: sum(src.num_ruptures for src in sg)
+                        for sg in self.csm.src_groups}
+        self.csm.info.update_eff_ruptures(eff_ruptures)
         self.datastore['csm_info'] = self.csm_info = self.csm.info
         self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
@@ -285,10 +287,6 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-
-    def filter_csm(self):
-        return UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance), self.csm
 
     def gen_args(self, monitor):
         """
@@ -298,6 +296,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
+        ufilter = UcerfFilter(self.sitecol, self.oqparam.maximum_distance)
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
@@ -309,7 +308,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
                              filter_distance=oq.filter_distance,
                              gmf=oq.ground_motion_fields,
                              min_iml=self.get_min_iml(oq))
-                allargs.append((srcs, self.src_filter, rlzs_by_gsim[sm_id],
+                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
 

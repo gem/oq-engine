@@ -17,18 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import time
-import logging
 import operator
 import collections
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
+import rtree
 from scipy.interpolate import interp1d
+
 from openquake.baselib import hdf5, config
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
@@ -194,11 +190,18 @@ def split_sources(srcs, min_mag):
     :param srcs: sources
     :returns: a pair (split sources, split time)
     """
+    from openquake.hazardlib.source import splittable
     sources = []
-    split_time = []
+    split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
-        if min_mag and src.get_min_max_mag()[0] < min_mag:
+        small_mag = min_mag and src.get_min_max_mag()[0] < min_mag
+        if not splittable(src):
+            if not small_mag:
+                sources.append(src)
+                split_time[src.id] = time.time() - t0
+            continue
+        if small_mag:
             splits = []
             for s in src:
                 if min_mag and s.get_min_max_mag()[0] < min_mag:
@@ -211,7 +214,7 @@ def split_sources(srcs, min_mag):
                     splits.append(s)
         else:
             splits = list(src)
-        split_time.append(time.time() - t0)
+        split_time[src.id] = time.time() - t0
         sources.extend(splits)
         has_serial = hasattr(src, 'serial')
         has_samples = hasattr(src, 'samples')
@@ -350,29 +353,6 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, param, monitor):
-        """
-        Filter the sources in parallel by using Starmap.apply
-
-        :param sources: a sequence of sources
-        :param param: a dictionary of parameters including concurrent_tasks
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
-        """
-        sources_by_grp = Starmap.apply(
-            preprocess, (sources, self, param, monitor),
-            concurrent_tasks=param['concurrent_tasks'],
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'),
-            distribute=param.pop('distribute', None),
-            progress=logging.info if 'gsims_by_trt' in param else logging.debug
-            # log the preprocessing phase in an event based calculation
-        ).reduce()
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
-        return sources_by_grp
-
 
 class RtreeFilter(SourceFilter):
     """
@@ -401,8 +381,6 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)
