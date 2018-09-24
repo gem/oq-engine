@@ -35,7 +35,6 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -716,15 +715,10 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
-    event_based = 'event_based' in oqparam.calculation_mode
-    if event_based:
+    if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
-        dist = None
-    else:
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
@@ -736,38 +730,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     # splitting assumes that the serials have been initialized already
     if split_all and 'ucerf' not in oqparam.calculation_mode:
         csm = parallel_split_filter(
-            csm, srcfilter, dist,
-            oqparam.minimum_magnitude, oqparam.random_seed,
+            csm, srcfilter, oqparam.minimum_magnitude, oqparam.random_seed,
             monitor('prefilter'))
-
-    if event_based:
-        param = {}
-        param['filter_distance'] = oqparam.filter_distance
-        param['ses_per_logic_tree_path'] = oqparam.ses_per_logic_tree_path
-        param['gsims_by_trt'] = gsim_lt.values
-        srcs_by_grp = parallel.Starmap.apply(
-            sample_rupts,
-            (csm.get_sources(), srcfilter, param, monitor('sample_rupts')),
-            concurrent_tasks=oqparam.concurrent_tasks,
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id')).reduce()
-        # log the preprocessing phase only in an event based calculation
-        csm = csm.new(srcs_by_grp)
     return csm
-
-
-def sample_rupts(srcs, srcfilter, param, monitor):
-    """
-    A small wrapper around :func:
-    `openquake.hazardlib.calc.stochastic.sample_ruptures`
-    """
-    ok = []
-    for src in srcs:
-        gsims = param['gsims_by_trt'][src.tectonic_region_type]
-        dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
-        vars(src).update(dic)
-        ok.append(src)
-    return {srcs[0].src_group_id: ok}
 
 
 def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
@@ -789,7 +754,7 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
         yield splits, stime
 
 
-def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
+def parallel_split_filter(csm, srcfilter,  min_mag, seed, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
@@ -799,14 +764,12 @@ def parallel_split_filter(csm, srcfilter, dist, min_mag, seed, monitor):
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Splitting/filtering sources')
     sources = csm.get_sources()
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
         split_filter,
         (sources, srcfilter, min_mag, seed, sample_factor, mon),
-        maxweight=RUPTURES_PER_BLOCK,
-        distribute=dist,
-        progress=logging.debug,
-        weight=operator.attrgetter('num_ruptures'),
-        key=operator.attrgetter('src_group_id'))
+        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
+        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
