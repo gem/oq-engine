@@ -28,7 +28,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.risklib import riskinput
-from openquake.commonlib import util, readinput
+from openquake.commonlib import util
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
@@ -263,7 +263,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
 @base.calculators.add('ucerf_hazard')
 class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
-    Event based PSHA calculator generating the ruptures only
+    Event based PSHA calculator generating the ruptures and GMFs together
     """
     core_task = compute_hazard
 
@@ -272,19 +272,13 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         parse the logic tree and source model input
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
-        oq = self.oqparam
         self.read_inputs()  # read the site collection
-        self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
-        eff_ruptures = {sg.id: sum(src.num_ruptures for src in sg)
-                        for sg in self.csm.src_groups}
-        self.csm.info.update_eff_ruptures(eff_ruptures)
-        self.datastore['csm_info'] = self.csm_info = self.csm.info
-        self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
-        self.sm_by_grp = self.csm_info.get_sm_by_grp()
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
@@ -395,7 +389,7 @@ class UCERFRiskCalculator(EbrCalculator):
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = self.csm_info.grp_by("trt")
+        self.grp_trt = self.csm.info.grp_by("trt")
         res = parallel.Starmap(
             compute_losses, self.gen_args(),
             self.monitor()).submit_all()
