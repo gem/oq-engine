@@ -1,5 +1,5 @@
-Scenario calculations starting from USGS shakemaps (GALE)
-=========================================================
+Scenario calculations starting from USGS shakemaps
+==================================================
 
 Since version 3.1 the engine is able to perform `scenario_risk`
 and `scenario_damage` calculations starting from the shakemaps provided
