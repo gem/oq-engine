@@ -55,6 +55,8 @@ MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
 
+GSIM_DICT = {}  # gsim_repr -> gsim
+
 
 class LtSourceModel(object):
     """
@@ -1436,11 +1438,12 @@ class GsimLogicTree(object):
                                 raise InvalidLogicTree(
                                     'Found duplicated IMTs in gsimByImt')
                             gsim = MultiGMPE(gsim_by_imt=gsimdict)
-                    elif isinstance(uncertainty.text, str):
-                        uncertainty.text = gsim = self.instantiate(
-                            uncertainty.text.strip(), uncertainty.attrib)
-                    else:  # already converted
-                        gsim = uncertainty.text
+                    elif uncertainty.text.strip() in GSIM_DICT:
+                        gsim = GSIM_DICT[uncertainty.text.strip()]
+                    else:
+                        gsim_name = uncertainty.text.strip()
+                        gsim = self.instantiate(gsim_name, uncertainty.attrib)
+                        GSIM_DICT[gsim_name] = gsim
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
@@ -1533,7 +1536,7 @@ class GsimLogicTree(object):
 
 
 def parallel_read_source_models(gsim_lt, source_model_lt,
-                                  converter, monitor):
+                                converter, monitor):
     """
     Convert the source model files listed in the logic tree
     into picked files.
