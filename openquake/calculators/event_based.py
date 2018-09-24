@@ -58,7 +58,7 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         vars(src).update(dic)
         acc[src.src_group_id].append(src)
         n += len(dic['eb_ruptures'])
-        if n > param['RUPTURES_PER_BLOCK']:
+        if n > param['ruptures_per_block']:
             yield acc
             n = 0
             acc.clear()
@@ -269,7 +269,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        param = {'RUPTURES_PER_BLOCK': RUPTURES_PER_BLOCK}
+        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
