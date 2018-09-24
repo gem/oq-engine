@@ -18,6 +18,7 @@
 
 import unittest
 from openquake.hazardlib import imt, valid
+from openquake.hazardlib.gsim import registry
 
 
 class ValidationTestCase(unittest.TestCase):
@@ -141,10 +142,10 @@ class ValidationTestCase(unittest.TestCase):
 
             def __repr__(self):
                 return '<FakeGsim(%s)>' % self.arg
-        valid.GSIM['FakeGsim'] = FakeGsim
+        registry['FakeGsim'] = FakeGsim
         try:
             gsim = valid.gsim('FakeGsim', arg='0.1')
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
             self.assertEqual(gsim.minimum_distance, 0)
         finally:
-            del valid.GSIM['FakeGsim']
+            del registry['FakeGsim']
