@@ -26,8 +26,8 @@ import abc
 import math
 import warnings
 import functools
-from scipy.special import ndtr
 import numpy
+from scipy.special import ndtr
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
@@ -501,10 +501,11 @@ def _norm_sf(values):
     return ndtr(- values)
 
 
-ADM_STR = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
-           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
-ADM_FLOAT = ['DEFINED_FOR_REFERENCE_VELOCITY']
-ADM_TAB = ['STRESS_COEFFS']
+ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
+                             'COEFFS_SITE_RESPONSE']
 
 
 class GMPE(GroundShakingIntensityModel):
@@ -551,9 +552,10 @@ class GMPE(GroundShakingIntensityModel):
                     try:
                         keys[key] |= tmps
                     except TypeError:
-                        if key in ADM_STR or key in ADM_FLOAT:
+                        if (key in ADMITTED_STR_PARAMETERS or
+                            key in ADMITTED_FLOAT_PARAMETERS):
                             keys[key] = tmps
-                        elif key in ADM_TAB:
+                        elif (key in ADMITTED_TABLE_PARAMETERS):
                             pass
                         else:
                             print('This is not a recognized type ', key)

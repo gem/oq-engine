@@ -17,7 +17,7 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
@@ -31,7 +31,7 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
         """ Tests the instantiation """
-        mgmpe = NRCan15SiteTerm(gmpe='BooreEtAl2014')
+        mgmpe = NRCan15SiteTerm(gmpe_name='BooreEtAl2014')
         #
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
@@ -57,7 +57,7 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculation(self):
         """ Test mean and std calculation """
         # Modified gmpe
-        mgmpe = NRCan15SiteTerm(gmpe='AtkinsonBoore2006')
+        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
         # Set parameters
         sites = Dummy.get_site_collection(4, vs30=760.)
         rup = Dummy.get_rupture(mag=6.0)
@@ -80,7 +80,7 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
     def test_gm_calculation_amplification(self):
         """ Test mean and std calculation """
         # Modified gmpe
-        mgmpe = NRCan15SiteTerm(gmpe='BooreAtkinson2008')
+        mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
         sites = Dummy.get_site_collection(4, vs30=400.)
         rup = Dummy.get_rupture(mag=6.0)
