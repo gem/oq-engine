@@ -28,6 +28,7 @@ import numpy
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -35,8 +36,6 @@ from openquake.hazardlib.calc.filters import IntegrationDistance
 PRECISION = pmf.PRECISION
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
-
-GSIM = gsim.get_available_gsims()
 
 
 def disagg_outputs(value):
@@ -83,8 +82,10 @@ def gsim(value, **kwargs):
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
     else:
+        #if value == 'NRCan15SiteTerm':
+        #    import pdb; pdb.set_trace()
         try:
-            gsim_class = GSIM[value]
+            gsim_class = registry[value]
         except KeyError:
             raise ValueError('Unknown GSIM: %s' % value)
     try:
