@@ -72,6 +72,9 @@ class BooreAtkinson2008(GMPE):
     #: See paragraph 'Predictor Variables', pag 103
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -96,12 +99,14 @@ class BooreAtkinson2008(GMPE):
             # avoid recomputing PGA on rock, just add site terms
             mean = np.log(pga4nl) + \
                 self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                        C_SR)
         else:
             mean = self._compute_magnitude_scaling(rup, C) + \
                 self._compute_distance_scaling(rup, dists, C) + \
                 self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                        C_SR)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
