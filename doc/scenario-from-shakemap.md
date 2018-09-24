@@ -1,22 +1,19 @@
-Scenario calculations starting from USGS shakemaps (GALE)
-=========================================================
+Scenario calculations starting from USGS shakemaps
+==================================================
 
-The next version of the engine will be able to perform scenario_risk
-and scenario_damage calculations starting from the shakemaps provided
+Since version 3.1 the engine is able to perform `scenario_risk`
+and `scenario_damage` calculations starting from the shakemaps provided
 by the United States Geological Survey (USGS) service.
-
-Here is the proposed workflow.
 
 First of all, one has to prepare a parent calculation containing the
 full exposure and risk functions for the region of interest, say South
-America. To that aim the use will need to write a `job_hazard.ini` file
+America. To that aim the user will need to write a `job_hazard.ini` file
 like this one:
 
 ```
    [general]
    description = Full South America
    calculation_mode = scenario
-   sites_csv = south_america.csv
    exposure_file = full_exposure_model.xml
    structural_vulnerability_file = structural_vulnerability_model.xml
 ```
@@ -26,21 +23,15 @@ By running the calculation
 $ oq engine --run job_hazard.ini
 ```
 
-the exposure and the risk functions will be imported in the datastore. In
-this example there are only vulnerability functions for the loss type
+the exposure and the risk functions will be imported in the datastore.
+
+In this example there are only vulnerability functions for the loss type
 `structural`, but there could be more, and even fragility functions.
-This is a particular kind of hazard calculation in which the only output
-generated will be the hazard site collection, coming from the sites_csv
-file provided by the hazard team.
+
+The hazard has to be prepared only once.
 
 Let's suppose that the calculation ID of this hazard calculation is 1000.
-The hazard has to be prepared only once, so it is not a problem if the
-preparation is slow. The slowness will due to the procedure associating
-the assets to the hazard sites, which will involve millions of assets
-for South America. However, since it uses the rtree library which is very
-fast, it should take just minutes.
-
-Having prepared the hazard, we can now run the risk on a given shakemap.
+We can now run the risk on a given shakemap.
 For that, one need a `job_risk.ini` file like the following::
 
 ```
@@ -50,6 +41,7 @@ For that, one need a `job_risk.ini` file like the following::
    truncation_level = 3
    shakemap_id = usp000fjta
 ```
+
 This example refers to an Earthquake happened in Pisco in Peru in 2007
 (see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap).
 The risk can be computed by running the risk file against the prepared
@@ -61,7 +53,7 @@ $ oq run job_risk.ini --hc 1000
 
 The engine will perform the following operations:
 
-1. dowload the shakemap from the USGS web site and convert it in a format
+1. dowload the shakemap from the USGS web site and convert it into a format
    suitable for further processing, i.e. a shakemap array with lon, lat fields
 2. the shakemap array will be associated to the hazard sites in the region
    covered by the shakemap
