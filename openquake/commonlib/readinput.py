@@ -674,6 +674,8 @@ def set_min_mag(srcs, min_mag):
     for src in srcs:
         try:
             mmag = min_mag[src.tectonic_region_type]
+        except AttributeError:  # src is a node
+            continue
         except KeyError:
             mmag = min_mag['default']
         except TypeError:
