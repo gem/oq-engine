@@ -553,13 +553,13 @@ class GMPE(GroundShakingIntensityModel):
                         keys[key] |= tmps
                     except TypeError:
                         if (key in ADMITTED_STR_PARAMETERS or
-                            key in ADMITTED_FLOAT_PARAMETERS):
+                                key in ADMITTED_FLOAT_PARAMETERS):
                             keys[key] = tmps
                         elif (key in ADMITTED_TABLE_PARAMETERS):
                             pass
                         else:
-                            print('This is not a recognized type ', key)
-                            raise
+                            raise NameError('This is not a recognized type ' %
+                                            key)
                     else:
                         keys[key] = tmps
         for key in keys:
