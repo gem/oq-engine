@@ -145,6 +145,7 @@ fast sources.
 """
 import os
 import sys
+import time
 import socket
 import signal
 import pickle
@@ -434,6 +435,7 @@ class IterResult(object):
     def __iter__(self):
         if self.iresults == ():
             return ()
+        t0 = time.time()
         self.received = []
         for result in self.iresults:
             check_mem_usage()  # log a warning if too much memory is used
@@ -450,18 +452,17 @@ class IterResult(object):
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon, mem_gb)
+            self.save_task_info(result.mon, mem_gb)
             if result.splice:
                 yield from val
             else:
                 yield val
-        if self.received and not self.name.startswith('_'):
+        if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
-            msg = 'Received %s from %d outputs, maximum per output %s'
-            logging.info(msg, humansize(tot), len(self.received),
-                         humansize(max_per_output))
+            logging.info('Received %s from %d outputs in %d seconds, biggest '
+                         'output=%s', humansize(tot), len(self.received),
+                         time.time() - t0, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
@@ -624,15 +625,14 @@ class Starmap(object):
         Log the progress of the computation in percentage
         """
         done = self.total - self.todo
-        if not self.name.startswith('_'):  # public task
-            percent = int(float(done) / self.total * 100)
-            if not hasattr(self, 'prev_percent'):  # first time
-                self.prev_percent = 0
-                self.progress('Sent %s of data in %d task(s)',
-                              humansize(self.sent.sum()), self.total)
-            elif percent > self.prev_percent:
-                self.progress('%s %3d%%', self.name, percent)
-                self.prev_percent = percent
+        percent = int(float(done) / self.total * 100)
+        if not hasattr(self, 'prev_percent'):  # first time
+            self.prev_percent = 0
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent.sum()), self.total)
+        elif percent > self.prev_percent:
+            self.progress('%s %3d%%', self.name, percent)
+            self.prev_percent = percent
         return done
 
     def submit(self, *args):
