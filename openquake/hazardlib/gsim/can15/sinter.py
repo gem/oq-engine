@@ -37,6 +37,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
+        return mean, stds
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
@@ -62,10 +63,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         # Computing adjusted mean and stds
         mean_adj = np.log(np.exp(mean_zh06)*0.1 + np.exp(mean_am09)*0.5 +
                           np.exp(mean_ab15)*0.2 + np.exp(mean_ga14)*0.2)
-        # note that in this case we do not apply a triangular smoothing on
-        # distance as explained at page 996
-        stds_adj = np.log(np.exp(stds1) + np.exp(stds2) + np.exp(stds3) +
-                          np.exp(stds4))
+        stds_adj = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stds_adj
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
