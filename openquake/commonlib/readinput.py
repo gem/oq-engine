@@ -808,7 +808,7 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
             sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
         elif not srcs_by_grp:
             # raise an exception in the regular case (no sample_factor)
-            RuntimeError('All sources were filtered away!')
+            raise RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
             source_info[:, 'split_time'] = arr[:, 0]
             source_info[:, 'num_split'] = arr[:, 1]
