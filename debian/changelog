@@ -1,10 +1,13 @@
   [Michele Simionato]
+  * Changed the rupture generation to yield bunches of ruptures, thus avoiding
+    the 4GB pickle limit
   * Parallelized the splitting of the sources, thus making the preprocessing
     faster
 
   [Marco Pagani]
   * Implemented two additional versions of the Silva et al. 2002 GMPE
   * Added the possibility of setting rake to 'undefined'
+  * Added first 'modified GMPE' implementing the site term for Canada 2015 model
   * Fixed a bug in the disaggregation calculation due to wrong binning of magnitudes
 
   [Michele Simionato]
