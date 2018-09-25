@@ -636,7 +636,6 @@ class OqParam(valid.ParamSet):
                          % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
-            # check that we can write on the parent directory
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:
