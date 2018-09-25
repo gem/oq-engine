@@ -627,7 +627,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_export_dir(self):
         """
-        The `export_dir` parameter must refer to a directory,
+        export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
         if not self.export_dir:
@@ -637,11 +637,11 @@ class OqParam(valid.ParamSet):
             return True
         elif not os.path.exists(self.export_dir):
             # check that we can write on the parent directory
-            pdir = os.path.dirname(self.export_dir)
-            can_write = os.path.exists(pdir) and os.access(pdir, os.W_OK)
-            if can_write:
-                os.mkdir(self.export_dir)
-            return can_write
+            try:
+                os.makedirs(self.export_dir)
+            except PermissionError:
+                return False
+            return True
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
