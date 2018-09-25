@@ -195,23 +195,23 @@ def split_sources(srcs):
     split_time = {}  # src.id -> time
     for src in srcs:
         t0 = time.time()
+        mag_a, mag_b = src.get_min_max_mag()
         min_mag = getattr(src, 'min_mag', 0)
-        small_mag = min_mag and src.get_min_max_mag()[0] < min_mag
-        if not splittable(src):
-            if not small_mag:
-                sources.append(src)
-                split_time[src.id] = time.time() - t0
+        if mag_b < min_mag:  # discard the source completely
             continue
-        if small_mag:
+        if not splittable(src):
+            sources.append(src)
+            split_time[src.id] = time.time() - t0
+            continue
+        if min_mag:
             splits = []
             for s in src:
-                if min_mag and s.get_min_max_mag()[0] < min_mag:
-                    # discard some ruptures
-                    s.min_mag = min_mag
-                    s.num_ruptures = s.count_ruptures()
-                    if s.num_ruptures:
-                        splits.append(s)
-                else:
+                s.min_mag = min_mag
+                mag_a, mag_b = s.get_min_max_mag()
+                if mag_b < min_mag:
+                    continue
+                s.num_ruptures = s.count_ruptures()
+                if s.num_ruptures:
                     splits.append(s)
         else:
             splits = list(src)
