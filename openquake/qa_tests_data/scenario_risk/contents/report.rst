@@ -3,8 +3,8 @@ QA Scenario Risk for contents
 
 ============== ===================
 checksum32     3,665,953,184      
-date           2018-09-05T10:03:41
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-09-25T14:27:44
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 3, num_levels = 20
@@ -75,30 +75,13 @@ W        1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   3         3         
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-scenario_risk      0.00365 3.409E-04 0.00327 0.00392 3        
-================== ======= ========= ======= ======= =========
-
-Data transfer
--------------
-============= ============================================================== ========
-task          sent                                                           received
-scenario_risk riskinputs=8.94 KB riskmodel=6.39 KB monitor=927 B param=330 B 1.6 KB  
-============= ============================================================== ========
-
 Slowest operations
 ------------------
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-total scenario_risk 0.01095   0.28516   3     
-computing risk      0.00804   0.28516   3     
-building riskinputs 0.00480   0.0       1     
-computing gmfs      0.00317   0.0       1     
-saving gmfs         0.00135   0.0       1     
-getting hazard      9.837E-04 0.0       6     
-reading exposure    4.225E-04 0.00391   1     
+building riskinputs 0.00417   0.0       1     
+computing gmfs      0.00334   0.0       1     
+saving gmfs         0.00137   0.0       1     
+reading exposure    4.015E-04 0.0       1     
 =================== ========= ========= ======
