@@ -515,8 +515,6 @@ class CompositeSourceModel(collections.Sequence):
                         if sm.samples > 1:
                             src.samples = sm.samples
                         sources.append(src)
-        if kind == 'all' and not sources:
-            raise RuntimeError('All sources were filtered away!')
         return sources
 
     @cached_property

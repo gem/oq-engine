@@ -19,9 +19,8 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
 from openquake.calculators import base
