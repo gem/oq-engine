@@ -94,7 +94,6 @@ xmlns:gml="http://www.opengis.net/gml"
     <sourceGroup
     rup_interdep="indep"
     src_interdep="indep"
-    srcs_weights="1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00"
     tectonicRegion="Active Shallow Crust"
     >
         <multiPointSource
@@ -149,11 +148,12 @@ xmlns:gml="http://www.opengis.net/gml"
 </nrml>
 '''
 
+
 class PointToMultiPointTestCase(unittest.TestCase):
     def test_simple(self):
         testfile = os.path.join(testdir, 'two-point-sources.xml')
         sm = nrml.read(testfile).sourceModel
-        update_source_model(sm)
+        update_source_model(sm, testfile)
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
@@ -165,7 +165,7 @@ class PointToMultiPointTestCase(unittest.TestCase):
             testdir, '../../../qa_tests_data/classical/case_30/ssm/shallow/'
             'gridded_seismicity_source_4.xml'))
         sm = nrml.read(testfile).sourceModel
-        update_source_model(sm)
+        update_source_model(sm, testfile)
         with io.BytesIO() as f:
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
