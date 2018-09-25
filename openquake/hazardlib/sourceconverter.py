@@ -893,15 +893,17 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
-def update_source_model(sm_node):
+def update_source_model(sm_node, fname):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
     """
     i = 0
     for group in sm_node:
+        if 'srcs_weights' in group.attrib:
+            raise InvalidFile('srcs_weights must be removed in %s' % fname)
         if not group.tag.endswith('sourceGroup'):
             raise InvalidFile('wrong NRML, got %s instead of '
-                              'sourceGroup' % group.tag)
+                              'sourceGroup in %s' % (group.tag, fname))
         psrcs = []
         others = []
         for src in group:
