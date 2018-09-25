@@ -3,8 +3,8 @@ Scenario QA Test, Case 2
 
 ============== ===================
 checksum32     773,454,739        
-date           2018-06-26T14:56:59
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:27:43
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -53,12 +53,3 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
-
-Slowest operations
-------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-reading site collection 0.00876  0.0       1     
-computing gmfs          0.00151  0.0       1     
-======================= ======== ========= ======

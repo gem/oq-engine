@@ -23,7 +23,6 @@ import logging
 import operator
 import itertools
 import traceback
-from functools import partial
 from datetime import datetime
 from shapely import wkt
 import numpy
@@ -318,45 +317,29 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def filter_csm(self):
+    def get_filter(self):
         """
-        :returns: (filtered CompositeSourceModel, SourceFilter)
+        :returns: a SourceFilter/RtreeFilter or None
         """
         oq = self.oqparam
-        mon = self.monitor('preprocess')
         self.hdf5cache = self.datastore.hdf5cache()
-        src_filter = SourceFilter(self.sitecol.complete, oq.maximum_distance,
-                                  self.hdf5cache)
-        param = dict(concurrent_tasks=oq.concurrent_tasks)
-        if 'EventBased' in self.__class__.__name__:
-            param['filter_distance'] = oq.filter_distance
-            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
-            param['gsims_by_trt'] = self.csm.gsim_lt.values
-        else:
-            # use processpool in classical
-            param['distribute'] = 'processpool'
-            if oq.prefilter_sources == 'no':
-                logging.info('Not prefiltering the sources')
-                return src_filter, self.csm
-        dist = param.get('distribute', os.environ['OQ_DISTRIBUTE'])
-        if oq.prefilter_sources == 'rtree' and dist in ('no', 'processpool'):
+        self.src_filter = SourceFilter(
+            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
+        if 'ucerf' in oq.calculation_mode:
+            # do not preprocess
+            return
+        elif (oq.prefilter_sources == 'rtree' and 'event_based' not in
+                oq.calculation_mode):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
             logging.info('Preprocessing the sources with rtree')
-            prefilter = RtreeFilter(self.sitecol.complete, oq.maximum_distance,
-                                    self.hdf5cache)
-            sources_by_grp = prefilter.pfilter(
-                self.csm.get_sources(), param, mon)
-            csm = self.csm.new(sources_by_grp)
+            src_filter = RtreeFilter(self.sitecol.complete,
+                                     oq.maximum_distance, self.hdf5cache)
         else:
-            logging.info('Preprocessing the sources')
-            sources_by_grp = src_filter.pfilter(
-                self.csm.get_sources(), param, mon)
-            csm = self.csm.new(sources_by_grp)
-        logging.info('There are %d realizations', csm.info.get_num_rlzs())
-        return src_filter, csm
+            src_filter = self.src_filter
+        return src_filter
 
     def can_read_parent(self):
         """
@@ -395,15 +378,8 @@ class HazardCalculator(BaseCalculator):
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
-            self.csm = readinput.get_composite_source_model(oq, self.monitor())
-            if oq.disagg_by_src:
-                self.csm = self.csm.grp_by_src()
-            with self.monitor('splitting sources', measuremem=1, autoflush=1):
-                logging.info('Splitting sources')
-                self.csm.split_all(oq.minimum_magnitude)
-            self.csm.info.gsim_lt.check_imts(oq.imtls)
-            self.csm.info.gsim_lt.store_gmpe_tables(self.datastore)
-            self.rup_data = {}
+            self.csm = readinput.get_composite_source_model(
+                oq, self.monitor(), srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
@@ -617,37 +593,11 @@ class HazardCalculator(BaseCalculator):
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
 
-    def count_eff_ruptures(self, result_dict, src_group_id):
+    def store_csm_info(self, eff_ruptures):
         """
-        Returns the number of ruptures in the src_group (after filtering)
-        or 0 if the src_group has been filtered away.
-
-        :param result_dict: a dictionary with keys (grp_id, gsim)
-        :param src_group_id: the source group ID
+        Save info about the composite source model inside the csm_info dataset
         """
-        return result_dict.eff_ruptures.get(src_group_id, 0)
-
-    def store_source_info(self, infos, acc):
-        # save the calculation times per each source
-        if infos:
-            rows = sorted(
-                infos.values(),
-                key=operator.attrgetter('calc_time'),
-                reverse=True)
-            array = numpy.zeros(len(rows), source.SourceInfo.dt)
-            for i, row in enumerate(rows):
-                for name in array.dtype.names:
-                    value = getattr(row, name)
-                    if name == 'num_sites':
-                        value /= (row.num_split or 1)
-                    elif name == 'grp_id' and isinstance(value, list):
-                        # same ID sources; store only the first
-                        value = value[0]
-                    array[i][name] = value
-            self.datastore['source_info'] = array
-            infos.clear()
-        self.csm.info.update_eff_ruptures(
-            partial(self.count_eff_ruptures, acc))
+        self.csm.info.update_eff_ruptures(eff_ruptures)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(self.oqparam.sm_lt_path)
         if not self.rlzs_assoc:
             raise RuntimeError('Empty logic tree: too much filtering?')
@@ -662,12 +612,19 @@ class HazardCalculator(BaseCalculator):
             logging.warn(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
-        if 'source_info' in self.datastore:
-            # the table is missing for UCERF, we should fix that
-            self.datastore.set_attrs(
-                'source_info', nbytes=array.nbytes,
-                has_dupl_sources=self.csm.has_dupl_sources)
         self.datastore.flush()
+
+    def store_source_info(self, calc_times):
+        """
+        Save (weight, num_sites, calc_time) inside the source_info dataset
+        """
+        if calc_times:
+            source_info = self.datastore['source_info']
+            ids, vals = zip(*sorted(calc_times.items()))
+            vals = numpy.array(vals)  # shape (n, 3)
+            source_info[ids, 'weight'] += vals[:, 0]
+            source_info[ids, 'num_sites'] += vals[:, 1]
+            source_info[ids, 'calc_time'] += vals[:, 2]
 
     def post_process(self):
         """For compatibility with the engine"""

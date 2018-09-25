@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-09-05T10:04:32
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-09-25T14:28:39
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -148,23 +148,23 @@ Number of ruptures per tectonic region type
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
 source_model.xml 0      Active Shallow Crust 444          296         
-source_model.xml 1      Active Shallow Crust 268          296         
-source_model.xml 2      Active Shallow Crust 207          296         
+source_model.xml 1      Active Shallow Crust 208          296         
+source_model.xml 2      Active Shallow Crust 149          296         
 source_model.xml 3      Active Shallow Crust 534          296         
 source_model.xml 4      Active Shallow Crust 298          296         
 source_model.xml 5      Active Shallow Crust 239          296         
 source_model.xml 6      Active Shallow Crust 474          296         
 source_model.xml 7      Active Shallow Crust 238          296         
-source_model.xml 8      Active Shallow Crust 204          296         
-source_model.xml 9      Active Shallow Crust 498          296         
-source_model.xml 10     Active Shallow Crust 198          296         
-source_model.xml 11     Active Shallow Crust 172          296         
+source_model.xml 8      Active Shallow Crust 179          296         
+source_model.xml 9      Active Shallow Crust 409          296         
+source_model.xml 10     Active Shallow Crust 173          296         
+source_model.xml 11     Active Shallow Crust 114          296         
 source_model.xml 12     Active Shallow Crust 465          296         
 source_model.xml 13     Active Shallow Crust 229          296         
-source_model.xml 14     Active Shallow Crust 197          296         
-source_model.xml 15     Active Shallow Crust 500          296         
-source_model.xml 16     Active Shallow Crust 202          296         
-source_model.xml 17     Active Shallow Crust 174          296         
+source_model.xml 14     Active Shallow Crust 170          296         
+source_model.xml 15     Active Shallow Crust 411          296         
+source_model.xml 16     Active Shallow Crust 175          296         
+source_model.xml 17     Active Shallow Crust 116          296         
 source_model.xml 18     Active Shallow Crust 483          296         
 source_model.xml 19     Active Shallow Crust 247          296         
 source_model.xml 20     Active Shallow Crust 188          296         
@@ -178,27 +178,45 @@ source_model.xml 26     Active Shallow Crust 221          296
 
 ============= =====
 #TRT models   27   
-#eff_ruptures 8,691
+#eff_ruptures 8,175
 #tot_ruptures 7,992
-#tot_weight   8,175
+#tot_weight   0    
 ============= =====
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= ========= ======
-source_id source_class      num_ruptures calc_time split_time num_sites num_split events
-========= ================= ============ ========= ========== ========= ========= ======
-SFLT2     SimpleFaultSource 89           0.14695   1.836E-05  1.00000   61        0     
-SFLT1     SimpleFaultSource 132          0.06808   2.384E-06  1.00000   32        0     
-========= ================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      SFLT1     S    0     2     60           0.0       3.433E-05  0.0       1         0.0   
+0      SFLT2     S    2     4     384          0.0       2.146E-04  0.0       2         0.0   
+1      SFLT1     S    0     2     60           0.0       1.407E-05  0.0       1         0.0   
+1      SFLT2     S    2     4     148          0.0       1.144E-04  0.0       2         0.0   
+2      SFLT1     S    0     2     60           0.0       1.144E-05  0.0       1         0.0   
+2      SFLT2     S    2     4     89           0.0       1.049E-04  0.0       2         0.0   
+3      SFLT1     S    0     2     150          0.0       1.073E-05  0.0       1         0.0   
+3      SFLT2     S    2     4     384          0.0       1.016E-04  0.0       2         0.0   
+4      SFLT1     S    0     2     150          0.0       1.049E-05  0.0       1         0.0   
+4      SFLT2     S    2     4     148          0.0       1.016E-04  0.0       2         0.0   
+5      SFLT1     S    0     2     150          0.0       1.073E-05  0.0       1         0.0   
+5      SFLT2     S    2     4     89           0.0       1.016E-04  0.0       2         0.0   
+6      SFLT1     S    0     2     90           0.0       1.049E-05  0.0       1         0.0   
+6      SFLT2     S    2     4     384          0.0       1.006E-04  0.0       2         0.0   
+7      SFLT1     S    0     2     90           0.0       1.025E-05  0.0       1         0.0   
+7      SFLT2     S    2     4     148          0.0       9.918E-05  0.0       2         0.0   
+8      SFLT1     S    0     2     90           0.0       1.049E-05  0.0       1         0.0   
+8      SFLT2     S    2     4     89           0.0       9.918E-05  0.0       2         0.0   
+9      SFLT1     S    0     2     25           0.0       1.025E-05  0.0       1         0.0   
+9      SFLT2     S    2     4     384          0.0       9.918E-05  0.0       2         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-SimpleFaultSource 0.21504   2     
-================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.0       54    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -206,54 +224,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ======= ======= ======= =========
-operation-duration   mean    stddev  min     max     num_tasks
-pickle_source_models 0.01879 NaN     0.01879 0.01879 1        
-count_eff_ruptures   0.00398 0.00189 0.00164 0.00993 65       
-preprocess           0.00345 0.00189 0.00125 0.01183 68       
-==================== ======= ======= ======= ======= =========
-
-Fastest task
-------------
-taskno=61, weight=132, duration=0 s, sources="SFLT1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   132     NaN    132 132 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=9, weight=210, duration=0 s, sources="SFLT2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   210     NaN    210 210 1
-======== ======= ====== === === =
+================== ======= ====== ======= ======= =========
+operation-duration mean    stddev min     max     num_tasks
+read_source_models 0.01888 NaN    0.01888 0.01888 1        
+split_filter       0.06423 NaN    0.06423 0.06423 1        
+================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-==================== ================================================================================ ========
-task                 sent                                                                             received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                             156 B   
-count_eff_ruptures   sources=83.4 KB param=32.63 KB monitor=19.49 KB srcfilter=13.96 KB gsims=7.62 KB 23.51 KB
-preprocess           srcs=74.51 KB monitor=21.18 KB srcfilter=16.8 KB param=2.39 KB                   80.35 KB
-==================== ================================================================================ ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     1.8 KB  
+split_filter       srcs=16.17 KB monitor=432 B srcfilter=253 B sample_factor=21 B seed=14 B 23.83 KB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-========================== ======== ========= ======
-operation                  time_sec memory_mb counts
-========================== ======== ========= ======
-total count_eff_ruptures   0.25842  4.67969   65    
-managing sources           0.25779  0.0       1     
-total preprocess           0.23433  0.87109   68    
-total pickle_source_models 0.01879  0.0       1     
-aggregate curves           0.01499  0.0       65    
-store source_info          0.00710  0.0       1     
-splitting sources          0.00143  0.0       1     
-========================== ======== ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+updating source_info     0.07873  0.0       1     
+total split_filter       0.06423  0.0       1     
+total read_source_models 0.01888  0.0       1     
+======================== ======== ========= ======

@@ -159,7 +159,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         C_HR = self.COEFFS_HARD_ROCK[imt]
         C_BC = self.COEFFS_BC[imt]
         C_SR = self.COEFFS_SOIL_RESPONSE[imt]
-        SC = self.STRESS_COEFFS[imt]
+        SC = self.COEFFS_STRESS[imt]
 
         return C_HR, C_BC, C_SR, SC
 
@@ -339,7 +339,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         'Vref': 760.0
     }
 
-    STRESS_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""\
     IMT    delta  M1    Mh
     pga    0.15   0.50  5.50
     0.025  0.15   0.00  5.00

@@ -75,11 +75,9 @@ import io
 import os
 import re
 import sys
-import pickle
 import decimal
 import logging
 import operator
-import tempfile
 import collections
 
 import numpy
@@ -182,7 +180,7 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()
+default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -329,7 +327,6 @@ def read_source_models(fnames, converter,  monitor):
         sm.relpath = fname[P:]
         fname2sm[fname] = sm
     return fname2sm
-
 
 
 def read(source, chatty=True, stop=None):

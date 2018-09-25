@@ -28,6 +28,7 @@ import numpy
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -83,8 +84,10 @@ def gsim(value, **kwargs):
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
     else:
+        #if value == 'NRCan15SiteTerm':
+        #    import pdb; pdb.set_trace()
         try:
-            gsim_class = GSIM[value]
+            gsim_class = registry[value]
         except KeyError:
             raise ValueError('Unknown GSIM: %s' % value)
     try:
@@ -272,14 +275,21 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name=''):
+    def __init__(self, minrange, maxrange, name='', accept=None):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
+        self.accept = accept
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float_(value)
+        try:
+            f = float_(value)
+        except ValueError:  # passed a string
+            if value == self.accept:
+                return value
+            else:
+                raise
         if f > self.maxrange:
             raise ValueError("%s %s is bigger than the maximum (%s)" %
                              (self.name, f, self.maxrange))
@@ -945,10 +955,10 @@ def point3d(value, lon, lat, depth):
     return longitude(lon), latitude(lat), positivefloat(depth)
 
 
-strike_range = FloatRange(0, 360)
-slip_range = strike_range
-dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180)
+strike_range = FloatRange(0, 360, 'strike')
+slip_range = FloatRange(0, 360, 'slip')
+dip_range = FloatRange(0, 90, 'dip')
+rake_range = FloatRange(-180, 180, 'rake', 'undefined')
 
 
 def ab_values(value):
@@ -1014,7 +1024,6 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
-
 
 
 # used for the exposure validation

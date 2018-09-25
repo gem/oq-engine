@@ -22,18 +22,13 @@ BIONIC_DEP =
 BIONIC_REC =
 XENIAL_DEP =
 XENIAL_REC =
-TRUSTY_DEP =
-TRUSTY_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
 	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
+	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
-else ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
 else
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
@@ -70,4 +65,4 @@ override_dh_gencontrol:
 	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
 
 %:
-	dh --with python3 --with quilt $@
+	dh --with python3 --with quilt,systemd $@
