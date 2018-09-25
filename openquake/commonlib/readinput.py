@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import csv
 import copy
 import zlib
@@ -23,17 +24,18 @@ import shutil
 import zipfile
 import logging
 import tempfile
+import operator
 import configparser
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5
+from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -46,6 +48,7 @@ from openquake.commonlib import logictree, source, writers
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
+RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 U16 = numpy.uint16
@@ -209,7 +212,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
-    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
@@ -380,6 +382,9 @@ def get_gsim_lt(oqparam, trts=['*']):
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             set([StdDev.TOTAL])):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+    trts = set(oqparam.minimum_magnitude) - {'default'}
+    expected_trts = set(gsim_lt.values)
+    assert trts <= expected_trts, (trts, expected_trts)
     return gsim_lt
 
 
@@ -502,13 +507,19 @@ class SourceModelFactory(object):
         return sm
 
 
-source_dt = numpy.dtype([
-    ('grp_id', numpy.uint16),
-    ('source_id', hdf5.vstr),
-    ('code', (numpy.string_, 1)),
-    ('gidx1', numpy.uint32),
-    ('gidx2', numpy.uint32),
-    ('filtered', numpy.bool)])
+source_info_dt = numpy.dtype([
+    ('grp_id', numpy.uint16),          # 0
+    ('source_id', hdf5.vstr),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('gidx1', numpy.uint32),           # 3
+    ('gidx2', numpy.uint32),           # 4
+    ('num_ruptures', numpy.uint32),    # 5
+    ('calc_time', numpy.float32),      # 6
+    ('split_time', numpy.float32),     # 7
+    ('num_sites', numpy.float32),      # 8
+    ('num_split',  numpy.uint32),      # 9
+    ('weight', numpy.float32),         # 10
+])
 
 
 def store_sm(smodel, h5):
@@ -516,15 +527,8 @@ def store_sm(smodel, h5):
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
     :param h5: a :class:`openquake.baselib.hdf5.File` instance
     """
-    try:
-        sources = h5['sources']
-    except KeyError:
-        sources = hdf5.create(h5, 'sources', source_dt, shape=(None,),
-                              fillvalue=None)
-    try:
-        srcgeoms = h5['srcgeoms']
-    except KeyError:
-        srcgeoms = hdf5.create(h5, 'srcgeoms', point3d, shape=(None,))
+    sources = h5['source_info']
+    source_geom = h5['source_geom']
     gid = 0
     for sg in smodel:
         srcs = []
@@ -534,11 +538,12 @@ def store_sm(smodel, h5):
             n = len(srcgeom)
             geom = numpy.zeros(n, point3d)
             geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-            srcs.append((sg.id, src.source_id, src.code, gid, gid + n, 0))
+            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                         src.num_ruptures, 0, 0, 0, 0, 0))
             geoms.append(geom)
             gid += n
-        hdf5.extend(srcgeoms, numpy.concatenate(geoms))
-        hdf5.extend(sources, numpy.array(srcs, source_dt))
+        hdf5.extend(source_geom, numpy.concatenate(geoms))
+        hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -578,6 +583,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     smlt_dir = os.path.dirname(source_model_lt.filename)
     idx = 0
     grp_id = 0
+    if monitor.hdf5:
+        sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
+        hdf5.create(monitor.hdf5, 'source_geom', point3d)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
@@ -585,9 +593,15 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             if oqparam.calculation_mode.startswith('ucerf'):
                 sg = copy.copy(grp)
                 sg.id = grp_id
-                sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.id = idx
+                sg.sources = [src]
                 src_groups.append(sg)
+                idx += 1
                 grp_id += 1
+                data = [((sg.id, src.source_id, src.code, 0, 0,
+                         src.num_ruptures, 0, 0, 0, 0, 0))]
+                hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
@@ -650,7 +664,24 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, monitor=None, in_memory=True):
+def set_min_mag(srcs, min_mag):
+    """
+    Set the attribute .min_mag
+
+    :param srcs: a sequence of sources
+    :param min_mag: a dictionary TRT- > magnitude or a scalar
+    """
+    for src in srcs:
+        try:
+            mmag = min_mag[src.tectonic_region_type]
+        except KeyError:
+            mmag = min_mag['default']
+        if mmag:
+            src.min_mag = mmag
+
+
+def get_composite_source_model(oqparam, monitor=None, in_memory=True,
+                               split_all=True, srcfilter=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -660,6 +691,10 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
          a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if False, just parse the XML without instantiating the sources
+    :param split_all:
+        if True, split all the sources in the models
+    :param srcfilter:
+        if not None, perform a preprocess operation on the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -694,12 +729,88 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True):
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+    if not in_memory:
+        return csm
 
     if 'event_based' in oqparam.calculation_mode:
-        # initialize the rupture serial numbers before filtering; in
+        # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+
+    # TODO: check why the seeds still depend on the minimun_magnitude
+    set_min_mag(csm.get_sources(), oqparam.minimum_magnitude)
+
+    if oqparam.disagg_by_src:
+        csm = csm.grp_by_src()  # one group per source
+
+    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    if monitor.hdf5:
+        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
+
+    # splitting assumes that the serials have been initialized already
+    if split_all and 'ucerf' not in oqparam.calculation_mode:
+        csm = parallel_split_filter(
+            csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
     return csm
+
+
+def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
+    """
+    Split the given source and filter the subsources by distance and by
+    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
+    Yields a pair (split_sources, split_time) if split_sources is non-empty.
+    """
+    splits, stime = split_sources(srcs)
+    if splits and sample_factor:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+        # will run a computation 100 times smaller
+        splits = random_filter(splits, sample_factor, seed)
+        # NB: for performance, sample before splitting
+    if splits and srcfilter:
+        splits = list(srcfilter.filter(splits))
+    if splits:
+        yield splits, stime
+
+
+def parallel_split_filter(csm, srcfilter, seed, monitor):
+    """
+    Apply :func:`split_filter` in parallel to the composite source model.
+
+    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
+    """
+    mon = monitor('split_filter')
+    sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    logging.info('Splitting/filtering sources')
+    sources = csm.get_sources()
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smap = parallel.Starmap.apply(
+        split_filter,
+        (sources, srcfilter, seed, sample_factor, mon),
+        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
+        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
+    if monitor.hdf5:
+        source_info = monitor.hdf5['source_info']
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
+    srcs_by_grp = collections.defaultdict(list)
+    with monitor('updating source_info', autoflush=True):
+        arr = numpy.zeros((len(sources), 2), F32)
+        for splits, stime in smap:
+            for split in splits:
+                i = split.id
+                arr[i, 0] += stime[i]
+                arr[i, 1] += 1
+                srcs_by_grp[split.src_group_id].append(split)
+        if sample_factor and not srcs_by_grp:
+            sys.stderr.write('Too much sampling, no sources\n')
+            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
+        elif not srcs_by_grp:
+            # raise an exception in the regular case (no sample_factor)
+            raise RuntimeError('All sources were filtered away!')
+        elif monitor.hdf5:
+            source_info[:, 'split_time'] = arr[:, 0]
+            source_info[:, 'num_split'] = arr[:, 1]
+    return csm.new(srcs_by_grp)
 
 
 def get_imts(oqparam):

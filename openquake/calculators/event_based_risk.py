@@ -19,9 +19,8 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
 from openquake.calculators import base
@@ -323,6 +322,8 @@ class EbrCalculator(base.RiskCalculator):
                  for e, losses in zip(self.eids, self.agglosses)
                  for r, loss in enumerate(losses) if loss.sum()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
+            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
     def postproc(self):
@@ -342,7 +343,7 @@ class EbrCalculator(base.RiskCalculator):
             return
         if dstore.parent:
             dstore.parent.open('r')  # to read the ruptures
-        if 'ruptures' in dstore:
+        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
                 rlt, lbr = build_loss_tables(dstore)

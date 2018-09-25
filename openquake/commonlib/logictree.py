@@ -36,7 +36,7 @@ from collections import namedtuple
 from decimal import Decimal
 import numpy
 from openquake.baselib import hdf5, node, parallel
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -1327,11 +1327,10 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
-    def store_gmpe_tables(self, dstore):
+    def store_gmpe_tables(self, dest):
         """
         Store the GMPE tables in HDF5 format inside the datastore
         """
-        dest = dstore.hdf5
         dirname = os.path.dirname(self.fname)
         for gmpe_table in sorted(self.gmpe_tables):
             hdf5path = os.path.join(dirname, gmpe_table)
@@ -1339,9 +1338,9 @@ class GsimLogicTree(object):
                 for group in f:
                     name = '%s/%s' % (gmpe_table, group)
                     if hasattr(f[group], 'value'):  # dataset, not group
-                        dstore[name] = f[group].value
+                        dest[name] = f[group].value
                         for k, v in f[group].attrs.items():
-                            dstore[name].attrs[k] = v
+                            dest[name].attrs[k] = v
                     else:
                         grp = dest.require_group(gmpe_table)
                         f.copy(group, grp)
@@ -1437,11 +1436,9 @@ class GsimLogicTree(object):
                                 raise InvalidLogicTree(
                                     'Found duplicated IMTs in gsimByImt')
                             gsim = MultiGMPE(gsim_by_imt=gsimdict)
-                    elif isinstance(uncertainty.text, str):
-                        uncertainty.text = gsim = self.instantiate(
-                            uncertainty.text.strip(), uncertainty.attrib)
-                    else:  # already converted
-                        gsim = uncertainty.text
+                    else:
+                        gsim = self.instantiate(uncertainty.text.strip(),
+                                                uncertainty.attrib)
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
@@ -1450,7 +1447,7 @@ class GsimLogicTree(object):
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
                 assert sum(weights) == 1, weights
-                if len(branch_ids) > len(set(branch_ids)):
+                if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
         if len(trts) > len(set(trts)):
@@ -1534,7 +1531,7 @@ class GsimLogicTree(object):
 
 
 def parallel_read_source_models(gsim_lt, source_model_lt,
-                                  converter, monitor):
+                                converter, monitor):
     """
     Convert the source model files listed in the logic tree
     into picked files.

@@ -129,7 +129,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
-        dskeys.add('hcurves')
+        if oq.hazard_stats():
+            dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
@@ -161,7 +162,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     for key in sorted(dskeys & exportable):
         try:
             size_mb = dstore.get_attr(key, 'nbytes') / MB
-        except KeyError:
+        except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
     ds_size = os.path.getsize(dstore.hdf5path) / MB

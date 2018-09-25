@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009','HM2018']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -105,7 +105,7 @@ class OqParam(valid.ParamSet):
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
-    minimum_magnitude = valid.Param(valid.positivefloat, 0)
+    minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -235,17 +235,6 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
-
-        # checks for hazard outputs
-        if not self.hazard_stats():
-            if self.uniform_hazard_spectra:
-                raise InvalidFile(
-                    '%(job_ini)s: uniform_hazard_spectra=true is inconsistent '
-                    'with mean_hazard_curves=false' % self.inputs)
-            elif self.hazard_maps:
-                raise InvalidFile(
-                    '%(job_ini)s: hazard_maps=true is inconsistent '
-                    'with mean_hazard_curves=false' % self.inputs)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
