@@ -33,7 +33,7 @@ mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
 
 
 def get(arr, i):
-    if isinstance(arr, numpy.ndarray):
+    if hasattr(arr, '__getitem__'):
         return arr[i]
     return arr
 
