@@ -222,9 +222,8 @@ def check_mem_usage(monitor=None, soft_percent=None, hard_percent=None):
         msg = 'Using over %d%% of the memory in %s!'
         calc_id = getattr(monitor, 'calc_id', 0)
         if calc_id:
-            msg += ' [calc_id=%d]' % calc_id
-            dbcmd('log', calc_id, datetime.utcnow(), 'WARNING', '', msg %
-                  (used_mem_percent, hostname))
+            dbcmd('log', calc_id, datetime.utcnow(), 'WARNING',
+                  '[calc_id=%d]' % calc_id, msg % (used_mem_percent, hostname))
         else:
             logging.warn(msg, used_mem_percent, hostname)
 
