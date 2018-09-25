@@ -12,6 +12,7 @@ from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.can15.western import get_sigma
 
 from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
 from openquake.hazardlib.gsim.atkinson_boore_2006 import \
@@ -80,13 +81,12 @@ class EasternCan15Mid(PezeshkEtAl2011):
         stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean, stddevs
 
-    def _get_delta(stds, dists):
+    def _get_delta(self, stds, dists):
         """
         Computes the additional delta to be used for the computation of the
         upp and low models
         """
-        delta = np.zeros_like(dists.rjb)
-        delta = np.max([(0.1-0.001*dists.repi), 0.0])
+        delta = np.maximum((0.1-0.001*dists.repi), np.zeros_like(dists.repi))
         return delta
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -164,10 +164,15 @@ class EasternCan15Low(EasternCan15Mid):
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        mean, stds = self._get_mean(sites, rup, dists, imt, stddev_types)
+        # This is just used for testing purposes
+        if len(stddev_types) == 0:
+            stddev_types = [StdDev.TOTAL]
+        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
+                                                stddev_types)
         stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         delta = self._get_delta(stds, dists)
         mean = mean - stds - delta
+        mean = np.squeeze(mean)
         return mean, stddevs
 
 
@@ -178,8 +183,13 @@ class EasternCan15Upp(EasternCan15Mid):
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
-        mean, stds = self._get_mean(sites, rup, dists, imt, stddev_types)
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        # This is just used for testing purposes
+        if len(stddev_types) == 0:
+            stddev_types = [StdDev.TOTAL]
+        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
+                                                stddev_types)
+        stddevs = [[np.ones(len(dists.rjb))*get_sigma(imt)]]
         delta = self._get_delta(stds, dists)
         mean = mean + stds + delta
+        mean = np.squeeze(mean)
         return mean, stddevs

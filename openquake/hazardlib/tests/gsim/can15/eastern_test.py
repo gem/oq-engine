@@ -20,12 +20,28 @@ from openquake.hazardlib.gsim.can15.eastern import (EasternCan15Mid,
                                                     EasternCan15Low)
 
 
+class EasternCan15LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EasternCan15Upp
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_ENA_low.csv',
+                   max_discrep_percentage=170.)
+
+
+class EasternCan15HighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = EasternCan15Upp
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_ENA_high.csv',
+                   max_discrep_percentage=170.)
+
+
 class EasternCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = EasternCan15Mid
 
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_med.csv',
-                   max_discrep_percentage=0.4)
+                   max_discrep_percentage=100.)
     """
     def test_std_total(self):
         self.check('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
