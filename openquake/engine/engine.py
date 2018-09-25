@@ -186,8 +186,14 @@ def raiseMasterKilled(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE.startswith('celery'):
-        signal.signal(signal.SIGINT, inhibitSigInt)
+    # this code has been disabled because it's causing issues with 'nohup':
+    # grep Sig /proc/$!/status: SigIgn:	0000000001001000
+    # last digit should be '1' and not '0'.
+    # A workaround would be using 'disown'. Code can be restored/removed after
+    # further investigation is performed.
+    # Ref: https://unix.stackexchange.com/a/420663
+    # if OQ_DISTRIBUTE.startswith('celery'):
+    #     signal.signal(signal.SIGINT, inhibitSigInt)
 
     msg = 'Received a signal %d' % signum
     if signum in (signal.SIGTERM, signal.SIGINT):
