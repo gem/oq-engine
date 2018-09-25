@@ -55,15 +55,25 @@ class WesternRuptureDimensionTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(computed, expected)
 
 
+class WesternCan15HighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15Upp
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_Wcrust_high.csv',
+                   max_discrep_percentage=80.)
+
+
 class WesternCan15MidTestCase(BaseGSIMTestCase):
     GSIM_CLASS = WesternCan15Mid
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_med.csv',
-                   max_discrep_percentage=0.4)
-    """
-    def test_std_total(self):
-        self.check('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
-    """
+                   max_discrep_percentage=80.)
 
+
+class WesternCan15LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15Low
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_Wcrust_low.csv',
+                   max_discrep_percentage=80.)

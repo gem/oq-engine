@@ -25,13 +25,12 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
 
-    def _get_delta(dists):
+    def _get_delta(self, dists):
         """
         Computes the additional delta to be used for the computation of the
         upp and low models
         """
-        delta = np.zeros_like(dists.rrup)
-        delta = np.min([(0.15-0.0007*dists.rrup), 0.35])
+        delta = np.minimum((0.15-0.0007*dists.rrup), 0.35)
         return delta
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -89,6 +88,9 @@ class SInterCan15Low(SInterCan15Mid):
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
         mean -= self._get_delta(dists)
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
+        mean = np.squeeze(mean)
+        return mean, stddevs
 
 
 class SInterCan15Upp(SInterCan15Mid):
@@ -97,5 +99,6 @@ class SInterCan15Upp(SInterCan15Mid):
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
         mean += self._get_delta(dists)
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
+        mean = np.squeeze(mean)
         return mean, stddevs
