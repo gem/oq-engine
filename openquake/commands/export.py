@@ -41,6 +41,7 @@ def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
             print('Exported %s in %s' % (general.humansize(nbytes), fnames))
     if mon.duration > 1:
         print(mon)
+    dstore.close()
 
 
 export.arg('datastore_key', 'datastore key')
