@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     1,429,593,239      
-date           2018-09-05T10:03:41
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-09-25T14:27:45
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 2, num_levels = 8
@@ -71,30 +71,13 @@ taxonomy mean    stddev min max num_sites num_assets
 tax1     1.00000 0.0    1   1   2         2         
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-scenario_risk      0.07966 5.467E-04 0.07928 0.08005 2        
-================== ======= ========= ======= ======= =========
-
-Data transfer
--------------
-============= =============================================================== ========
-task          sent                                                            received
-scenario_risk riskinputs=15.06 KB riskmodel=2.62 KB monitor=618 B param=220 B 1.6 KB  
-============= =============================================================== ========
-
 Slowest operations
 ------------------
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-total scenario_risk 0.15933   1.40234   2     
-computing risk      0.15709   1.40234   2     
-building riskinputs 0.00378   0.0       1     
-saving gmfs         0.00217   0.0       1     
-getting hazard      8.013E-04 0.0       4     
-reading exposure    5.710E-04 0.0       1     
-computing gmfs      5.643E-04 0.0       1     
+building riskinputs 0.00322   0.0       1     
+saving gmfs         0.00250   0.0       1     
+reading exposure    5.794E-04 0.0       1     
+computing gmfs      5.107E-04 0.0       1     
 =================== ========= ========= ======
