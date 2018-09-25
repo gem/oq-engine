@@ -217,8 +217,11 @@ def check_mem_usage(monitor=Monitor(),
                           (used_mem_percent, hard_percent))
     elif used_mem_percent > soft_percent:
         hostname = socket.gethostname()
-        logging.warn('Using over %d%% of the memory in %s!',
-                     used_mem_percent, hostname)
+        msg = 'Using over %d%% of the memory in %s!'
+        calc_id = getattr(monitor, 'calc_id', 0)
+        if calc_id:
+            msg += ' [calc_id=%d]' % calc_id
+        logging.warn(msg, used_mem_percent, hostname)
 
 
 class Pickled(object):
