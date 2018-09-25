@@ -156,6 +156,7 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
+from datetime import datetime
 import psutil
 import numpy
 try:
@@ -201,13 +202,14 @@ def oq_distribute(task=None):
     return dist
 
 
-def check_mem_usage(monitor=Monitor(),
-                    soft_percent=None, hard_percent=None):
+def check_mem_usage(monitor=None, soft_percent=None, hard_percent=None):
     """
     Display a warning if we are running out of memory
 
     :param int mem_percent: the memory limit as a percentage
     """
+    if monitor:
+        from openquake.commonlib.logs import dbcmd
     soft_percent = soft_percent or config.memory.soft_mem_limit
     hard_percent = hard_percent or config.memory.hard_mem_limit
     used_mem_percent = psutil.virtual_memory().percent
@@ -221,7 +223,10 @@ def check_mem_usage(monitor=Monitor(),
         calc_id = getattr(monitor, 'calc_id', 0)
         if calc_id:
             msg += ' [calc_id=%d]' % calc_id
-        logging.warn(msg, used_mem_percent, hostname)
+            dbcmd('log', calc_id, datetime.utcnow(), 'WARNING', '', msg %
+                  (used_mem_percent, hostname))
+        else:
+            logging.warn(msg, used_mem_percent, hostname)
 
 
 class Pickled(object):
