@@ -370,6 +370,7 @@ def safely_call(func, args, monitor=dummy_mon):
         return Result.new(func, args, monitor)
 
     mon = args[-1]
+    check_mem_usage(mon)  # log a warning if too much memory is used
     mon.operation = 'total ' + func.__name__
     mon.measuremem = True
     if mon is not monitor:
