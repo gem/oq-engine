@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ===================
 checksum32     98,343,102         
-date           2018-09-05T10:04:13
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-09-25T14:28:14
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -75,19 +75,19 @@ source_model.xml 0      Active Shallow Crust 3,000        3,000
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  3,000        6.66350   2.623E-06  1.00000   1         6     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         P    0     1     3,000        7.70147   1.860E-05  1.00000   1         6.00000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  6.66350   1     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    7.70147   1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -95,36 +95,32 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ====== ======= ======= =========
-operation-duration   mean    stddev min     max     num_tasks
-pickle_source_models 0.00426 NaN    0.00426 0.00426 1        
-preprocess           6.66881 NaN    6.66881 6.66881 1        
-compute_gmfs         0.00483 NaN    0.00483 0.00483 1        
-==================== ======= ====== ======= ======= =========
+================== ======= ====== ======= ======= =========
+operation-duration mean    stddev min     max     num_tasks
+read_source_models 0.00501 NaN    0.00501 0.00501 1        
+split_filter       0.01076 NaN    0.01076 0.01076 1        
+build_ruptures     7.70398 NaN    7.70398 7.70398 1        
+================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-==================== =========================================================================================== ========
-task                 sent                                                                                        received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                                        158 B   
-preprocess           srcs=0 B srcfilter=0 B param=0 B monitor=0 B                                                20.4 KB 
-compute_gmfs         sources_or_ruptures=20.51 KB param=2.5 KB rlzs_by_gsim=420 B monitor=307 B src_filter=220 B 7.66 KB 
-==================== =========================================================================================== ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     1.55 KB 
+split_filter       srcs=13.01 KB monitor=432 B srcfilter=220 B sample_factor=21 B seed=15 B 13.04 KB
+build_ruptures     srcs=0 B srcfilter=0 B param=0 B monitor=0 B                             20.56 KB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total preprocess           6.66881   0.0       1     
-total compute_gmfs         0.00483   0.0       1     
-total pickle_source_models 0.00426   0.0       1     
-saving ruptures            0.00410   0.0       1     
-store source_info          0.00409   0.0       1     
-making contexts            0.00367   0.0       6     
-building ruptures          0.00315   0.0       1     
-managing sources           0.00297   0.0       1     
-GmfGetter.init             8.550E-04 0.0       1     
-splitting sources          2.120E-04 0.0       1     
-aggregating hcurves        1.812E-04 0.0       1     
-========================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     7.70398  0.0       1     
+updating source_info     0.01789  0.0       1     
+total split_filter       0.01076  0.0       1     
+store source_info        0.00632  0.0       1     
+total read_source_models 0.00501  0.0       1     
+making contexts          0.00477  0.0       6     
+saving ruptures          0.00414  0.0       1     
+======================== ======== ========= ======

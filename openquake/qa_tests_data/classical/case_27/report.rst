@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ===================
 checksum32     1,195,921,690      
-date           2018-09-05T10:04:33
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-09-25T14:28:39
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 6
@@ -74,33 +74,33 @@ source_model.xml 0      Subduction Interface 19           19
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= ========= ======
-source_id source_class               num_ruptures calc_time split_time num_sites num_split events
-========= ========================== ============ ========= ========== ========= ========= ======
-case_01   NonParametricSeismicSource 1            0.00174   0.0        1.00000   1         0     
-case_02   NonParametricSeismicSource 1            1.431E-05 0.0        1.00000   1         0     
-case_03   NonParametricSeismicSource 1            8.583E-06 0.0        1.00000   1         0     
-case_04   NonParametricSeismicSource 1            7.629E-06 0.0        1.00000   1         0     
-case_05   NonParametricSeismicSource 1            6.914E-06 0.0        1.00000   1         0     
-case_06   NonParametricSeismicSource 1            6.676E-06 0.0        1.00000   1         0     
-case_09   NonParametricSeismicSource 1            6.676E-06 0.0        1.00000   1         0     
-case_07   NonParametricSeismicSource 1            6.437E-06 0.0        1.00000   1         0     
-case_08   NonParametricSeismicSource 1            6.437E-06 0.0        1.00000   1         0     
-case_10   NonParametricSeismicSource 1            6.437E-06 0.0        1.00000   1         0     
-case_11   NonParametricSeismicSource 1            6.437E-06 0.0        1.00000   1         0     
-case_13   NonParametricSeismicSource 2            6.437E-06 0.0        1.00000   1         0     
-case_14   NonParametricSeismicSource 2            6.437E-06 0.0        1.00000   1         0     
-case_12   NonParametricSeismicSource 2            6.199E-06 0.0        1.00000   1         0     
-case_15   NonParametricSeismicSource 2            6.199E-06 0.0        1.00000   1         0     
-========= ========================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
+0      case_01   N    0      2,874  1            0.0       2.074E-05  0.0       1         0.0   
+0      case_02   N    2,874  7,184  1            0.0       7.629E-06  0.0       1         0.0   
+0      case_03   N    7,184  11,470 1            0.0       5.484E-06  0.0       1         0.0   
+0      case_04   N    11,470 17,196 1            0.0       5.484E-06  0.0       1         0.0   
+0      case_05   N    17,196 19,615 1            0.0       5.484E-06  0.0       1         0.0   
+0      case_06   N    19,615 23,263 1            0.0       5.007E-06  0.0       1         0.0   
+0      case_07   N    23,263 25,939 1            0.0       5.245E-06  0.0       1         0.0   
+0      case_08   N    25,939 30,001 1            0.0       5.245E-06  0.0       1         0.0   
+0      case_09   N    30,001 32,222 1            0.0       5.722E-06  0.0       1         0.0   
+0      case_10   N    32,222 35,646 1            0.0       5.245E-06  0.0       1         0.0   
+0      case_11   N    35,646 36,814 1            0.0       5.245E-06  0.0       1         0.0   
+0      case_12   N    36,814 39,684 2            0.0       6.676E-06  0.0       1         0.0   
+0      case_13   N    39,684 42,099 2            0.0       5.960E-06  0.0       1         0.0   
+0      case_14   N    42,099 44,771 2            0.0       6.199E-06  0.0       1         0.0   
+0      case_15   N    44,771 46,988 2            0.0       6.199E-06  0.0       1         0.0   
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-========================== ========= ======
-source_class               calc_time counts
-========================== ========= ======
-NonParametricSeismicSource 0.00184   15    
-========================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+N    0.0       15    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -108,54 +108,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ========= ========= ======= =========
-operation-duration   mean    stddev    min       max     num_tasks
-pickle_source_models 0.25805 NaN       0.25805   0.25805 1        
-count_eff_ruptures   0.00249 NaN       0.00249   0.00249 1        
-preprocess           0.00157 4.312E-04 7.498E-04 0.00222 15       
-==================== ======= ========= ========= ======= =========
-
-Fastest task
-------------
-taskno=1, weight=1, duration=0 s, sources="case_01 case_02 case_03 case_04 case_05 case_06 case_07 case_08 case_09 case_10 case_11 case_12 case_13 case_14 case_15"
-
-======== ======= ======= ======= ======= ==
-variable mean    stddev  min     max     n 
-======== ======= ======= ======= ======= ==
-nsites   1.00000 0.0     1       1       15
-weight   1.26667 0.45774 1.00000 2.00000 15
-======== ======= ======= ======= ======= ==
-
-Slowest task
-------------
-taskno=1, weight=1, duration=0 s, sources="case_01 case_02 case_03 case_04 case_05 case_06 case_07 case_08 case_09 case_10 case_11 case_12 case_13 case_14 case_15"
-
-======== ======= ======= ======= ======= ==
-variable mean    stddev  min     max     n 
-======== ======= ======= ======= ======= ==
-nsites   1.00000 0.0     1       1       15
-weight   1.26667 0.45774 1.00000 2.00000 15
-======== ======= ======= ======= ======= ==
+================== ======= ====== ======= ======= =========
+operation-duration mean    stddev min     max     num_tasks
+read_source_models 0.29554 NaN    0.29554 0.29554 1        
+split_filter       0.00609 NaN    0.00609 0.00609 1        
+================== ======= ====== ======= ======= =========
 
 Data transfer
 -------------
-==================== ===================================================================== ========
-task                 sent                                                                  received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                  156 B   
-count_eff_ruptures   sources=1.08 MB param=522 B monitor=307 B srcfilter=220 B gsims=135 B 1.34 KB 
-preprocess           srcs=1.09 MB monitor=4.67 KB srcfilter=3.71 KB param=540 B            1.09 MB 
-==================== ===================================================================== ========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.08 MB 
+split_filter       srcs=1.08 MB monitor=432 B srcfilter=253 B sample_factor=21 B seed=15 B 1.08 MB 
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total pickle_source_models 0.25805   0.0       1     
-managing sources           0.06814   0.0       1     
-total preprocess           0.02354   0.0       15    
-store source_info          0.00591   0.0       1     
-total count_eff_ruptures   0.00249   0.0       1     
-splitting sources          2.911E-04 0.0       1     
-aggregate curves           2.542E-04 0.0       1     
-========================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.29554  0.0       1     
+updating source_info     0.02112  0.0       1     
+total split_filter       0.00609  0.0       1     
+======================== ======== ========= ======
