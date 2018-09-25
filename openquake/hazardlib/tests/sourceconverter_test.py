@@ -93,7 +93,7 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceGroup
     rup_interdep="indep"
-q    src_interdep="indep"
+    src_interdep="indep"
     srcs_weights="1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00 1.0000000E+00"
     tectonicRegion="Active Shallow Crust"
     >
@@ -170,5 +170,4 @@ class PointToMultiPointTestCase(unittest.TestCase):
             nrml.write(sm, f)
             got = f.getvalue().decode('utf-8')
             print(got)
-            import pdb; pdb.set_trace()
-            self.assertEqual(got, expected)
+            self.assertEqual(got, multipoint)
