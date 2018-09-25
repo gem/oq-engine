@@ -343,7 +343,7 @@ class EbrCalculator(base.RiskCalculator):
             return
         if dstore.parent:
             dstore.parent.open('r')  # to read the ruptures
-        if 'ruptures' in dstore:
+        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
                 rlt, lbr = build_loss_tables(dstore)
