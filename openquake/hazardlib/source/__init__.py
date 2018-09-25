@@ -36,4 +36,5 @@ def splittable(src):
     """
     :returns: True if the source is splittable, False otherwise
     """
-    return src.__class__.__iter__ is not BaseSeismicSource.__iter__
+    return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
+            and getattr(src, 'mutex_weight', 1) == 1)

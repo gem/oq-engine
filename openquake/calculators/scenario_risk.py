@@ -145,6 +145,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 ((eid, rlzi, res[eid, rlzi])
                  for rlzi in range(R) for eid in range(E)), dtlist)
             self.datastore['losses_by_event'] = lbe
+            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
 
             # all losses
             if self.oqparam.asset_loss_table:
