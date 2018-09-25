@@ -674,8 +674,6 @@ def set_min_mag(srcs, min_mag):
     for src in srcs:
         try:
             mmag = min_mag[src.tectonic_region_type]
-        except AttributeError:  # src is a node
-            continue
         except KeyError:
             mmag = min_mag['default']
         if mmag:
@@ -725,7 +723,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     for sm in csm.source_models:
         counter = collections.Counter()
         for sg in sm.src_groups:
-            set_min_mag(sg, oqparam.minimum_magnitude)
             for srcid in map(getid, sg):
                 counter[srcid] += 1
         dupl = [srcid for srcid in counter if counter[srcid] > 1]
@@ -739,6 +736,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
+
+    # TODO: check why the seeds still depend on the minimun_magnitude
+    set_min_mag(csm.get_sources(), oqparam.minimum_magnitude)
 
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
