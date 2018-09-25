@@ -678,8 +678,6 @@ def set_min_mag(srcs, min_mag):
             continue
         except KeyError:
             mmag = min_mag['default']
-        except TypeError:
-            mmag = min_mag
         if mmag:
             src.min_mag = mmag
 
