@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.can15.eastern import (EasternCan15Mid,
 
 
 class EasternCan15LowTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = EasternCan15Upp
+    GSIM_CLASS = EasternCan15Low
 
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_low.csv',
