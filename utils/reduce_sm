@@ -31,12 +31,11 @@ def reduce_sm(calc_id):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'].value
-        events = info['events'] > 0
-        if events.any():
-            source_id = info[events]['source_id']
+        ok = info['weight'] > 0
+        if ok.any():
+            source_ids = set(info[ok]['source_id'])
         else:
-            source_id = info[info['num_ruptures'] > 0]['source_id']
-        source_ids = set(s.decode('utf-8') for s in source_id)
+            source_ids = set(info[ok]['source_id'])
     readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], source_ids)
 
