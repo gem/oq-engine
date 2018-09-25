@@ -32,10 +32,7 @@ def reduce_sm(calc_id):
         oqparam = dstore['oqparam']
         info = dstore['source_info'].value
         ok = info['weight'] > 0
-        if ok.any():
-            source_ids = set(info[ok]['source_id'])
-        else:
-            source_ids = set(info[ok]['source_id'])
+        source_ids = set(info[ok]['source_id'])
     readinput.reduce_source_model(
             oqparam.inputs['source_model_logic_tree'], source_ids)
 
