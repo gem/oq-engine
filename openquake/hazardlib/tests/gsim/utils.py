@@ -29,7 +29,7 @@ class BaseGSIMTestCase(unittest.TestCase):
     def get_context_attributes(self, ctx):
         return set(vars(ctx)) - set(['_slots_'])
 
-    def check(self, filename, max_discrep_percentage):
+    def check(self, filename, max_discrep_percentage, admit_changes=False):
         gsim = self.GSIM_CLASS()
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
@@ -42,7 +42,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        if not hasattr(gsim, 'DO_NOT_CHECK_DISTANCES'):
+        if not hasattr(gsim, 'DO_NOT_CHECK_DISTANCES') and not admit_changes:
             self.assertTrue(
                 numpy.all(ctxs),
                 msg='Contexts objects have been changed by method '
