@@ -15,30 +15,30 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.sinter import (SInterCan15Mid,
-                                                   SInterCan15Low,
-                                                   SInterCan15Upp)
+from openquake.hazardlib.gsim.can15.oceanic import (OceanicCan15Mid,
+                                                    OceanicCan15Low,
+                                                    OceanicCan15Upp)
 
 
-class SinterCan15HighTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SInterCan15Upp
-
-    def test_mean(self):
-        self.check('CAN15/GMPEtInterface_High_combo.csv',
-                   max_discrep_percentage=100.)
-
-
-class SinterCan15LowTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SInterCan15Low
+class OceanicCan15MidTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Mid
 
     def test_mean(self):
-        self.check('CAN15/GMPEtInterface_Low_combo.csv',
-                   max_discrep_percentage=900.)
+        self.check('CAN15/GMPEt_offshore_med.csv',
+                   max_discrep_percentage=80., admit_changes=True)
 
 
-class SinterCan15MidTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SInterCan15Mid
+class OceanicCan15HighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Upp
 
     def test_mean(self):
-        self.check('CAN15/GMPEtInterface_med_combo.csv',
-                   max_discrep_percentage=200.)
+        self.check('CAN15/GMPEt_offshore_high.csv',
+                   max_discrep_percentage=80., admit_changes=True)
+
+
+class OceanicCan15LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = OceanicCan15Low
+
+    def test_mean(self):
+        self.check('CAN15/GMPEt_offshore_low.csv',
+                   max_discrep_percentage=80., admit_changes=True)
