@@ -306,7 +306,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
-        return self.csm.info
+        self.csm_info = self.csm.info
 
     def agg_dicts(self, acc, result):
         """
@@ -398,8 +398,11 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         if oq.hazard_calculation_id:  # from ruptures
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            self.csm_info = self.datastore.parent['csm_info']
             iterargs = self.from_ruptures(param, self.monitor())
         else:  # starting from sources
+            self.build_ruptures()
             iargs = self.from_sources(param, self.monitor())
             iterargs = saving_sources_by_task(iargs, self.datastore)
         acc = parallel.Starmap(
@@ -433,12 +436,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
-        if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.build_ruptures()
-        else:
-            self.datastore.parent = datastore.read(
-                self.oqparam.hazard_calculation_id)
-            self.csm_info = self.datastore.parent['csm_info']
 
     def post_execute(self, result):
         """
@@ -448,7 +445,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        if oq.hazard_calculation_id is None:
+        if oq.hazard_calculation_id is None and 'events' in self.datastore:
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
