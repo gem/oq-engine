@@ -321,7 +321,7 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        x_tr = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
+        x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
             mean, x_tr, rup.hypo_depth, dists.rrup)
 
@@ -347,7 +347,7 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
+        x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
 
         return mean, stddevs
@@ -401,7 +401,7 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        x_tr = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
+        x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
             mean, x_tr, rup.hypo_depth, dists.rrup)
 
@@ -427,7 +427,7 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        x_vf = _get_min_distance_to_volcanic_front(sites.lons, sites.lats)
+        x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
 
         return mean, stddevs

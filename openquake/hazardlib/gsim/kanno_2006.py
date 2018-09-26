@@ -431,7 +431,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        ``A = log(obs/pre) = (alpha*R_tr + beta)*(D - 30)``
 #        """
 #
-#        r_trench = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
+#        r_trench = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
 #
 #        log_amp = (coeffs['alpha']*r_trench + coeffs['beta']) * \
 #            (rup.hypo_depth - self.REF_DEPTH_KM)
