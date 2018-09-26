@@ -31,16 +31,16 @@ class EasternCan15Mid(PezeshkEtAl2011):
 
     - Pezeshk et al. (2011) - For this GMPE we scale the ground motion from
     hard rock to B/C using the correction proposed in Atkinson and Adams (2013)
-    Table 2 page 994. As the distance metric used is Rrup we compute and
+    Table 2 page 994. As the distance metric used is Rrup we compute an
     equivalent Rrup distance from Repi using the equations in Appendix A (page
     31) of Atkinson (2012).
 
     - Atkinson (2008) as revised in Atkinson and Boore (2011). As the distance
-    metric used is Rjb we compute and equivalent Rjb distance from Repi
+    metric used is Rjb we compute an equivalent Rjb distance from Repi
     using the equations in Appendix A (page 31) of Atkinson (2012).
 
     - Atkinson and Boore (2006) as revised in Atkinson and Boore (2011). As
-    the distance metric used is Rjb we compute and equivalent Rjb distance
+    the distance metric used is Rjb we compute an equivalent Rjb distance
     from Repi using the equations in Appendix A (page 31) of Atkinson (2012).
 
     - Silva et al. (2002) single corner and saturation.
