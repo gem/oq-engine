@@ -26,7 +26,12 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     DO_NOT_CHECK_DISTANCES = set(('rrup', 'rjb'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+
         # get original values
         hslab = 50  # See info in GMPEt_Inslab_med.dat
         rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
@@ -59,9 +64,11 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
 
 
 class SSlabCan15Low(SSlabCan15Mid):
+    """
+    Slab backbone model for the Canada 2015 model. Low ground motion version
+    """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
         # get original values
         hslab = 50  # See info in GMPEt_Inslab_med.dat
         rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
@@ -78,9 +85,11 @@ class SSlabCan15Low(SSlabCan15Mid):
 
 
 class SSlabCan15Upp(SSlabCan15Mid):
+    """
+    Slab backbone model for the Canada 2015 model. High ground motion version
+    """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
         # get original values
         hslab = 50  # See info in GMPEt_Inslab_med.dat
         rjb, rrup = utils.get_equivalent_distance_inslab(rup.mag, dists.repi,
