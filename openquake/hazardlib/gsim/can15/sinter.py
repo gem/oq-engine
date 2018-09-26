@@ -17,6 +17,8 @@ from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import \
 
 class SInterCan15Mid(ZhaoEtAl2006SInter):
     """
+    Implements the Interface backbone model used for computing hazard for t
+    the 2015 version of the Canada national hazard model developed by NRCan.
     """
 
     #: Supported tectonic region type is subduction interface
@@ -34,12 +36,21 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         return delta
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
         return mean, stds
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
         # Zhao et al. 2006 - Vs30 + Rrup
         mean, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                    stddev_types)
