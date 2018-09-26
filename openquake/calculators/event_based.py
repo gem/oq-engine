@@ -239,15 +239,13 @@ class EventBasedCalculator(base.HazardCalculator):
             par = param.copy()
             par['samples'] = sm.samples
             for sg in sm.src_groups:
-                # ignore the sources not producing ruptures
-                sg.sources = [src for src in sg.sources if src.eb_ruptures]
-                if not sg.sources:
-                    continue
-                rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
-                for block in block_splitter(sg.sources, maxweight, weight):
-                    yield block, self.src_filter, rlzs_by_gsim, par, monitor
-                    num_tasks += 1
-                    num_sources += len(block)
+                sources = [src for src in sg.sources if src.eb_ruptures]
+                if sources:
+                    rlzs = self.rlzs_by_gsim_grp[sg.id]
+                    for block in block_splitter(sg.sources, maxweight, weight):
+                        yield block, self.src_filter, rlzs, par, monitor
+                        num_tasks += 1
+                        num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
