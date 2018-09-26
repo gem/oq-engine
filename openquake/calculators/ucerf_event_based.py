@@ -283,7 +283,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def gen_args(self, param, monitor):
+    def gen_args2(self, param, monitor):
         """
         Generate a task for each branch
         """
