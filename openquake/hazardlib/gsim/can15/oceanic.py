@@ -20,6 +20,7 @@
 :class:`OceanicCan15Mid`, :class:`OceanicCan15Low`, :class:`OceanicCan15Upp`
 """
 
+import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.can15.western import WesternCan15Mid
@@ -33,26 +34,30 @@ class OceanicCan15Mid(WesternCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        # get original values
-        rup.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+        rupl = copy.deepcopy(rup)
+        rupl.mag -= 0.5
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
                                                      stddev_types)
         stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean, stddevs
 
 
 class OceanicCan15Low(WesternCan15Mid):
+    """
+    Implements the GMPE for oceanic sources. This is the model giving lower
+    ground motion values.
+    """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        # get original values
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+        rupl = copy.deepcopy(rup)
+        rupl.mag -= 0.5
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
                                                      stddev_types)
         # adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
         tmp = 0.1+0.0007*dists.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
-        rup.mag -= 0.5
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean - delta
         stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
@@ -60,18 +65,22 @@ class OceanicCan15Low(WesternCan15Mid):
 
 
 class OceanicCan15Upp(WesternCan15Mid):
+    """
+    Implements the GMPE for oceanic sources. This is the model giving higher
+    ground motion values.
+    """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        # get original values
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+        rupl = copy.deepcopy(rup)
+        rupl.mag -= 0.5
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
                                                      stddev_types)
         # Adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
         tmp = 0.1+0.0007*dists.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
-        rup.mag -= 0.5
         mean_adj = mean + delta
         stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean_adj, stddevs
