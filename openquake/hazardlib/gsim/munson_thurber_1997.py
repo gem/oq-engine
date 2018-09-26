@@ -18,13 +18,14 @@
 
 """
 Module exports :class:`MunsonThurber1997`
+               :class:`MunsonThurber1997Hawaii`
                :class:`MunsonThurber1997Vector`.
 """
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, SA
 
 
 class MunsonThurber1997(GMPE):
@@ -94,6 +95,58 @@ class MunsonThurber1997(GMPE):
 
         # Constant (total) standard deviation
         stddevs = [0.237/np.log10(np.e) + np.zeros(R.shape)]
+
+        return mean, stddevs
+
+
+class MunsonThurber1997Hawaii(MunsonThurber1997):
+    """
+    Modifies :class:`MunsonThurber1997` for use with the USGS Hawaii seismic
+    hazard map of Klein FW, Frankel AD,Mueller CS, Wesson RL, Okubo PG.
+    Seismic-hazard maps for Hawaii. US Geological Survey; 2000.
+    """
+
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+
+        # assign constant
+        log10e = np.log10(np.e)
+
+        # Distance term
+        R = np.sqrt(dists.rjb ** 2 + 11.29 ** 2)
+        # Magnitude term
+        M = rup.mag - 6
+
+        # Site term only distinguishes between lava and ash;
+        # since ash sites have Vs30 in the range 60-200m/s,
+        # we use this upper value as class separator
+        S = np.zeros(R.shape)
+        S[sites.vs30 <= 200] = 1
+
+        # Mean ground motion (natural log)
+        # call super
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists,
+                                                     imt, stddev_types)
+
+        if rup.mag > 7. and rup.mag <= 7.7:
+            mean = (0.171 * (1 - M)) / log10e + mean
+
+        elif rup.mag > 7.7:
+            mean = (0.1512 + 0.387 * (1 - M)) / log10e + mean
+
+        # define natural log of SA 0.3 sec and 0.2 sec
+        if isinstance(imt, SA):
+            if imt.period == 0.3:
+                mean = np.log(2.2) + mean
+
+            if imt.period == 0.2:
+                mean = np.log(2.5) + mean
 
         return mean, stddevs
 

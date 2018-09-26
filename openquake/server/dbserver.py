@@ -93,7 +93,7 @@ class DbServer(object):
             # start task_in->task_out streamer thread
             c = config.zworkers
             threading.Thread(
-                target=w.streamer,
+                target=w._streamer,
                 args=(self.master_host, c.task_in_port, c.task_out_port)
             ).start()
             logging.warn('Task streamer started from %s -> %s',

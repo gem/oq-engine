@@ -3,8 +3,8 @@ Scenario Damage
 
 ============== ===================
 checksum32     2,048,857,716      
-date           2018-06-26T14:56:58
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:27:54
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 7, num_levels = 26
@@ -71,28 +71,13 @@ taxonomy mean    stddev min max num_sites num_assets
 Wood     1.00000 NaN    1   1   1         1         
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-scenario_damage    0.01062 NaN    0.01062 0.01062 1        
-================== ======= ====== ======= ======= =========
-
-Data transfer
--------------
-=============== ================================================= ========
-task            sent                                              received
-scenario_damage riskmodel=0 B riskinput=0 B param=0 B monitor=0 B 5.27 KB 
-=============== ================================================= ========
-
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total scenario_damage      0.01062   0.0       1     
-getting hazard             0.00721   0.0       2     
-building riskinputs        0.00258   0.0       1     
-computing risk             0.00213   0.0       1     
-unpickling scenario_damage 3.414E-04 0.0       1     
-========================== ========= ========= ======
+=================== ========= ========= ======
+operation           time_sec  memory_mb counts
+=================== ========= ========= ======
+building riskinputs 0.00229   0.0       1     
+saving gmfs         0.00204   0.0       1     
+computing gmfs      0.00200   0.0       1     
+reading exposure    5.302E-04 0.0       1     
+=================== ========= ========= ======

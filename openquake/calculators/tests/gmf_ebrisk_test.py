@@ -107,10 +107,10 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       hazard_calculation_id=str(calc1.calc_id),
                       source_model_logic_tree_file='',
-                      gsim_logic_tree_file='',
-                      concurrent_tasks='0')  # to avoid fork bug
+                      gsim_logic_tree_file='')
         calc2 = self.calc.datastore  # two files event_based_risk
 
+        check_csm_info(calc0, calc1)  # the csm_info arrays must be equal
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
         if sys.platform == 'darwin':

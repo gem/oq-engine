@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     2,836,454,835      
-date           2018-06-05T06:38:30
-engine_version 3.2.0-git65c4735   
+checksum32     1,223,742,661      
+date           2018-09-25T14:28:24
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -95,19 +95,19 @@ tax1     1.00000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= ========= ======
-source_id source_class      num_ruptures calc_time split_time num_sites num_split events
-========= ================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource 482          0.77000   2.234E-04  7.00000   15        650   
-========= ================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         S    0     2     482          0.76388   0.01337    105       15        385   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-SimpleFaultSource 0.77000   1     
-================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.76388   1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -117,35 +117,43 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00739 0.00175 0.00427 0.01198 15       
-compute_ruptures   0.13776 0.04884 0.09016 0.20652 6        
+read_source_models 0.00397 NaN     0.00397 0.00397 1        
+split_filter       0.02224 NaN     0.02224 0.02224 1        
+build_ruptures     0.05837 0.01872 0.02321 0.09354 14       
+compute_gmfs       0.08051 0.02192 0.05617 0.10040 5        
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-================ ============================================================================= =========
-task             sent                                                                          received 
-RtreeFilter      srcs=19.36 KB monitor=5.07 KB srcfilter=4.09 KB                               20.32 KB 
-compute_ruptures sources=14.01 KB param=3.38 KB monitor=2.07 KB src_filter=1.37 KB gsims=786 B 285.53 KB
-================ ============================================================================= =========
+================== ==================================================================================================== =========
+task               sent                                                                                                 received 
+read_source_models monitor=0 B fnames=0 B converter=0 B                                                                 1.47 KB  
+split_filter       srcs=3.12 KB monitor=446 B srcfilter=220 B sample_factor=21 B seed=14 B                              7.01 KB  
+build_ruptures     srcs=20.13 KB monitor=5.24 KB param=4.09 KB srcfilter=3.01 KB                                        281.93 KB
+compute_gmfs       sources_or_ruptures=273.13 KB param=14.37 KB monitor=1.68 KB rlzs_by_gsim=1.47 KB src_filter=1.07 KB 311.97 KB
+================== ==================================================================================================== =========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-total compute_ruptures          0.82659   8.66016   6     
-making contexts                 0.57327   0.0       259   
-EventBasedRuptureCalculator.run 0.52508   1.13281   1     
-managing sources                0.34412   0.0       1     
-total prefilter                 0.11088   5.19141   15    
-saving ruptures                 0.02446   0.0       6     
-unpickling compute_ruptures     0.01086   0.0       6     
-reading composite source model  0.00632   0.0       1     
-reading site collection         0.00486   0.0       1     
-store source_info               0.00471   0.0       1     
-unpickling prefilter            0.00446   0.0       15    
-setting event years             0.00215   0.0       1     
-reading exposure                0.00186   0.0       1     
-splitting sources               5.460E-04 0.0       1     
-=============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total build_ruptures     0.81721   0.22266   14    
+making contexts          0.53008   0.0       259   
+total compute_gmfs       0.40254   0.12500   5     
+building hazard          0.36103   0.12500   5     
+saving ruptures          0.05599   0.0       15    
+updating source_info     0.02976   0.0       1     
+building riskinputs      0.02325   0.0       1     
+total split_filter       0.02224   0.0       1     
+building ruptures        0.01735   0.0       5     
+GmfGetter.init           0.01672   0.0       5     
+managing sources         0.01573   0.0       1     
+saving gmfs              0.00807   0.0       5     
+store source_info        0.00569   0.0       1     
+total read_source_models 0.00419   0.0       3     
+saving gmf_data/indices  0.00333   0.0       1     
+setting event years      0.00193   0.0       1     
+aggregating hcurves      7.596E-04 0.0       5     
+reading exposure         6.764E-04 0.0       1     
+======================== ========= ========= ======

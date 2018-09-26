@@ -2,9 +2,9 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ============== ===================
-checksum32     1,554,747,528      
-date           2018-06-26T14:57:31
-engine_version 3.2.0-gitb0cd949   
+checksum32     3,294,662,884      
+date           2018-09-25T14:28:38
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -55,6 +55,7 @@ Required parameters per tectonic region type
 ====== ======================================================================================================= ========= ========== =======================
 grp_id gsims                                                                                                   distances siteparams ruptparams             
 ====== ======================================================================================================= ========= ========== =======================
+0      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
 1      AbrahamsonSilva1997() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() YoungsEtAl1997SInterNSHMP2008() rjb rrup  vs30       dip hypo_depth mag rake
 ====== ======================================================================================================= ========= ========== =======================
 
@@ -79,20 +80,20 @@ Alaska_asc_grid_NSHMP2007.xml extra_source_model.xml 1      Active Shallow Crust
 
 Slowest sources
 ---------------
-========= ================ ============ ========= ========== ========= ========= ======
-source_id source_class     num_ruptures calc_time split_time num_sites num_split events
-========= ================ ============ ========= ========== ========= ========= ======
-2         MultiPointSource 1,104        0.00614   4.699E-04  1.25000   4         0     
-1         MultiPointSource 160          0.0       1.643E-04  0.0       0         0     
-========= ================ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
+1      2         M    0     12    1,104        0.0       0.00426    0.0       4         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================ ========= ======
-source_class     calc_time counts
-================ ========= ======
-MultiPointSource 0.00614   2     
-================ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+M    0.0       2     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -102,53 +103,24 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =========
 operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00325 9.220E-04 0.00182 0.00443 14       
-count_eff_ruptures 0.00928 NaN       0.00928 0.00928 1        
+read_source_models 0.00232 1.511E-04 0.00221 0.00243 2        
+split_filter       0.00611 NaN       0.00611 0.00611 1        
 ================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=1, weight=162, duration=0 s, sources="2"
-
-======== ======= ======= === === =
-variable mean    stddev  min max n
-======== ======= ======= === === =
-nsites   1.25000 0.50000 1   2   4
-weight   40      7.62153 36  52  4
-======== ======= ======= === === =
-
-Slowest task
-------------
-taskno=1, weight=162, duration=0 s, sources="2"
-
-======== ======= ======= === === =
-variable mean    stddev  min max n
-======== ======= ======= === === =
-nsites   1.25000 0.50000 1   2   4
-weight   40      7.62153 36  52  4
-======== ======= ======= === === =
 
 Data transfer
 -------------
 ================== ======================================================================= ========
 task               sent                                                                    received
-RtreeFilter        srcs=21.95 KB monitor=4.4 KB srcfilter=3.81 KB                          7.04 KB 
-count_eff_ruptures sources=4.04 KB param=1.64 KB gsims=422 B monitor=329 B srcfilter=246 B 359 B   
+read_source_models monitor=662 B converter=638 B fnames=383 B                              6.78 KB 
+split_filter       srcs=5.01 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=14 B 3.01 KB 
 ================== ======================================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.23360   0.0       1     
-total prefilter                0.04549   1.71094   14    
-total count_eff_ruptures       0.00928   6.56641   1     
-store source_info              0.00726   0.0       1     
-reading composite source model 0.00515   0.0       1     
-unpickling prefilter           0.00307   0.0       14    
-splitting sources              9.668E-04 0.0       1     
-reading site collection        5.791E-04 0.0       1     
-unpickling count_eff_ruptures  2.720E-04 0.0       1     
-aggregate curves               2.656E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+updating source_info     0.01185  0.0       1     
+total split_filter       0.00611  0.0       1     
+total read_source_models 0.00464  0.0       2     
+======================== ======== ========= ======
