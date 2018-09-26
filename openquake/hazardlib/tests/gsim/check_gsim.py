@@ -35,6 +35,7 @@ from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
 from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
+
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
@@ -276,11 +277,16 @@ def _parse_csv_line(headers, values, req_site_params):
             damping = float(value)
         elif param.startswith('site_'):
             # value is sites context object attribute
-            if (param == 'site_vs30measured') or (param == 'site_backarc'):
+            if param == 'site_vs30measured' or param == 'site_backarc':
                 value = float(value) != 0
             else:
                 value = float(value)
-            setattr(sctx, param[len('site_'):], numpy.array([value]))
+            # site_lons, site_lats, site_depths -> lon, lat, depth
+            if param.endswith(('lons', 'lats', 'depths')):
+                attr = param[len('site_'):-1]
+            else:  # vs30s etc
+                attr = param[len('site_'):]
+            setattr(sctx, attr, numpy.array([value]))
         elif param.startswith('dist_'):
             # value is a distance measure
             value = float(value)
