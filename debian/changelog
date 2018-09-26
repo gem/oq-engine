@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Fixed a bug about 'The openquake master lost its controlling terminal'
+    when running with 'nohup' from command line
+
   [Michele Simionato]
   * 'lons' and 'lats' are now spelled 'lon' and 'lat' in
     the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
