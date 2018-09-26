@@ -206,16 +206,11 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
-    def gen_args(self, monitor):
+    def gen_args(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
-        param = dict(
-            oqparam=oq, min_iml=self.get_min_iml(oq),
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         concurrent_tasks = oq.concurrent_tasks
         if oq.hazard_calculation_id:
             U = len(self.datastore.parent['ruptures'])
@@ -385,9 +380,10 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
     def execute(self):
-        if self.oqparam.ground_motion_fields is False:
+        oq = self.oqparam
+        if oq.ground_motion_fields is False:
             return {}
-        if self.oqparam.hazard_calculation_id:
+        if oq.hazard_calculation_id:
             def saving_sources_by_task(allargs, dstore):
                 return allargs
         else:
@@ -396,8 +392,15 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         acc = self.zerodict()
+        param = dict(
+            oqparam=oq, min_iml=self.get_min_iml(oq),
+            save_ruptures=oq.save_ruptures,
+            gmf=oq.ground_motion_fields,
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('classical'))
+            allargs = self.gen_args(param, self.monitor('classical'))
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -422,8 +425,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 for sid in self.sitecol.complete.sids:
                     dset[sid, 0] = self.indices[sid, 0]
                     dset[sid, 1] = self.indices[sid, 1]
-        elif (self.oqparam.ground_motion_fields and
-              'ucerf' not in self.oqparam.calculation_mode):
+        elif (oq.ground_motion_fields and
+              'ucerf' not in oq.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         return acc
