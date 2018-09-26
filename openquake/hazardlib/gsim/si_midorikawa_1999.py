@@ -77,7 +77,7 @@ def _construct_surface(lons, lats, upper_depth, lower_depth):
 def _get_min_distance_to_sub_trench(lons, lats):
     """
     Compute and return minimum distance between subduction trench
-    and points specified by 'lons' and 'lats'
+    and points specified by 'lon' and 'lat'
 
     The method creates an instance of
     :class:`openquake.hazardlib.geo.SimpleFaultSurface` to model the subduction
@@ -97,7 +97,7 @@ def _get_min_distance_to_sub_trench(lons, lats):
 def _get_min_distance_to_volcanic_front(lons, lats):
     """
     Compute and return minimum distance between volcanic front and points
-    specified by 'lons' and 'lats'.
+    specified by 'lon' and 'lat'.
 
     Distance is negative if point is located east of the volcanic front,
     positive otherwise.
@@ -307,7 +307,7 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -333,7 +333,7 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for southwest Japan (i.e. proximity with volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -387,7 +387,7 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -413,7 +413,7 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for southwest Japan (i.e. proximity to volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lons', 'lats'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
