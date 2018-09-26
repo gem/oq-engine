@@ -5,6 +5,7 @@
 """
 
 import re
+import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -56,9 +57,6 @@ class EasternCan15Mid(PezeshkEtAl2011):
     # Set rake
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
-    # Distances to be excluded while checking this GMPE
-    DO_NOT_CHECK_DISTANCES = set(('rrup', 'rjb'))
-
     def apply_correction_to_BC(self, mean, imt, dists):
         """
         """
@@ -78,7 +76,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
         """
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         return mean, stddevs
 
     def _get_delta(self, stds, dists):
@@ -97,39 +95,39 @@ class EasternCan15Mid(PezeshkEtAl2011):
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
         # distances
-        dists.rjb, dists.rrup = utils.get_equivalent_distances_east(rup.mag,
-                                                                    dists.repi)
+        distsl = copy.copy(dists)
+        distsl.rjb, distsl.rrup = \
+            utils.get_equivalent_distances_east(rup.mag, dists.repi)
         #
         # Pezeshk et al. 2011 - Rrup
-        mean1, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
+        mean1, stds1 = super().get_mean_and_stddevs(sites, rup, distsl, imt,
                                                     stddev_types)
-        mean1 = self.apply_correction_to_BC(mean1, imt, dists)
+        mean1 = self.apply_correction_to_BC(mean1, imt, distsl)
         #
         # Atkinson 2008 - Rjb
         gmpe = Atkinson2008prime()
-        mean2, stds2 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+        mean2, stds2 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         #
         # Silva et al. 2002 - Rjb
         gmpe = SilvaEtAl2002SingleCornerSaturation()
-        mean4, stds4 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+        mean4, stds4 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
-        mean4 = self.apply_correction_to_BC(mean4, imt, dists)
+        mean4 = self.apply_correction_to_BC(mean4, imt, distsl)
         #
         # Silva et al. 2002 - Rjb
         gmpe = SilvaEtAl2002DoubleCornerSaturation()
-        mean5, stds5 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+        mean5, stds5 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
-        mean5 = self.apply_correction_to_BC(mean5, imt, dists)
+        mean5 = self.apply_correction_to_BC(mean5, imt, distsl)
         #
         # distances
-        dists.rjb, dists.rrup = utils.get_equivalent_distances_east(rup.mag,
-                                                                    dists.repi,
-                                                                    ab06=True)
+        distsl.rjb, distsl.rrup = \
+            utils.get_equivalent_distances_east(rup.mag, dists.repi, ab06=True)
         #
         # Atkinson and Boore 2006 - Rrup
         gmpe = AtkinsonBoore2006Modified2011()
-        mean3, stds3 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+        mean3, stds3 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         # Computing adjusted mean and stds
         mean_adj = np.log(np.exp(mean1)*0.2 + np.exp(mean2)*0.2 +
@@ -169,7 +167,7 @@ class EasternCan15Low(EasternCan15Mid):
             stddev_types = [StdDev.TOTAL]
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         delta = self._get_delta(stds, dists)
         mean = mean - stds - delta
         mean = np.squeeze(mean)
@@ -188,7 +186,7 @@ class EasternCan15Upp(EasternCan15Mid):
             stddev_types = [StdDev.TOTAL]
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        stddevs = [[np.ones(len(dists.rjb))*get_sigma(imt)]]
+        stddevs = [[np.ones(len(dists.repi))*get_sigma(imt)]]
         delta = self._get_delta(stds, dists)
         mean = mean + stds + delta
         mean = np.squeeze(mean)
