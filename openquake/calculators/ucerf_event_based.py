@@ -283,7 +283,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def from_ruptures(self, param, monitor):
+    def from_sources(self, param, monitor):
         """
         Generate a task for each branch
         """
