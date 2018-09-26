@@ -207,7 +207,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
-    def gen_args1(self, param, monitor):
+    def from_sources(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -225,7 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 par['samples'] = samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
 
-    def gen_args2(self, param, monitor):
+    def from_ruptures(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -390,7 +390,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        acc = self.zerodict()
         param = dict(
             oqparam=oq, min_iml=self.get_min_iml(oq),
             save_ruptures=oq.save_ruptures,
@@ -398,15 +397,14 @@ class EventBasedCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        if oq.hazard_calculation_id:
-            iterargs = self.gen_args1(param, self.monitor())
-        else:
-            iargs = self.gen_args2(param, self.monitor())
+        if oq.hazard_calculation_id:  # from ruptures
+            iterargs = self.from_sources(param, self.monitor())
+        else:  # starting from sources
+            iargs = self.from_ruptures(param, self.monitor())
             iterargs = saving_sources_by_task(iargs, self.datastore)
-        ires = parallel.Starmap(
+        acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
-        ).submit_all()
-        acc = ires.reduce(self.agg_dicts, acc)
+        ).reduce(self.agg_dicts, self.zerodict())
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
