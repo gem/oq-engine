@@ -214,7 +214,9 @@ try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
     if hasattr(signal, 'SIGHUP'):
-        signal.signal(signal.SIGHUP, raiseMasterKilled)
+        # Do not register our SIGHUP handler if running with 'nohup'
+        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 

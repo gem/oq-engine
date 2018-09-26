@@ -118,7 +118,7 @@ def export_site_model(ekey, dstore):
         for hdffield in rec.dtype.names:
             if hdffield == 'sids':  # skip
                 continue
-            elif hdffield == 'depths' and rec[hdffield] == 0:
+            elif hdffield == 'depth' and rec[hdffield] == 0:
                 continue
             xmlfield = hdf2xml.get(hdffield, hdffield)
             if hdffield == 'vs30measured':
