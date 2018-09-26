@@ -22,7 +22,12 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
     # Required distance is only repi since rrup and rjb are obtained from repi
     REQUIRES_DISTANCES = set(('repi',))
 
-    # Distances to be excluded while checking this GMPE
+    # Distances to be excluded while checking this GMPE. This parameter is
+    # needed to avoid conflicts with the parameters included in the
+    # verification table. For this GMPE the distance required is just
+    # epicentral and rrup and rjb are computed following the methodology
+    # described in Atkinson (2012).
+    # See also :module:`openquake.hazardlib.tests.gsim.utils.py`
     DO_NOT_CHECK_DISTANCES = set(('rrup', 'rjb'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
