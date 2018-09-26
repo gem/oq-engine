@@ -37,8 +37,8 @@ from mock import Mock
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import gettemp
-from openquake.hazardlib import valid
-from openquake.commonlib import logictree, readinput, tests, source
+from openquake.hazardlib.gsim import registry
+from openquake.commonlib import logictree, readinput, tests
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -2374,7 +2374,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             def __str__(self):
                 return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
 
-        valid.GSIM['FakeGMPETable'] = FakeGMPETable
+        registry['FakeGMPETable'] = FakeGMPETable
         try:
             xml = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -2396,7 +2396,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
 Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
         finally:
-            del valid.GSIM['FakeGMPETable']
+            del registry['FakeGMPETable']
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
@@ -2465,8 +2465,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def test_parse_invalid_smlt(self):
         smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
         with self.assertRaises(Exception) as ctx:
-            for smpath in logictree.collect_source_model_paths(smlt):
-                pass
+            logictree.collect_info(smlt)
         exc = ctx.exception
         self.assertIn('not well-formed (invalid token)', str(exc))
         self.assertEqual(exc.lineno, 5)

@@ -316,7 +316,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.warn') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
@@ -328,18 +328,18 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
             ).set_risk_imtls({})
-        self.assertIn("There is a single IMT, uniform_hazard_spectra cannot "
-                      "be True", str(ctx.exception))
+        self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
+                      "will contain a single point", w.call_args[0][0])
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
         vf = mock.Mock()
-        vf.imt = ' SA(0.1)'
+        vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
         rm = dict(taxo=dict(structural=vf))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
-        self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+        self.assertIn("'SA '", str(ctx.exception))
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
@@ -380,3 +380,15 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("iml_disagg and poes_disagg cannot be set at the "
                       "same time", str(ctx.exception))
+
+    def test_optimize_same_id_sources(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs=fakeinputs,
+                sites='0.1 0.2',
+                maximum_distance='400',
+                intensity_measure_types='PGA',
+                optimize_same_id_sources='true',
+            ).validate()
+        self.assertIn('can be true only in the classical\ncalculators',
+                      str(ctx.exception))

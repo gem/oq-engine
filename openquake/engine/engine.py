@@ -90,21 +90,22 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         OqParam.concurrent_tasks.default = ncores * 3
         logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate, task_ids=()):
+    def celery_cleanup(terminate, tasks=()):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
 
         :param bool terminate: the celery revoke command terminate flag
-        :param task_ids: celery task IDs
+        :param tasks: celery tasks
         """
         # Using the celery API, terminate and revoke and terminate any running
         # tasks associated with the current job.
-        if task_ids:
-            logs.LOG.warn('Revoking %d tasks', len(task_ids))
+        if tasks:
+            logs.LOG.warn('Revoking %d tasks', len(tasks))
         else:  # this is normal when OQ_DISTRIBUTE=no
             logs.LOG.debug('No task to revoke')
-        for tid in task_ids:
+        for task in tasks:
+            tid = task.task_id
             celery.task.control.revoke(tid, terminate=terminate)
             logs.LOG.debug('Revoked task %s', tid)
 
@@ -128,7 +129,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         dskeys.add('sourcegroups')
     hdf5 = dstore.hdf5
     if (len(rlzs) == 1 and 'poes' in hdf5) or 'hcurves' in hdf5:
-        dskeys.add('hcurves')
+        if oq.hazard_stats():
+            dskeys.add('hcurves')
         if oq.uniform_hazard_spectra:
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
@@ -149,6 +151,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         exportable.remove('ruptures')  # do not export, as requested by Vitor
     if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
         dskeys.remove('rup_loss_table')
+    if 'hmaps' in dskeys and not oq.hazard_maps:
+        dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
         # the calculation has not been imported in the db yet
         logs.dbcmd('import_job', dstore.calc_id, oq.calculation_mode,
@@ -158,7 +162,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     for key in sorted(dskeys & exportable):
         try:
             size_mb = dstore.get_attr(key, 'nbytes') / MB
-        except KeyError:
+        except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
     ds_size = os.path.getsize(dstore.hdf5path) / MB
@@ -199,7 +203,6 @@ def raiseMasterKilled(signum, _stack):
             else:
                 msg = 'The openquake master lost its controlling terminal'
 
-    parallel.Starmap.shutdown()
     raise MasterKilled(msg)
 
 
@@ -211,7 +214,9 @@ try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
     if hasattr(signal, 'SIGHUP'):
-        signal.signal(signal.SIGHUP, raiseMasterKilled)
+        # Do not register our SIGHUP handler if running with 'nohup'
+        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 
@@ -339,7 +344,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             t0 = time.time()
             calc.run(exports=exports,
                      hazard_calculation_id=hazard_calculation_id,
-                     close=False, **kw)  # don't close the datastore too soon
+                     close=False, **kw)
             logs.LOG.info('Exposing the outputs to the database')
             expose_outputs(calc.datastore)
             duration = time.time() - t0
@@ -364,7 +369,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # taking further action, so that the real error can propagate
             try:
                 if OQ_DISTRIBUTE.startswith('celery'):
-                    celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
+                    celery_cleanup(TERMINATE, parallel.running_tasks)
             except BaseException:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':

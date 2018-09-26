@@ -28,7 +28,7 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.baselib.general import DictArray, group_array
+from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -167,18 +167,20 @@ def extract_hazard(dstore, what):
     nsites = len(sitecol)
     M = len(oq.imtls)
     P = len(oq.poes)
-    for kind, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
+    for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
-            key = 'hcurves/%s/%s' % (imt, kind)
+            key = 'hcurves/%s/%s' % (imt, statname)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
             for sid in pmap:
-                arr[sid] = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
-        if oq.poes:
+        try:
+            hmap = dstore['hmaps/' + statname]
+        except KeyError:  # for statname=rlz-XXX
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
-            key = 'hmaps/poe-%s/%s' % (poe, kind)
+            key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
             idx = [m * P + p for m in range(M)]
             for sid in pmap:
@@ -229,19 +231,29 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
+def _get_dict(dstore, name, imts, imls):
+    dic = {}
+    dtlist = []
+    for imt, imls in zip(imts, imls):
+        dt = numpy.dtype([(str(iml), F32) for iml in imls])
+        dtlist.append((imt, dt))
+    for statname, curves in dstore[name].items():
+        dic[statname] = curves.value.view(dtlist).flatten()
+    return dic
+
+
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
     Extracts hazard curves. Use it as /extract/hcurves/mean or
     /extract/hcurves/rlz-0, /extract/hcurves/stats, /extract/hcurves/rlzs etc
     """
+    if 'hcurves' not in dstore:
+        return []
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol, complete=False)
-    dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[kind] = hcurves.convert_npy(oq.imtls, sitecol.sids)
+    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -253,13 +265,8 @@ def extract_hmaps(dstore, what):
     """
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mesh = get_mesh(sitecol)
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-        dic[kind] = calc.convert_to_array(hmap, len(mesh), pdic)
+    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -273,8 +280,8 @@ def extract_uhs(dstore, what):
     mesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+    for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
+        dic[name] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -544,4 +551,4 @@ def extract_mean_std_curves(dstore, what):
     arr = getter.get_mean().array
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls.slicedic[imt]]
+        yield 'poes/' + imt, arr[:, getter.imtls(imt)]

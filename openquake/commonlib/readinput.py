@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import csv
 import copy
 import zlib
@@ -23,20 +24,22 @@ import shutil
 import zipfile
 import logging
 import tempfile
+import operator
 import configparser
 import collections
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import performance, hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, deprecated, random_filter)
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.calc.filters import split_sources
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+from openquake.hazardlib.geo.mesh import point3d
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import asset, riskinput
 from openquake.risklib.riskmodels import get_risk_models
@@ -45,6 +48,7 @@ from openquake.commonlib import logictree, source, writers
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
+RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 U16 = numpy.uint16
@@ -177,30 +181,10 @@ def get_params(job_inis, **kw):
     inputs = params['inputs']
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
-        inputs['source'] = []
-        for paths in gen_sm_paths(smlt):
-            inputs['source'].extend(paths)
+        inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
     return params
-
-
-def gen_sm_paths(smlt):
-    """
-    Yields the path names for the source models listed in the smlt file,
-    a block at the time.
-    """
-    base_path = os.path.dirname(smlt)
-    for model in logictree.collect_source_model_paths(smlt):
-        paths = []
-        for name in model.split():
-            if os.path.isabs(name):
-                raise InvalidFile('%s: %s must be a relative path' %
-                                  (smlt, name))
-            fname = os.path.abspath(os.path.join(base_path, name))
-            if os.path.exists(fname):  # consider only real paths
-                paths.append(fname)
-        yield paths
 
 
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
@@ -238,7 +222,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
-    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
@@ -409,6 +392,9 @@ def get_gsim_lt(oqparam, trts=['*']):
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             set([StdDev.TOTAL])):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+    trts = set(oqparam.minimum_magnitude) - {'default'}
+    expected_trts = set(gsim_lt.values)
+    assert trts <= expected_trts, (trts, expected_trts)
     return gsim_lt
 
 
@@ -451,48 +437,8 @@ def get_rupture(oqparam):
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.seed = oqparam.random_seed
+    rup.serial = oqparam.random_seed
     return rup
-
-
-def read_source_groups(fname):
-    """
-    :param fname: a path to a source model XML file
-    :return: a list of SourceGroup objects containing source nodes
-    """
-    smodel = nrml.read(fname).sourceModel
-    src_groups = []
-    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
-        for sg_node in smodel:
-            sg = sourceconverter.SourceGroup(
-                sg_node['tectonicRegion'])
-            sg.sources = sg_node.nodes
-            src_groups.append(sg)
-    else:  # NRML 0.4 format: smodel is a list of source nodes
-        src_groups.extend(
-            sourceconverter.SourceGroup.collect(smodel))
-    return src_groups
-
-
-def get_source_ids(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        the complete set of source IDs found in all the source models
-    """
-    source_ids = set()
-    for fname in oqparam.inputs['source']:
-        if fname.endswith('.hdf5'):
-            with hdf5.File(fname, 'r') as f:
-                for sg in f['/']:
-                    for src in sg:
-                        source_ids.add(src.source_id)
-        else:
-            for sg in read_source_groups(fname):
-                for src_node in sg:
-                    source_ids.add(src_node['id'])
-    return source_ids
 
 
 def get_source_model_lt(oqparam):
@@ -508,14 +454,110 @@ def get_source_model_lt(oqparam):
         # NB: converting the random_seed into an integer is needed on Windows
         return logictree.SourceModelLogicTree(
             fname, validate=False, seed=int(oqparam.random_seed),
-            num_samples=oqparam.number_of_logic_tree_samples,
-            source_ids=get_source_ids(oqparam))
+            num_samples=oqparam.number_of_logic_tree_samples)
     return logictree.FakeSmlt(oqparam.inputs['source_model'],
                               int(oqparam.random_seed),
                               oqparam.number_of_logic_tree_samples)
 
 
-def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
+def check_nonparametric_sources(fname, smodel, investigation_time):
+    """
+    :param fname:
+        full path to a source model file
+    :param smodel:
+        source model object
+    :param investigation_time:
+        investigation_time to compare with in the case of
+        nonparametric sources
+    :returns:
+        the nonparametric sources in the model
+    :raises:
+        a ValueError if the investigation_time is different from the expected
+    """
+    # NonParametricSeismicSources
+    np = [src for sg in smodel.src_groups for src in sg
+          if hasattr(src, 'data')]
+    if np and smodel.investigation_time != investigation_time:
+        raise ValueError(
+            'The source model %s contains an investigation_time '
+            'of %s, while the job.ini has %s' % (
+                fname, smodel.investigation_time, investigation_time))
+    return np
+
+
+class SourceModelFactory(object):
+    def __init__(self):
+        self.fname_hits = collections.Counter()  # fname -> number of calls
+        self.changed_sources = 0
+
+    def __call__(self, fname, sm, apply_uncertainties, investigation_time):
+        """
+        :param fname:
+            the full pathname of a source model file
+        :param sm:
+            the original source model
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        :param investigation_time:
+            the investigation_time in the job.ini
+        :returns:
+            a copy of the original source model with changed sources (if any)
+            or the original model with unchanged sources
+        """
+        check_nonparametric_sources(fname, sm, investigation_time)
+        if apply_uncertainties:
+            sm = copy.deepcopy(sm)
+            for group in sm:
+                for src in group:
+                    apply_uncertainties(src)
+                    self.changed_sources += 1
+                    # NB: redoing count_ruptures which can be slow
+                    src.num_ruptures = src.count_ruptures()
+        self.fname_hits[fname] += 1
+        return sm
+
+
+source_info_dt = numpy.dtype([
+    ('grp_id', numpy.uint16),          # 0
+    ('source_id', hdf5.vstr),          # 1
+    ('code', (numpy.string_, 1)),      # 2
+    ('gidx1', numpy.uint32),           # 3
+    ('gidx2', numpy.uint32),           # 4
+    ('num_ruptures', numpy.uint32),    # 5
+    ('calc_time', numpy.float32),      # 6
+    ('split_time', numpy.float32),     # 7
+    ('num_sites', numpy.float32),      # 8
+    ('num_split',  numpy.uint32),      # 9
+    ('weight', numpy.float32),         # 10
+])
+
+
+def store_sm(smodel, h5):
+    """
+    :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
+    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    """
+    sources = h5['source_info']
+    source_geom = h5['source_geom']
+    gid = 0
+    for sg in smodel:
+        srcs = []
+        geoms = []
+        for src in sg:
+            srcgeom = src.geom()
+            n = len(srcgeom)
+            geom = numpy.zeros(n, point3d)
+            geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                         src.num_ruptures, 0, 0, 0, 0, 0))
+            geoms.append(geom)
+            gid += n
+        hdf5.extend(source_geom, numpy.concatenate(geoms))
+        hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+
+
+def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
+                      in_memory=True):
     """
     Build all the source models generated by the logic tree.
 
@@ -525,39 +567,72 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
+    :param monitor:
+        a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
         an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
     """
+    make_sm = SourceModelFactory()
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    psr = nrml.SourceModelParser(converter)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
+    elif in_memory:
+        logging.info('Reading the source model(s)')
+        dic = logictree.parallel_read_source_models(
+            gsim_lt, source_model_lt, converter, monitor)
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)
+    idx = 0
+    grp_id = 0
+    if monitor.hdf5:
+        sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
+        hdf5.create(monitor.hdf5, 'source_geom', point3d)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
             if oqparam.calculation_mode.startswith('ucerf'):
                 sg = copy.copy(grp)
-                sg.id = sm.ordinal
-                sg.sources = [sg[0].new(sm.ordinal, sm.names)]  # one source
+                sg.id = grp_id
+                src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.id = idx
+                sg.sources = [src]
                 src_groups.append(sg)
+                idx += 1
+                grp_id += 1
+                data = [((sg.id, src.source_id, src.code, 0, 0,
+                         src.num_ruptures, 0, 0, 0, 0, 0))]
+                hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
                 apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
-                logging.info('Reading %s', fname)
-                src_groups.extend(psr.parse_src_groups(fname, apply_unc))
+                newsm = make_sm(fname, dic[fname], apply_unc,
+                                oqparam.investigation_time)
+                for sg in newsm:
+                    for src in sg:
+                        src.src_group_id = grp_id
+                        src.id = idx
+                        idx += 1
+                    sg.id = grp_id
+                    grp_id += 1
+                if monitor.hdf5:
+                    store_sm(newsm, monitor.hdf5)
+                src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
-                src_groups.extend(read_source_groups(fname))
+                src_groups.extend(logictree.read_source_groups(fname))
+
+        if grp_id >= TWO16:
+            # the limit is really needed only for event based calculations
+            raise ValueError('There is a limit of %d src groups!' % TWO16)
+
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -575,20 +650,21 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
 
-    # check investigation_time
-    psr.check_nonparametric_sources(oqparam.investigation_time)
-
     # log if some source file is being used more than once
     dupl = 0
-    for fname, hits in psr.fname_hits.items():
+    for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not psr.changed_sources:
+            if not make_sm.changed_sources:
                 dupl += hits
-    if dupl and not oqparam.optimize_same_id_sources:
+    if (dupl and not oqparam.optimize_same_id_sources and
+            'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
+    if make_sm.changed_sources:
+        logging.info('Modified %d sources in the composite source model',
+                     make_sm.changed_sources)
 
 
 def getid(src):
@@ -598,27 +674,52 @@ def getid(src):
         return src['id']
 
 
-def get_composite_source_model(oqparam, in_memory=True):
+def set_min_mag(srcs, min_mag):
+    """
+    Set the attribute .min_mag
+
+    :param srcs: a sequence of sources
+    :param min_mag: a dictionary TRT- > magnitude or a scalar
+    """
+    for src in srcs:
+        try:
+            mmag = min_mag[src.tectonic_region_type]
+        except KeyError:
+            mmag = min_mag['default']
+        if mmag:
+            src.min_mag = mmag
+
+
+def get_composite_source_model(oqparam, monitor=None, in_memory=True,
+                               split_all=True, srcfilter=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param monitor:
+         a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if False, just parse the XML without instantiating the sources
+    :param split_all:
+        if True, split all the sources in the models
+    :param srcfilter:
+        if not None, perform a preprocess operation on the sources
     """
     smodels = []
-    grp_id = 0
-    idx = 0
     gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
-    if source_model_lt.on_each_source():
+    if oqparam.number_of_logic_tree_samples == 0:
+        logging.info('Potential number of logic tree paths = {:,d}'.format(
+            source_model_lt.num_paths * gsim_lt.get_num_paths()))
+    if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
+    if monitor is None:
+        monitor = performance.Monitor()
     for source_model in get_source_models(
-            oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
+            oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            src_group.id = grp_id
             for src in src_group:
                 # there are two cases depending on the flag in_memory:
                 # 1) src is a hazardlib source and has a src_group_id
@@ -626,13 +727,6 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # 2) src is a Node object, then nothing must be done
                 if isinstance(src, Node):
                     continue
-                src.src_group_id = grp_id
-                src.id = idx
-                idx += 1
-            grp_id += 1
-            if grp_id >= TWO16:
-                # the limit is really needed only for event based calculations
-                raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(gsim_lt, source_model_lt, smodels,
                                       oqparam.optimize_same_id_sources)
@@ -645,7 +739,88 @@ def get_composite_source_model(oqparam, in_memory=True):
         if dupl:
             raise nrml.DuplicatedID('Found duplicated source IDs in %s: %s'
                                     % (sm, dupl))
+    if not in_memory:
+        return csm
+
+    if 'event_based' in oqparam.calculation_mode:
+        # initialize the rupture serial numbers before splitting/filtering; in
+        # this way the serials are independent from the site collection
+        csm.init_serials(oqparam.ses_seed)
+
+    # TODO: check why the seeds still depend on the minimun_magnitude
+    set_min_mag(csm.get_sources(), oqparam.minimum_magnitude)
+
+    if oqparam.disagg_by_src:
+        csm = csm.grp_by_src()  # one group per source
+
+    csm.info.gsim_lt.check_imts(oqparam.imtls)
+    if monitor.hdf5:
+        csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
+
+    # splitting assumes that the serials have been initialized already
+    if split_all and 'ucerf' not in oqparam.calculation_mode:
+        csm = parallel_split_filter(
+            csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
     return csm
+
+
+def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
+    """
+    Split the given source and filter the subsources by distance and by
+    magnitude. Perform sampling  if a nontrivial sample_factor is passed.
+    Yields a pair (split_sources, split_time) if split_sources is non-empty.
+    """
+    splits, stime = split_sources(srcs)
+    if splits and sample_factor:
+        # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+        # will run a computation 100 times smaller
+        splits = random_filter(splits, sample_factor, seed)
+        # NB: for performance, sample before splitting
+    if splits and srcfilter:
+        splits = list(srcfilter.filter(splits))
+    if splits:
+        yield splits, stime
+
+
+def parallel_split_filter(csm, srcfilter, seed, monitor):
+    """
+    Apply :func:`split_filter` in parallel to the composite source model.
+
+    :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
+    """
+    mon = monitor('split_filter')
+    sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    logging.info('Splitting/filtering sources')
+    sources = csm.get_sources()
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smap = parallel.Starmap.apply(
+        split_filter,
+        (sources, srcfilter, seed, sample_factor, mon),
+        maxweight=RUPTURES_PER_BLOCK, distribute=dist,
+        progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
+    if monitor.hdf5:
+        source_info = monitor.hdf5['source_info']
+        source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
+    srcs_by_grp = collections.defaultdict(list)
+    with monitor('updating source_info', autoflush=True):
+        arr = numpy.zeros((len(sources), 2), F32)
+        for splits, stime in smap:
+            for split in splits:
+                i = split.id
+                arr[i, 0] += stime[i]
+                arr[i, 1] += 1
+                srcs_by_grp[split.src_group_id].append(split)
+        if sample_factor and not srcs_by_grp:
+            sys.stderr.write('Too much sampling, no sources\n')
+            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
+        elif not srcs_by_grp:
+            # raise an exception in the regular case (no sample_factor)
+            raise RuntimeError('All sources were filtered away!')
+        elif monitor.hdf5:
+            source_info[:, 'split_time'] = arr[:, 0]
+            source_info[:, 'num_split'] = arr[:, 1]
+    return csm.new(srcs_by_grp)
 
 
 def get_imts(oqparam):
@@ -876,7 +1051,7 @@ def get_pmap_from_nrml(oqparam, fname):
     array = numpy.zeros((len(mesh), num_levels))
     imtls = DictArray(imtls)
     for imt_ in hcurves_by_imt:
-        array[:, imtls.slicedic[imt_]] = hcurves_by_imt[imt_]
+        array[:, imtls(imt_)] = hcurves_by_imt[imt_]
     return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
 
 
@@ -986,33 +1161,41 @@ def get_mesh_hcurves(oqparam):
 
 
 # used in utils/reduce_sm and utils/extract_source
-def reduce_source_model(smlt_file, source_ids):
+def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
     """
-    for paths in gen_sm_paths(smlt_file):
-        for path in paths:
-            root = nrml.read(path)
-            model = Node('sourceModel', root[0].attrib)
-            origmodel = root[0]
-            if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
-                for src_node in origmodel:
+    for path in logictree.collect_info(smlt_file).smpaths:
+        root = nrml.read(path)
+        model = Node('sourceModel', root[0].attrib)
+        origmodel = root[0]
+        if root['xmlns'] == 'http://openquake.org/xmlns/nrml/0.4':
+            for src_node in origmodel:
+                if src_node['id'] in source_ids:
+                    model.nodes.append(src_node)
+        else:  # nrml/0.5
+            for src_group in origmodel:
+                sg = copy.copy(src_group)
+                sg.nodes = []
+                weights = src_group.get('srcs_weights')
+                if weights:
+                    assert len(weights) == len(src_group.nodes)
+                else:
+                    weights = [1] * len(src_group.nodes)
+                src_group['srcs_weights'] = reduced_weigths = []
+                for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
-                        model.nodes.append(src_node)
-            else:  # nrml/0.5
-                for src_group in origmodel:
-                    sg = copy.copy(src_group)
-                    sg.nodes = []
-                    for src_node in src_group:
-                        if src_node['id'] in source_ids:
-                            sg.nodes.append(src_node)
-                    if sg.nodes:
-                        model.nodes.append(sg)
-            if model:
-                shutil.copy(path, path + '.bak')
-                with open(path, 'wb') as f:
-                    nrml.write([model], f, xmlns=root['xmlns'])
-                    logging.warn('Reduced %s' % path)
+                        sg.nodes.append(src_node)
+                        reduced_weigths.append(weight)
+                if sg.nodes:
+                    model.nodes.append(sg)
+        shutil.copy(path, path + '.bak')
+        if model:
+            with open(path, 'wb') as f:
+                nrml.write([model], f, xmlns=root['xmlns'])
+                logging.warn('Reduced %s' % path)
+        elif remove:  # remove the files completely reduced
+            os.remove(path)
 
 
 def get_checksum32(oqparam):

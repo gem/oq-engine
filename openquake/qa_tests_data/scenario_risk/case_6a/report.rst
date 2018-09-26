@@ -3,8 +3,8 @@ Scenario Calculation with Simple Fault Rupture
 
 ============== ===================
 checksum32     1,923,070,683      
-date           2018-06-26T14:58:38
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:27:43
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -55,12 +55,3 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=2, rlzs=2)
   0,BooreAtkinson2008(): [0]
   0,ChiouYoungs2008(): [1]>
-
-Slowest operations
-------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-computing gmfs          0.00491  0.0       1     
-reading site collection 0.00101  0.0       1     
-======================= ======== ========= ======

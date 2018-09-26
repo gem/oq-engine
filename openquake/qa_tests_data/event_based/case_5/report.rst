@@ -3,8 +3,8 @@ Germany_SHARE Combined Model event_based
 
 ============== ===================
 checksum32     3,726,424,986      
-date           2018-06-26T14:58:35
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:28:01
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 100, num_levels = 1
@@ -55,13 +55,15 @@ b3        0.30000 complex(4,5,2,1) 1/8
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================================================================================ ================= ======================= =================
-grp_id gsims                                                                                            distances         siteparams              ruptparams       
-====== ================================================================================================ ================= ======================= =================
-0      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake         
-1      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-4      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake         
-====== ================================================================================================ ================= ======================= =================
+====== ================================================================================================ ================= ======================= ============================
+grp_id gsims                                                                                            distances         siteparams              ruptparams                  
+====== ================================================================================================ ================= ======================= ============================
+0      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake                    
+1      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor           
+2      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc()                       rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+3      Campbell2003SHARE() ToroEtAl2002SHARE()                                                          rjb rrup                                  mag rake                    
+4      FaccioliEtAl2010()                                                                               rrup              vs30                    mag rake                    
+====== ================================================================================================ ================= ======================= ============================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -90,45 +92,46 @@ source_models/ss_model_final_250km_Buffer.xml 4      Volcanic             640   
 ============= =====
 #TRT models   3    
 #eff_ruptures 2,347
-#tot_ruptures 5,039
-#tot_weight   9,119
+#tot_ruptures 5,192
+#tot_weight   0    
 ============= =====
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= ========= ======
-source_id source_class      num_ruptures calc_time split_time num_sites num_split events
-========= ================= ============ ========= ========== ========= ========= ======
-19        SimpleFaultSource 16           0.40192   0.0        9.00000   12        0     
-1339      PointSource       14           0.20183   0.0        7.75000   12        0     
-264       PointSource       14           0.12124   0.0        1.22222   9         0     
-258       PointSource       12           0.11832   0.0        5.87500   8         3     
-246       PointSource       12           0.11829   0.0        4.46154   13        6     
-257       PointSource       12           0.10986   0.0        5.87500   8         5     
-247       PointSource       12           0.10517   0.0        4.46154   13        0     
-263       PointSource       14           0.10493   0.0        1.22222   9         0     
-249       PointSource       12           0.09161   0.0        2.00000   7         0     
-248       PointSource       12           0.08654   0.0        2.00000   7         0     
-259       PointSource       12           0.08376   0.0        5.87500   8         0     
-250       PointSource       12           0.06939   0.0        1.85714   7         0     
-22        SimpleFaultSource 2            0.05401   0.0        1.00000   6         0     
-20        SimpleFaultSource 2            0.04281   0.0        9.00000   6         0     
-330045    PointSource       22           0.03732   0.0        7.00000   1         0     
-330076    PointSource       18           0.03663   0.0        5.00000   1         0     
-330077    PointSource       20           0.02000   0.0        5.00000   1         0     
-330046    PointSource       20           0.01868   0.0        5.00000   1         0     
-330047    PointSource       26           0.01699   0.0        8.00000   1         0     
-21        SimpleFaultSource 1            0.01653   0.0        9.00000   4         0     
-========= ================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         A    0     4     7            0.00998   0.00195    5.00000   1         1.00000
+0      2         A    4     8     7            0.00540   0.00170    5.00000   1         0.0    
+1      1339      A    0     10    168          0.14685   0.07533    93        12        0.0    
+1      19        S    10    73    349          0.34330   0.00211    108       12        0.0    
+1      20        S    73    92    31           0.02514   4.907E-04  54        6         0.0    
+1      21        S    92    101   7            0.00865   2.317E-04  36        4         0.0    
+1      22        S    101   115   34           0.04201   4.578E-04  6.00000   6         0.0    
+1      246       A    115   121   156          0.11132   0.05351    58        13        1.00000
+1      247       A    121   127   156          0.12990   0.05207    58        13        0.0    
+1      248       A    127   138   384          0.07519   0.07538    14        7         0.0    
+1      249       A    138   149   384          0.07426   0.07528    14        7         0.0    
+1      250       A    149   160   384          0.06949   0.07607    13        7         0.0    
+1      257       A    160   173   96           0.08509   0.02479    47        8         1.00000
+1      258       A    173   186   96           0.06622   0.02252    47        8         0.0    
+1      259       A    186   199   96           0.05775   0.02238    47        8         0.0    
+1      263       A    199   211   1,022        0.11414   0.18429    11        9         0.0    
+1      264       A    211   223   1,022        0.10685   0.18544    11        9         0.0    
+2      101622    P    0     1     39           0.0       0.0        0.0       0         0.0    
+2      101623    P    1     2     36           0.0       0.0        0.0       0         0.0    
+3      323839    P    2     3     6            0.0       0.0        0.0       0         0.0    
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-PointSource       1.61568   49    
-SimpleFaultSource 0.51528   4     
-================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    1.05245   13    
+P    0.46321   51    
+S    0.41909   4     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -138,35 +141,30 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00777 0.01509 0.00167 0.08656 55       
-compute_hazard     0.11961 0.05401 0.03092 0.31442 20       
+read_source_models 0.05379 0.06733 0.01184 0.13146 3        
+split_filter       0.20918 NaN     0.20918 0.20918 1        
+build_ruptures     0.11309 0.03867 0.01974 0.20136 18       
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-============== =================================================================================================== =========
-task           sent                                                                                                received 
-RtreeFilter    srcs=188.61 KB monitor=17.29 KB srcfilter=14.99 KB                                                  118.06 KB
-compute_hazard sources_or_ruptures=116.44 KB param=62.4 KB rlzs_by_gsim=13.74 KB monitor=6.31 KB src_filter=4.8 KB 19.69 KB 
-============== =================================================================================================== =========
+================== ======================================================================== =========
+task               sent                                                                     received 
+read_source_models monitor=993 B converter=957 B fnames=608 B                               45.33 KB 
+split_filter       srcs=67.18 KB monitor=343 B srcfilter=220 B sample_factor=21 B seed=14 B 77.7 KB  
+build_ruptures     srcs=99.43 KB param=17.42 KB monitor=6.06 KB srcfilter=3.87 KB           123.26 KB
+================== ======================================================================== =========
 
 Slowest operations
 ------------------
-============================== ======== ========= ======
-operation                      time_sec memory_mb counts
-============================== ======== ========= ======
-total compute_hazard           2.39221  8.62891   20    
-building ruptures              2.31520  7.96094   20    
-total prefilter                0.42756  4.23828   55    
-managing sources               0.38657  0.0       1     
-reading composite source model 0.18598  0.0       1     
-splitting sources              0.10374  0.0       1     
-unpickling prefilter           0.01845  0.0       55    
-saving ruptures                0.01770  0.0       20    
-making contexts                0.01598  0.0       3     
-store source_info              0.01518  0.0       1     
-GmfGetter.init                 0.00655  0.05859   20    
-unpickling compute_hazard      0.00591  0.0       20    
-aggregating hcurves            0.00455  0.0       20    
-reading site collection        0.00105  0.0       1     
-============================== ======== ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     2.03556  0.16016   18    
+updating source_info     0.23128  0.0       1     
+total split_filter       0.20918  0.25781   1     
+total read_source_models 0.16138  0.0       3     
+store source_info        0.01003  0.0       1     
+saving ruptures          0.00875  0.0       3     
+making contexts          0.00300  0.0       3     
+======================== ======== ========= ======

@@ -28,6 +28,7 @@ import collections
 import numpy
 import scipy.stats
 
+from openquake.hazardlib import pmf
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -151,7 +152,7 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # the 'international date line' issue
         # the 'minus 1' is needed because the digitize method returns the
         # index of the upper bound of the bin
-        mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
+        mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
         dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
         lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins[sid])
         lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins[sid]) - 1

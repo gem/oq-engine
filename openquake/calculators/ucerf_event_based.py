@@ -28,7 +28,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.risklib import riskinput
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import util
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
@@ -232,7 +232,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
             with filt_mon:
                 for rup, n_occ in zip(rups, n_occs):
                     rup.serial = serial
-                    rup.seed = seed
                     try:
                         rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
                         indices = rup.sctx.sids
@@ -247,9 +246,11 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
     res['ruptures'] = {src.src_group_id: ebruptures}
-    if not param['save_ruptures']:
-        res.events_by_grp = {grp_id: event_based.get_events(ebruptures)
-                             for grp_id in res}
+    if param['save_ruptures']:
+        res.ruptures_by_grp = {src.src_group_id: ebruptures}
+    else:
+        res.events_by_grp = {
+            src.src_group_id: event_based.get_events(ebruptures)}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
@@ -262,7 +263,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
 @base.calculators.add('ucerf_hazard')
 class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
-    Event based PSHA calculator generating the ruptures only
+    Event based PSHA calculator generating the ruptures and GMFs together
     """
     core_task = compute_hazard
 
@@ -271,24 +272,16 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         parse the logic tree and source model input
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
-        oq = self.oqparam
         self.read_inputs()  # read the site collection
-        self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
-        self.datastore['csm_info'] = self.csm_info = self.csm.info
-        self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
-        self.infos = []
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
-        self.sm_by_grp = self.csm_info.get_sm_by_grp()
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-
-    def filter_csm(self):
-        return UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance), self.csm
 
     def gen_args(self, monitor):
         """
@@ -298,6 +291,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
+        ufilter = UcerfFilter(self.sitecol, self.oqparam.maximum_distance)
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
@@ -309,7 +303,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
                              filter_distance=oq.filter_distance,
                              gmf=oq.ground_motion_fields,
                              min_iml=self.get_min_iml(oq))
-                allargs.append((srcs, self.src_filter, rlzs_by_gsim[sm_id],
+                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
 
@@ -395,8 +389,10 @@ class UCERFRiskCalculator(EbrCalculator):
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = self.csm_info.grp_by("trt")
-        res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
+        self.grp_trt = self.csm.info.grp_by("trt")
+        res = parallel.Starmap(
+            compute_losses, self.gen_args(),
+            self.monitor()).submit_all()
         self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
@@ -429,11 +425,12 @@ class UCERFRiskCalculator(EbrCalculator):
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            if hasattr(res, 'eff_ruptures'):  # for UCERF
+            if hasattr(res, 'eff_ruptures'):
                 self.eff_ruptures += res.eff_ruptures
-            if hasattr(res, 'ruptures_by_grp'):  # for UCERF
-                save_ruptures(self, res.ruptures_by_grp)
-            elif hasattr(res, 'events_by_grp'):  # for UCERF
+            if hasattr(res, 'ruptures_by_grp'):
+                for ruptures in res.ruptures_by_grp.values():
+                    save_ruptures(self, ruptures)
+            elif hasattr(res, 'events_by_grp'):
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
                     self.datastore.extend('events', events)
