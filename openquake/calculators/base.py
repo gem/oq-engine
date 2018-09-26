@@ -288,7 +288,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Set the attributes nbytes
         """
         # sanity check that eff_ruptures have been set, i.e. are not -1
-        csm_info = self.datastore['csm_info']
+        try:
+            csm_info = self.datastore['csm_info']
+        except KeyError:
+            csm_info = self.datastore['csm_info'] = self.csm.info
         for sm in csm_info.source_models:
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
