@@ -128,16 +128,18 @@ def set_counts(dstore, dsetname):
     return dic
 
 
-def set_random_years(dstore, name, investigation_time):
+def set_random_years(dstore, name, ses_seed, investigation_time):
     """
     Set on the `events` dataset year labels sensitive to the
     SES ordinal and the investigation time.
 
     :param dstore: a DataStore instance
     :param name: name of the dataset ('events')
+    :param ses_seed: seed to use in numpy.random.choice
     :param investigation_time: investigation time
     """
     events = dstore[name].value
+    numpy.random.seed(ses_seed)
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
     for event in events:
@@ -468,8 +470,8 @@ class EventBasedCalculator(base.HazardCalculator):
                              num_events, self.rupser.nruptures)
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
-                numpy.random.seed(self.oqparam.ses_seed)
                 set_random_years(self.datastore, 'events',
+                                 self.oqparam.ses_seed,
                                  int(self.oqparam.investigation_time))
 
         if result and oq.hazard_curves_from_gmfs:
