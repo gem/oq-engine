@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If a worker runs close to out of memory, now a warning appears in the
+    main log
   * Fixed a bug with the minimum_magnitude feature and extended it to be
     tectonic region type dependent
   * Changed the rupture generation to yield bunches of ruptures, thus avoiding
