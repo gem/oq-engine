@@ -244,11 +244,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 if not sg.sources:
                     continue
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
-                if sg.src_interdep == 'mutex':  # do not split
-                    yield sg, self.src_filter, rlzs_by_gsim, par, monitor
-                    num_tasks += 1
-                    num_sources += len(sg.sources)
-                    continue
                 for block in block_splitter(sg.sources, maxweight, weight):
                     yield block, self.src_filter, rlzs_by_gsim, par, monitor
                     num_tasks += 1
