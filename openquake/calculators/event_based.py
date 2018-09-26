@@ -33,7 +33,8 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.classical import (
+    ClassicalCalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -206,27 +207,30 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
-    def gen_args(self, param, monitor):
+    def gen_args1(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
         concurrent_tasks = oq.concurrent_tasks
-        if oq.hazard_calculation_id:
-            U = len(self.datastore.parent['ruptures'])
-            logging.info('Found %d ruptures', U)
-            parent = self.can_read_parent() or self.datastore
-            samples_by_grp = self.csm_info.get_samples_by_grp()
-            for slc in split_in_slices(U, concurrent_tasks or 1):
-                for grp_id in self.rlzs_by_gsim_grp:
-                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                    ruptures = RuptureGetter(parent, slc, grp_id)
-                    par = param.copy()
-                    par['samples'] = samples_by_grp[grp_id]
-                    yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
-            return
+        U = len(self.datastore.parent['ruptures'])
+        logging.info('Found %d ruptures', U)
+        parent = self.can_read_parent() or self.datastore
+        samples_by_grp = self.csm_info.get_samples_by_grp()
+        for slc in split_in_slices(U, concurrent_tasks or 1):
+            for grp_id in self.rlzs_by_gsim_grp:
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+                ruptures = RuptureGetter(parent, slc, grp_id)
+                par = param.copy()
+                par['samples'] = samples_by_grp[grp_id]
+                yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
 
-        maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
+    def gen_args2(self, param, monitor):
+        """
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        concurrent_tasks = self.oqparam.concurrent_tasks or 1
+        maxweight = self.csm.get_maxweight(weight, concurrent_tasks)
         logging.info('Using maxweight=%d', maxweight)
         num_tasks = 0
         num_sources = 0
@@ -383,11 +387,6 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         if oq.ground_motion_fields is False:
             return {}
-        if oq.hazard_calculation_id:
-            def saving_sources_by_task(allargs, dstore):
-                return allargs
-        else:
-            from openquake.calculators.classical import saving_sources_by_task
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
@@ -399,18 +398,14 @@ class EventBasedCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
-        with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(param, self.monitor('classical'))
-            iterargs = saving_sources_by_task(allargs, self.datastore)
-            if isinstance(allargs, list):
-                # there is a trick here: if the arguments are known
-                # (a list, not an iterator), keep them as a list
-                # then the Starmap will understand the case of a single
-                # argument tuple and it will run in core the task
-                iterargs = list(iterargs)
-            ires = parallel.Starmap(
-                self.core_task.__func__, iterargs, self.monitor()
-            ).submit_all()
+        if oq.hazard_calculation_id:
+            iterargs = self.gen_args1(param, self.monitor())
+        else:
+            iargs = self.gen_args2(param, self.monitor())
+            iterargs = saving_sources_by_task(iargs, self.datastore)
+        ires = parallel.Starmap(
+            self.core_task.__func__, iterargs, self.monitor()
+        ).submit_all()
         acc = ires.reduce(self.agg_dicts, acc)
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
