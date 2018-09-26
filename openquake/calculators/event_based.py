@@ -385,8 +385,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        if oq.ground_motion_fields is False:
-            return {}
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
@@ -398,11 +396,14 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         if oq.hazard_calculation_id:  # from ruptures
+            assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.csm_info = self.datastore.parent['csm_info']
             iterargs = self.from_ruptures(param, self.monitor())
         else:  # starting from sources
             self.build_ruptures()
+            if oq.ground_motion_fields is False:
+                return {}
             iargs = self.from_sources(param, self.monitor())
             iterargs = saving_sources_by_task(iargs, self.datastore)
         acc = parallel.Starmap(
@@ -445,7 +446,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
-        if oq.hazard_calculation_id is None and 'events' in self.datastore:
+        if oq.hazard_calculation_id is None:
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
