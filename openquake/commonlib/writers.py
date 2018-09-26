@@ -86,16 +86,13 @@ class HeaderTranslator(object):
                 names.append(descr)
         return names
 
+
 htranslator = HeaderTranslator(
     '(rlzi):uint16',
     '(sid):uint32',
     '(eid):uint64',
     '(imti):uint8',
-    '(gmv_.+):float32',
     '(aid):uint32',
-    '(annual_loss_orig):float32',
-    '(annual_loss_retro):float32',
-    '(bcr):float32',
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
@@ -103,39 +100,16 @@ htranslator = HeaderTranslator(
     '(event_id):uint64',
     '(event_set):uint32',
     '(eid):uint32',
-    '(eid-\d+):float32',
     '(year):uint32',
     '(return_period):uint32',
     '(site_id):uint32',
     '(taxonomy):\|S100',
     '(tag):\|S100',
     '(multiplicity):uint16',
-    '(magnitude):float32',
-    '(centroid_lon):float32',
-    '(centroid_lat):float32',
-    '(centroid_depth):float32',
     '(numsites):uint32',
-    '(losses):float32',
-    '(poes):float32',
-    '(avg):float32',
-    '(poe-[\d\.]+):float32',
-    '(lon):float32',
-    '(lat):float32',
-    '(depth):float32',
-    '(structural.*):float32',
-    '(nonstructural.*):float32',
-    '(business_interruption.*):float32',
-    '(contents.*):float32',
-    '(occupants):float32',
-    '(occupants~.+):float32',
-    '(occupants_ins):float32',
-    '(no_damage):float32',
-    '(slight):float32',
-    '(moderate):float32',
-    '(extensive):float32',
-    '(extreme):float32',
-    '(complete):float32',
-    '(\d+):float32',  # realization column, used in the GMF scenario exporter
+    '(lon):float64',
+    '(lat):float64',
+    '(depth):float64',
 )
 
 
@@ -162,7 +136,8 @@ def build_header(dtype):
     Convert a numpy nested dtype into a list of strings suitable as header
     of csv file.
 
-    >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
+    >>> imt_dt = numpy.dtype([('PGA', numpy.float32, 3),
+    ...                       ('PGV', numpy.float32, 4)])
     >>> build_header(imt_dt)
     ['PGA:3', 'PGV:4']
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
@@ -177,7 +152,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float64' and not numpytype.startswith('|S'):
+        if numpytype != 'float32' and not numpytype.startswith('|S'):
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -322,7 +297,7 @@ def parse_header(header):
     Here is an example:
 
     >>> parse_header(['PGA:float32', 'PGV', 'avg:float32:2'])
-    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f4'), ('PGV', '<f8'), ('avg', '<f4', (2,))]))
+    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f4'), ('PGV', '<f4'), ('avg', '<f4', (2,))]))
 
     :params header: a list of type descriptions
     :returns: column names and the corresponding composite dtype
@@ -333,10 +308,10 @@ def parse_header(header):
         col = col_str.strip().split(':')
         n = len(col)
         if n == 1:  # default dtype and no shape
-            col = [col[0], 'float64', '']
+            col = [col[0], 'float32', '']
         elif n == 2:
             if castable_to_int(col[1]):  # default dtype and shape
-                col = [col[0], 'float64', col[1]]
+                col = [col[0], 'float32', col[1]]
             else:  # dtype and no shape
                 col = [col[0], col[1], '']
         elif n > 3:

@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2018-06-26T14:58:32
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:27:55
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 2, num_levels = 4
@@ -74,22 +74,27 @@ source_model.xml 0      Active Shallow Crust 2,625        5,572
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            1.69730   0.0        2.00000   292       15    
-2         PointSource  6            0.51341   0.0        2.00000   97        13    
-3         PointSource  5            0.21586   0.0        2.00000   57        0     
-9         PointSource  3            0.00282   0.0        1.50000   2         0     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         A    0     4     1,752        1.85509   28         584       292       1.00000
+0      2         A    4     8     582          0.55560   2.85070    194       97        3.00000
+0      3         A    8     12    440          0.19638   1.44441    114       57        0.0    
+0      4         A    12    16    267          0.0       0.0        0.0       0         0.0    
+0      5         A    16    20    518          0.0       0.0        0.0       0         0.0    
+0      6         A    20    24    316          0.0       0.0        0.0       0         0.0    
+0      7         A    24    28    1,028        0.0       0.0        0.0       0         0.0    
+0      8         A    28    32    447          0.0       0.0        0.0       0         0.0    
+0      9         A    32    36    222          0.00244   0.05608    3.00000   2         0.0    
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  2.42940   4     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    2.60950   9     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -99,35 +104,30 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00977 0.00340 0.00407 0.01975 59       
-compute_hazard     0.09544 0.02554 0.01619 0.15088 28       
+read_source_models 0.61453 NaN     0.61453 0.61453 1        
+split_filter       0.62795 NaN     0.62795 0.62795 1        
+build_ruptures     0.04639 0.01387 0.02097 0.09166 63       
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-============== ================================================================================================== ========
-task           sent                                                                                               received
-RtreeFilter    srcs=392.08 KB monitor=18.55 KB srcfilter=16.08 KB                                                 149 KB  
-compute_hazard sources_or_ruptures=169.4 KB param=63.55 KB monitor=8.8 KB rlzs_by_gsim=8.12 KB src_filter=6.73 KB 36.16 KB
-============== ================================================================================================== ========
+================== ======================================================================== =========
+task               sent                                                                     received 
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     9.2 KB   
+split_filter       srcs=30.96 KB monitor=432 B srcfilter=220 B sample_factor=21 B seed=14 B 129.54 KB
+build_ruptures     srcs=200.07 KB monitor=21.23 KB param=18.15 KB srcfilter=13.54 KB        255.88 KB
+================== ======================================================================== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_hazard           2.67234   7.74219   28    
-building ruptures              2.59350   6.83203   28    
-total prefilter                0.57645   1.19141   59    
-splitting sources              0.50570   0.0       1     
-reading composite source model 0.50554   0.0       1     
-managing sources               0.33993   0.0       1     
-saving ruptures                0.03347   0.0       28    
-unpickling prefilter           0.02491   0.0       59    
-GmfGetter.init                 0.00889   0.20703   28    
-unpickling compute_hazard      0.00755   0.0       28    
-making contexts                0.00704   0.0       5     
-aggregating hcurves            0.00586   0.0       28    
-store source_info              0.00477   0.0       1     
-reading site collection        2.429E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     2.92237  0.13281   63    
+updating source_info     0.65254  0.0       1     
+total split_filter       0.62795  0.57812   1     
+total read_source_models 0.61453  0.0       1     
+saving ruptures          0.01041  0.0       4     
+making contexts          0.00552  0.0       5     
+store source_info        0.00494  0.0       1     
+======================== ======== ========= ======

@@ -28,6 +28,7 @@ import numpy
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -83,8 +84,10 @@ def gsim(value, **kwargs):
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
     else:
+        #if value == 'NRCan15SiteTerm':
+        #    import pdb; pdb.set_trace()
         try:
-            gsim_class = GSIM[value]
+            gsim_class = registry[value]
         except KeyError:
             raise ValueError('Unknown GSIM: %s' % value)
     try:
@@ -261,7 +264,7 @@ class SimpleId(object):
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 
-MAX_ID_LENGTH = 60
+MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
@@ -272,14 +275,21 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name=''):
+    def __init__(self, minrange, maxrange, name='', accept=None):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
+        self.accept = accept
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float_(value)
+        try:
+            f = float_(value)
+        except ValueError:  # passed a string
+            if value == self.accept:
+                return value
+            else:
+                raise
         if f > self.maxrange:
             raise ValueError("%s %s is bigger than the maximum (%s)" %
                              (self.name, f, self.maxrange))
@@ -663,12 +673,13 @@ def intensity_measure_types(value):
     return imts
 
 
-def check_levels(imls, imt, no_damage_limit=0):
+def check_levels(imls, imt, min_iml=1E-10):
     """
     Raise a ValueError if the given levels are invalid.
 
     :param imls: a list of intensity measure and levels
     :param imt: the intensity measure type
+    :param min_iml: minimum intensity measure level (default 1E-10)
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
     >>> check_levels([], 'PGA')
@@ -686,12 +697,15 @@ def check_levels(imls, imt, no_damage_limit=0):
     """
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
-    elif imls[0] == 0 and no_damage_limit == 0:
-        raise ValueError('The imls for %s start from 0: %s' % (imt, imls))
     elif imls != sorted(imls):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
         raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
+    elif imls[0] == 0 and imls[1] <= min_iml:  # apply the cutoff
+        raise ValueError("The min_iml %s=%s is larger than the second level "
+                         "for %s" % (imt, min_iml, imls))
+    elif imls[0] == 0 and imls[1] > min_iml:  # apply the cutoff
+        imls[0] = min_iml
 
 
 def intensity_measure_types_and_levels(value):
@@ -941,10 +955,10 @@ def point3d(value, lon, lat, depth):
     return longitude(lon), latitude(lat), positivefloat(depth)
 
 
-strike_range = FloatRange(0, 360)
-slip_range = strike_range
-dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180)
+strike_range = FloatRange(0, 360, 'strike')
+slip_range = FloatRange(0, 360, 'slip')
+dip_range = FloatRange(0, 90, 'dip')
+rake_range = FloatRange(-180, 180, 'rake', 'undefined')
 
 
 def ab_values(value):
@@ -1010,7 +1024,6 @@ def simple_slice(value):
     except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
-
 
 
 # used for the exposure validation
@@ -1200,11 +1213,11 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             yield item
 
 
-class RepiEquivalent(object):
+class RjbEquivalent(object):
     """
-    A class to compute the equivalent epicentral distance. Usage:
+    A class to compute the equivalent Rjb distance. Usage:
 
-    >> reqv = RepiEquivalent('lookup.hdf5')
+    >> reqv = RjbEquivalent('lookup.hdf5')
     >> reqv.get(repi_distances, mag)
     """
     def __init__(self, hdf5path):

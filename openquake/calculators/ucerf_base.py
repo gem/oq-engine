@@ -168,6 +168,7 @@ class UCERFSource(BaseSeismicSource):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
+    code = b'U'
     MODIFICATIONS = set()
     tectonic_region_type = DEFAULT_TRT
     RUPTURE_WEIGHT = 1  # not very heavy
@@ -371,6 +372,7 @@ class UCERFSource(BaseSeismicSource):
         stop = self.stop
         while stop > start:
             new = copy.copy(self)
+            new.id = self.id
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
@@ -412,6 +414,7 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
+                ps.id = self.id
                 ps.src_group_id = self.src_group_id
                 ps.num_ruptures = ps.count_ruptures()
                 sources.append(ps)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -52,7 +53,7 @@ def compare_mean_curves(calc_ref, calc, nsigma=3):
         mean_ref, std_ref = pmap_ref[site_id_ref[lonlat]].array.T
         err = numpy.sqrt(std**2 + std_ref**2)
         for imt in imtls:
-            sl = imtls.slicedic[imt]
+            sl = imtls(imt)
             ok = (numpy.abs(mean[sl] - mean_ref[sl]) < nsigma * err[sl]).all()
             if not ok:
                 md = (numpy.abs(mean[sl] - mean_ref[sl])).max()

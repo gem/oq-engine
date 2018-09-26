@@ -297,8 +297,9 @@ producing too small PoEs.'''
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
-        results = parallel.Starmap(compute_disagg, all_args).reduce(
-            self.agg_result, AccumDict(accum={}))
+        results = parallel.Starmap(
+            compute_disagg, all_args, self.monitor()
+        ).reduce(self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
         trti = csm.info.trt2i()
@@ -463,13 +464,13 @@ producing too small PoEs.'''
                 for g, grp_id in enumerate(grp_ids):
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
-                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        ys = pmap[sid].array[oq.imtls(imt), 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-%s-%s' % (
-                        prefix, imt, rec['lons'], rec['lats'])
+                        prefix, imt, rec['lon'], rec['lat'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:

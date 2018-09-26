@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ===================
 checksum32     1,751,642,476      
-date           2018-06-26T14:57:50
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:28:40
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -81,39 +81,54 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2,970        2,025       
-source_model.xml 1      Active Shallow Crust 2,970        2,025       
-source_model.xml 2      Active Shallow Crust 2,965        2,025       
-source_model.xml 3      Active Shallow Crust 2,957        2,025       
-source_model.xml 4      Active Shallow Crust 2,754        2,025       
+source_model.xml 0      Active Shallow Crust 2,025        2,025       
+source_model.xml 1      Active Shallow Crust 2,025        2,025       
+source_model.xml 2      Active Shallow Crust 2,025        2,025       
+source_model.xml 3      Active Shallow Crust 2,295        2,025       
+source_model.xml 4      Active Shallow Crust 2,295        2,025       
 ================ ====== ==================== ============ ============
 
 ============= ======
 #TRT models   5     
-#eff_ruptures 14,616
+#eff_ruptures 10,665
 #tot_ruptures 10,125
-#tot_weight   1,067 
+#tot_weight   0     
 ============= ======
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-5         AreaSource   425          0.02702   0.00454    1.00000   168       0     
-3         AreaSource   510          0.02372   0.00633    1.00000   163       0     
-4         AreaSource   425          0.01652   0.00604    1.00000   127       0     
-2         AreaSource   510          0.01645   0.00640    1.00000   241       0     
-1         AreaSource   425          0.00954   0.00598    1.00000   225       0     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         A    0     4     375          0.0       0.41011    0.0       25        0.0   
+0      2         A    4     8     450          0.0       0.31987    0.0       30        0.0   
+0      3         A    8     12    450          0.0       0.31802    0.0       30        0.0   
+0      4         A    12    16    375          0.0       0.13157    0.0       25        0.0   
+0      5         A    16    20    375          0.0       0.10180    0.0       25        0.0   
+1      1         A    0     4     375          0.0       0.13078    0.0       25        0.0   
+1      2         A    4     8     450          0.0       0.16882    0.0       30        0.0   
+1      3         A    8     12    450          0.0       0.16761    0.0       30        0.0   
+1      4         A    12    16    375          0.0       0.13839    0.0       25        0.0   
+1      5         A    16    20    375          0.0       0.10169    0.0       25        0.0   
+2      1         A    0     4     375          0.0       0.13050    0.0       25        0.0   
+2      2         A    4     8     450          0.0       0.16593    0.0       30        0.0   
+2      3         A    8     12    450          0.0       0.16587    0.0       30        0.0   
+2      4         A    12    16    375          0.0       0.12949    0.0       25        0.0   
+2      5         A    16    20    375          0.0       0.10287    0.0       25        0.0   
+3      1         A    0     4     425          0.0       0.13204    0.0       25        0.0   
+3      2         A    4     8     510          0.0       0.16806    0.0       30        0.0   
+3      3         A    8     12    510          0.0       0.16942    0.0       30        0.0   
+3      4         A    12    16    425          0.0       0.13179    0.0       25        0.0   
+3      5         A    16    20    425          0.0       0.10302    0.0       25        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.09324   5     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    0.0       25    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -123,53 +138,24 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00561 0.00202 0.00217 0.01115 57       
-count_eff_ruptures 0.01477 0.00380 0.00998 0.02295 11       
+read_source_models 0.02472 NaN     0.02472 0.02472 1        
+split_filter       0.11864 0.11413 0.03794 0.19935 2        
 ================== ======= ======= ======= ======= =========
-
-Fastest task
-------------
-taskno=6, weight=99, duration=0 s, sources="3 4 5"
-
-======== ======= ====== ======= ======= ==
-variable mean    stddev min     max     n 
-======== ======= ====== ======= ======= ==
-nsites   1.00000 0.0    1       1       66
-weight   1.50000 0.0    1.50000 1.50000 66
-======== ======= ====== ======= ======= ==
-
-Slowest task
-------------
-taskno=5, weight=99, duration=0 s, sources="1 2 3 5"
-
-======== ======= ====== ======= ======= ==
-variable mean    stddev min     max     n 
-======== ======= ====== ======= ======= ==
-nsites   1.00000 0.0    1       1       66
-weight   1.50000 0.0    1.50000 1.50000 66
-======== ======= ====== ======= ======= ==
 
 Data transfer
 -------------
-================== =============================================================================== =========
-task               sent                                                                            received 
-RtreeFilter        srcs=182.63 KB monitor=17.92 KB srcfilter=15.53 KB                              213.08 KB
-count_eff_ruptures sources=188.51 KB param=4.63 KB monitor=3.53 KB srcfilter=2.64 KB gsims=1.41 KB 5.46 KB  
-================== =============================================================================== =========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     5.26 KB 
+split_filter       srcs=20.59 KB monitor=864 B srcfilter=506 B sample_factor=42 B seed=28 B 162.9 KB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.36955   0.0       1     
-total prefilter                0.31968   3.15625   57    
-reading composite source model 0.17893   0.0       1     
-total count_eff_ruptures       0.16243   6.50391   11    
-splitting sources              0.14611   0.0       1     
-unpickling prefilter           0.03003   0.0       57    
-store source_info              0.00733   0.0       1     
-aggregate curves               0.00319   0.0       11    
-unpickling count_eff_ruptures  0.00277   0.0       11    
-reading site collection        3.469E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total split_filter       0.23728  0.0       2     
+updating source_info     0.23050  0.0       1     
+total read_source_models 0.02472  0.0       1     
+======================== ======== ========= ======

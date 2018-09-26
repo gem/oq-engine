@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     4,272,018,576      
-date           2018-06-26T14:58:20
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:28:01
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -74,19 +74,19 @@ source_model.xml 0      Active Shallow Crust 3            4
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= ========= ======
-source_id source_class               num_ruptures calc_time split_time num_sites num_split events
-========= ========================== ============ ========= ========== ========= ========= ======
-1         NonParametricSeismicSource 1            0.01373   0.0        3.00000   3         7     
-========= ========================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         N    0     420   4            0.02246   1.895E-04  9.00000   3         4.00000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-========================== ========= ======
-source_class               calc_time counts
-========================== ========= ======
-NonParametricSeismicSource 0.01373   1     
-========================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+N    0.02246   1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -96,35 +96,30 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00504 0.00126 0.00344 0.00638 4        
-compute_hazard     0.02153 NaN     0.02153 0.02153 1        
+read_source_models 0.05353 NaN     0.05353 0.05353 1        
+split_filter       0.00571 NaN     0.00571 0.00571 1        
+build_ruptures     0.01212 0.00177 0.01012 0.01345 3        
 ================== ======= ======= ======= ======= =========
 
 Data transfer
 -------------
-============== =========================================================================================== ========
-task           sent                                                                                        received
-RtreeFilter    srcs=17.11 KB monitor=1.26 KB srcfilter=1.09 KB                                             14.91 KB
-compute_hazard sources_or_ruptures=13.9 KB param=2.28 KB monitor=322 B rlzs_by_gsim=297 B src_filter=246 B 27.08 KB
-============== =========================================================================================== ========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    14.88 KB
+split_filter       srcs=14.6 KB monitor=432 B srcfilter=220 B sample_factor=21 B seed=14 B 13.29 KB
+build_ruptures     srcs=14.82 KB monitor=1.01 KB param=885 B srcfilter=660 B               29.97 KB
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.06748   0.0       1     
-managing sources               0.04770   0.0       1     
-total compute_hazard           0.02153   7.82031   1     
-total prefilter                0.02015   3.56641   4     
-building ruptures              0.01840   6.91016   1     
-making contexts                0.01274   0.0       3     
-saving ruptures                0.00740   0.0       1     
-store source_info              0.00534   0.0       1     
-unpickling prefilter           0.00113   0.0       4     
-unpickling compute_hazard      8.237E-04 0.0       1     
-GmfGetter.init                 3.843E-04 0.0       1     
-reading site collection        3.395E-04 0.0       1     
-splitting sources              3.135E-04 0.0       1     
-aggregating hcurves            2.031E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.05353  0.0       1     
+total build_ruptures     0.03637  0.0       3     
+making contexts          0.02086  0.0       3     
+updating source_info     0.01202  0.0       1     
+saving ruptures          0.00839  0.0       3     
+total split_filter       0.00571  0.48828   1     
+store source_info        0.00463  0.0       1     
+======================== ======== ========= ======
