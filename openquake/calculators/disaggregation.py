@@ -470,7 +470,7 @@ producing too small PoEs.'''
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-%s-%s' % (
-                        prefix, imt, rec['lons'], rec['lats'])
+                        prefix, imt, rec['lon'], rec['lat'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:
