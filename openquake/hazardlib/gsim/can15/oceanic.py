@@ -32,6 +32,10 @@ class OceanicCan15Mid(WesternCan15Mid):
     Implements the GMPE for oceanic sources
     """
 
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
         rupl = copy.deepcopy(rup)

@@ -27,6 +27,10 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
 
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
     def _get_delta(self, dists):
         """
         Computes the additional delta to be used for the computation of the
