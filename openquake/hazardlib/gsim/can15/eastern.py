@@ -62,7 +62,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
     def apply_correction_to_BC(self, mean, imt, dists):
         """
         """
-        if re.search('^SA', str(imt)):
+        if imt.period:
             cff = self.SITE_COEFFS[imt]
             tmp = cff['mf']
         elif imt in [PGA()]:

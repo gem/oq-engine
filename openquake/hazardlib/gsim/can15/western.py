@@ -34,7 +34,7 @@ def get_sigma(imt):
     :returns:
         A float representing the total sigma value
     """
-    if str(imt) == 'PGA' or imt.period < 0.2:
+    if imt.period < 0.2:
         return 0.23
     elif imt.period > 1.0:
         return 0.27
@@ -62,7 +62,6 @@ class WesternCan15Mid(BooreAtkinson2011):
 class WesternCan15Low(WesternCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
         # get original values
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
