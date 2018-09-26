@@ -75,6 +75,5 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
         tmp = general.gettemp(suffix='.hdf5')
         with hdf5.File(tmp, 'w') as f:
             f[mps.source_id] = mps
-
         with hdf5.File(tmp, 'r') as f:
             f[mps.source_id]
