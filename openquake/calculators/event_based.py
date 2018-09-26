@@ -207,7 +207,7 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
-    def from_sources(self, param, monitor):
+    def from_ruptures(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -225,7 +225,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 par['samples'] = samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
 
-    def from_ruptures(self, param, monitor):
+    def from_sources(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -398,9 +398,9 @@ class EventBasedCalculator(base.HazardCalculator):
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         if oq.hazard_calculation_id:  # from ruptures
-            iterargs = self.from_sources(param, self.monitor())
+            iterargs = self.from_ruptures(param, self.monitor())
         else:  # starting from sources
-            iargs = self.from_ruptures(param, self.monitor())
+            iargs = self.from_sources(param, self.monitor())
             iterargs = saving_sources_by_task(iargs, self.datastore)
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
