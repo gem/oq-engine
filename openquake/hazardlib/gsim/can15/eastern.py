@@ -48,13 +48,17 @@ class EasternCan15Mid(PezeshkEtAl2011):
     - Silva et al. (2002) double corner and saturation.
     """
 
-    # Required site parameters
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
+    #: Required site parameters
     REQUIRES_SITES_PARAMETERS = set(('vs30',))
 
-    # Required distance is only repi since rrup and rjb are obtained from repi
+    #: Required distance is only repi since rrup and rjb are obtained from repi
     REQUIRES_DISTANCES = set(('repi',))
 
-    # Set rake
+    #: Required rupture parameters
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
 
     def apply_correction_to_BC(self, mean, imt, dists):
