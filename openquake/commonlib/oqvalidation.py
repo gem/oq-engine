@@ -105,7 +105,7 @@ class OqParam(valid.ParamSet):
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
-    minimum_magnitude = valid.Param(valid.positivefloat, 0)
+    minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -301,7 +301,7 @@ class OqParam(valid.ParamSet):
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
-                    if param in ('lons', 'lats'):  # no check
+                    if param in ('lon', 'lat'):  # no check
                         continue
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
@@ -627,7 +627,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_export_dir(self):
         """
-        The `export_dir` parameter must refer to a directory,
+        export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
         if not self.export_dir:
@@ -636,12 +636,11 @@ class OqParam(valid.ParamSet):
                          % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
-            # check that we can write on the parent directory
-            pdir = os.path.dirname(self.export_dir)
-            can_write = os.path.exists(pdir) and os.access(pdir, os.W_OK)
-            if can_write:
-                os.mkdir(self.export_dir)
-            return can_write
+            try:
+                os.makedirs(self.export_dir)
+            except PermissionError:
+                return False
+            return True
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 

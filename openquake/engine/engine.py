@@ -162,7 +162,7 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     for key in sorted(dskeys & exportable):
         try:
             size_mb = dstore.get_attr(key, 'nbytes') / MB
-        except KeyError:
+        except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
     ds_size = os.path.getsize(dstore.hdf5path) / MB
@@ -214,7 +214,9 @@ try:
     signal.signal(signal.SIGTERM, raiseMasterKilled)
     signal.signal(signal.SIGINT, raiseMasterKilled)
     if hasattr(signal, 'SIGHUP'):
-        signal.signal(signal.SIGHUP, raiseMasterKilled)
+        # Do not register our SIGHUP handler if running with 'nohup'
+        if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, raiseMasterKilled)
 except ValueError:
     pass
 

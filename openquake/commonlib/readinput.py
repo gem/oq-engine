@@ -36,7 +36,6 @@ from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import split_sources
-from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -213,7 +212,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
-    BaseSeismicSource.min_mag = oqparam.minimum_magnitude
     return oqparam
 
 
@@ -384,6 +382,9 @@ def get_gsim_lt(oqparam, trts=['*']):
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
                             set([StdDev.TOTAL])):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
+    trts = set(oqparam.minimum_magnitude) - {'default'}
+    expected_trts = set(gsim_lt.values)
+    assert trts <= expected_trts, (trts, expected_trts)
     return gsim_lt
 
 
@@ -663,6 +664,22 @@ def getid(src):
         return src['id']
 
 
+def set_min_mag(srcs, min_mag):
+    """
+    Set the attribute .min_mag
+
+    :param srcs: a sequence of sources
+    :param min_mag: a dictionary TRT- > magnitude or a scalar
+    """
+    for src in srcs:
+        try:
+            mmag = min_mag[src.tectonic_region_type]
+        except KeyError:
+            mmag = min_mag['default']
+        if mmag:
+            src.min_mag = mmag
+
+
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                split_all=True, srcfilter=None):
     """
@@ -720,6 +737,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
 
+    # TODO: check why the seeds still depend on the minimun_magnitude
+    set_min_mag(csm.get_sources(), oqparam.minimum_magnitude)
+
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
 
@@ -730,18 +750,17 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     # splitting assumes that the serials have been initialized already
     if split_all and 'ucerf' not in oqparam.calculation_mode:
         csm = parallel_split_filter(
-            csm, srcfilter, oqparam.minimum_magnitude, oqparam.random_seed,
-            monitor('prefilter'))
+            csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
     return csm
 
 
-def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
+def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
     """
     Split the given source and filter the subsources by distance and by
     magnitude. Perform sampling  if a nontrivial sample_factor is passed.
     Yields a pair (split_sources, split_time) if split_sources is non-empty.
     """
-    splits, stime = split_sources(srcs, min_mag)
+    splits, stime = split_sources(srcs)
     if splits and sample_factor:
         # debugging tip to reduce the size of a calculation
         # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
@@ -754,7 +773,7 @@ def split_filter(srcs, srcfilter, min_mag, seed, sample_factor, monitor):
         yield splits, stime
 
 
-def parallel_split_filter(csm, srcfilter,  min_mag, seed, monitor):
+def parallel_split_filter(csm, srcfilter, seed, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
@@ -767,7 +786,7 @@ def parallel_split_filter(csm, srcfilter,  min_mag, seed, monitor):
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
         split_filter,
-        (sources, srcfilter, min_mag, seed, sample_factor, mon),
+        (sources, srcfilter, seed, sample_factor, mon),
         maxweight=RUPTURES_PER_BLOCK, distribute=dist,
         progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
@@ -787,7 +806,7 @@ def parallel_split_filter(csm, srcfilter,  min_mag, seed, monitor):
             sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
         elif not srcs_by_grp:
             # raise an exception in the regular case (no sample_factor)
-            RuntimeError('All sources were filtered away!')
+            raise RuntimeError('All sources were filtered away!')
         elif monitor.hdf5:
             source_info[:, 'split_time'] = arr[:, 0]
             source_info[:, 'num_split'] = arr[:, 1]

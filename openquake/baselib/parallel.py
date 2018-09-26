@@ -156,6 +156,7 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
+from datetime import datetime
 import psutil
 import numpy
 try:
@@ -199,26 +200,6 @@ def oq_distribute(task=None):
                          'in order to be able to run %s with celery' %
                          task.__name__)
     return dist
-
-
-def check_mem_usage(monitor=Monitor(),
-                    soft_percent=None, hard_percent=None):
-    """
-    Display a warning if we are running out of memory
-
-    :param int mem_percent: the memory limit as a percentage
-    """
-    soft_percent = soft_percent or config.memory.soft_mem_limit
-    hard_percent = hard_percent or config.memory.hard_mem_limit
-    used_mem_percent = psutil.virtual_memory().percent
-    if used_mem_percent > hard_percent:
-        raise MemoryError('Using more memory than allowed by configuration '
-                          '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
-                          (used_mem_percent, hard_percent))
-    elif used_mem_percent > soft_percent:
-        hostname = socket.gethostname()
-        logging.warn('Using over %d%% of the memory in %s!',
-                     used_mem_percent, hostname)
 
 
 class Pickled(object):
@@ -304,11 +285,13 @@ class Result(object):
     :param val: value to return or exception instance
     :param mon: Monitor instance
     :param tb_str: traceback string (empty if there was no exception)
+    :param msg: message string (default empty)
     """
-    def __init__(self, val, mon, tb_str='', count=0):
+    def __init__(self, val, mon, tb_str='', msg='', count=0):
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
+        self.msg = msg
         self.count = count
 
     def get(self):
@@ -316,7 +299,7 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         val = self.pik.unpickle()
-        if self.tb_str and self.tb_str != 'TASK_ENDED':
+        if self.tb_str:
             etype = val.__class__
             msg = '\n%s%s: %s' % (self.tb_str, etype.__name__, val)
             if issubclass(etype, KeyError):
@@ -334,7 +317,7 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
-            res = Result(None, mon, 'TASK_ENDED')
+            res = Result(None, mon, msg='TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)),
@@ -343,6 +326,22 @@ class Result(object):
             res = Result(val, mon, count=count)
         res.splice = splice
         return res
+
+
+def check_mem_usage(soft_percent=None, hard_percent=None):
+    """
+    Display a warning if we are running out of memory
+    """
+    soft_percent = soft_percent or config.memory.soft_mem_limit
+    hard_percent = hard_percent or config.memory.hard_mem_limit
+    used_mem_percent = psutil.virtual_memory().percent
+    if used_mem_percent > hard_percent:
+        raise MemoryError('Using more memory than allowed by configuration '
+                          '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
+                          (used_mem_percent, hard_percent))
+    elif used_mem_percent > soft_percent:
+        msg = 'Using over %d%% of the memory in %s!'
+        return msg % (used_mem_percent, socket.gethostname())
 
 
 dummy_mon = Monitor()
@@ -376,6 +375,9 @@ def safely_call(func, args, monitor=dummy_mon):
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
+        msg = check_mem_usage()  # warn if too much memory is used
+        if msg:
+            zsocket.send(Result(None, mon, msg=msg))
         if inspect.isgeneratorfunction(func):
             gfunc = func
         else:
@@ -392,7 +394,7 @@ def safely_call(func, args, monitor=dummy_mon):
                 err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
                              count=count)
                 zsocket.send(err)
-            if res.tb_str == 'TASK_ENDED':
+            if res.msg == 'TASK_ENDED':
                 break
             mon.duration = 0
 
@@ -438,7 +440,9 @@ class IterResult(object):
         t0 = time.time()
         self.received = []
         for result in self.iresults:
-            check_mem_usage()  # log a warning if too much memory is used
+            msg = check_mem_usage()  # log a warning if too much memory is used
+            if msg:
+                logging.warn(msg)
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
@@ -716,9 +720,11 @@ class Starmap(object):
                 logging.warn('Discarding a result from job %s, since this '
                              'is job %d', res.mon.calc_id, self.calc_id)
                 continue
-            elif res.tb_str == 'TASK_ENDED':
+            elif res.msg == 'TASK_ENDED':
                 self.log_percent()
                 self.todo -= 1
+            elif res.msg:
+                logging.warn(res.msg)
             else:
                 yield res
         self.log_percent()

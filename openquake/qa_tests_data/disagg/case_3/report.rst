@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     583,572,055        
-date           2018-06-05T06:40:10
-engine_version 3.2.0-git65c4735   
+date           2018-09-25T14:27:50
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -81,33 +81,33 @@ source_model_test_complex.xml 0      Active Shallow Crust 2,308        2,308
 source_model_test_point.xml   1      Active Shallow Crust 624          624         
 ============================= ====== ==================== ============ ============
 
-============= ======
-#TRT models   2     
-#eff_ruptures 2,932 
-#tot_ruptures 2,932 
-#tot_weight   27,883
-============= ======
+============= =====
+#TRT models   2    
+#eff_ruptures 2,932
+#tot_ruptures 2,932
+#tot_weight   9,294
+============= =====
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= ========= ======
-source_id source_class       num_ruptures calc_time split_time num_sites num_split events
-========= ================== ============ ========= ========== ========= ========= ======
-f1        ComplexFaultSource 2,308        0.16356   5.898E-04  1.00000   37        0     
-p1        PointSource        156          0.00181   6.437E-06  1.00000   1         0     
-p2        PointSource        156          1.431E-05 1.669E-06  1.00000   1         0     
-p3        PointSource        156          9.775E-06 1.192E-06  1.00000   1         0     
-p4        PointSource        156          8.106E-06 1.431E-06  1.00000   1         0     
-========= ================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      f1        C    0     4     2,308        22        0.04743    37        37        9,232 
+1      p1        P    0     1     156          0.60733   9.537E-06  1.00000   1         15    
+1      p2        P    1     2     156          0.37776   5.007E-06  1.00000   1         15    
+1      p3        P    2     3     156          0.37111   4.053E-06  1.00000   1         15    
+1      p4        P    3     4     156          0.38187   4.292E-06  1.00000   1         15    
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================== ========= ======
-source_class       calc_time counts
-================== ========= ======
-ComplexFaultSource 0.16356   1     
-PointSource        0.00184   4     
-================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+C    22        1     
+P    1.73807   4     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -117,55 +117,62 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =========
 operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00687 0.00479 0.00243 0.02237 41       
-count_eff_ruptures 0.00636 0.00402 0.00271 0.02419 34       
+read_source_models 0.05662 0.07608 0.00283 0.11042 2        
+split_filter       0.03011 NaN     0.03011 0.03011 1        
+classical          0.72368 0.31285 0.20969 1.74082 34       
+build_hazard_stats 0.00859 NaN     0.00859 0.00859 1        
 ================== ======= ======= ======= ======= =========
 
 Fastest task
 ------------
-taskno=34, weight=187, duration=0 s, sources="p1 p2 p3 p4"
+taskno=20, weight=8, duration=0 s, sources="f1"
+
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   1.00000 NaN    1       1       1
+weight   8.00000 NaN    8.00000 8.00000 1
+======== ======= ====== ======= ======= =
+
+Slowest task
+------------
+taskno=34, weight=62, duration=1 s, sources="p1 p2 p3 p4"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   1.00000 0.0    1   1   4
-weight   46      0.0    46  46  4
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=12, weight=24, duration=0 s, sources="f1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   24      NaN    24  24  1
+weight   15      0.0    15  15  4
 ======== ======= ====== === === =
 
 Data transfer
 -------------
-================== ================================================================================ ========
-task               sent                                                                             received
-RtreeFilter        srcs=43.9 KB srcfilter=16.26 KB monitor=13.85 KB                                 48.41 KB
-count_eff_ruptures param=74.18 KB sources=44.79 KB srcfilter=11.95 KB monitor=11.72 KB gsims=9.4 KB 12.12 KB
-================== ================================================================================ ========
+================== =============================================================================== =========
+task               sent                                                                            received 
+read_source_models monitor=736 B converter=638 B fnames=380 B                                      6.14 KB  
+split_filter       srcs=4.79 KB monitor=381 B srcfilter=380 B sample_factor=21 B seed=14 B         10.79 KB 
+classical          param=76.67 KB group=43.06 KB src_filter=11.52 KB monitor=11.46 KB gsims=9.4 KB 154.65 KB
+build_hazard_stats pgetter=5.82 KB monitor=354 B hstats=67 B                                       1.92 KB  
+================== =============================================================================== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-PSHACalculator.run             0.76076   0.0       1     
-managing sources               0.31538   0.0       1     
-total prefilter                0.28151   4.75391   41    
-total count_eff_ruptures       0.21640   5.65234   34    
-reading composite source model 0.14540   0.0       1     
-unpickling prefilter           0.01444   0.0       41    
-aggregate curves               0.00963   0.0       34    
-unpickling count_eff_ruptures  0.00858   0.0       34    
-store source_info              0.00739   0.0       1     
-splitting sources              0.00108   0.0       1     
-reading site collection        7.839E-04 0.0       1     
-saving probability maps        1.948E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total classical          24        0.82031   34    
+iter_ruptures            11        0.0       41    
+get_poes                 7.68008   0.0       2,932 
+make_contexts            4.88879   0.0       2,932 
+store source_info        0.16106   0.0       34    
+total read_source_models 0.11325   0.27734   2     
+updating source_info     0.04085   0.0       1     
+total split_filter       0.03011   0.0       1     
+aggregate curves         0.02948   0.0       34    
+managing sources         0.01255   0.0       1     
+total build_hazard_stats 0.00859   0.06250   1     
+combine pmaps            0.00775   0.06250   1     
+saving probability maps  0.00283   0.0       1     
+saving statistics        7.246E-04 0.0       1     
+compute mean             4.916E-04 0.0       1     
+======================== ========= ========= ======
