@@ -378,7 +378,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: Since "R_tr is the shortest distance from the observation site to the
 #    #: Kuril, Japan, and Izu-Bonin trenches" this attenuation model is not
 #    #: trivially adaptable to other regions.
-#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lons', 'lats'))
+#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lon', 'lat'))
 #
 #    #: There aren't even plots of results for northeast Japan in the paper
 #    #: so results cannot be verified without a dataset from the authors.

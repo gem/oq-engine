@@ -301,8 +301,6 @@ class OqParam(valid.ParamSet):
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
-                    if param in ('lons', 'lats'):  # no check
-                        continue
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
                     if (isinstance(param_value, float) and
