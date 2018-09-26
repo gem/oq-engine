@@ -1,6 +1,102 @@
   [Michele Simionato]
-  * Forbbidden intensity measure levels starting from zero unless there
-    is a noDamageLimit in the fragility functions
+  * If a worker runs close to out of memory, now a warning appears in the
+    main log
+
+  [Daniele Viganò]
+  * Fixed a bug about 'The openquake master lost its controlling terminal'
+    when running with 'nohup' from command line
+
+  [Michele Simionato]
+  * The `export_dir` is now created recursively, i.e. subdirectories are
+    automatically created if needed
+  * Fixed a bug with the minimum_magnitude feature and extended it to be
+    tectonic region type dependent
+  * Changed the rupture generation to yield bunches of ruptures, thus avoiding
+    the 4GB pickle limit
+  * Parallelized the splitting of the sources, thus making the preprocessing
+    faster
+
+  [Marco Pagani]
+  * Implemented two additional versions of the Silva et al. 2002 GMPE
+  * Added the possibility of setting rake to 'undefined'
+  * Added first 'modified GMPE' implementing the site term for Canada 2015 model
+  * Fixed a bug in the disaggregation calculation due to wrong binning of magnitudes
+
+  [Michele Simionato]
+  * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
+    is accepted again, as requested by Laurentiu Danciu
+
+  [Daniele Viganò]
+  * Support for Ubuntu Trusty is removed
+  * Replaced supervisord with systemd in Ubuntu packages
+
+  [Michele Simionato]
+  * Changed the way the rupture geometries are stored to be consistent with
+    the source geometries
+  * We are now saving information about the source geometries in the datastore
+    (experimentally)
+  * Fixed a bug in event based with sampling causing incorrect GMFs
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
+  * Replaced the forking processpool with a spawning processpool
+
+python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
+
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
+
+  [Matteo Nastasi]
+  * specified 'amd64' as the only architecture supported by ubuntu packages
+
+  [Michele Simionato]
+  * Changed the source writer: now the `srcs_weights` are written in the XML
+    file only if they are nontrivial
+  * Changed the algorithm assigning the seeds: they are now generated before
+    the source splitting; also, a seed-related bug in the splitting was fixed
+  * For event based, moved the rupture generation in the prefiltering phase
+
+  [Daniele Viganò]
+  * Fixed a bug with CTRL-C when using the `processpool` distribution
+
+  [Robin Gee]
+  * Raised the source ID length limit in the validation from 60 to 75 characters
+    to allow sources with longer IDs
+
+  [Michele Simionato]
+  * Introduced a `multi_node` flag in `openquake.cfg` and used it to
+    fully parallelize the prefiltering in a cluster
+  * Used the rupture seed as rupture ID in event based calculations
+  * Changed the deprecation mechanism of GSIMs to use a class attribute
+    `superseded_by=NewGsimClass`
+  * Solved the pickling bug in event based hazard by using generator tasks
+  * Improved the distribution of the risk tasks by changing the weight
+
+  [Pablo Heresi]
+  * Contributed the HM2018CorrelationModel
+
+  [Michele Simionato]
+  * Restored the `individual_curves` flag that for the moment is used for the
+    risk curves
+  * Introduced two experimental new parameters `floating_distance` and
+    `spinning_distance` to reduce hypocenter distributions and nodal plane
+    distributions of ruptures over the corresponding distances
+  * Optimized the parsing of the logic tree when there is no "applyToSources"
+  * Made the IMT classes extensible in client code
+  * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
+    hazard curves and to reduce by half the download time
+
+  [Graeme Weatherill]
+  * Implements a fix of Montalva et al (2016) for new coefficients (now
+    Montalva et al. (2017))
+
+  [Michele Simionato]
+  * Parallelized the reading of the source models
+  * Optimized `oq info --report` by not splitting the sources in that case
+  * Speedup the download of the hazard curves, maps and uhs
+  * Honored `concurrent_tasks` in the prefiltering phase too
+  * It is now legal to compute uniform hazard spectra for a single period
   * Added command `oq plot_memory`
   * Introduced a MultiGMPE concept
   * Saved the size of the datastore in the database and used it in the WebUI
@@ -74,6 +170,8 @@
   * Optimized the memory consumption in the UCERF classical calculator
   * Added a parameter `minimum_magnitude` in the job.ini
   * Added an utility `utils/combine_mean_curves.py`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 06 Sep 2018 12:27:53 +0000
 
 python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
 

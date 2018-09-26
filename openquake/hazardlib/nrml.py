@@ -72,9 +72,9 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
+import os
 import re
 import sys
-import copy
 import decimal
 import logging
 import operator
@@ -108,8 +108,8 @@ class SourceModel(collections.Sequence):
     >> with openquake.baselib.hdf5.File('/tmp/sm.hdf5', 'w') as f:
     ..    f['/'] = source_model
     """
-    def __init__(self, src_groups, name=None, investigation_time=None,
-                 start_time=None):
+    def __init__(self, src_groups, name='', investigation_time='',
+                 start_time=''):
         self.src_groups = src_groups
         self.name = name
         self.investigation_time = investigation_time
@@ -180,7 +180,7 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
-default = sourceconverter.SourceConverter()
+default = sourceconverter.SourceConverter()  # rupture_mesh_spacing=10
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
@@ -188,20 +188,18 @@ def get_source_model_04(node, fname, converter=default):
     sources = []
     source_ids = set()
     converter.fname = fname
-    for no, src_node in enumerate(node, 1):
+    for src_node in node:
         src = converter.convert_node(src_node)
         if src.source_id in source_ids:
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
         source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
                         for trt, srcs in groups.items())
-    return SourceModel(src_groups, node.get('name'))
+    return SourceModel(src_groups, node.get('name', ''))
 
 
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
@@ -305,69 +303,30 @@ validators = {
 }
 
 
-class SourceModelParser(object):
+def read_source_models(fnames, converter,  monitor):
     """
-    A source model parser featuring a cache.
-
+    :param fnames:
+        list of source model files
     :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
+        a SourceConverter instance
+    :param monitor:
+        a :class:`openquake.performance.Monitor` instance
+    :returns:
+        a dictionary fname -> SourceModel instance
     """
-    def __init__(self, converter):
-        self.converter = converter
-        self.sm = {}  # cache fname -> source model
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
-
-    def parse_src_groups(self, fname, apply_uncertainties):
-        """
-        :param fname:
-            the full pathname of the source model file
-        :param apply_uncertainties:
-            a function modifying the sources
-        """
-        try:
-            sm = self.sm[fname]
-        except KeyError:
-            if fname.endswith(('.xml', '.nrml')):
-                sm = to_python(fname, self.converter)
-            elif fname.endswith('.hdf5'):
-                sm = sourceconverter.to_python(fname, self.converter)
-            else:
-                raise ValueError('Unrecognized extension in %s' % fname)
-            self.sm[fname] = sm
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in sm]
-        for group in groups:
-            for src in group:
-                changed = apply_uncertainties(src)
-                if changed:
-                    # redo count_ruptures which can be slow
-                    src.num_ruptures = src.count_ruptures()
-                    self.changed_sources += 1
-        self.fname_hits[fname] += 1
-        return groups
-
-    def check_nonparametric_sources(self, investigation_time):
-        """
-        :param investigation_time:
-            investigation_time to compare with in the case of
-            nonparametric sources
-        :returns:
-            list of nonparametric sources in the composite source model
-        """
-        npsources = []
-        for fname, sm in self.sm.items():
-            # NonParametricSeismicSources
-            np = [src for sg in sm.src_groups for src in sg
-                  if hasattr(src, 'data')]
-            if np:
-                npsources.extend(np)
-                if sm.investigation_time != investigation_time:
-                    raise ValueError(
-                        'The source model %s contains an investigation_time '
-                        'of %s, while the job.ini has %s' % (
-                            fname, sm.investigation_time, investigation_time))
-        return npsources
+    fname2sm = {}
+    prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
+    P = len(prefix) + 1
+    for fname in fnames:
+        if fname.endswith(('.xml', '.nrml')):
+            sm = to_python(fname, converter)
+        elif fname.endswith('.hdf5'):
+            sm = sourceconverter.to_python(fname, converter)
+        else:
+            raise ValueError('Unrecognized extension in %s' % fname)
+        sm.relpath = fname[P:]
+        fname2sm[fname] = sm
+    return fname2sm
 
 
 def read(source, chatty=True, stop=None):

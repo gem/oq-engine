@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.characteristic` defines
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.geo import mesh, NodalPlane
+from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
@@ -54,6 +54,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     its attribute `surface_node` to an explicit representation of the surface
     as a LiteralNode object.
     """
+    code = b'X'
     _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
 
     MODIFICATIONS = set(('set_geometry',))
@@ -117,3 +118,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         The underlying polygon, as a convex hull
         """
         return self.surface.mesh.get_convex_hull()
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.surface.mesh],
+                           numpy.float32)

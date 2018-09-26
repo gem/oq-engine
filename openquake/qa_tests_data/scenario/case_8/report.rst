@@ -3,8 +3,8 @@ Scenario QA Test with AtkinsonBoore2003SInter
 
 ============== ===================
 checksum32     157,390,023        
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+date           2018-09-25T14:27:43
+engine_version 3.3.0-git8ffb37de56
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -53,12 +53,3 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,AtkinsonBoore2003SInter(): [0]>
-
-Slowest operations
-------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-computing gmfs          0.00147   0.0       1     
-reading site collection 4.325E-04 0.0       1     
-======================= ========= ========= ======

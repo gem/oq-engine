@@ -173,8 +173,7 @@ def view_times_by_source_class(token, dstore):
     """
     Returns the calculation times depending on the source typology
     """
-    totals = sum_tbl(
-        dstore['source_info'], 'source_class', ['calc_time'])
+    totals = sum_tbl(dstore['source_info'], 'code', ['calc_time'])
     return rst_table(totals)
 
 
@@ -324,12 +323,13 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         dset = dstore['task_info/' + task]
-        argnames = dset.attrs['argnames'].split()
-        totsent = dset.attrs['sent']
-        sent = ['%s=%s' % (a, humansize(s))
-                for s, a in sorted(zip(totsent, argnames), reverse=True)]
-        recv = dset['received'].sum()
-        data.append((task, ' '.join(sent), humansize(recv)))
+        if 'argnames' in dset.attrs:
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset.attrs['sent']
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 
@@ -586,7 +586,8 @@ def view_task_info(token, dstore):
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
         val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if len(val):
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -617,10 +618,8 @@ def view_task_hazard(token, dstore):
         return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
-    elif 'count_eff_ruptures' in tasks:
-        data = dstore['task_info/count_eff_ruptures'].value
     else:
-        data = dstore['task_info/compute_hazard'].value
+        data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -661,18 +660,15 @@ def view_hmap(token, dstore):
         poe = valid.probability(token.split(':')[1])
     except IndexError:
         poe = 0.1
-    try:
-        mean = dstore['hcurves/mean']
-    except KeyError:  # there is a single realization
-        mean = dstore['hcurves/rlz-000']
+    mean = dstore['hcurves/mean'].value
     oq = dstore['oqparam']
-    hmap = calc.make_hmap(mean, oq.imtls, [poe])
-    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    hmap = calc.make_hmap_array(mean, oq.imtls, [poe], len(mean))
     dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
-    array = numpy.zeros(len(items), dt)
-    for i, (maxvalue, sid) in enumerate(reversed(items)):
-        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
-    return rst_table(array)
+    array = numpy.zeros(len(hmap), dt)
+    for i, vals in enumerate(hmap):
+        array[i] = (i, ) + tuple(vals)
+    array.sort(order=list(oq.imtls)[0])
+    return rst_table(array[:20])
 
 
 @view.add('flat_hcurves')
@@ -724,17 +720,17 @@ def view_dupl_sources(token, dstore):
     info = dstore['source_info']
     items = sorted(group_array(info.value, 'source_id').items())
     tbl = []
-    tot_calc_time = 0
+    tot_time = 0
     for source_id, records in items:
         if len(records) > 1:  # dupl
             calc_time = records['calc_time'].sum()
-            tot_calc_time += calc_time
+            tot_time += calc_time + records['split_time'].sum()
             tbl.append((source_id, calc_time, len(records)))
     if tbl and info.attrs['has_dupl_sources']:
-        tot = info['calc_time'].sum()
-        percent = tot_calc_time / tot * 100
-        m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
-            tot_calc_time, tot, percent)
+        tot = info['calc_time'].sum() + info['split_time'].sum()
+        percent = tot_time / tot * 100
+        m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (
+            tot_time, tot, percent)
         return rst_table(tbl, ['source_id', 'calc_time', 'num_dupl']) + m
     else:
         return 'There are no duplicated sources'
@@ -755,6 +751,16 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('global_gmfs')
+def view_global_gmfs(token, dstore):
+    """
+    Display GMFs averaged on everything for debugging purposes
+    """
+    imtls = dstore['oqparam'].imtls
+    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    return rst_table([row], header=imtls)
 
 
 @view.add('mean_disagg')

@@ -27,7 +27,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import get_pickled_sizes
 from openquake.hazardlib import gsim, nrml, InvalidFile
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
@@ -146,8 +146,7 @@ def info(calculators, gsims, views, exports, extracts, report, input_file=''):
             print(source_model_info([node[0]]))
         elif node[0].tag.endswith('logicTree'):
             nodes = [nrml.read(sm_path)[0]
-                     for sm_paths in readinput.gen_sm_paths(input_file)
-                     for sm_path in sm_paths]
+                     for sm_path in logictree.collect_info(input_file).smpaths]
             print(source_model_info(nodes))
         else:
             print(node.to_str())
