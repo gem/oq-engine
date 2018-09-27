@@ -283,7 +283,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def gen_args(self, monitor):
+    def from_sources(self, param, monitor):
         """
         Generate a task for each branch
         """
@@ -297,12 +297,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             oqparam=oq, save_ruptures=oq.save_ruptures,
-                             filter_distance=oq.filter_distance,
-                             gmf=oq.ground_motion_fields,
-                             min_iml=self.get_min_iml(oq))
+                param = param.copy()
+                param['samples'] = sm.samples
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
