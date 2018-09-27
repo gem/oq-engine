@@ -400,6 +400,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
+        logging.info('Building GMFs')
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
