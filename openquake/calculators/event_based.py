@@ -210,6 +210,9 @@ class EventBasedCalculator(base.HazardCalculator):
 
     @cached_property
     def csm_info(self):
+        """
+        :returns: a cached CompositionInfo object
+        """
         try:
             return self.csm.info
         except AttributeError:
