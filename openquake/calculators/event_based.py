@@ -275,18 +275,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 par['samples'] = self.samples_by_grp[grp_id]
                 yield srcs, self.src_filter, rlzs_by_gsim, par, monitor
             for src in srcs:
-                if hasattr(src, 'eb_ruptures'):  # except UCERF
-                    # save the events always; save the ruptures
-                    # if oq.save_ruptures is true
-                    self.save_ruptures(src.eb_ruptures)
-                    gmf_size += max_gmf_size(
-                        {src.src_group_id: src.eb_ruptures},
-                        self.rlzs_by_gsim_grp,
-                        self.samples_by_grp,
-                        len(self.oqparam.imtls))
-                if hasattr(src, 'calc_times'):
-                    calc_times += src.calc_times
-                    del src.calc_times
+                # save the events always; save the ruptures
+                # if oq.save_ruptures is true
+                self.save_ruptures(src.eb_ruptures)
+                gmf_size += max_gmf_size(
+                    {src.src_group_id: src.eb_ruptures},
+                    self.rlzs_by_gsim_grp,
+                    self.samples_by_grp,
+                    len(self.oqparam.imtls))
+                calc_times += src.calc_times
+                del src.calc_times
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
