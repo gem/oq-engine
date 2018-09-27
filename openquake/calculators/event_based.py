@@ -431,8 +431,10 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Save the SES collection
         """
-        self.rupser.close()  # called by ucerf_event_based
         oq = self.oqparam
+        self.rupser.close()  # called by ucerf_event_based
+        if 'ucerf' in oq.calculation_mode:
+            self.csm.info.update_eff_ruptures(self.csm.get_num_ruptures())
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if oq.hazard_calculation_id is None:
