@@ -29,14 +29,14 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.extract import extract
-from openquake.calculators.views import rst_table
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_17,
-    case_18, mutex)
+    case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
+    case_17,  case_18, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -297,6 +297,20 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
         fname = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_16(self):
+        # an example with site model raising warnings and autogridded exposure
+        self.run_calc(case_16.__file__, 'job.ini',
+                      ground_motion_fields='false')
+        hid = str(self.calc.datastore.calc_id)
+        self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
+        self.assertEqual(view('global_gmfs', self.calc.datastore), '''\
+======= ======= =======
+PGA     SA(0.3) SA(0.6)
+======= ======= =======
+0.00870 0.00469 0.00372
+======= ======= =======''')
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
