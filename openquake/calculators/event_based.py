@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, split_in_slices, humansize, get_array)
+    AccumDict, split_in_slices, humansize, get_array, cached_property)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -207,14 +207,17 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
+    @cached_property
+    def csm_info(self):
+        try:
+            return self.csm.info
+        except AttributeError:
+            return self.datastore.parent['csm_info']
+
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
-        try:
-            csm_info = self.csm.info
-        except AttributeError:
-            csm_info = self.datastore.parent['csm_info']
-        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = csm_info.get_samples_by_grp()
+        self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = self.csm_info.get_samples_by_grp()
 
     def from_ruptures(self, param, monitor):
         """
@@ -237,6 +240,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
+        self.R = self.csm_info.get_num_rlzs()
         self.L = len(self.oqparam.imtls.array)
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
@@ -297,7 +301,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
-        self.csm_info = self.csm.info
 
     def agg_dicts(self, acc, result):
         """
@@ -389,13 +392,10 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:  # from ruptures
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            self.csm_info = self.datastore.parent['csm_info']
-            self.R = self.csm_info.get_num_rlzs()
             iterargs = self.from_ruptures(param, self.monitor())
         else:  # starting from sources
-            self.R = self.csm.info.get_num_rlzs()
-            iterargs = list(saving_sources_by_task(
-                self.build_ruptures(param), self.datastore))
+            iterargs = saving_sources_by_task(
+                self.build_ruptures(param), self.datastore)
             if oq.ground_motion_fields is False:
                 return {}
         acc = parallel.Starmap(
