@@ -247,7 +247,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def build_ruptures(self, par):
+    def from_sources(self, par, monitor):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -258,36 +258,34 @@ class EventBasedCalculator(base.HazardCalculator):
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        if 'ucerf' not in self.oqparam.calculation_mode:
-            mon = self.monitor('build_ruptures')
-            logging.info('Building ruptures')
-            ires = parallel.Starmap.apply(
-                build_ruptures,
-                (self.csm.get_sources(), self.src_filter, param, mon),
-                concurrent_tasks=self.oqparam.concurrent_tasks,
-                weight=operator.attrgetter('num_ruptures'),
-                key=operator.attrgetter('src_group_id'))
-            for srcs in ires:
-                srcs = [src for src in srcs if src.eb_ruptures]
-                if srcs:
-                    grp_id = srcs[0].src_group_id
-                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                    par = par.copy()
-                    par['samples'] = self.samples_by_grp[grp_id]
-                    yield srcs, self.src_filter, rlzs_by_gsim, par, mon
-                for src in srcs:
-                    if hasattr(src, 'eb_ruptures'):  # except UCERF
-                        # save the events always; save the ruptures
-                        # if oq.save_ruptures is true
-                        self.save_ruptures(src.eb_ruptures)
-                        gmf_size += max_gmf_size(
-                            {src.src_group_id: src.eb_ruptures},
-                            self.rlzs_by_gsim_grp,
-                            self.samples_by_grp,
-                            len(self.oqparam.imtls))
-                    if hasattr(src, 'calc_times'):
-                        calc_times += src.calc_times
-                        del src.calc_times
+        logging.info('Building ruptures')
+        ires = parallel.Starmap.apply(
+            build_ruptures,
+            (self.csm.get_sources(), self.src_filter, param, monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'))
+        for srcs in ires:
+            srcs = [src for src in srcs if src.eb_ruptures]
+            if srcs:
+                grp_id = srcs[0].src_group_id
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+                par = par.copy()
+                par['samples'] = self.samples_by_grp[grp_id]
+                yield srcs, self.src_filter, rlzs_by_gsim, par, monitor
+            for src in srcs:
+                if hasattr(src, 'eb_ruptures'):  # except UCERF
+                    # save the events always; save the ruptures
+                    # if oq.save_ruptures is true
+                    self.save_ruptures(src.eb_ruptures)
+                    gmf_size += max_gmf_size(
+                        {src.src_group_id: src.eb_ruptures},
+                        self.rlzs_by_gsim_grp,
+                        self.samples_by_grp,
+                        len(self.oqparam.imtls))
+                if hasattr(src, 'calc_times'):
+                    calc_times += src.calc_times
+                    del src.calc_times
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -393,10 +391,12 @@ class EventBasedCalculator(base.HazardCalculator):
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             iterargs = self.from_ruptures(param, self.monitor())
-        else:  # starting from sources
+        else:  # from sources
             iterargs = saving_sources_by_task(
-                self.build_ruptures(param), self.datastore)
+                self.from_sources(param, self.monitor()), self.datastore)
             if oq.ground_motion_fields is False:
+                for args in iterargs:  # store the ruptures/events
+                    pass
                 return {}
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
