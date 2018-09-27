@@ -53,9 +53,10 @@ def build_ruptures(srcs, srcfilter, param, monitor):
     """
     acc = []
     n = 0
+    mon = monitor('making contexts', measuremem=False)
     for src in srcs:
         gsims = param['gsims_by_trt'][src.tectonic_region_type]
-        dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
+        dic = sample_ruptures([src], srcfilter, gsims, param, mon)
         vars(src).update(dic)
         acc.append(src)
         n += len(dic['eb_ruptures'])
