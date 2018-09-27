@@ -31,6 +31,9 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     #: not verified warning
     non_verified = True
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def _get_delta(self, dists):
         """
         Computes the additional delta to be used for the computation of the
