@@ -86,11 +86,11 @@ def get_events(ebruptures):
     return numpy.array(events, readinput.stored_event_dt)
 
 
-def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
+def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
                  samples_by_grp, num_imts):
     """
     :param ruptures_by_grp: dictionary grp_id -> EBRuptures
-    :param rlzs_by_gsim: method grp_id -> {gsim: rlzs}
+    :param rlzs_by_gsim: dictionary grp_id -> {gsim: rlzs}
     :param samples_by_grp: dictionary grp_id -> samples
     :param num_imts: number of IMTs
     :returns:
@@ -103,7 +103,7 @@ def max_gmf_size(ruptures_by_grp, get_rlzs_by_gsim,
     for grp_id, ebruptures in ruptures_by_grp.items():
         sample = 0
         samples = samples_by_grp[grp_id]
-        for gsim, rlzs in get_rlzs_by_gsim(grp_id).items():
+        for gsim, rlzs in rlzs_by_gsim[grp_id].items():
             for ebr in ebruptures:
                 if samples > 1:
                     len_eids = [len(get_array(ebr.events, sample=s)['eid'])
@@ -209,8 +209,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.rlzs_by_gsim_grp = self.csm.info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = self.csm.info.get_samples_by_grp()
+        try:
+            csm_info = self.csm.info
+        except AttributeError:
+            csm_info = self.datastore.parent['csm_info']
+        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = csm_info.get_samples_by_grp()
 
     def from_ruptures(self, param, monitor):
         """
@@ -234,7 +238,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
-        self.R = self.csm.info.get_num_rlzs()
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
         self.grp_trt = self.csm_info.grp_by("trt")
@@ -244,14 +247,16 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        self.R = self.csm.info.get_num_rlzs()
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
+        gmf_size = 0
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))
         if 'ucerf' not in self.oqparam.calculation_mode:
             mon = self.monitor('build_ruptures')
             logging.info('Building ruptures')
-            srcs_by_grp = AccumDict(accum=[])
             ires = parallel.Starmap.apply(
                 build_ruptures,
                 (self.csm.get_sources(), self.src_filter, param, mon),
@@ -262,28 +267,23 @@ class EventBasedCalculator(base.HazardCalculator):
                 srcs = [src for src in srcs if src.eb_ruptures]
                 if srcs:
                     grp_id = srcs[0].src_group_id
-                    rlzs = self.rlzs_by_gsim_grp[grp_id]
+                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
                     par = par.copy()
                     par['samples'] = self.samples_by_grp[grp_id]
-                    srcs_by_grp[grp_id].extend(srcs)
-                    yield srcs, self.src_filter, rlzs, par, mon
-
-            self.csm = self.csm.new(srcs_by_grp)
-        rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        samples_by_grp = self.csm.info.get_samples_by_grp()
-        gmf_size = 0
-        calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        for src in self.csm.get_sources():
-            if hasattr(src, 'eb_ruptures'):  # except UCERF
-                # save the events always and the ruptures if oq.save_ruptures
-                self.save_ruptures(src.eb_ruptures)
-                gmf_size += max_gmf_size(
-                    {src.src_group_id: src.eb_ruptures},
-                    rlzs_assoc.get_rlzs_by_gsim,
-                    samples_by_grp, len(self.oqparam.imtls))
-            if hasattr(src, 'calc_times'):
-                calc_times += src.calc_times
-                del src.calc_times
+                    yield srcs, self.src_filter, rlzs_by_gsim, par, mon
+                for src in srcs:
+                    if hasattr(src, 'eb_ruptures'):  # except UCERF
+                        # save the events always; save the ruptures
+                        # if oq.save_ruptures is true
+                        self.save_ruptures(src.eb_ruptures)
+                        gmf_size += max_gmf_size(
+                            {src.src_group_id: src.eb_ruptures},
+                            self.rlzs_by_gsim_grp,
+                            self.samples_by_grp,
+                            len(self.oqparam.imtls))
+                    if hasattr(src, 'calc_times'):
+                        calc_times += src.calc_times
+                        del src.calc_times
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -390,8 +390,10 @@ class EventBasedCalculator(base.HazardCalculator):
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.csm_info = self.datastore.parent['csm_info']
+            self.R = self.csm_info.get_num_rlzs()
             iterargs = self.from_ruptures(param, self.monitor())
         else:  # starting from sources
+            self.R = self.csm.info.get_num_rlzs()
             iterargs = list(saving_sources_by_task(
                 self.build_ruptures(param), self.datastore))
             if oq.ground_motion_fields is False:
