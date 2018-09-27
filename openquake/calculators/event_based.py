@@ -33,7 +33,8 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.classical import (
+    ClassicalCalculator, saving_sources_by_task)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -206,32 +207,30 @@ class EventBasedCalculator(base.HazardCalculator):
     core_task = compute_gmfs
     is_stochastic = True
 
-    def gen_args(self, monitor):
+    def from_ruptures(self, param, monitor):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
-        param = dict(
-            oqparam=oq, min_iml=self.get_min_iml(oq),
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         concurrent_tasks = oq.concurrent_tasks
-        if oq.hazard_calculation_id:
-            U = len(self.datastore.parent['ruptures'])
-            logging.info('Found %d ruptures', U)
-            parent = self.can_read_parent() or self.datastore
-            samples_by_grp = self.csm_info.get_samples_by_grp()
-            for slc in split_in_slices(U, concurrent_tasks or 1):
-                for grp_id in self.rlzs_by_gsim_grp:
-                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                    ruptures = RuptureGetter(parent, slc, grp_id)
-                    par = param.copy()
-                    par['samples'] = samples_by_grp[grp_id]
-                    yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
-            return
+        U = len(self.datastore.parent['ruptures'])
+        logging.info('Found %d ruptures', U)
+        parent = self.can_read_parent() or self.datastore
+        samples_by_grp = self.csm_info.get_samples_by_grp()
+        for slc in split_in_slices(U, concurrent_tasks or 1):
+            for grp_id in self.rlzs_by_gsim_grp:
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+                ruptures = RuptureGetter(parent, slc, grp_id)
+                par = param.copy()
+                par['samples'] = samples_by_grp[grp_id]
+                yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
 
-        maxweight = self.csm.get_maxweight(weight, concurrent_tasks or 1)
+    def from_sources(self, param, monitor):
+        """
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        concurrent_tasks = self.oqparam.concurrent_tasks or 1
+        maxweight = self.csm.get_maxweight(weight, concurrent_tasks)
         logging.info('Using maxweight=%d', maxweight)
         num_tasks = 0
         num_sources = 0
@@ -239,20 +238,13 @@ class EventBasedCalculator(base.HazardCalculator):
             par = param.copy()
             par['samples'] = sm.samples
             for sg in sm.src_groups:
-                # ignore the sources not producing ruptures
-                sg.sources = [src for src in sg.sources if src.eb_ruptures]
-                if not sg.sources:
-                    continue
-                rlzs_by_gsim = self.rlzs_by_gsim_grp[sg.id]
-                if sg.src_interdep == 'mutex':  # do not split
-                    yield sg, self.src_filter, rlzs_by_gsim, par, monitor
-                    num_tasks += 1
-                    num_sources += len(sg.sources)
-                    continue
-                for block in block_splitter(sg.sources, maxweight, weight):
-                    yield block, self.src_filter, rlzs_by_gsim, par, monitor
-                    num_tasks += 1
-                    num_sources += len(block)
+                sources = [src for src in sg.sources if src.eb_ruptures]
+                if sources:
+                    rlzs = self.rlzs_by_gsim_grp[sg.id]
+                    for block in block_splitter(sg.sources, maxweight, weight):
+                        yield block, self.src_filter, rlzs, par, monitor
+                        num_tasks += 1
+                        num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
     def zerodict(self):
@@ -314,7 +306,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
-        return self.csm.info
+        self.csm_info = self.csm.info
 
     def agg_dicts(self, acc, result):
         """
@@ -392,30 +384,31 @@ class EventBasedCalculator(base.HazardCalculator):
                     '%d %s, got %d' % (max_[var], var, num_[var]))
 
     def execute(self):
-        if self.oqparam.ground_motion_fields is False:
-            return {}
-        if self.oqparam.hazard_calculation_id:
-            def saving_sources_by_task(allargs, dstore):
-                return allargs
-        else:
-            from openquake.calculators.classical import saving_sources_by_task
+        oq = self.oqparam
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
-        acc = self.zerodict()
-        with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('classical'))
-            iterargs = saving_sources_by_task(allargs, self.datastore)
-            if isinstance(allargs, list):
-                # there is a trick here: if the arguments are known
-                # (a list, not an iterator), keep them as a list
-                # then the Starmap will understand the case of a single
-                # argument tuple and it will run in core the task
-                iterargs = list(iterargs)
-            ires = parallel.Starmap(
-                self.core_task.__func__, iterargs, self.monitor()
-            ).submit_all()
-        acc = ires.reduce(self.agg_dicts, acc)
+        param = dict(
+            oqparam=oq, min_iml=self.get_min_iml(oq),
+            save_ruptures=oq.save_ruptures,
+            gmf=oq.ground_motion_fields,
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
+        if oq.hazard_calculation_id:  # from ruptures
+            assert oq.ground_motion_fields, 'must be True!'
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            self.csm_info = self.datastore.parent['csm_info']
+            iterargs = self.from_ruptures(param, self.monitor())
+        else:  # starting from sources
+            self.build_ruptures()
+            if oq.ground_motion_fields is False:
+                return {}
+            iargs = self.from_sources(param, self.monitor())
+            iterargs = saving_sources_by_task(iargs, self.datastore)
+        acc = parallel.Starmap(
+            self.core_task.__func__, iterargs, self.monitor()
+        ).reduce(self.agg_dicts, self.zerodict())
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
@@ -429,8 +422,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 for sid in self.sitecol.complete.sids:
                     dset[sid, 0] = self.indices[sid, 0]
                     dset[sid, 1] = self.indices[sid, 1]
-        elif (self.oqparam.ground_motion_fields and
-              'ucerf' not in self.oqparam.calculation_mode):
+        elif (oq.ground_motion_fields and
+              'ucerf' not in oq.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         return acc
@@ -444,12 +437,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def init(self):
         self.rupser = calc.RuptureSerializer(self.datastore)
-        if self.oqparam.hazard_calculation_id is None:
-            self.csm_info = self.build_ruptures()
-        else:
-            self.datastore.parent = datastore.read(
-                self.oqparam.hazard_calculation_id)
-            self.csm_info = self.datastore.parent['csm_info']
 
     def post_execute(self, result):
         """
