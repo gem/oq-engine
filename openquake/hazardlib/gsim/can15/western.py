@@ -54,6 +54,9 @@ class WesternCan15Mid(BooreAtkinson2011):
     #: not verified warning
     non_verified = True
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
         # get original values
