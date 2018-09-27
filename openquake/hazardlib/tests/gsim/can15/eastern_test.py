@@ -42,8 +42,3 @@ class EasternCan15MidTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('CAN15/GMPEt_ENA_med.csv',
                    max_discrep_percentage=100.)
-    """
-    def test_std_total(self):
-        self.check('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
-                   max_discrep_percentage=0.1)
-    """
