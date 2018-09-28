@@ -201,6 +201,7 @@ class Monitor(object):
             return '<%s, duration=%ss, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))
         elif self.duration:
-            return '<%s, duration=%ss>' % (msg, self.duration)
+            return '<%s, duration=%ss, counts=%s>' % (
+                msg, self.duration, self.counts)
         else:
             return '<%s>' % msg
