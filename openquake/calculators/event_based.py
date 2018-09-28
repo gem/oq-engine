@@ -292,7 +292,8 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'))
-        for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE):
+        for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE,
+                                       kind=operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
