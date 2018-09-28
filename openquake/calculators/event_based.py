@@ -240,7 +240,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def store_ruptures(self, ires):
+    def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for srcs in ires:
@@ -290,9 +290,10 @@ class EventBasedCalculator(base.HazardCalculator):
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'))
 
+        logging.info('Building GMFs')
         def weight(ebr):
             return num_rlzs[ebr.grp_id] * ebr.multiplicity
-        for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE,
+        for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
@@ -397,7 +398,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
-        logging.info('Building GMFs')
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
