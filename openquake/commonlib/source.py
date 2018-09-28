@@ -442,9 +442,10 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
         new.info.update_eff_ruptures(new.get_num_ruptures())
+        new.info.tot_weight = new.get_weight()
         return new
 
-    def get_weight(self, weight):
+    def get_weight(self, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
