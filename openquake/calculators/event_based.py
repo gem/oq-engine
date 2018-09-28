@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import os.path
 import logging
 import operator
@@ -256,6 +257,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 calc_times += src.calc_times
                 del src.calc_times
                 yield from src.eb_ruptures
+                del src.eb_ruptures
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -320,7 +322,7 @@ class EventBasedCalculator(base.HazardCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
-            data = result['gmfdata']
+            data = result.pop('gmfdata')
             with sav_mon:
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
