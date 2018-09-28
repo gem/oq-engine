@@ -34,8 +34,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import (
-    ClassicalCalculator, saving_sources_by_task)
+from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -45,7 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 200  # decided by MS
+BLOCKSIZE = 500  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -68,11 +67,6 @@ def build_ruptures(srcs, srcfilter, param, monitor):
             acc.clear()
     if acc:
         yield acc
-
-
-def weight(src):
-    """The number of events produced by the source"""
-    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
@@ -293,7 +287,8 @@ class EventBasedCalculator(base.HazardCalculator):
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'))
         for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE,
-                                       kind=operator.attrgetter('grp_id')):
+                                       operator.attrgetter('multiplicity'),
+                                       operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
