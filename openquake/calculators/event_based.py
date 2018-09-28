@@ -44,7 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 500  # decided by MS
+BLOCKSIZE = 1000  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -285,9 +285,12 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'))
+
+        def weight(ebr):
+            num_rlzs = len(self.rlzs_by_gsim_grp[ebr.grp_id])
+            return num_rlzs * ebr.multiplicity
         for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE,
-                                       operator.attrgetter('multiplicity'),
-                                       operator.attrgetter('grp_id')):
+                                       weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
