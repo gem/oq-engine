@@ -44,7 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 1000  # decided by MS
+BLOCKSIZE = 100  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -291,8 +291,9 @@ class EventBasedCalculator(base.HazardCalculator):
             key=operator.attrgetter('src_group_id'))
 
         logging.info('Building GMFs')
+
         def weight(ebr):
-            return num_rlzs[ebr.grp_id] * ebr.multiplicity
+            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity)
         for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
