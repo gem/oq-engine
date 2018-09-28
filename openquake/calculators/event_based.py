@@ -167,15 +167,14 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
     Compute GMFs and optionally hazard curves
     """
     res = AccumDict(ruptures={})
-    with monitor('building ruptures', measuremem=True):
-        if isinstance(ruptures, RuptureGetter):
-            # the ruptures are read from the datastore
-            grp_id = ruptures.grp_id
-            sitecol = src_filter  # this is actually a site collection
-        else:
-            # use the ruptures sampled in prefiltering
-            grp_id = ruptures[0].grp_id
-            sitecol = src_filter.sitecol
+    if isinstance(ruptures, RuptureGetter):
+        # the ruptures are read from the datastore
+        grp_id = ruptures.grp_id
+        sitecol = src_filter  # this is actually a site collection
+    else:
+        # use the ruptures sampled in prefiltering
+        grp_id = ruptures[0].grp_id
+        sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
         res.events = get_events(ruptures)
