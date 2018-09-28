@@ -274,6 +274,10 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         self.R = self.csm.info.get_num_rlzs()
+        num_rlzs = {grp_id: sum(
+            len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+                    for grp_id in self.rlzs_by_gsim_grp}
+
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
@@ -287,8 +291,7 @@ class EventBasedCalculator(base.HazardCalculator):
             key=operator.attrgetter('src_group_id'))
 
         def weight(ebr):
-            num_rlzs = len(self.rlzs_by_gsim_grp[ebr.grp_id])
-            return num_rlzs * ebr.multiplicity
+            return num_rlzs[ebr.grp_id] * ebr.multiplicity
         for ruptures in block_splitter(self.store_ruptures(ires), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
