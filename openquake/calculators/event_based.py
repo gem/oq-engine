@@ -44,7 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 100  # decided by MS
+BLOCKSIZE = 500  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -277,11 +277,11 @@ class EventBasedCalculator(base.HazardCalculator):
         num_rlzs = {grp_id: sum(
             len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
                     for grp_id in self.rlzs_by_gsim_grp}
-
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
+
         logging.info('Building ruptures')
         ires = parallel.Starmap.apply(
             build_ruptures,
@@ -289,8 +289,6 @@ class EventBasedCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('num_ruptures'),
             key=operator.attrgetter('src_group_id'))
-
-        logging.info('Building GMFs')
 
         def weight(ebr):
             return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity)
@@ -301,6 +299,9 @@ class EventBasedCalculator(base.HazardCalculator):
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
+
+        if self.oqparam.ground_motion_fields:
+            logging.info('Building GMFs')
 
     def agg_dicts(self, acc, result):
         """
