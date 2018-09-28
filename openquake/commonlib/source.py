@@ -441,7 +441,7 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
-        new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
+        new.info.update_eff_ruptures(new.get_num_ruptures())
         return new
 
     def get_weight(self, weight):
