@@ -153,8 +153,13 @@ class GroundShakingIntensityModel(object):
     superseded_by = None
     non_verified = False
 
+    @classmethod
     def __init_subclass__(cls):
         registry[cls.__name__] = cls
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        cls = self.__class__
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
                 cls.__name__, cls.superseded_by.__name__)
@@ -405,7 +410,8 @@ class GroundShakingIntensityModel(object):
         return hash(str(self))
 
     def __str__(self):
-        return "%s()" % self.__class__.__name__
+        kwargs = ', '.join('%s=%r' % kv for kv in self.kwargs.items())
+        return "%s(%s)" % (self.__class__.__name__, kwargs)
 
     def __repr__(self):
         """
