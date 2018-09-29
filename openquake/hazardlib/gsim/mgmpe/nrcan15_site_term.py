@@ -165,3 +165,7 @@ class NRCan15SiteTerm(GMPE):
     7.500  -0.692  -0.247  -0.00
     10.00  -0.650  -0.215  -0.00
     """)
+
+    def __str__(self):
+        return '%s(%s)' % (self.__class__.__name__,
+                           self.gmpe.__class__.__name__)
