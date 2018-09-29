@@ -57,36 +57,8 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-class MetaGSIM(abc.ABCMeta):
-    """
-    Metaclass controlling the instantiation mechanism.
-    A GroundShakingIntensityModel subclass with an
-    attribute deprecated=True will print a deprecation warning when
-    instantiated. A subclass with an attribute non_verified=True will
-    print a UserWarning.
-    """
-    superseded_by = None
-    non_verified = False
-
-    def __init__(cls, name, bases, dct):
-        registry[name] = cls
-
-    def __call__(cls, **kwargs):
-        if cls.superseded_by:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.superseded_by.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        self = super().__call__(**kwargs)
-        self.kwargs = kwargs
-        return self
-
-
 @functools.total_ordering
-class GroundShakingIntensityModel(metaclass=MetaGSIM):
+class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
 
@@ -102,7 +74,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
@@ -179,6 +150,19 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     minimum_distance = 0  # can be set by the engine
+    superseded_by = None
+    non_verified = False
+
+    def __init_subclass__(cls):
+        registry[cls.__name__] = cls
+        if cls.superseded_by:
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.superseded_by.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        if cls.non_verified:
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -421,14 +405,14 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return hash(str(self))
 
     def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return "%s(%s)" % (self.__class__.__name__, kwargs)
+        return "%s()" % self.__class__.__name__
 
     def __repr__(self):
         """
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
+        return str(self.__class__.__name__)
         return repr(str(self))
 
 

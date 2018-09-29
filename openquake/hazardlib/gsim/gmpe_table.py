@@ -558,3 +558,7 @@ class GMPETable(GMPE):
         # linearly (or approximately linearly) with magnitude
         m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
         return 10.0 ** m_interpolator(mag)
+
+    def __str__(self):
+        return "%s(gmpe_table='%s')" % (self.__class__.__name__,
+                                        os.path.basename(self.GMPE_TABLE))
