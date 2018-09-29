@@ -412,7 +412,6 @@ class GroundShakingIntensityModel(object):
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
-        return str(self.__class__.__name__)
         return repr(str(self))
 
 
