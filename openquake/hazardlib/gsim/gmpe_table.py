@@ -323,7 +323,7 @@ class GMPETable(GMPE):
                         os.path.join(self.GMPE_DIR, gmpe_table))
             else:
                 raise IOError("GMPE Table Not Defined!")
-        super().__init__()
+        super().__init__(gmpe_table=gmpe_table)
         self.imls = None
         self.stddevs = {}
         self.m_w = None
@@ -558,7 +558,3 @@ class GMPETable(GMPE):
         # linearly (or approximately linearly) with magnitude
         m_interpolator = interp1d(self.m_w, numpy.log10(iml_table), axis=1)
         return 10.0 ** m_interpolator(mag)
-
-    def __str__(self):
-        return "%s(gmpe_table='%s')" % (self.__class__.__name__,
-                                        os.path.basename(self.GMPE_TABLE))
