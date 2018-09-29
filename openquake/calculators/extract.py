@@ -480,8 +480,9 @@ def build_damage_dt(dstore, mean_std=True):
        a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
        loss_type -> (ds1, ds2, ...) depending on the flag mean_std
     """
+    oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr('composite_risk_model', 'limit_states'))
+        dstore.get_attr(oq.risk_model, 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -491,7 +492,7 @@ def build_damage_dt(dstore, mean_std=True):
         else:
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    loss_types = dstore.get_attr(oq.risk_model, 'loss_types')
     return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
 
 
