@@ -499,6 +499,17 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
+    @property
+    def risk_model(self):
+        """
+        :returns: 'frag_model', 'vuln_model' or the empty string
+        """
+        if self.job_type == 'hazard':
+            return ('frag_model' if self._file_type == 'fragility'
+                    else 'vuln_model')
+        return ('frag_model' if 'damage' in self.calculation_mode
+                else 'vuln_model')
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
@@ -659,11 +670,11 @@ class OqParam(valid.ParamSet):
         if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'frag_model' in parent_datasets
         elif 'risk' in self.calculation_mode:
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'vuln_model' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):
