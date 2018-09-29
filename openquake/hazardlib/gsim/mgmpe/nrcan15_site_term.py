@@ -46,6 +46,7 @@ class NRCan15SiteTerm(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name):
+        super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 
@@ -165,7 +166,3 @@ class NRCan15SiteTerm(GMPE):
     7.500  -0.692  -0.247  -0.00
     10.00  -0.650  -0.215  -0.00
     """)
-
-    def __str__(self):
-        return '%s(%s)' % (self.__class__.__name__,
-                           self.gmpe.__class__.__name__)
