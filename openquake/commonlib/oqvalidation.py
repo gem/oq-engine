@@ -208,6 +208,9 @@ class OqParam(valid.ParamSet):
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
+        if (self.hazard_calculation_id and
+                self.calculation_mode == 'ucerf_risk'):
+            raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'warn')
             self.check_missing('gsim_logic_tree', 'warn')
@@ -496,6 +499,17 @@ class OqParam(valid.ParamSet):
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
 
+    @property
+    def risk_model(self):
+        """
+        :returns: 'fragility', 'vulnerability' or the empty string
+        """
+        if self.job_type == 'hazard':
+            return ('fragility' if self.file_type == 'fragility'
+                    else 'vulnerability')
+        return ('fragility' if 'damage' in self.calculation_mode
+                else 'vulnerability')
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
@@ -656,11 +670,11 @@ class OqParam(valid.ParamSet):
         if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'fragility' in parent_datasets
         elif 'risk' in self.calculation_mode:
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'vulnerability' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):
