@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import os.path
 import logging
 import operator
@@ -24,7 +25,8 @@ import numpy
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, split_in_slices, humansize, get_array, cached_property)
+    AccumDict, block_splitter, split_in_slices, humansize, get_array,
+    cached_property)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -33,8 +35,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
 from openquake.calculators.getters import GmfGetter, RuptureGetter
-from openquake.calculators.classical import (
-    ClassicalCalculator, saving_sources_by_task)
+from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -44,6 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
+BLOCKSIZE = 500  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -66,11 +68,6 @@ def build_ruptures(srcs, srcfilter, param, monitor):
             acc.clear()
     if acc:
         yield acc
-
-
-def weight(src):
-    """The number of events produced by the source"""
-    return sum(ebr.multiplicity for ebr in src.eb_ruptures)
 
 
 def get_events(ebruptures):
@@ -166,35 +163,28 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_gmfs(sources_or_ruptures, src_filter,
-                 rlzs_by_gsim, param, monitor):
+def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     res = AccumDict(ruptures={})
-    ruptures = []
-    with monitor('building ruptures', measuremem=True):
-        if isinstance(sources_or_ruptures, RuptureGetter):
-            # the ruptures are read from the datastore
-            grp_id = sources_or_ruptures.grp_id
-            ruptures.extend(sources_or_ruptures)
-            sitecol = src_filter  # this is actually a site collection
-        else:
-            # use the ruptures sampled in prefiltering
-            grp_id = sources_or_ruptures[0].src_group_id
-            for src in sources_or_ruptures:
-                ruptures.extend(src.eb_ruptures)
-            sitecol = src_filter.sitecol
-    if ruptures:
-        if not param['oqparam'].save_ruptures or isinstance(
-                sources_or_ruptures, RuptureGetter):  # ruptures already saved
-            res.events = get_events(ruptures)
-        else:
-            res['ruptures'] = {grp_id: ruptures}
-        getter = GmfGetter(
-            rlzs_by_gsim, ruptures, sitecol,
-            param['oqparam'], param['min_iml'], param['samples'])
-        res.update(getter.compute_gmfs_curves(monitor))
+    if isinstance(ruptures, RuptureGetter):
+        # the ruptures are read from the datastore
+        grp_id = ruptures.grp_id
+        sitecol = src_filter  # this is actually a site collection
+    else:
+        # use the ruptures sampled in prefiltering
+        grp_id = ruptures[0].grp_id
+        sitecol = src_filter.sitecol
+    if not param['oqparam'].save_ruptures or isinstance(
+            ruptures, RuptureGetter):  # ruptures already saved
+        res.events = get_events(ruptures)
+    else:
+        res['ruptures'] = {grp_id: ruptures}
+    getter = GmfGetter(
+        rlzs_by_gsim, ruptures, sitecol,
+        param['oqparam'], param['min_iml'], param['samples'])
+    res.update(getter.compute_gmfs_curves(monitor))
     return res
 
 
@@ -251,49 +241,29 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def from_sources(self, par, monitor):
-        """
-        Prefilter the composite source model and store the source_info
-        """
-        self.R = self.csm.info.get_num_rlzs()
-        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
-        param['filter_distance'] = self.oqparam.filter_distance
-        param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
-        param['gsims_by_trt'] = self.csm.gsim_lt.values
+    def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        logging.info('Building ruptures')
-        ires = parallel.Starmap.apply(
-            build_ruptures,
-            (self.csm.get_sources(), self.src_filter, param, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'))
-        for srcs in ires:
-            srcs = [src for src in srcs if src.eb_ruptures]
-            if srcs:
-                grp_id = srcs[0].src_group_id
-                rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                par = par.copy()
-                par['samples'] = self.samples_by_grp[grp_id]
-                yield srcs, self.src_filter, rlzs_by_gsim, par, monitor
-            for src in srcs:
-                # save the events always; save the ruptures
-                # if oq.save_ruptures is true
-                self.save_ruptures(src.eb_ruptures)
-                gmf_size += max_gmf_size(
-                    {src.src_group_id: src.eb_ruptures},
-                    self.rlzs_by_gsim_grp,
-                    self.samples_by_grp,
-                    len(self.oqparam.imtls))
-                calc_times += src.calc_times
-                del src.calc_times
-        self.rupser.close()
+        with self.monitor('saving ruptures', autoflush=True):
+            for srcs in ires:
+                for src in srcs:
+                    # save the events always; save the ruptures
+                    # if oq.save_ruptures is true
+                    self.save_ruptures(src.eb_ruptures)
+                    gmf_size += max_gmf_size(
+                        {src.src_group_id: src.eb_ruptures},
+                        self.rlzs_by_gsim_grp,
+                        self.samples_by_grp,
+                        len(self.oqparam.imtls))
+                    calc_times += src.calc_times
+                    del src.calc_times
+                    yield from src.eb_ruptures
+                    del src.eb_ruptures
+            self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
             msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
-            logging.info('Estimating %s%s of GMFs',
-                         msg, humansize(gmf_size))
+            logging.info('Estimating %s%s of GMFs', msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
@@ -301,6 +271,40 @@ class EventBasedCalculator(base.HazardCalculator):
                 grp.id: sum(src.num_ruptures for src in grp)
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
+
+    def from_sources(self, par, monitor):
+        """
+        Prefilter the composite source model and store the source_info
+        """
+        self.R = self.csm.info.get_num_rlzs()
+        num_rlzs = {grp_id: sum(
+            len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+                    for grp_id in self.rlzs_by_gsim_grp}
+        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
+        param['filter_distance'] = self.oqparam.filter_distance
+        param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
+        param['gsims_by_trt'] = self.csm.gsim_lt.values
+
+        logging.info('Building ruptures')
+        ires = parallel.Starmap.apply(
+            build_ruptures,
+            (self.csm.get_sources(), self.src_filter, param, monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'))
+
+        def weight(ebr):
+            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity)
+        for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
+                                       weight, operator.attrgetter('grp_id')):
+            ebr = ruptures[0]
+            rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
+            par = par.copy()
+            par['samples'] = self.samples_by_grp[ebr.grp_id]
+            yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
+
+        if self.oqparam.ground_motion_fields:
+            logging.info('Building GMFs')
 
     def agg_dicts(self, acc, result):
         """
@@ -319,7 +323,7 @@ class EventBasedCalculator(base.HazardCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
-            data = result['gmfdata']
+            data = result.pop('gmfdata')
             with sav_mon:
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
@@ -351,11 +355,10 @@ class EventBasedCalculator(base.HazardCalculator):
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
-            with self.monitor('saving ruptures', autoflush=True):
-                events = get_events(ruptures)
-                dset = self.datastore.extend('events', events)
-                if self.oqparam.save_ruptures:
-                    self.rupser.save(ruptures, eidx=len(dset)-len(events))
+            events = get_events(ruptures)
+            dset = self.datastore.extend('events', events)
+            if self.oqparam.save_ruptures:
+                self.rupser.save(ruptures, eidx=len(dset)-len(events))
 
     def check_overflow(self):
         """
@@ -394,13 +397,11 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             iterargs = self.from_ruptures(param, self.monitor())
         else:  # from sources
-            iterargs = saving_sources_by_task(
-                self.from_sources(param, self.monitor()), self.datastore)
+            iterargs = self.from_sources(param, self.monitor())
             if oq.ground_motion_fields is False:
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
-        logging.info('Building GMFs')
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
