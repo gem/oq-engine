@@ -166,7 +166,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.datastore.create_dset('performance_data', perf_dt)
             self.set_log_format()
             if logversion:  # make sure this is logged only once
-                logging.info('Running %s', self.oqparam.inputs['job_ini'])
+                logging.info('Running %s from %s',
+                             self.oqparam.inputs['job_ini'],
+                             self.oqparam.hazard_calculation_id)
                 logging.info('Using engine version %s', engine_version)
                 logversion = False
             if concurrent_tasks is None:  # use the job.ini parameter
