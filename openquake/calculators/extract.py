@@ -57,8 +57,6 @@ def extract_(dstore, dspath):
     extract('sitecol', dstore). It is also possibly to extract the
     attributes, for instance with extract('sitecol.attrs', dstore).
     """
-    if dspath.endswith('.attrs'):
-        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)
@@ -553,3 +551,12 @@ def extract_mean_std_curves(dstore, what):
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
         yield 'poes/' + imt, arr[:, getter.imtls(imt)]
+
+
+@extract.add('composite_risk_model.attrs')
+def crm_attrs(dstore, what):
+    """
+    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
+    """
+    name = dstore['oqparam'].risk_model
+    return ArrayWrapper(0, dstore.get_attrs(name))
