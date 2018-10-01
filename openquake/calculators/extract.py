@@ -57,8 +57,6 @@ def extract_(dstore, dspath):
     extract('sitecol', dstore). It is also possibly to extract the
     attributes, for instance with extract('sitecol.attrs', dstore).
     """
-    if dspath.endswith('.attrs'):
-        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)
@@ -480,8 +478,9 @@ def build_damage_dt(dstore, mean_std=True):
        a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
        loss_type -> (ds1, ds2, ...) depending on the flag mean_std
     """
+    oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr('composite_risk_model', 'limit_states'))
+        dstore.get_attr(oq.risk_model, 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -491,7 +490,7 @@ def build_damage_dt(dstore, mean_std=True):
         else:
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    loss_types = dstore.get_attr(oq.risk_model, 'loss_types')
     return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
 
 
@@ -552,3 +551,14 @@ def extract_mean_std_curves(dstore, what):
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
         yield 'poes/' + imt, arr[:, getter.imtls(imt)]
+
+
+@extract.add('composite_risk_model.attrs')
+def crm_attrs(dstore, what):
+    """
+    :returns:
+        the attributes of the risk model, i.e. limit_states, loss_types,
+        min_iml and covs, needed by the risk exporters.
+    """
+    name = dstore['oqparam'].risk_model
+    return ArrayWrapper(0, dstore.get_attrs(name))
