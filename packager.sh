@@ -86,7 +86,7 @@ NL="
 "
 TB="	"
 
-OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.5/dist-packages
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.6/dist-packages
 #
 #  functions
 
@@ -816,7 +816,7 @@ devtest_run () {
         branch_cur="$branch"
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
+            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur\$" ; then
                 deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
                 found=1
                 break
@@ -924,7 +924,7 @@ builddoc_run () {
         branch_cur="$branch"
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
+            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur\$" ; then
                 deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
                 found=1
                 break

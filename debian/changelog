@@ -1,8 +1,16 @@
   [Michele Simionato]
+  * Worked around the OverflowError: cannot serialize a bytes object larger
+    than 4 GiB in event based calculations
+  * Started using Python 3.6 features
+  * Fixed the check on vulnerability function ID uniqueness for NRML 0.5
+  * Ruptures and GMFs are now computed concurrently, thus mitigating the
+    issue of slow tasks
+  * Changed the name of the files containing the disaggregation outputs:
+    instead of longitude and latitude they contain the site ID now
   * If a worker runs close to out of memory, now a warning appears in the
     main log
   * 'lons' and 'lats' are now spelled 'lon' and 'lat' in
-     the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
+    the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
 
   [Daniele Viganò]
   * Fixed a bug about 'The openquake master lost its controlling terminal'
