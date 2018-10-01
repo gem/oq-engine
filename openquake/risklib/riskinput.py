@@ -42,7 +42,7 @@ def read_composite_risk_model(dstore):
     :returns: a :class:`CompositeRiskModel` instance
     """
     oqparam = dstore['oqparam']
-    crm = dstore.getitem('composite_risk_model')
+    crm = dstore.getitem(oqparam.risk_model)
     rmdict, retrodict = AccumDict(), AccumDict()
     rmdict.limit_states = crm.attrs['limit_states']
     for quotedtaxonomy, rm in crm.items():
@@ -51,7 +51,7 @@ def read_composite_risk_model(dstore):
         retrodict[taxo] = {}
         for lt in rm:
             lt = str(lt)  # ensure Python 2-3 compatibility
-            rf = dstore['composite_risk_model/%s/%s' % (quotedtaxonomy, lt)]
+            rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
                 rf = rf.build(rmdict.limit_states,
