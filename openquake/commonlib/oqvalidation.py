@@ -502,13 +502,13 @@ class OqParam(valid.ParamSet):
     @property
     def risk_model(self):
         """
-        :returns: 'frag_model', 'vuln_model' or the empty string
+        :returns: 'fragility', 'vulnerability' or the empty string
         """
         if self.job_type == 'hazard':
-            return ('frag_model' if self.file_type == 'fragility'
-                    else 'vuln_model')
-        return ('frag_model' if 'damage' in self.calculation_mode
-                else 'vuln_model')
+            return ('fragility' if self.file_type == 'fragility'
+                    else 'vulnerability')
+        return ('fragility' if 'damage' in self.calculation_mode
+                else 'vulnerability')
 
     def is_valid_shakemap(self):
         """
@@ -670,11 +670,11 @@ class OqParam(valid.ParamSet):
         if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
-            ) or 'frag_model' in parent_datasets
+            ) or 'fragility' in parent_datasets
         elif 'risk' in self.calculation_mode:
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
-            ) or 'vuln_model' in parent_datasets
+            ) or 'vulnerability' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):
