@@ -556,7 +556,9 @@ def extract_mean_std_curves(dstore, what):
 @extract.add('composite_risk_model.attrs')
 def crm_attrs(dstore, what):
     """
-    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
+    :returns:
+        the attributes of the risk model, i.e. limit_states, loss_types,
+        min_iml and covs, needed by the risk exporters.
     """
     name = dstore['oqparam'].risk_model
     return ArrayWrapper(0, dstore.get_attrs(name))
