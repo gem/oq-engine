@@ -342,7 +342,7 @@ def avglosses_data_transfer(token, dstore):
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = dstore['csm_info'].get_num_rlzs()
-    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
+    L = len(dstore.get_attr(oq.risk_model, 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
@@ -583,7 +583,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration mean stddev min max num_tasks'.split()]
+    data = ['operation-duration mean stddev min max outputs'.split()]
     for task in dstore['task_info']:
         val = dstore['task_info/' + task]['duration']
         if len(val):
