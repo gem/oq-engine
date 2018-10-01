@@ -166,7 +166,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.datastore.create_dset('performance_data', perf_dt)
             self.set_log_format()
             if logversion:  # make sure this is logged only once
-                logging.info('Running %s', self.oqparam.inputs['job_ini'])
+                logging.info('Running %s from %s',
+                             self.oqparam.inputs['job_ini'],
+                             self.oqparam.hazard_calculation_id)
                 logging.info('Using engine version %s', engine_version)
                 logversion = False
             if concurrent_tasks is None:  # use the job.ini parameter
@@ -288,7 +290,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Set the attributes nbytes
         """
         # sanity check that eff_ruptures have been set, i.e. are not -1
-        csm_info = self.datastore['csm_info']
+        try:
+            csm_info = self.datastore['csm_info']
+        except KeyError:
+            csm_info = self.datastore['csm_info'] = self.csm.info
         for sm in csm_info.source_models:
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
@@ -497,19 +502,20 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        oq = self.oqparam
         logging.info('Reading the risk model if present')
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'composite_risk_model' in parent:
+            if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
         # save the risk models and loss_ratios in the datastore
-        self.datastore['composite_risk_model'] = rm
-        attrs = self.datastore.getitem('composite_risk_model').attrs
+        self.datastore[oq.risk_model] = rm
+        attrs = self.datastore.getitem(oq.risk_model).attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
-        self.datastore.set_nbytes('composite_risk_model')
+        self.datastore.set_nbytes(oq.risk_model)
         self.datastore.hdf5.flush()
 
     def _read_risk_data(self):
