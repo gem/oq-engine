@@ -505,7 +505,7 @@ class OqParam(valid.ParamSet):
         :returns: 'frag_model', 'vuln_model' or the empty string
         """
         if self.job_type == 'hazard':
-            return ('frag_model' if self._file_type == 'fragility'
+            return ('frag_model' if self.file_type == 'fragility'
                     else 'vuln_model')
         return ('frag_model' if 'damage' in self.calculation_mode
                 else 'vuln_model')
