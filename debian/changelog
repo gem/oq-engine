@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added a first [preliminary] version of the GMM for the Canada model
+    represented in an analytical form.
+
   [Michele Simionato]
   * Worked around the OverflowError: cannot serialize a bytes object larger
     than 4 GiB in event based calculations
@@ -31,10 +35,6 @@
   * Added the possibility of setting rake to 'undefined'
   * Added first 'modified GMPE' implementing the site term for Canada 2015 model
   * Fixed a bug in the disaggregation calculation due to wrong binning of magnitudes
-  * Added a first [preliminary] version of the GMM for the Canada model 
-    represented in an analytical form. In following PR this model will be 
-	improved. This initial version is merged into master just for testing
-	purposes.
 
   [Michele Simionato]
   * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
