@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Worked around the OverflowError: cannot serialize a bytes object larger
+    than 4 GiB in event based calculations
   * Fixed the check on vulnerability function ID uniqueness for NRML 0.5
   * Ruptures and GMFs are now computed concurrently, thus mitigating the
     issue of slow tasks
