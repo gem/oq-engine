@@ -505,7 +505,7 @@ class HazardCalculator(BaseCalculator):
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'frag_model' in parent or 'vuln_model' in parent:
+            if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
