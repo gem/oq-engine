@@ -81,9 +81,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(
-            accum={} if ri.by_site or not param['avg_losses']
-            else numpy.zeros(A, F64))
+        avg = AccumDict(accum={})  # (li, r) -> array of losses of shape A
         result = dict(aids=ri.aids, avglosses=avg)
         if 'builder' in param:
             builder = param['builder']
@@ -204,7 +202,6 @@ class EbrCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
-        self.num_losses = numpy.zeros((self.A, self.R), U32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
