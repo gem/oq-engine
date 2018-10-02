@@ -255,15 +255,15 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('saving event loss table', autoflush=True):
             idx, agg = agglosses
             self.agglosses[idx] += agg
-
-        with self.monitor('saving avg_losses-rlzs'):
-            vals = self.assetcol.values(aids)
-            arr = numpy.zeros((len(aids), self.R, self.L * self.I), F32)
-            for (l, i), ratios in avglosses.items():
-                values = vals[self.riskmodel.loss_types[l]]
-                for r in range(self.R):
-                    arr[:, r, l + self.L * i] = ratios[:, r] * values
-            self.dset[aids, :, :] = arr
+        if self.oqparam.avg_losses:
+            with self.monitor('saving avg_losses-rlzs'):
+                vals = self.assetcol.values(aids)
+                arr = numpy.zeros((len(aids), self.R, self.L * self.I), F32)
+                for (l, i), ratios in avglosses.items():
+                    values = vals[self.riskmodel.loss_types[l]]
+                    for r in range(self.R):
+                        arr[:, r, l + self.L * i] = ratios[:, r] * values
+                self.dset[aids, :, :] = arr
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
 
