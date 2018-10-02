@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to run the risk over an hazard calculation of another user
   * Worked around the OverflowError: cannot serialize a bytes object larger
     than 4 GiB in event based calculations
   * Started using Python 3.6 features
