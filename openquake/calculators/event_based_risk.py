@@ -81,7 +81,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(accum=numpy.zeros(A, F32))
+        avg = AccumDict(accum=numpy.zeros((A, R, I), F32))
         result = dict(aids=ri.aids, avglosses=avg)
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
@@ -114,9 +114,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     # average losses
                     if param['avg_losses']:
                         rat = ratios.sum(axis=0) * param['ses_ratio']
-                        for i in range(I):
-                            lba = avg[l + L * i, r]
-                            lba[idx] += rat[i]
+                        avg[loss_type][idx, r] += rat
 
                     # agglosses
                     for i in range(I):
@@ -182,10 +180,6 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
-        # FIXME: commented because it can be misleading
-        # if not oq.ignore_covs:
-        #     logging.info('Generating %s of epsilons',
-        #                  humansize(self.A * self.E * 4))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -261,13 +255,10 @@ class EbrCalculator(base.RiskCalculator):
             idx, agg = agglosses
             self.agglosses[idx] += agg
 
-        if not hasattr(self, 'vals'):
-            self.vals = self.assetcol.values()
+        vals = self.assetcol.values(aids)
         with self.monitor('saving avg_losses-rlzs'):
-            for (li, r), ratios in avglosses.items():
-                l = li if li < self.L else li - self.L
-                vs = self.vals[self.riskmodel.loss_types[l]]
-                self.dset[aids, r, li] += ratios * vs[aids]
+            for lt, ratios in avglosses.items():
+                self.dset[aids, :, li] += ratios * vals[lt]
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
 
