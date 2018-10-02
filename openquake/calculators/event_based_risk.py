@@ -81,7 +81,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(accum=numpy.zeros((A, R), F32))  # (l, i) -> array
+        avg = numpy.zeros((A, R, L * I), F32)
         result = dict(aids=ri.aids, avglosses=avg)
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
@@ -115,7 +115,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     if param['avg_losses']:
                         rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
                         for i in range(I):
-                            avg[l, i][idx, r] += rat[i]
+                            avg[idx, r, l + L * i] += rat[i]
 
                     # agglosses
                     for i in range(I):
@@ -248,20 +248,12 @@ class EbrCalculator(base.RiskCalculator):
             dictionary with agglosses, avglosses
         """
         aids = dic.pop('aids')
-        agglosses = dic.pop('agglosses')
-        avglosses = dic.pop('avglosses')
-        with self.monitor('saving event loss table', autoflush=True):
-            idx, agg = agglosses
-            self.agglosses[idx] += agg
+        idx, agg = dic.pop('agglosses')
+        self.agglosses[idx] += agg
         if self.oqparam.avg_losses:
-            with self.monitor('saving avg_losses-rlzs'):
-                arr = numpy.zeros((len(aids), self.R, self.L * self.I), F32)
-                for (l, i), losses in avglosses.items():
-                    arr[:, :, l + self.L * i] = losses
-                self.dset[aids, :, :] = arr
+            self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
-
         self.taskno += 1
 
     def _save_curves(self, dic, aids):
