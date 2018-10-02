@@ -240,14 +240,12 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
 
-    def save_losses(self, dic, offset=0):
+    def save_losses(self, dic):
         """
         Save the event loss tables incrementally.
 
         :param dic:
             dictionary with agglosses, avglosses
-        :param offset:
-            realization offset
         """
         aids = dic.pop('aids')
         agglosses = dic.pop('agglosses')
@@ -291,7 +289,7 @@ class EbrCalculator(base.RiskCalculator):
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        self.save_losses(res, offset=0)
+        self.save_losses(res)
         return 1
 
     def post_execute(self, result):
