@@ -68,8 +68,7 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L))])
     agg = numpy.zeros((E, R, L), F32)
-    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
-                    else numpy.zeros(A, F64))
+    avg = numpy.zeros((A, R, L), F32)
     result = dict(aids=riskinput.aids, avglosses=avg)
 
     # update the result dictionary and the agg array with each output
@@ -84,17 +83,12 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape (E, I)
+                ratios = loss_ratios[a]  # shape E
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)
                 # average losses
                 if param['avg_losses']:
-                    rat = ratios.sum(axis=0) * param['ses_ratio']
-                    lba = avg[l, r]
-                    try:
-                        lba[aid] += rat
-                    except KeyError:
-                        lba[aid] = rat
+                    avg[aid, :, :] = losses.sum(axis=0) * param['ses_ratio']
 
                 # this is the critical loop: it is important to keep it
                 # vectorized in terms of the event indices
@@ -390,7 +384,6 @@ class UCERFRiskCalculator(EbrCalculator):
         res = parallel.Starmap(
             compute_losses, self.gen_args(),
             self.monitor()).submit_all()
-        self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
         self.csm.info.update_eff_ruptures(self.eff_ruptures)
@@ -449,10 +442,10 @@ class UCERFRiskCalculator(EbrCalculator):
             agglosses['rlzi'] += offset
             self.datastore.extend('losses_by_event', agglosses)
         with self.monitor('saving avg_losses-rlzs'):
-            avglosses = dic.pop('avglosses')
-            for (l, r), ratios in avglosses.items():
-                lt = self.riskmodel.loss_types[l]
-                self.dset[:, r + offset, l] += ratios * self.vals[lt]
+            avglosses = dic.pop('avglosses')  # shape (A, R, L)
+            A, R, L = avglosses.shape
+            for r in range(R):
+                self.dset[:, r + offset, :] += avglosses[:, r, :]
         self.taskno += 1
 
     def post_execute(self, result):
