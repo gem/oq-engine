@@ -281,7 +281,8 @@ class EbrCalculator(base.RiskCalculator):
         :param results: a list of result dictionaries
         """
         for res in results:
-            self.save_losses(res)
+            with self.monitor('saving losses', measuremem=True):
+                self.save_losses(res)
         return 1
 
     def post_execute(self, result):
