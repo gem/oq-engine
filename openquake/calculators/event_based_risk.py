@@ -81,13 +81,13 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(accum={})  # (li, r) -> array of losses of shape A
+        avg = AccumDict(accum=numpy.zeros(A, F32))
         result = dict(aids=ri.aids, avglosses=avg)
+        aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
-            aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         # update the result dictionary and the agg array with each output
         for out in riskmodel.gen_outputs(ri, monitor):
             if len(out.eids) == 0:  # this happens for sites with no events
@@ -101,11 +101,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
+                    idx = aid2idx[aid]
                     aval = asset.value(loss_type)
                     losses = aval * ratios
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
-                            idx = aid2idx[aid]
                             for i in range(I):
                                 lt = loss_type + '_ins' * i
                                 all_curves[idx, r][lt] = builder.build_curve(
@@ -116,10 +116,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         rat = ratios.sum(axis=0) * param['ses_ratio']
                         for i in range(I):
                             lba = avg[l + L * i, r]
-                            try:
-                                lba[aid] += rat[i]
-                            except KeyError:
-                                lba[aid] = rat[i]
+                            lba[idx] += rat[i]
 
                     # agglosses
                     for i in range(I):
@@ -270,8 +267,7 @@ class EbrCalculator(base.RiskCalculator):
             for (li, r), ratios in avglosses.items():
                 l = li if li < self.L else li - self.L
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                self.dset[aids, r, li] += numpy.array(
-                    [ratios.get(aid, 0) * vs[aid] for aid in aids])
+                self.dset[aids, r, li] += ratios * vs[aids]
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
 
