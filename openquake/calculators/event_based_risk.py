@@ -113,7 +113,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
                     # average losses
                     if param['avg_losses']:
-                        rat = ratios.sum(axis=0) * param['ses_ratio']
+                        rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
                         for i in range(I):
                             avg[l, i][idx, r] += rat[i]
 
@@ -255,12 +255,9 @@ class EbrCalculator(base.RiskCalculator):
             self.agglosses[idx] += agg
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses-rlzs'):
-                vals = self.assetcol.values(aids)
                 arr = numpy.zeros((len(aids), self.R, self.L * self.I), F32)
-                for (l, i), ratios in avglosses.items():
-                    values = vals[self.riskmodel.loss_types[l]]
-                    for r in range(self.R):
-                        arr[:, r, l + self.L * i] = ratios[:, r] * values
+                for (l, i), losses in avglosses.items():
+                    arr[:, :, l + self.L * i] = losses
                 self.dset[aids, :, :] = arr
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
