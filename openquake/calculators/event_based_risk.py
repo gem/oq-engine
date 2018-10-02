@@ -278,7 +278,7 @@ class EbrCalculator(base.RiskCalculator):
     def combine(self, dummy, results):
         """
         :param dummy: unused parameter
-        :param res: a result dictionary
+        :param results: a list of result dictionaries
         """
         for res in results:
             self.save_losses(res)
