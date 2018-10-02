@@ -115,7 +115,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     if param['avg_losses']:
                         rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
                         for i in range(I):
-                            avg[idx, r, l + L * i] += rat[i]
+                            avg[idx, r, l + L * i] = rat[i]
 
                     # agglosses
                     for i in range(I):
