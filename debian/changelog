@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added a first [preliminary] version of the GMM for the Canada model
+    represented in an analytical form.
+
   [Michele Simionato]
   * Made it possible to run the risk over an hazard calculation of another user
   * Worked around the OverflowError: cannot serialize a bytes object larger
