@@ -393,9 +393,11 @@ def safely_call(func, args, monitor=dummy_mon):
                 err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
                              count=count)
                 zsocket.send(err)
+            mon.duration = 0
+            mon.counts = 0
+            mon.children.clear()
             if res.msg == 'TASK_ENDED':
                 break
-            mon.duration = 0
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
