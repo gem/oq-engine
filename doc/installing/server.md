@@ -51,7 +51,7 @@ Mapping of unix groups isn't supported at the moment.
 
 On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicorn.org/) is the recommended software stack to run the WebUI.
 
-When packages are used, the custom `local_settings.py` file should be placed in `/usr/share/openquake/engine` to avoid conflicts when packages are upgraded.
+When packages are used, the custom `local_settings.py` file should be placed in `/usr/share/openquake/engine` to avoid conflicts when packages are upgraded and `oq webui` commands must be executed as the `openquake` user: `sudo -u openquake oq webui <subcommand>`.
 
 #### gunicorn
 
