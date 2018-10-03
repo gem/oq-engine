@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     1,223,742,661      
-date           2018-09-25T14:28:24
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:01:12
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -98,7 +98,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.76388   0.01337    105       15        385   
+0      1         S    0     2     482          1.56810   0.00457    105       15        385   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -106,7 +106,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    0.76388   1     
+S    1.56810   1     
 ==== ========= ======
 
 Duplicated sources
@@ -115,45 +115,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.00397 NaN     0.00397 0.00397 1        
-split_filter       0.02224 NaN     0.02224 0.02224 1        
-build_ruptures     0.05837 0.01872 0.02321 0.09354 14       
-compute_gmfs       0.08051 0.02192 0.05617 0.10040 5        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.00656 NaN     0.00656 0.00656 1      
+split_filter       0.02131 NaN     0.02131 0.02131 1      
+build_ruptures     0.11436 0.04166 0.05756 0.20656 14     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================================================================== =========
-task               sent                                                                                                 received 
-read_source_models monitor=0 B fnames=0 B converter=0 B                                                                 1.47 KB  
-split_filter       srcs=3.12 KB monitor=446 B srcfilter=220 B sample_factor=21 B seed=14 B                              7.01 KB  
-build_ruptures     srcs=20.13 KB monitor=5.24 KB param=4.09 KB srcfilter=3.01 KB                                        281.93 KB
-compute_gmfs       sources_or_ruptures=273.13 KB param=14.37 KB monitor=1.68 KB rlzs_by_gsim=1.47 KB src_filter=1.07 KB 311.97 KB
-================== ==================================================================================================== =========
+================== ======================================================================= =========
+task               sent                                                                    received 
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.47 KB  
+split_filter       srcs=3.12 KB monitor=439 B srcfilter=220 B sample_factor=21 B seed=14 B 7.01 KB  
+build_ruptures     srcs=20.13 KB monitor=5.03 KB param=4.09 KB srcfilter=3.01 KB           281.68 KB
+================== ======================================================================= =========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total build_ruptures     0.81721   0.22266   14    
-making contexts          0.53008   0.0       259   
-total compute_gmfs       0.40254   0.12500   5     
-building hazard          0.36103   0.12500   5     
-saving ruptures          0.05599   0.0       15    
-updating source_info     0.02976   0.0       1     
-building riskinputs      0.02325   0.0       1     
-total split_filter       0.02224   0.0       1     
-building ruptures        0.01735   0.0       5     
-GmfGetter.init           0.01672   0.0       5     
-managing sources         0.01573   0.0       1     
-saving gmfs              0.00807   0.0       5     
-store source_info        0.00569   0.0       1     
-total read_source_models 0.00419   0.0       3     
-saving gmf_data/indices  0.00333   0.0       1     
-setting event years      0.00193   0.0       1     
-aggregating hcurves      7.596E-04 0.0       5     
-reading exposure         6.764E-04 0.0       1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     1.60102  0.12500   14    
+making contexts          1.27197  0.0       259   
+saving ruptures          0.37294  0.25781   1     
+updating source_info     0.02845  0.0       1     
+total split_filter       0.02131  0.0       1     
+store source_info        0.00694  0.0       1     
+total read_source_models 0.00656  0.0       1     
+setting event years      0.00313  0.0       1     
+reading exposure         0.00111  0.0       1     
+======================== ======== ========= ======
