@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     865,392,691        
-date           2018-09-25T14:29:01
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:02:17
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -75,22 +75,22 @@ NSHM_source_model-editedbkgd.xml 0      Active Shallow Crust 40           40
 NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2            2           
 ================================ ====== ==================== ============ ============
 
-============= ==
-#TRT models   2 
-#eff_ruptures 42
-#tot_ruptures 42
-#tot_weight   0 
-============= ==
+============= =======
+#TRT models   2      
+#eff_ruptures 42     
+#tot_ruptures 42     
+#tot_weight   6.00000
+============= =======
 
 Slowest sources
 ---------------
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
-0      1         P    0      1      20           0.0       3.099E-05  0.0       1         0.0   
-0      2         P    1      2      20           0.0       1.192E-05  0.0       1         0.0   
-1      21444     X    2      20,504 1            0.0       8.106E-06  0.0       1         0.0   
-1      21445     X    20,504 34,373 1            0.0       3.815E-06  0.0       1         0.0   
+0      1         P    0      1      20           0.0       2.193E-05  0.0       1         0.0   
+0      2         P    1      2      20           0.0       9.060E-06  0.0       1         0.0   
+1      21444     X    2      20,504 1            0.0       6.676E-06  0.0       1         0.0   
+1      21445     X    20,504 34,373 1            0.0       2.623E-06  0.0       1         0.0   
 ====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -108,18 +108,18 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-read_source_models 0.18811 NaN    0.18811 0.18811 1        
-split_filter       0.00242 NaN    0.00242 0.00242 1        
-================== ======= ====== ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.43846 NaN    0.43846 0.43846 1      
+split_filter       0.00162 NaN    0.00162 0.00162 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ========================================================================= =========
 task               sent                                                                      received 
 read_source_models monitor=0 B fnames=0 B converter=0 B                                      808.97 KB
-split_filter       srcs=808.48 KB monitor=432 B srcfilter=253 B sample_factor=21 B seed=14 B 808.65 KB
+split_filter       srcs=808.48 KB monitor=428 B srcfilter=253 B sample_factor=21 B seed=14 B 808.65 KB
 ================== ========================================================================= =========
 
 Slowest operations
@@ -127,7 +127,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.18811  0.0       1     
-updating source_info     0.01620  0.0       1     
-total split_filter       0.00242  0.0       1     
+total read_source_models 0.43846  0.0       1     
+updating source_info     0.01285  0.0       1     
+total split_filter       0.00162  0.0       1     
 ======================== ======== ========= ======

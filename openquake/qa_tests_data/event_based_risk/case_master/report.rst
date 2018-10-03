@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     571,516,522        
-date           2018-09-25T14:28:24
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:01:14
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -99,12 +99,12 @@ source_model_2.xml 3      Stable Shallow Crust 1            1
 6.05.hdf5          4      Deep Seismicity      2            2           
 ================== ====== ==================== ============ ============
 
-============= ===
-#TRT models   5  
-#eff_ruptures 971
-#tot_ruptures 971
-#tot_weight   0  
-============= ===
+============= =====
+#TRT models   5    
+#eff_ruptures 971  
+#tot_ruptures 971  
+#tot_weight   2,569
+============= =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -132,11 +132,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.25616   0.00559    105       15        0.0    
-1      2         S    2     4     4            0.02190   1.884E-05  7.00000   1         9.00000
-2      1         S    0     2     482          0.21190   0.00457    105       15        1.00000
-3      2         X    2     398   1            2.816E-04 5.960E-06  7.00000   1         0.0    
-4      buc06pt05 N    0     24    2            0.00128   7.153E-05  14        2         1.00000
+0      1         S    0     2     482          0.34416   0.00476    105       15        0.0    
+1      2         S    2     4     4            0.02449   1.740E-05  7.00000   1         9.00000
+2      1         S    0     2     482          0.33854   0.00384    105       15        1.00000
+3      2         X    2     398   1            2.513E-04 5.484E-06  7.00000   1         0.0    
+4      buc06pt05 N    0     24    2            0.00138   6.866E-05  14        2         1.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -144,9 +144,9 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00128   1     
-S    0.48996   3     
-X    2.816E-04 1     
+N    0.00138   1     
+S    0.70719   3     
+X    2.513E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -155,46 +155,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.01221 0.00529 0.00739 0.01786 3        
-split_filter       0.04204 NaN     0.04204 0.04204 1        
-build_ruptures     0.01935 0.01002 0.00277 0.03899 31       
-compute_gmfs       0.03481 0.02429 0.01506 0.06193 3        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.01634 0.01201 0.00834 0.03015 3      
+split_filter       0.07424 NaN     0.07424 0.07424 1      
+build_ruptures     0.02611 0.01832 0.00255 0.07369 31     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ================================================================================================= ========
-task               sent                                                                                              received
-read_source_models monitor=1.08 KB converter=957 B fnames=576 B                                                      16.3 KB 
-split_filter       srcs=17.88 KB monitor=381 B srcfilter=220 B sample_factor=21 B seed=14 B                          26.49 KB
-build_ruptures     srcs=54.8 KB param=19.38 KB monitor=11.59 KB srcfilter=6.66 KB                                    68.49 KB
-compute_gmfs       param=17.02 KB sources_or_ruptures=13.71 KB rlzs_by_gsim=1.12 KB monitor=1.01 KB src_filter=660 B 57.41 KB
-================== ================================================================================================= ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=1.08 KB converter=957 B fnames=576 B                             16.3 KB 
+split_filter       srcs=17.88 KB monitor=381 B srcfilter=220 B sample_factor=21 B seed=14 B 26.49 KB
+build_ruptures     srcs=54.8 KB param=19.38 KB monitor=11.14 KB srcfilter=6.66 KB           68 KB   
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total build_ruptures     0.59990   0.0       31    
-total compute_gmfs       0.10442   0.25391   3     
-building hazard          0.07452   0.06250   3     
-updating source_info     0.05210   0.0       1     
-total split_filter       0.04204   0.0       1     
-total read_source_models 0.03664   0.22266   3     
-making contexts          0.01865   0.0       6     
-building riskinputs      0.01751   0.0       1     
-building hazard curves   0.01660   0.0       63    
-saving ruptures          0.00818   0.0       3     
-saving gmfs              0.00796   0.0       3     
-building ruptures        0.00778   0.0       3     
-store source_info        0.00684   0.0       1     
-managing sources         0.00453   0.0       1     
-saving gmf_data/indices  0.00439   0.0       1     
-aggregating hcurves      0.00427   0.0       3     
-GmfGetter.init           0.00252   0.21094   3     
-setting event years      0.00163   0.0       1     
-reading exposure         7.741E-04 0.0       1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     0.80954  0.0       31    
+saving ruptures          0.22124  0.0       1     
+updating source_info     0.08294  0.0       1     
+total split_filter       0.07424  0.0       1     
+total read_source_models 0.04901  0.0       3     
+making contexts          0.04095  0.0       6     
+store source_info        0.00995  0.0       1     
+setting event years      0.00186  0.0       1     
+reading exposure         0.00126  0.0       1     
+======================== ======== ========= ======

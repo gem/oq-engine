@@ -3,8 +3,8 @@ Disaggregation with sampling
 
 ============== ===================
 checksum32     1,553,247,118      
-date           2018-09-25T14:27:45
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:00:43
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 2, num_levels = 38
@@ -77,10 +77,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         P    0     1     15           0.01554   5.126E-05  1.00000   1         1.50000
-0      2         A    1     5     1,440        1.71626   2.42523    96        96        144    
+0      1         P    0     1     15           0.03766   2.456E-05  1.00000   1         1.50000
+0      2         A    1     5     1,440        2.85253   3.95453    96        96        144    
 0      3         S    5     7     617          0.0       0.0        0.0       0         0.0    
-0      4         C    7     11    164          0.66139   0.00206    10        10        656    
+0      4         C    7     11    164          1.56815   0.00304    10        10        656    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -88,9 +88,9 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.71626   1     
-C    0.66139   1     
-P    0.01554   1     
+A    2.85253   1     
+C    1.56815   1     
+P    0.03766   1     
 S    0.0       1     
 ==== ========= ======
 
@@ -100,28 +100,28 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.04239 NaN     0.04239 0.04239 1        
-split_filter       0.05235 NaN     0.05235 0.05235 1        
-classical          0.30340 0.56532 0.05759 1.69592 8        
-build_hazard_stats 0.00752 0.00104 0.00679 0.00825 2        
-================== ======= ======= ======= ======= =========
+================== ======= ========= ======= ======= =======
+operation-duration mean    stddev    min     max     outputs
+read_source_models 0.14478 NaN       0.14478 0.14478 1      
+split_filter       0.11081 NaN       0.11081 0.11081 1      
+classical          0.56074 0.88600   0.16114 2.74479 8      
+build_hazard_stats 0.00583 6.128E-04 0.00540 0.00626 2      
+================== ======= ========= ======= ======= =======
 
 Fastest task
 ------------
-taskno=4, weight=88, duration=0 s, sources="4"
+taskno=6, weight=80, duration=0 s, sources="4"
 
 ======== ======= ====== === === =
 variable mean    stddev min max n
 ======== ======= ====== === === =
 nsites   1.00000 NaN    1   1   1
-weight   88      NaN    88  88  1
+weight   80      NaN    80  80  1
 ======== ======= ====== === === =
 
 Slowest task
 ------------
-taskno=1, weight=141, duration=1 s, sources="1 2"
+taskno=1, weight=141, duration=2 s, sources="1 2"
 
 ======== ======= ====== ======= ======= ==
 variable mean    stddev min     max     n 
@@ -135,7 +135,7 @@ Data transfer
 ================== =========================================================================== ========
 task               sent                                                                        received
 read_source_models monitor=0 B fnames=0 B converter=0 B                                        3.63 KB 
-split_filter       srcs=3.32 KB monitor=446 B srcfilter=253 B sample_factor=21 B seed=15 B     24.73 KB
+split_filter       srcs=3.32 KB monitor=439 B srcfilter=253 B sample_factor=21 B seed=15 B     24.73 KB
 classical          group=31.64 KB param=6.77 KB monitor=2.7 KB src_filter=1.72 KB gsims=1016 B 7.03 KB 
 build_hazard_stats pgetter=5.04 KB monitor=708 B hstats=134 B                                  684 B   
 ================== =========================================================================== ========
@@ -145,19 +145,19 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          2.42720   1.18359   8     
-make_contexts            0.96184   0.0       1,619 
-iter_ruptures            0.90773   0.0       107   
-get_poes                 0.50488   0.0       1,084 
-updating source_info     0.06479   0.0       1     
-total split_filter       0.05235   0.40234   1     
-total read_source_models 0.04257   0.0       3     
-store source_info        0.02494   0.0       8     
-total build_hazard_stats 0.01503   0.02344   2     
-combine pmaps            0.01355   0.02344   2     
-managing sources         0.00668   0.0       1     
-aggregate curves         0.00240   0.0       8     
-saving probability maps  0.00182   0.0       1     
-saving statistics        0.00101   0.0       2     
-compute mean             6.661E-04 0.0       1     
+total classical          4.48595   1.44531   8     
+iter_ruptures            1.79526   0.0       107   
+make_contexts            1.79360   0.0       1,619 
+get_poes                 0.84509   0.0       1,084 
+total read_source_models 0.14478   0.0       1     
+updating source_info     0.12326   0.0       1     
+total split_filter       0.11081   0.0       1     
+store source_info        0.06016   0.0       8     
+managing sources         0.02283   0.0       1     
+total build_hazard_stats 0.01166   0.53125   2     
+combine pmaps            0.01069   0.53125   2     
+aggregate curves         0.00245   0.0       8     
+saving probability maps  0.00195   0.0       1     
+saving statistics        0.00121   0.0       2     
+compute mean             4.375E-04 0.0       1     
 ======================== ========= ========= ======
