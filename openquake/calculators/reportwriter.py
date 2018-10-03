@@ -128,6 +128,7 @@ def build_report(job_ini, output_dir=None):
         the directory where the report is written (default the input directory)
     """
     oq = readinput.get_oqparam(job_ini)
+    oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)

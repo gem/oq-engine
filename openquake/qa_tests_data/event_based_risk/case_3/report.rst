@@ -3,8 +3,8 @@ Event Based Risk Lisbon
 
 ============== ===================
 checksum32     3,187,009,563      
-date           2018-09-25T14:28:35
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:01:29
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -94,7 +94,7 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 5,202        5,226
 #TRT models   4     
 #eff_ruptures 31,144
 #tot_ruptures 34,382
-#tot_weight   0     
+#tot_weight   3,114 
 ============= ======
 
 Estimated data transfer for the avglosses
@@ -120,26 +120,26 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      0         A    0     4     6,075        4.42245   5.79192    135       135       1.00000
-0      1         A    4     8     989          0.75045   0.39050    43        43        0.0    
-0      2         A    8     12    4,901        2.55093   4.79858    114       114       1.00000
-1      10        A    12    16    1,116        0.86993   1.11586    62        62        0.0    
-1      3         A    16    20    812          0.61249   0.17307    28        28        0.0    
-1      4         A    20    24    310          0.23999   0.41822    31        31        0.0    
-1      5         A    24    28    551          0.42749   0.16641    19        19        1.00000
-1      6         A    28    32    1,054        0.63469   0.35121    34        34        0.0    
-1      7         A    32    36    429          0.33442   0.22789    33        33        0.0    
-1      8         A    36    40    342          0.25142   0.11328    19        19        0.0    
-1      9         A    40    44    612          0.25304   0.84085    49        49        0.0    
-2      0         A    0     4     6,075        4.33737   5.38757    135       135       2.00000
-2      1         A    4     8     989          0.77659   0.41869    43        43        4.00000
-2      2         A    8     12    4,901        2.36381   4.89020    114       114       1.00000
-3      10        A    12    16    1,116        0.90063   1.19633    62        62        0.0    
-3      3         A    16    20    812          0.38891   0.18563    28        28        0.0    
-3      4         A    20    24    310          0.25447   0.44448    31        31        2.00000
-3      5         A    24    28    551          0.41774   0.17919    19        19        0.0    
-3      6         A    28    32    1,054        0.77349   0.37663    34        34        0.0    
-3      7         A    32    36    429          0.33208   0.25205    33        33        1.00000
+0      0         A    0     4     6,075        7.60229   10         135       135       1.00000
+0      1         A    4     8     989          1.32710   0.63256    43        43        0.0    
+0      2         A    8     12    4,901        4.48903   10         114       114       1.00000
+1      10        A    12    16    1,116        1.52721   1.84696    62        62        0.0    
+1      3         A    16    20    812          0.84033   0.28426    28        28        0.0    
+1      4         A    20    24    310          0.29187   0.68388    31        31        0.0    
+1      5         A    24    28    551          0.55849   0.27326    19        19        1.00000
+1      6         A    28    32    1,054        1.14794   1.12217    34        34        0.0    
+1      7         A    32    36    429          0.53596   0.37370    33        33        0.0    
+1      8         A    36    40    342          0.47817   0.18225    19        19        0.0    
+1      9         A    40    44    612          0.79035   1.02482    49        49        0.0    
+2      0         A    0     4     6,075        7.71868   15         135       135       2.00000
+2      1         A    4     8     989          1.36122   0.65794    43        43        4.00000
+2      2         A    8     12    4,901        4.37262   6.42733    114       114       1.00000
+3      10        A    12    16    1,116        1.29169   1.80121    62        62        0.0    
+3      3         A    16    20    812          0.56213   0.29307    28        28        0.0    
+3      4         A    20    24    310          0.41279   0.66782    31        31        2.00000
+3      5         A    24    28    551          0.73130   0.26604    19        19        0.0    
+3      6         A    28    32    1,054        1.32360   0.57021    34        34        0.0    
+3      7         A    32    36    429          0.56043   0.37540    33        33        1.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -147,7 +147,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    22        22    
+A    39        22    
 ==== ========= ======
 
 Duplicated sources
@@ -156,45 +156,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.16752 0.01211 0.15896 0.17608 2        
-split_filter       0.09528 0.05320 0.02308 0.15229 5        
-build_ruptures     1.25853 0.32931 0.56404 1.52989 18       
-compute_gmfs       0.01897 0.00874 0.01085 0.03029 4        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.32966 0.07855 0.27412 0.38521 2      
+split_filter       0.17415 0.08563 0.04373 0.27127 5      
+build_ruptures     2.19333 0.48461 1.01389 2.66054 18     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ================================================================================================= =========
-task               sent                                                                                              received 
-read_source_models monitor=736 B converter=638 B fnames=382 B                                                        20.26 KB 
-split_filter       srcs=158.07 KB monitor=1.86 KB srcfilter=1.07 KB sample_factor=105 B seed=70 B                    424.1 KB 
-build_ruptures     srcs=435.57 KB param=8.19 KB monitor=6.73 KB srcfilter=3.87 KB                                    569.94 KB
-compute_gmfs       sources_or_ruptures=26.07 KB param=16.48 KB rlzs_by_gsim=1.66 KB monitor=1.35 KB src_filter=880 B 20.22 KB 
-================== ================================================================================================= =========
+================== ============================================================================== =========
+task               sent                                                                           received 
+read_source_models monitor=736 B converter=638 B fnames=382 B                                     20.26 KB 
+split_filter       srcs=158.07 KB monitor=1.86 KB srcfilter=1.07 KB sample_factor=105 B seed=70 B 424.1 KB 
+build_ruptures     srcs=435.57 KB param=8.19 KB monitor=6.47 KB srcfilter=3.87 KB                 569.85 KB
+================== ============================================================================== =========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total build_ruptures     22        0.0       18    
-total split_filter       0.47640   0.25391   5     
-total read_source_models 0.33504   0.0       2     
-updating source_info     0.17364   0.0       1     
-total compute_gmfs       0.07587   0.15625   4     
-building hazard          0.05244   0.15625   4     
-saving ruptures          0.03386   0.0       13    
-building ruptures        0.01445   0.0       4     
-making contexts          0.01374   0.0       15    
-store source_info        0.00673   0.0       1     
-managing sources         0.00661   0.0       1     
-saving gmfs              0.00632   0.0       4     
-GmfGetter.init           0.00489   0.0       4     
-building riskinputs      0.00304   0.0       1     
-setting event years      0.00124   0.0       1     
-saving gmf_data/indices  9.582E-04 0.0       1     
-aggregating hcurves      6.659E-04 0.0       4     
-reading exposure         5.131E-04 0.0       1     
+total build_ruptures     39        0.25000   18    
+saving ruptures          2.69361   0.0       1     
+total split_filter       0.87076   0.42188   5     
+total read_source_models 0.65932   0.0       2     
+updating source_info     0.30709   0.0       1     
+making contexts          0.01190   0.0       15    
+store source_info        0.01024   0.0       1     
+setting event years      0.00186   0.0       1     
+reading exposure         8.571E-04 0.0       1     
 ======================== ========= ========= ======

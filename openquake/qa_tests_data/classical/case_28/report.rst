@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ===================
 checksum32     576,018,697        
-date           2018-09-25T14:28:46
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:01:52
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 2, num_levels = 133
@@ -87,7 +87,7 @@ GridSources.xml 1      Tectonic_type_b 260          260
 #TRT models   2  
 #eff_ruptures 520
 #tot_ruptures 520
-#tot_weight   0  
+#tot_weight   52 
 ============= ===
 
 Slowest sources
@@ -95,8 +95,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      21        M    0     2     260          0.0       7.782E-04  0.0       2         0.0   
-1      21        M    0     2     260          0.0       5.956E-04  0.0       2         0.0   
+0      21        M    0     2     260          0.0       0.00114    0.0       2         0.0   
+1      21        M    0     2     260          0.0       9.742E-04  0.0       2         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -113,18 +113,18 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-read_source_models 0.00154 NaN    0.00154 0.00154 1        
-split_filter       0.00231 NaN    0.00231 0.00231 1        
-================== ======= ====== ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00200 NaN    0.00200 0.00200 1      
+split_filter       0.00316 NaN    0.00316 0.00316 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
 ================== ======================================================================= ========
 task               sent                                                                    received
 read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.91 KB 
-split_filter       srcs=1.95 KB monitor=432 B srcfilter=253 B sample_factor=21 B seed=14 B 2.46 KB 
+split_filter       srcs=1.95 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=14 B 2.46 KB 
 ================== ======================================================================= ========
 
 Slowest operations
@@ -132,7 +132,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.00818  0.0       1     
-total split_filter       0.00231  0.0       1     
-total read_source_models 0.00154  0.0       1     
+updating source_info     0.01035  0.0       1     
+total split_filter       0.00316  0.16797   1     
+total read_source_models 0.00200  0.0       1     
 ======================== ======== ========= ======
