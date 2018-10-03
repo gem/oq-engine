@@ -68,12 +68,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    mon = monitor('build risk curves', measuremem=False)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    results = []
     for ri in riskinputs:
+        mon = monitor('build risk curves', measuremem=False)
         with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
             ri.hazard_getter.init()
         eids = ri.hazard_getter.eids
@@ -141,8 +140,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
         # store info about the GMFs, must be done at the end
         result['gmdata'] = ri.gmdata
-        results.append(result)
-    return results
+        yield result
 
 
 @base.calculators.add('event_based_risk')
@@ -275,14 +273,13 @@ class EbrCalculator(base.RiskCalculator):
                 for aid, arr in zip(aids, loss_maps):
                     self.datastore[key][aid] = arr
 
-    def combine(self, dummy, results):
+    def combine(self, dummy, res):
         """
         :param dummy: unused parameter
-        :param results: a list of result dictionaries
+        :param res: a result dictionary
         """
-        for res in results:
-            with self.monitor('saving losses', measuremem=True):
-                self.save_losses(res)
+        with self.monitor('saving losses', measuremem=True):
+            self.save_losses(res)
         return 1
 
     def post_execute(self, result):
