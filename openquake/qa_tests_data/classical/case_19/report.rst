@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ===================
 checksum32     1,220,765,868      
-date           2018-09-25T14:29:01
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:02:18
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 78
@@ -99,7 +99,7 @@ grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites nu
 4      s34       A    579   605   12,327       0.0       0.0        0.0       0         0.0   
 4      s35       A    605   631   12,327       0.0       0.0        0.0       0         0.0   
 4      s40       A    631   657   12,327       0.0       0.0        0.0       0         0.0   
-4      s46       A    657   683   7,770        0.0       68         0.0       370       0.0   
+4      s46       A    657   683   7,770        0.0       140        0.0       370       0.0   
 4      s70       A    683   711   17,871       0.0       0.0        0.0       0         0.0   
 4      s72       A    711   739   17,871       0.0       0.0        0.0       0         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
@@ -119,26 +119,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-read_source_models 7.14483 NaN    7.14483 7.14483 1        
-split_filter       0.29370 NaN    0.29370 0.29370 1        
-================== ======= ====== ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 11      NaN    11      11      1      
+split_filter       0.62700 NaN    0.62700 0.62700 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================================================= ========
-task               sent                                                                          received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                          44.58 KB
-split_filter       srcs=57.93 KB monitor=6.8 KB srcfilter=4.23 KB sample_factor=336 B seed=224 B 80.99 KB
-================== ============================================================================= ========
+================== ============================================================================== ========
+task               sent                                                                           received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                           44.58 KB
+split_filter       srcs=57.93 KB monitor=6.69 KB srcfilter=4.23 KB sample_factor=336 B seed=224 B 80.99 KB
+================== ============================================================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 7.14483  0.0       1     
-updating source_info     2.76380  0.0       1     
-total split_filter       0.29370  0.0       1     
+total read_source_models 11       0.31250   1     
+updating source_info     4.64978  0.31250   1     
+total split_filter       0.62700  0.65234   1     
 ======================== ======== ========= ======

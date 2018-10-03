@@ -3,8 +3,8 @@ QA Scenario Risk for contents
 
 ============== ===================
 checksum32     3,665,953,184      
-date           2018-09-25T14:27:44
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-03T15:00:42
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 3, num_levels = 20
@@ -80,8 +80,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.00417   0.0       1     
-computing gmfs      0.00334   0.0       1     
-saving gmfs         0.00137   0.0       1     
-reading exposure    4.015E-04 0.0       1     
+building riskinputs 0.00692   0.0       1     
+computing gmfs      0.00524   0.0       1     
+saving gmfs         0.00205   0.0       1     
+reading exposure    6.201E-04 0.0       1     
 =================== ========= ========= ======
