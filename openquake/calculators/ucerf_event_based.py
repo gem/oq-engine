@@ -83,7 +83,7 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape E
+                ratios = loss_ratios[a]  # shape (E, 1)
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)
                 # average losses
