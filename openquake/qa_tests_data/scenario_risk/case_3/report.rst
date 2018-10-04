@@ -3,8 +3,8 @@ Scenario QA Test 3
 
 ============== ===================
 checksum32     775,322,845        
-date           2018-10-03T15:00:42
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-04T15:36:23
+engine_version 3.3.0-gitf22d3f2c70
 ============== ===================
 
 num_sites = 4, num_levels = 15
@@ -57,6 +57,14 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Exposure model
 --------------
 =============== ========
@@ -79,8 +87,8 @@ Slowest operations
 =================== ========= ========= ======
 operation           time_sec  memory_mb counts
 =================== ========= ========= ======
-saving gmfs         0.05909   0.0       1     
-building riskinputs 0.04358   0.0       1     
-computing gmfs      0.01011   0.0       1     
-reading exposure    6.166E-04 0.0       1     
+saving gmfs         0.02601   0.0       1     
+building riskinputs 0.01574   0.0       1     
+computing gmfs      0.00580   0.0       1     
+reading exposure    3.893E-04 0.0       1     
 =================== ========= ========= ======
