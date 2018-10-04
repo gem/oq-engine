@@ -1214,7 +1214,7 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
-git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
+git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm)
 
 # NOTE: if in the future we need modules we need to execute the following commands
 #
