@@ -453,21 +453,6 @@ class AssetCollection(object):
         sitecol.make_complete()
         return new
 
-    def values(self, aids=None):
-        """
-        :param aids: asset indices where to compute the values (None means all)
-        :returns: a structured array of asset values by loss type
-        """
-        if aids is None:
-            aids = range(len(self))
-        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
-        vals = numpy.zeros(len(aids), loss_dt)  # asset values by loss_type
-        for i, aid in enumerate(aids):
-            asset = self[aid]
-            for lt in self.loss_types:
-                vals[i][lt] = asset.value(lt, self.time_event)
-        return vals
-
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
@@ -534,7 +519,6 @@ def build_asset_array(assets_by_site, tagnames=()):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
-    :param time_event: a time event string (or None)
     :returns: an array `assetcol`
     """
     for assets in assets_by_site:

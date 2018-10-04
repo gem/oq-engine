@@ -62,7 +62,6 @@ class UcerfTestCase(CalculatorTestCase):
         # check the generated hazard maps
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
-                      concurrent_tasks='0',  # avoid usual fork bug
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
         # check the GMFs

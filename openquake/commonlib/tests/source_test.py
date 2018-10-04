@@ -17,21 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
 import unittest
 from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
 
+from openquake.baselib.general import assert_close
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, readinput
 from openquake.commonlib.source import CompositionInfo
 from openquake.hazardlib import nrml
-from openquake.baselib.general import assert_close
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(htests.__file__)
@@ -758,7 +756,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
-        csm = readinput.get_composite_source_model(oqparam)
+        csm = readinput.get_composite_source_model(oqparam, split_all=False)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 18)

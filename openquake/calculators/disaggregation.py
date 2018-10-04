@@ -34,7 +34,7 @@ from openquake.calculators import getters
 from openquake.calculators import base, classical
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-sid-%(sid)s/'
 
 
 def _to_matrix(matrices, num_trts):
@@ -408,7 +408,7 @@ producing too small PoEs.'''
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz='rlz-%d' if isinstance(rlz_id, int) else rlz_id,
-            imt=imt_str, lon=lon, lat=lat)
+            imt=imt_str, sid=site_id)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
@@ -470,7 +470,7 @@ producing too small PoEs.'''
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-%s-%s' % (
-                        prefix, imt, rec['lons'], rec['lats'])
+                        prefix, imt, rec['lon'], rec['lat'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:

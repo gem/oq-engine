@@ -3,8 +3,8 @@ Scenario QA Test with No Spatial Correlation
 
 ============== ===================
 checksum32     1,558,745,804      
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+date           2018-10-03T15:00:39
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -53,12 +53,3 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
-
-Slowest operations
-------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-computing gmfs          0.01917  0.0       1     
-reading site collection 0.00648  0.0       1     
-======================= ======== ========= ======

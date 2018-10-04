@@ -3,8 +3,8 @@ QA test for disaggregation case_2
 
 ============== ===================
 checksum32     131,107,173        
-date           2018-09-05T10:03:44
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:00:58
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -72,32 +72,69 @@ Realizations per (TRT, GSIM)
   2,BooreAtkinson2008(): [2]
   2,ChiouYoungs2008(): [3]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+================== ====== ==================== ============ ============
+source_model       grp_id trt                  eff_ruptures tot_ruptures
+================== ====== ==================== ============ ============
+source_model_1.xml 0      Subduction Intraslab 1,815        1,815       
+source_model_1.xml 1      Active Shallow Crust 3,630        3,630       
+source_model_2.xml 2      Active Shallow Crust 1,420        1,420       
+================== ====== ==================== ============ ============
+
+============= =====
+#TRT models   3    
+#eff_ruptures 6,865
+#tot_ruptures 6,865
+#tot_weight   1,964
+============= =====
+
+Slowest sources
+---------------
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      2         A    0     4     1,815        0.0       4.54332    0.0       121       0.0   
+1      1         A    4     8     1,815        0.0       6.45425    0.0       121       0.0   
+1      3         A    8     12    1,815        0.0       3.82011    0.0       121       0.0   
+2      1         S    0     2     1,420        0.0       0.00452    0.0       15        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+
+Computation times by source typology
+------------------------------------
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    0.0       3     
+S    0.0       1     
+==== ========= ======
+
+Duplicated sources
+------------------
+There are no duplicated sources
+
 Information about the tasks
 ---------------------------
-==================== ======= ======= ======= ======= =========
-operation-duration   mean    stddev  min     max     num_tasks
-pickle_source_models 0.03432 0.03004 0.01308 0.05557 2        
-compute_disagg       1.35732 1.51281 0.41964 4.77020 14       
-==================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.09090 0.10643 0.01565 0.16616 2      
+split_filter       0.19163 NaN     0.19163 0.19163 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-==================== =============================================================================================================================== ========
-task                 sent                                                                                                                            received
-pickle_source_models monitor=618 B converter=578 B fnames=360 B                                                                                      312 B   
-compute_disagg       sources=80.08 KB oqparam=28.72 KB cmaker=18.21 KB bin_edges=16.69 KB src_filter=9.83 KB iml4=4.68 KB monitor=4.27 KB trti=196 B 40.79 MB
-==================== =============================================================================================================================== ========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=662 B converter=638 B fnames=360 B                              5.32 KB 
+split_filter       srcs=4.07 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=14 B 86.93 KB
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
-========================== ======== ========= ======
-operation                  time_sec memory_mb counts
-========================== ======== ========= ======
-total compute_disagg       19       11        14    
-disaggregate_pne           8.75335  0.0       11,915
-disagg_contexts            6.14352  0.0       6,865 
-get_closest                0.63597  0.0       6,865 
-build_disagg_matrix        0.07032  3.56641   28    
-total pickle_source_models 0.06865  4.44531   2     
-splitting sources          0.06441  0.0       1     
-========================== ======== ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+updating source_info     0.21611  0.0       1     
+total split_filter       0.19163  0.53516   1     
+total read_source_models 0.18180  0.07812   2     
+======================== ======== ========= ======
