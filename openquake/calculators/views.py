@@ -377,6 +377,16 @@ def view_totlosses(token, dstore):
 
 
 # for event based risk
+def portfolio_loss(dstore):
+    array = dstore['losses_by_event'].value
+    L, = array.dtype['loss'].shape
+    R = dstore['csm_info'].get_num_rlzs()
+    data = numpy.zeros((R, L), F32)
+    for row in array:
+        data[row['rlzi']] += row['loss']
+    return data
+
+
 @view.add('portfolio_losses')
 def view_portfolio_losses(token, dstore):
     """
@@ -385,34 +395,22 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
-    data = numpy.zeros(R, loss_dt)
-    rlzids = [str(r) for r in range(R)]
-    for r in range(R):
-        loss = by_rlzi[r]['loss'].sum(axis=0)
-        for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = loss[l]
+    data = portfolio_loss(dstore).view(loss_dt)[0]
+    rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
 
-# for event based risk
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
     The loss for the full portfolio, for each realization and loss type,
     extracted from the event loss table.
     """
-    oq = dstore['oqparam']
-    loss_dt = oq.loss_dt()
-    L = len(loss_dt.names)
-    R = dstore['csm_info'].get_num_rlzs()
-    data = numpy.zeros((R, L), F32)
-    for row in dstore['losses_by_event']:
-        data[row['rlzi']] += row['loss']
-    return rst_table(data, fmt='%.5E')
+    data = portfolio_loss(dstore)
+    return rst_table([[data.mean(), data.std(ddof=1)]],
+                     header=['mean', 'stddev'])
 
 
 def sum_table(records):
