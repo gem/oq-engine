@@ -166,7 +166,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             self._monitor.hdf5 = self.datastore.hdf5
             self.set_log_format()
             if logversion:  # make sure this is logged only once
-                logging.info('Running %s [hc=%s]',
+                logging.info('Running %s [--hc=%s]',
                              self.oqparam.inputs['job_ini'],
                              self.oqparam.hazard_calculation_id)
                 logging.info('Using engine version %s', engine_version)
