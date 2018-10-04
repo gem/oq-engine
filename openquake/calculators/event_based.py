@@ -304,6 +304,7 @@ class EventBasedCalculator(base.HazardCalculator):
             par['samples'] = self.samples_by_grp[ebr.grp_id]
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
+        self.setting_events()
         if self.oqparam.ground_motion_fields:
             logging.info('Building GMFs')
 
@@ -432,23 +433,17 @@ class EventBasedCalculator(base.HazardCalculator):
             ds.set_nbytes('gmf_data/' + sm_id)
         ds.set_nbytes('gmf_data')
 
-    def post_execute(self, result):
+    def setting_events(self):
         """
-        Save the SES collection
+        Call set_random_years on the events dataset
         """
-        oq = self.oqparam
-        if 'ucerf' in oq.calculation_mode:
-            self.rupser.close()
-            self.csm.info.update_eff_ruptures(self.csm.get_num_ruptures())
-        N = len(self.sitecol.complete)
-        L = len(oq.imtls.array)
-        if oq.hazard_calculation_id is None:
+        if self.oqparam.hazard_calculation_id is None:
             num_events = sum(set_counts(self.datastore, 'events').values())
             if num_events == 0:
                 raise RuntimeError(
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
-            if oq.save_ruptures:
+            if self.oqparam.save_ruptures:
                 logging.info('Setting %d event years on %d ruptures',
                              num_events, self.rupser.nruptures)
             with self.monitor('setting event years', measuremem=True,
@@ -457,6 +452,17 @@ class EventBasedCalculator(base.HazardCalculator):
                                  self.oqparam.ses_seed,
                                  int(self.oqparam.investigation_time))
 
+    def post_execute(self, result):
+        """
+        Save the SES collection
+        """
+        oq = self.oqparam
+        if 'ucerf' in oq.calculation_mode:
+            self.rupser.close()
+            self.csm.info.update_eff_ruptures(self.csm.get_num_ruptures())
+            self.setting_events()
+        N = len(self.sitecol.complete)
+        L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
             rlzs = self.csm_info.get_rlzs_assoc().realizations
             # compute and save statistics; this is done in process and can
