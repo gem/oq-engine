@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ===================
 checksum32     1,316,139,513      
-date           2018-09-25T14:28:09
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-04T15:36:39
+engine_version 3.3.0-gitf22d3f2c70
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -40,55 +40,13 @@ source                  `source_model.xml <source_model.xml>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1,1)    1/1             
-========= ======= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== =================== ========= ========== ==========
-grp_id gsims               distances siteparams ruptparams
-====== =================== ========= ========== ==========
-0      SadighEtAl1997()    rrup      vs30       mag rake  
-1      BooreAtkinson2008() rjb       vs30       mag rake  
-====== =================== ========= ========== ==========
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=2, rlzs=1)
-  0,SadighEtAl1997(): [0]
-  1,BooreAtkinson2008(): [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1            1           
-source_model.xml 1      Stable Continental   1            1           
-================ ====== ==================== ============ ============
-
-============= =
-#TRT models   2
-#eff_ruptures 2
-#tot_ruptures 2
-#tot_weight   0
-============= =
-
 Slowest sources
 ---------------
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     1            0.02202   1.335E-05  1.00000   1         3,536 
-1      2         P    1     2     1            0.02112   3.338E-06  1.00000   1         3,370 
+0      1         P    0     1     1            0.0       1.502E-05  0.0       1         0.0   
+1      2         P    1     2     1            0.0       5.007E-06  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -96,7 +54,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.04314   2     
+P    0.0       2     
 ==== ========= ======
 
 Duplicated sources
@@ -105,32 +63,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-read_source_models 0.00119 NaN       0.00119 0.00119 1        
-split_filter       0.00316 NaN       0.00316 0.00316 1        
-build_ruptures     0.02461 5.225E-04 0.02424 0.02498 2        
-================== ======= ========= ======= ======= =========
+================== ========= ====== ========= ========= =======
+operation-duration mean      stddev min       max       outputs
+read_source_models 9.201E-04 NaN    9.201E-04 9.201E-04 1      
+split_filter       0.00313   NaN    0.00313   0.00313   1      
+================== ========= ====== ========= ========= =======
 
 Data transfer
 -------------
-================== ======================================================================= =========
-task               sent                                                                    received 
-read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.94 KB  
-split_filter       srcs=1.62 KB monitor=432 B srcfilter=220 B sample_factor=21 B seed=14 B 1.71 KB  
-build_ruptures     srcs=2.71 KB param=812 B monitor=690 B srcfilter=440 B                  127.46 KB
-================== ======================================================================= =========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.94 KB 
+split_filter       srcs=1.62 KB monitor=425 B srcfilter=220 B sample_factor=21 B seed=14 B 1.71 KB 
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total build_ruptures     0.04923   0.25391   2     
-saving ruptures          0.03594   0.0       2     
-updating source_info     0.00860   0.0       1     
-store source_info        0.00566   0.0       1     
-total split_filter       0.00316   0.25391   1     
-total read_source_models 0.00119   0.0       1     
-making contexts          7.420E-04 0.0       2     
+updating source_info     0.00828   0.0       1     
+total split_filter       0.00313   0.0       1     
+total read_source_models 9.201E-04 0.0       1     
 ======================== ========= ========= ======

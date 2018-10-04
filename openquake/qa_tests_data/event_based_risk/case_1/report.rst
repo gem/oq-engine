@@ -3,8 +3,8 @@ Event Based Risk QA Test 1
 
 ============== ===================
 checksum32     908,357,909        
-date           2018-10-03T15:01:29
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-04T15:36:48
+engine_version 3.3.0-gitf22d3f2c70
 ============== ===================
 
 num_sites = 3, num_levels = 25
@@ -103,9 +103,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         P    0     1     6            0.00749   2.337E-05  1.00000   1         8.00000
-0      2         P    1     2     6            0.00780   9.060E-06  1.00000   1         6.00000
-0      3         P    2     3     6            0.00763   7.153E-06  1.00000   1         6.00000
+0      1         P    0     1     6            0.00867   3.099E-05  1.00000   1         8.00000
+0      2         P    1     2     6            0.00815   1.550E-05  1.00000   1         6.00000
+0      3         P    2     3     6            0.00877   8.821E-06  1.00000   1         6.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-P    0.02292   3     
+P    0.02559   3     
 ==== ========= ======
 
 Duplicated sources
@@ -124,9 +124,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00206 NaN       0.00206 0.00206 1      
-split_filter       0.00264 NaN       0.00264 0.00264 1      
-build_ruptures     0.00998 1.404E-04 0.00985 0.01013 3      
+read_source_models 0.00129 NaN       0.00129 0.00129 1      
+split_filter       0.00388 NaN       0.00388 0.00388 1      
+build_ruptures     0.01165 3.369E-04 0.01127 0.01191 3      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -140,16 +140,16 @@ build_ruptures     srcs=4.15 KB param=1.12 KB monitor=1.08 KB srcfilter=660 B   
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-saving ruptures          0.06112  0.0       1     
-total build_ruptures     0.02994  0.0       3     
-store source_info        0.02741  0.0       1     
-updating source_info     0.00925  0.0       1     
-making contexts          0.00860  0.0       9     
-total split_filter       0.00264  0.0       1     
-total read_source_models 0.00206  0.0       1     
-setting event years      0.00184  0.0       1     
-reading exposure         0.00134  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+saving ruptures          0.03702   0.0       1     
+total build_ruptures     0.03494   0.0       3     
+updating source_info     0.01012   0.0       1     
+making contexts          0.00856   0.0       9     
+store source_info        0.00466   0.0       1     
+total split_filter       0.00388   0.0       1     
+total read_source_models 0.00129   0.0       1     
+setting event years      0.00117   0.0       1     
+reading exposure         9.599E-04 0.0       1     
+======================== ========= ========= ======

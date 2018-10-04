@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ===================
 checksum32     1,591,568,041      
-date           2018-10-03T15:01:44
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-04T15:36:54
+engine_version 3.3.0-gitf22d3f2c70
 ============== ===================
 
 num_sites = 10, num_levels = 13
@@ -80,7 +80,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      3         S    0     2     447          0.0       0.00452    0.0       15        0.0   
+0      3         S    0     2     447          0.0       0.00500    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,8 +99,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00645 NaN    0.00645 0.00645 1      
-split_filter       0.02093 NaN    0.02093 0.02093 1      
+read_source_models 0.00329 NaN    0.00329 0.00329 1      
+split_filter       0.01848 NaN    0.01848 0.01848 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -116,7 +116,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.03801  0.0       1     
-total split_filter       0.02093  0.0       1     
-total read_source_models 0.00645  0.0       1     
+updating source_info     0.02510  0.0       1     
+total split_filter       0.01848  0.0       1     
+total read_source_models 0.00329  0.0       1     
 ======================== ======== ========= ======
