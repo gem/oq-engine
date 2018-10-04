@@ -395,7 +395,7 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    data = portfolio_loss(dstore).view(loss_dt)[0]
+    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
