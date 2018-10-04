@@ -261,8 +261,7 @@ class EbrCalculator(base.RiskCalculator):
         for key in ('curves-rlzs', 'curves-stats'):
             array = dic.get(key)  # shape (A, S, P)
             if array is not None:
-                for aid, arr in zip(aids, array):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :, :] = array
 
     def _save_maps(self, dic, aids):
         for key in ('loss_maps-rlzs', 'loss_maps-stats'):
@@ -271,8 +270,7 @@ class EbrCalculator(base.RiskCalculator):
                 loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
                 for lti, lt in enumerate(self.loss_maps_dt.names):
                     loss_maps[lt] = array[:, :, :, lti]
-                for aid, arr in zip(aids, loss_maps):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :] = loss_maps
 
     def combine(self, dummy, res):
         """
