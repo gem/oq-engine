@@ -440,10 +440,12 @@ class IterResult(object):
             return ()
         t0 = time.time()
         self.received = []
+        first_time = True
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
-            if msg:
+            if msg and first_time:
                 logging.warn(msg)
+                first_time = False  # warn only once
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
