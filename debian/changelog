@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Optimized the saving of the risk results in event based in the case of
+    many sites and changed the command `oq show portfolio_loss` to show
+    mean and standard deviation of the portfolio loss for each loss type
+
   [Marco Pagani]
   * Added a first [preliminary] version of the GMM for the Canada model
     represented in an analytical form.
