@@ -3,8 +3,8 @@ Classical PSHA with NZ NSHM
 
 ============== ===================
 checksum32     865,392,691        
-date           2018-09-05T10:04:54
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:02:17
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 29
@@ -84,23 +84,23 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2            2
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= ========= ======
-source_id source_class              num_ruptures calc_time split_time num_sites num_split events
-========= ========================= ============ ========= ========== ========= ========= ======
-21444     CharacteristicFaultSource 1            0.00274   1.431E-06  1.00000   1         0     
-1         PointSource               20           0.00141   2.623E-06  1.00000   1         0     
-21445     CharacteristicFaultSource 1            2.289E-05 9.537E-07  1.00000   1         0     
-2         PointSource               20           1.025E-05 1.192E-06  1.00000   1         0     
-========= ========================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1  gidx2  num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
+0      1         P    0      1      20           0.0       2.193E-05  0.0       1         0.0   
+0      2         P    1      2      20           0.0       9.060E-06  0.0       1         0.0   
+1      21444     X    2      20,504 1            0.0       6.676E-06  0.0       1         0.0   
+1      21445     X    20,504 34,373 1            0.0       2.623E-06  0.0       1         0.0   
+====== ========= ==== ====== ====== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-========================= ========= ======
-source_class              calc_time counts
-========================= ========= ======
-CharacteristicFaultSource 0.00276   2     
-PointSource               0.00143   2     
-========================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    0.0       2     
+X    0.0       2     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -108,54 +108,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ========= ======= ======= =========
-operation-duration   mean    stddev    min     max     num_tasks
-pickle_source_models 0.18251 NaN       0.18251 0.18251 1        
-count_eff_ruptures   0.00259 0.00118   0.00176 0.00343 2        
-preprocess           0.00116 1.713E-04 0.00101 0.00134 4        
-==================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=1, weight=4, duration=0 s, sources="1 2"
-
-======== ======= ====== ======= ======= =
-variable mean    stddev min     max     n
-======== ======= ====== ======= ======= =
-nsites   1.00000 0.0    1       1       2
-weight   2.00000 0.0    2.00000 2.00000 2
-======== ======= ====== ======= ======= =
-
-Slowest task
-------------
-taskno=2, weight=2, duration=0 s, sources="21444 21445"
-
-======== ======= ====== ======= ======= =
-variable mean    stddev min     max     n
-======== ======= ====== ======= ======= =
-nsites   1.00000 0.0    1       1       2
-weight   1.00000 0.0    1.00000 1.00000 2
-======== ======= ====== ======= ======= =
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.43846 NaN    0.43846 0.43846 1      
+split_filter       0.00162 NaN    0.00162 0.00162 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==================== ======================================================================== ========
-task                 sent                                                                     received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                     188 B   
-count_eff_ruptures   sources=809.44 KB param=1.4 KB monitor=614 B srcfilter=440 B gsims=245 B 858 B   
-preprocess           srcs=810.61 KB monitor=1.25 KB srcfilter=1012 B param=144 B              810.8 KB
-==================== ======================================================================== ========
+================== ========================================================================= =========
+task               sent                                                                      received 
+read_source_models monitor=0 B fnames=0 B converter=0 B                                      808.97 KB
+split_filter       srcs=808.48 KB monitor=428 B srcfilter=253 B sample_factor=21 B seed=14 B 808.65 KB
+================== ========================================================================= =========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total pickle_source_models 0.18251   0.0       1     
-managing sources           0.02036   0.0       1     
-total count_eff_ruptures   0.00519   0.0       2     
-total preprocess           0.00466   0.0       4     
-store source_info          0.00439   0.0       1     
-aggregate curves           3.834E-04 0.0       2     
-splitting sources          2.420E-04 0.0       1     
-========================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.43846  0.0       1     
+updating source_info     0.01285  0.0       1     
+total split_filter       0.00162  0.0       1     
+======================== ======== ========= ======

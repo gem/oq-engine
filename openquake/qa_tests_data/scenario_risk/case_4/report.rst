@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     3,157,733,199      
-date           2018-09-05T10:03:39
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:00:40
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -75,30 +75,13 @@ Unreinforced-Brick-Masonry 1.00000 0.0    1   1   5         5
 *ALL*                      1.00000 0.0    1   1   20        20        
 ========================== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-scenario_risk      0.00560 6.723E-04 0.00455 0.00703 20       
-================== ======= ========= ======= ======= =========
-
-Data transfer
--------------
-============= ===================================================================== ========
-task          sent                                                                  received
-scenario_risk riskinputs=150.31 KB riskmodel=47.15 KB monitor=6.04 KB param=2.15 KB 16.02 KB
-============= ===================================================================== ========
-
 Slowest operations
 ------------------
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-total scenario_risk 0.11209  0.19531   20    
-computing risk      0.06780  0.19531   20    
-building riskinputs 0.03583  0.05859   1     
-getting hazard      0.01920  0.0       40    
-saving gmfs         0.01000  0.0       1     
-computing gmfs      0.00233  0.0       1     
-reading exposure    0.00146  0.0       1     
+building riskinputs 0.04739  0.06250   1     
+saving gmfs         0.01671  0.0       1     
+computing gmfs      0.00296  0.03906   1     
+reading exposure    0.00175  0.0       1     
 =================== ======== ========= ======

@@ -128,8 +128,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     if not param:
         param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
     eb_ruptures = []
-    calc_times = []
-    rup_mon = monitor('making contexts', measuremem=False)
+    # AccumDict of arrays with 3 elements weight, nsites, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
@@ -143,12 +143,11 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
-                                       s_sites, rup_mon))
+                                       s_sites, monitor))
         eb_ruptures.extend(ebrs)
         eids = set_eids(ebrs)
-        src_id = src.source_id.split(':', 1)[0]
         dt = time.time() - t0
-        calc_times.append((src_id, src.nsites, eids, dt))
+        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
@@ -168,8 +167,8 @@ def _sample_ruptures(src, prob, num_ses, num_samples):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = src.serial[rup_no]
-        numpy.random.seed(rup.seed)
+        rup.serial = src.serial[rup_no]
+        numpy.random.seed(rup.serial)
         for sam_idx in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
                 # sampling of mutex sources if prob < 1
@@ -188,7 +187,6 @@ def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        rup.serial = rup.seed
         if cmaker.maximum_distance:
             with rup_mon:
                 try:

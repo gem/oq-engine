@@ -1,4 +1,66 @@
+  [Marco Pagani]
+  * Added a first [preliminary] version of the GMM for the Canada model
+    represented in an analytical form.
+
+  [Michele Simionato]
+  * Made it possible to run the risk over an hazard calculation of another user
+  * Worked around the OverflowError: cannot serialize a bytes object larger
+    than 4 GiB in event based calculations
+  * Started using Python 3.6 features
+  * Fixed the check on vulnerability function ID uniqueness for NRML 0.5
+  * Ruptures and GMFs are now computed concurrently, thus mitigating the
+    issue of slow tasks
+  * Changed the name of the files containing the disaggregation outputs:
+    instead of longitude and latitude they contain the site ID now
+  * If a worker runs close to out of memory, now a warning appears in the
+    main log
+  * 'lons' and 'lats' are now spelled 'lon' and 'lat' in
+    the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
+
+  [Daniele Viganò]
+  * Fixed a bug about 'The openquake master lost its controlling terminal'
+    when running with 'nohup' from command line
+
+  [Michele Simionato]
+  * The `export_dir` is now created recursively, i.e. subdirectories are
+    automatically created if needed
+  * Fixed a bug with the minimum_magnitude feature and extended it to be
+    tectonic region type dependent
+  * Changed the rupture generation to yield bunches of ruptures, thus avoiding
+    the 4GB pickle limit
+  * Parallelized the splitting of the sources, thus making the preprocessing
+    faster
+
+  [Marco Pagani]
+  * Implemented two additional versions of the Silva et al. 2002 GMPE
+  * Added the possibility of setting rake to 'undefined'
+  * Added first 'modified GMPE' implementing the site term for Canada 2015 model
+  * Fixed a bug in the disaggregation calculation due to wrong binning of magnitudes
+
+  [Michele Simionato]
+  * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
+    is accepted again, as requested by Laurentiu Danciu
+
+  [Daniele Viganò]
+  * Support for Ubuntu Trusty is removed
+  * Replaced supervisord with systemd in Ubuntu packages
+
+  [Michele Simionato]
+  * Changed the way the rupture geometries are stored to be consistent with
+    the source geometries
+  * We are now saving information about the source geometries in the datastore
+    (experimentally)
+  * Fixed a bug in event based with sampling causing incorrect GMFs
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
+  * Replaced the forking processpool with a spawning processpool
+
 python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
+
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
 
   [Matteo Nastasi]
   * specified 'amd64' as the only architecture supported by ubuntu packages

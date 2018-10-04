@@ -16,18 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
-import logging
+import time
 import operator
 import collections
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
+import rtree
 from scipy.interpolate import interp1d
+
 from openquake.baselib import hdf5, config
-from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
@@ -188,6 +185,61 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
+def split_sources(srcs):
+    """
+    :param srcs: sources
+    :returns: a pair (split sources, split time)
+    """
+    from openquake.hazardlib.source import splittable
+    sources = []
+    split_time = {}  # src.id -> time
+    for src in srcs:
+        t0 = time.time()
+        mag_a, mag_b = src.get_min_max_mag()
+        min_mag = getattr(src, 'min_mag', 0)
+        if mag_b < min_mag:  # discard the source completely
+            continue
+        if not splittable(src):
+            sources.append(src)
+            split_time[src.id] = time.time() - t0
+            continue
+        if min_mag:
+            splits = []
+            for s in src:
+                s.min_mag = min_mag
+                mag_a, mag_b = s.get_min_max_mag()
+                if mag_b < min_mag:
+                    continue
+                s.num_ruptures = s.count_ruptures()
+                if s.num_ruptures:
+                    splits.append(s)
+        else:
+            splits = list(src)
+        split_time[src.id] = time.time() - t0
+        sources.extend(splits)
+        has_serial = hasattr(src, 'serial')
+        has_samples = hasattr(src, 'samples')
+        if len(splits) > 1:
+            start = 0
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
+                split.src_group_id = src.src_group_id
+                split.id = src.id
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+                if has_samples:
+                    split.samples = src.samples
+        elif splits:  # single source
+            splits[0].id = src.id
+            if has_serial:
+                splits[0].serial = src.serial
+            if has_samples:
+                splits[0].samples = src.samples
+    return sources, split_time
+
+
 def preprocess(srcs, srcfilter, param, monitor):
     """
     :returns: a dict src_group_id -> sources
@@ -302,29 +354,6 @@ class SourceFilter(object):
                 src.indices = indices
                 yield src
 
-    def pfilter(self, sources, param, monitor):
-        """
-        Filter the sources in parallel by using Starmap.apply
-
-        :param sources: a sequence of sources
-        :param param: a dictionary of parameters including concurrent_tasks
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
-        """
-        sources_by_grp = Starmap.apply(
-            preprocess, (sources, self, param, monitor),
-            concurrent_tasks=param['concurrent_tasks'],
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'),
-            distribute=param.pop('distribute', None),
-            progress=logging.info if 'gsims_by_trt' in param else logging.debug
-            # log the preprocessing phase in an event based calculation
-        ).reduce()
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
-        return sources_by_grp
-
 
 class RtreeFilter(SourceFilter):
     """
@@ -353,8 +382,6 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
         lonlats = zip(sitecol.lons, sitecol.lats)

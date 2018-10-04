@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ===================
 checksum32     177,006,542        
-date           2018-09-05T10:03:34
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:00:25
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 12, num_levels = 19
@@ -72,7 +72,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 1,846        33,831      
+source_model.xml 0      Active Shallow Crust 1,613        33,831      
 ================ ====== ==================== ============ ============
 
 Exposure model
@@ -95,33 +95,33 @@ UFB      1.00000 0.0     1   1   2         2
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-232       AreaSource   1,612        0.00742   0.03478    6.04839   124       0     
-225       AreaSource   520          0.00509   0.01165    2.00000   18        0     
-101       AreaSource   559          0.0       0.01711    0.0       0         0     
-125       AreaSource   8,274        0.0       0.23423    0.0       0         0     
-135       AreaSource   3,285        0.0       0.11543    0.0       0         0     
-137       AreaSource   2,072        0.0       0.07111    0.0       0         0     
-253       AreaSource   3,058        0.0       0.07390    0.0       0         0     
-27        AreaSource   1,482        0.0       0.03544    0.0       0         0     
-299       AreaSource   710          0.0       0.01549    0.0       0         0     
-306       AreaSource   1,768        0.0       0.05593    0.0       0         0     
-359       AreaSource   2,314        0.0       0.05533    0.0       0         0     
-42        AreaSource   1,755        0.0       0.03278    0.0       0         0     
-57        AreaSource   840          0.0       0.01611    0.0       0         0     
-59        AreaSource   750          0.0       0.01555    0.0       0         0     
-8         AreaSource   4,832        0.0       0.32682    0.0       0         0     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      8         A    0     4     4,832        0.0       0.0        0.0       0         0.0   
+0      27        A    4     8     1,482        0.0       0.0        0.0       0         0.0   
+0      42        A    8     12    1,755        0.0       0.0        0.0       0         0.0   
+0      57        A    12    16    840          0.0       0.0        0.0       0         0.0   
+0      59        A    16    20    750          0.0       0.0        0.0       0         0.0   
+0      101       A    20    26    559          0.0       0.0        0.0       0         0.0   
+0      125       A    26    30    8,274        0.0       0.0        0.0       0         0.0   
+0      135       A    30    34    3,285        0.0       0.0        0.0       0         0.0   
+0      137       A    34    38    2,072        0.0       0.0        0.0       0         0.0   
+0      225       A    38    41    520          0.31322   0.34340    36        18        33    
+0      232       A    41    45    1,612        3.60089   6.98183    750       124       395   
+0      253       A    45    51    3,058        0.0       0.0        0.0       0         0.0   
+0      299       A    51    55    710          0.0       0.0        0.0       0         0.0   
+0      306       A    55    59    1,768        0.0       0.0        0.0       0         0.0   
+0      359       A    59    63    2,314        0.0       0.0        0.0       0         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   0.01251   15    
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    3.91412   15    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -129,56 +129,66 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ======= ======= ======= =========
-operation-duration   mean    stddev  min     max     num_tasks
-pickle_source_models 1.03787 NaN     1.03787 1.03787 1        
-count_eff_ruptures   0.00812 0.00127 0.00722 0.00901 2        
-preprocess           0.02955 0.00884 0.00309 0.04059 17       
-==================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 1.91911 NaN     1.91911 1.91911 1      
+split_filter       0.48465 NaN     0.48465 0.48465 1      
+classical          1.96445 1.50444 0.90065 3.02824 2      
+build_hazard_stats 0.00881 0.00608 0.00563 0.02214 12     
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
-taskno=2, weight=84, duration=0 s, sources="232"
+taskno=2, weight=83, duration=0 s, sources="232"
 
 ======== ======= ======= ======= ======= ==
 variable mean    stddev  min     max     n 
 ======== ======= ======= ======= ======= ==
-nsites   6.26923 0.66679 5       7       26
-weight   3.25045 0.17530 2.90689 3.43948 26
+nsites   6.07692 0.68836 5       7       26
+weight   3.19967 0.18270 2.90689 3.43948 26
 ======== ======= ======= ======= ======= ==
 
 Slowest task
 ------------
-taskno=1, weight=344, duration=0 s, sources="225 232"
+taskno=1, weight=345, duration=3 s, sources="225 232"
 
 ======== ======= ======= ======= ======= ===
 variable mean    stddev  min     max     n  
 ======== ======= ======= ======= ======= ===
-nsites   5.37069 1.54092 2       7       116
-weight   2.97022 0.50643 1.83848 3.43948 116
+nsites   5.41379 1.56076 2       7       116
+weight   2.98160 0.51148 1.83848 3.43948 116
 ======== ======= ======= ======= ======= ===
 
 Data transfer
 -------------
-==================== ======================================================================== ========
-task                 sent                                                                     received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                     160 B   
-count_eff_ruptures   sources=38.96 KB param=1.24 KB monitor=690 B srcfilter=440 B gsims=254 B 791 B   
-preprocess           srcs=579.49 KB monitor=5.93 KB srcfilter=4.2 KB param=612 B              36.71 KB
-==================== ======================================================================== ========
+================== =========================================================================== ========
+task               sent                                                                        received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                        13.32 KB
+split_filter       srcs=16.36 KB monitor=1.73 KB srcfilter=1012 B sample_factor=84 B seed=56 B 36.13 KB
+classical          group=36.93 KB param=1.24 KB monitor=690 B src_filter=440 B gsims=254 B     4.15 KB 
+build_hazard_stats pgetter=29.71 KB monitor=4.15 KB hstats=804 B                               4.57 KB 
+================== =========================================================================== ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-splitting sources          1.11380   1.46484   1     
-total pickle_source_models 1.03801   0.22656   3     
-total preprocess           0.50235   2.56250   17    
-managing sources           0.11468   0.10938   1     
-total count_eff_ruptures   0.01623   5.39453   2     
-store source_info          0.00502   0.07422   1     
-aggregate curves           7.205E-04 0.0       2     
-reading exposure           7.110E-04 0.0       1     
-saving probability maps    3.860E-04 0.0       1     
-========================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total classical          3.92889   0.60156   2     
+total read_source_models 1.91911   0.39062   1     
+make_contexts            1.83923   0.0       1,846 
+iter_ruptures            1.33506   0.0       142   
+updating source_info     1.05519   0.39062   1     
+get_poes                 0.69777   0.0       1,613 
+total split_filter       0.48465   1.34375   1     
+total build_hazard_stats 0.10567   0.72266   12    
+combine pmaps            0.09797   0.72266   12    
+building riskinputs      0.04267   0.0       1     
+managing sources         0.02031   0.0       1     
+saving statistics        0.00790   0.0       12    
+store source_info        0.00614   0.0       2     
+compute mean             0.00423   0.0       9     
+saving probability maps  0.00213   0.0       1     
+reading exposure         7.470E-04 0.0       1     
+aggregate curves         5.946E-04 0.0       2     
+======================== ========= ========= ======
