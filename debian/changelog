@@ -1,6 +1,8 @@
   [Marco Pagani]
   * Added a first [preliminary] version of the GMM for the Canada model
     represented in an analytical form.
+  * Added a modified version of Atkinson and Macias to be used for the
+    calculation of hazard in NSHMP2014.
 
   [Michele Simionato]
   * Made it possible to run the risk over an hazard calculation of another user
