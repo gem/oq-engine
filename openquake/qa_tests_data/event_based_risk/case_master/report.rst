@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     571,516,522        
-date           2018-10-03T15:01:14
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-04T15:36:41
+engine_version 3.3.0-gitf22d3f2c70
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -132,11 +132,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.34416   0.00476    105       15        0.0    
-1      2         S    2     4     4            0.02449   1.740E-05  7.00000   1         9.00000
-2      1         S    0     2     482          0.33854   0.00384    105       15        1.00000
-3      2         X    2     398   1            2.513E-04 5.484E-06  7.00000   1         0.0    
-4      buc06pt05 N    0     24    2            0.00138   6.866E-05  14        2         1.00000
+0      1         S    0     2     482          0.21802   0.00590    105       15        0.0    
+1      2         S    2     4     4            0.02262   2.170E-05  7.00000   1         9.00000
+2      1         S    0     2     482          0.18144   0.00445    105       15        1.00000
+3      2         X    2     398   1            2.553E-04 8.821E-06  7.00000   1         0.0    
+4      buc06pt05 N    0     24    2            0.00106   9.727E-05  14        2         1.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -144,9 +144,9 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.00138   1     
-S    0.70719   3     
-X    2.513E-04 1     
+N    0.00106   1     
+S    0.42207   3     
+X    2.553E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -157,9 +157,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01634 0.01201 0.00834 0.03015 3      
-split_filter       0.07424 NaN     0.07424 0.07424 1      
-build_ruptures     0.02611 0.01832 0.00255 0.07369 31     
+read_source_models 0.01562 0.01597 0.00492 0.03397 3      
+split_filter       0.03024 NaN     0.03024 0.03024 1      
+build_ruptures     0.01708 0.00882 0.00258 0.03633 31     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -173,16 +173,16 @@ build_ruptures     srcs=54.8 KB param=19.38 KB monitor=11.14 KB srcfilter=6.66 K
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total build_ruptures     0.80954  0.0       31    
-saving ruptures          0.22124  0.0       1     
-updating source_info     0.08294  0.0       1     
-total split_filter       0.07424  0.0       1     
-total read_source_models 0.04901  0.0       3     
-making contexts          0.04095  0.0       6     
-store source_info        0.00995  0.0       1     
-setting event years      0.00186  0.0       1     
-reading exposure         0.00126  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total build_ruptures     0.52963   0.0       31    
+saving ruptures          0.12183   0.0       1     
+total read_source_models 0.04685   0.22266   3     
+updating source_info     0.03931   0.0       1     
+total split_filter       0.03024   0.0       1     
+making contexts          0.01986   0.0       6     
+store source_info        0.00585   0.0       1     
+setting event years      0.00109   0.0       1     
+reading exposure         7.415E-04 0.0       1     
+======================== ========= ========= ======

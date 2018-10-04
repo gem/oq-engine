@@ -121,6 +121,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
+        if 'performance_data' not in self.datastore:
+            self.datastore.create_dset('performance_data', perf_dt)
 
     def monitor(self, operation='', **kw):
         """
@@ -162,8 +164,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             self._monitor.hdf5 = self.datastore.hdf5
-            if 'performance_data' not in self.datastore:
-                self.datastore.create_dset('performance_data', perf_dt)
             self.set_log_format()
             if logversion:  # make sure this is logged only once
                 logging.info('Running %s from %s',
