@@ -3,8 +3,8 @@ Scenario QA Test, Case 9, Multiple GSIMs
 
 ============== ===================
 checksum32     572,372,510        
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+date           2018-10-03T15:00:39
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 3, num_levels = 1
@@ -55,12 +55,3 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=2, rlzs=2)
   0,LinLee2008SSlab(): [0]
   0,YoungsEtAl1997SSlab(): [1]>
-
-Slowest operations
-------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-computing gmfs          0.00199   0.0       1     
-reading site collection 3.953E-04 0.0       1     
-======================= ========= ========= ======

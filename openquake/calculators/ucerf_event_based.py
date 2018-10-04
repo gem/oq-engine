@@ -28,7 +28,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.risklib import riskinput
-from openquake.commonlib import util, readinput
+from openquake.commonlib import util
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
@@ -58,8 +58,9 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
+    with monitor('getting hazard'):
         riskinput.hazard_getter.init()
+        hazard = riskinput.hazard_getter.get_hazard()
     eids = riskinput.hazard_getter.eids
     A = len(riskinput.aids)
     E = len(eids)
@@ -68,12 +69,11 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L))])
     agg = numpy.zeros((E, R, L), F32)
-    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
-                    else numpy.zeros(A, F64))
+    avg = numpy.zeros((A, R, L), F32)
     result = dict(aids=riskinput.aids, avglosses=avg)
 
     # update the result dictionary and the agg array with each output
-    for out in riskmodel.gen_outputs(riskinput, monitor):
+    for out in riskmodel.gen_outputs(riskinput, monitor, hazard):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
@@ -84,17 +84,12 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape (E, I)
+                ratios = loss_ratios[a]  # shape (E, 1)
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)
                 # average losses
                 if param['avg_losses']:
-                    rat = ratios.sum(axis=0) * param['ses_ratio']
-                    lba = avg[l, r]
-                    try:
-                        lba[aid] += rat
-                    except KeyError:
-                        lba[aid] = rat
+                    avg[aid, :, :] = losses.sum(axis=0) * param['ses_ratio']
 
                 # this is the critical loop: it is important to keep it
                 # vectorized in terms of the event indices
@@ -232,7 +227,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
             with filt_mon:
                 for rup, n_occ in zip(rups, n_occs):
                     rup.serial = serial
-                    rup.seed = seed
                     try:
                         rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
                         indices = rup.sctx.sids
@@ -264,7 +258,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
 @base.calculators.add('ucerf_hazard')
 class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
-    Event based PSHA calculator generating the ruptures only
+    Event based PSHA calculator generating the ruptures and GMFs together
     """
     core_task = compute_hazard
 
@@ -273,26 +267,18 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         parse the logic tree and source model input
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
-        oq = self.oqparam
         self.read_inputs()  # read the site collection
-        self.csm = readinput.get_composite_source_model(oq)
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
-        self.datastore['csm_info'] = self.csm_info = self.csm.info
-        self.rlzs_assoc = self.csm_info.get_rlzs_assoc()
-        self.infos = []
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.eid = collections.Counter()  # sm_id -> event_id
-        self.sm_by_grp = self.csm_info.get_sm_by_grp()
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def filter_csm(self):
-        return UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance), self.csm
-
-    def gen_args(self, monitor):
+    def from_sources(self, param, monitor):
         """
         Generate a task for each branch
         """
@@ -300,18 +286,16 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         allargs = []  # it is better to return a list; if there is single
         # branch then `parallel.Starmap` will run the task in core
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
+        ufilter = UcerfFilter(self.sitecol, self.oqparam.maximum_distance)
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             oqparam=oq, save_ruptures=oq.save_ruptures,
-                             filter_distance=oq.filter_distance,
-                             gmf=oq.ground_motion_fields,
-                             min_iml=self.get_min_iml(oq))
-                allargs.append((srcs, self.src_filter, rlzs_by_gsim[sm_id],
+                param = param.copy()
+                param['samples'] = sm.samples
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
+                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
 
@@ -397,11 +381,10 @@ class UCERFRiskCalculator(EbrCalculator):
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = self.csm_info.grp_by("trt")
+        self.grp_trt = self.csm.info.grp_by("trt")
         res = parallel.Starmap(
             compute_losses, self.gen_args(),
             self.monitor()).submit_all()
-        self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
         self.csm.info.update_eff_ruptures(self.eff_ruptures)
@@ -460,10 +443,10 @@ class UCERFRiskCalculator(EbrCalculator):
             agglosses['rlzi'] += offset
             self.datastore.extend('losses_by_event', agglosses)
         with self.monitor('saving avg_losses-rlzs'):
-            avglosses = dic.pop('avglosses')
-            for (l, r), ratios in avglosses.items():
-                lt = self.riskmodel.loss_types[l]
-                self.dset[:, r + offset, l] += ratios * self.vals[lt]
+            avglosses = dic.pop('avglosses')  # shape (A, R, L)
+            A, R, L = avglosses.shape
+            for r in range(R):
+                self.dset[:, r + offset, :] += avglosses[:, r, :]
         self.taskno += 1
 
     def post_execute(self, result):

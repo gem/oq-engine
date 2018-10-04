@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     3,691,355,175      
-date           2018-06-05T06:40:12
-engine_version 3.2.0-git65c4735   
+date           2018-10-03T15:00:43
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -72,33 +72,33 @@ Number of ruptures per tectonic region type
 ======================================= ====== =============== ============ ============
 source_model                            grp_id trt             eff_ruptures tot_ruptures
 ======================================= ====== =============== ============ ============
-slab_buc0/6.05.nrml slab_buc1/6.75.nrml 0      Deep Seismicity 15           7           
-slab_buc0/6.05.nrml slab_buc1/6.75.nrml 1      Deep Seismicity 15           8           
+slab_buc0/6.05.nrml slab_buc1/6.75.nrml 0      Deep Seismicity 7            7           
+slab_buc0/6.05.nrml slab_buc1/6.75.nrml 1      Deep Seismicity 8            8           
 ======================================= ====== =============== ============ ============
 
 ============= ==
 #TRT models   2 
-#eff_ruptures 30
+#eff_ruptures 15
 #tot_ruptures 15
 #tot_weight   15
 ============= ==
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= ========= ======
-source_id source_class               num_ruptures calc_time split_time num_sites num_split events
-========= ========================== ============ ========= ========== ========= ========= ======
-buc06pt05 NonParametricSeismicSource 7            0.00410   3.195E-05  1.00000   14        0     
-buc16pt75 NonParametricSeismicSource 8            8.416E-05 1.931E-05  1.00000   16        0     
-========= ========================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      buc06pt05 N    0     76    7            0.00584   3.788E-04  7.00000   7         7.00000
+1      buc16pt75 N    0     240   8            0.02234   2.918E-04  8.00000   8         8.00000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-========================== ========= ======
-source_class               calc_time counts
-========================== ========= ======
-NonParametricSeismicSource 0.00418   2     
-========================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+N    0.02818   2     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -106,11 +106,13 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00395 0.00146 0.00133 0.00814 15       
-count_eff_ruptures 0.00638 NaN     0.00638 0.00638 1        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.00516 0.00122 0.00429 0.00602 2      
+split_filter       0.00407 NaN     0.00407 0.00407 1      
+classical          0.03095 NaN     0.03095 0.03095 1      
+build_hazard_stats 0.00679 NaN     0.00679 0.00679 1      
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
@@ -136,27 +138,32 @@ weight   1.00000 0.0    1.00000 1.00000 15
 
 Data transfer
 -------------
-================== ====================================================================== ========
-task               sent                                                                   received
-RtreeFilter        srcs=22.65 KB monitor=5.07 KB srcfilter=4.09 KB                        23.25 KB
-count_eff_ruptures sources=15.12 KB param=561 B monitor=353 B srcfilter=233 B gsims=129 B 451 B   
-================== ====================================================================== ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=736 B converter=638 B fnames=362 B                               12.46 KB
+split_filter       srcs=11.06 KB monitor=381 B srcfilter=253 B sample_factor=21 B seed=15 B 12.32 KB
+classical          group=12.37 KB param=636 B monitor=345 B src_filter=220 B gsims=129 B    1016 B  
+build_hazard_stats pgetter=3.74 KB monitor=354 B hstats=67 B                                515 B   
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-PSHACalculator.run             0.35676   0.0       1     
-managing sources               0.15960   0.0       1     
-total prefilter                0.05928   3.60156   15    
-reading composite source model 0.01058   0.0       1     
-total count_eff_ruptures       0.00638   5.75781   1     
-store source_info              0.00533   0.0       1     
-unpickling prefilter           0.00461   0.0       15    
-reading site collection        8.748E-04 0.0       1     
-splitting sources              3.648E-04 0.0       1     
-unpickling count_eff_ruptures  1.986E-04 0.0       1     
-aggregate curves               1.941E-04 0.0       1     
-saving probability maps        1.600E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+managing sources         0.03689   0.0       1     
+total classical          0.03095   0.0       1     
+get_poes                 0.02157   0.0       15    
+updating source_info     0.01281   0.0       1     
+total read_source_models 0.01031   0.0       2     
+total build_hazard_stats 0.00679   0.02344   1     
+combine pmaps            0.00609   0.02344   1     
+total split_filter       0.00407   0.0       1     
+make_contexts            0.00399   0.0       15    
+saving probability maps  0.00361   0.0       1     
+store source_info        0.00318   0.0       1     
+iter_ruptures            0.00129   0.0       15    
+saving statistics        9.768E-04 0.0       1     
+compute mean             4.201E-04 0.0       1     
+aggregate curves         2.635E-04 0.0       1     
+======================== ========= ========= ======

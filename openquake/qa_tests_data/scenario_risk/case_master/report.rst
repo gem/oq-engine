@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     818,655,088        
-date           2018-09-05T10:03:40
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:00:41
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -80,30 +80,13 @@ tax3     1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-scenario_risk      0.01095 0.00215 0.00749 0.01335 7        
-================== ======= ======= ======= ======= =========
-
-Data transfer
--------------
-============= ================================================================== =========
-task          sent                                                               received 
-scenario_risk riskinputs=87.68 KB riskmodel=45.27 KB monitor=2.11 KB param=770 B 174.54 KB
-============= ================================================================== =========
-
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-total scenario_risk 0.07664   0.61719   7     
-computing risk      0.06774   0.61719   7     
-building riskinputs 0.01350   0.0       1     
-computing gmfs      0.01285   0.0       1     
-saving gmfs         0.00578   0.0       1     
-getting hazard      0.00309   0.0       14    
-reading exposure    8.156E-04 0.0       1     
-=================== ========= ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+building riskinputs 0.02285  0.0       1     
+computing gmfs      0.02132  0.23047   1     
+saving gmfs         0.01080  0.0       1     
+reading exposure    0.00135  0.0       1     
+=================== ======== ========= ======

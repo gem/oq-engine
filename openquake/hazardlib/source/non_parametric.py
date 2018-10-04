@@ -50,6 +50,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         rupture to occur N times (the PMF must be defined from a minimum number
         of occurrences equal to 0)
     """
+    code = b'N'
     _slots_ = BaseSeismicSource._slots_ + ['data']
 
     MODIFICATIONS = set()
@@ -158,3 +159,14 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __repr__(self):
         return '<%s gridded=%s>' % (self.__class__.__name__, self.is_gridded())
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        # the rupture can have a faultSurface which is a 3D array
+        # or can be a griddedSurface which is a 2D array or others
+        arr = numpy.concatenate([rup.surface.mesh.array.reshape(3, -1)
+                                 for rup, pmf in self.data],
+                                axis=1)  # shape (3, N)
+        return arr.T

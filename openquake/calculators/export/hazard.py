@@ -118,7 +118,7 @@ def export_site_model(ekey, dstore):
         for hdffield in rec.dtype.names:
             if hdffield == 'sids':  # skip
                 continue
-            elif hdffield == 'depths' and rec[hdffield] == 0:
+            elif hdffield == 'depth' and rec[hdffield] == 0:
                 continue
             xmlfield = hdf2xml.get(hdffield, hdffield)
             if hdffield == 'vs30measured':
@@ -475,6 +475,8 @@ def export_hcurves_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
+        if hasattr(hcurves, 'array'):
+            hcurves = hcurves.array[:, 0]
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
