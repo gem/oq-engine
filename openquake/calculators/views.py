@@ -377,8 +377,8 @@ def view_totlosses(token, dstore):
 
 
 # for event based risk
-@view.add('portfolio_loss')
-def view_portfolio_loss(token, dstore):
+@view.add('portfolio_losses')
+def view_portfolio_losses(token, dstore):
     """
     The loss for the full portfolio, for each realization and loss type,
     extracted from the event loss table.

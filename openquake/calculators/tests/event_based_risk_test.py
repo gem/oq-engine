@@ -215,8 +215,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         a = extract(self.calc.datastore, 'agg_curves/structural?' + tags)
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
-        fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
+        fname = gettemp(view('portfolio_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
         # check ruptures are stored correctly
@@ -237,9 +237,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname, delta=1E-5)
-        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
-            'expected/portfolio_loss.txt', fname, delta=1E-5)
+            'expected/portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing
