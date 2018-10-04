@@ -58,8 +58,9 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
+    with monitor('getting hazard'):
         riskinput.hazard_getter.init()
+        hazard = riskinput.hazard_getter.get_hazard()
     eids = riskinput.hazard_getter.eids
     A = len(riskinput.aids)
     E = len(eids)
@@ -72,7 +73,7 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     result = dict(aids=riskinput.aids, avglosses=avg)
 
     # update the result dictionary and the agg array with each output
-    for out in riskmodel.gen_outputs(riskinput, monitor):
+    for out in riskmodel.gen_outputs(riskinput, monitor, hazard):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
