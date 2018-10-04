@@ -4,7 +4,6 @@
 :class:`EasternCan15Upp`
 """
 
-import re
 import copy
 import numpy as np
 
@@ -63,6 +62,9 @@ class EasternCan15Mid(PezeshkEtAl2011):
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+    #: Standard deviation types supported
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
 
     def apply_correction_to_BC(self, mean, imt, dists):
         """

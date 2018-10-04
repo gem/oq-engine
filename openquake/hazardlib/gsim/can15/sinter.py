@@ -50,7 +50,8 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         """
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        return mean, stds
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
+        return mean, stddevs
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
