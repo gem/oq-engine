@@ -201,6 +201,11 @@ class TavakoliPezeshk2005MblgAB1987NSHMP2008(TavakoliPezeshk2005):
 
     Coefficients are given for the B/C site conditions.
     """
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+
     def _convert_magnitude(self, mag):
         """
         Convert Mblg to Mw using Atkinson and Boore 1987 conversion equation
@@ -254,6 +259,8 @@ class TavakoliPezeshk2005MwNSHMP2008(
     Extend :class:`TavakoliPezeshk2005MblgAB1987NSHMP2008` but assumes
     magnitude to be in Mw scale, and therefore no conversion is applied
     """
+
+
     def _convert_magnitude(self, mag):
         """
         Return magnitude value unchanged
