@@ -216,7 +216,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(a.array.shape, (4, 3))  # 4 stats, 3 return periods
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname, delta=1E-5)
+        self.assertEqualFiles(
+            'expected/portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
         # check ruptures are stored correctly
