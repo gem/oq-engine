@@ -72,7 +72,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     for ri in riskinputs:
-        with monitor('building hazard'):
+        with monitor('getting hazard'):
             ri.hazard_getter.init()
             hazard = ri.hazard_getter.get_hazard()
         mon = monitor('build risk curves', measuremem=False)
