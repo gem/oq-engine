@@ -63,6 +63,7 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
         adjustment[distance < 10.0] = 0.25
     return adjustment
 
+
 DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
 
 
