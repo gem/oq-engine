@@ -94,6 +94,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname)
 
+        # test portfolio loss
+        pf = view('portfolio_loss', self.calc.datastore)
+        self.assertEqual(pf, '''\
+============== ============= ==========
+portfolio_loss nonstructural structural
+============== ============= ==========
+mean           4,585         15,603    
+stddev         838           555       
+============== ============= ==========''')
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
