@@ -377,25 +377,43 @@ def view_totlosses(token, dstore):
 
 
 # for event based risk
-@view.add('portfolio_loss')
-def view_portfolio_loss(token, dstore):
+def portfolio_loss(dstore):
+    array = dstore['losses_by_event'].value
+    L, = array.dtype['loss'].shape
+    R = dstore['csm_info'].get_num_rlzs()
+    data = numpy.zeros((R, L), F32)
+    for row in array:
+        data[row['rlzi']] += row['loss']
+    return data
+
+
+@view.add('portfolio_losses')
+def view_portfolio_losses(token, dstore):
     """
-    The loss for the full portfolio, for each realization and loss type,
+    The losses for the full portfolio, for each realization and loss type,
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
-    data = numpy.zeros(R, loss_dt)
-    rlzids = [str(r) for r in range(R)]
-    for r in range(R):
-        loss = by_rlzi[r]['loss'].sum(axis=0)
-        for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = loss[l]
+    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
+    rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
+
+
+@view.add('portfolio_loss')
+def view_portfolio_loss(token, dstore):
+    """
+    The mean and stddev loss for the full portfolio for each loss type,
+    extracted from the event loss table, averaged over the realizations
+    """
+    data = portfolio_loss(dstore)  # shape (R, L)
+    loss_types = list(dstore['oqparam'].loss_dt().names)
+    header = ['portfolio_loss'] + loss_types
+    mean = ['mean'] + [row.mean() for row in data.T]
+    stddev = ['stddev'] + [row.std(ddof=1) for row in data.T]
+    return rst_table([mean, stddev], header)
 
 
 def sum_table(records):
