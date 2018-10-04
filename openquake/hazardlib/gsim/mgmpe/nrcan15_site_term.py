@@ -49,6 +49,13 @@ class NRCan15SiteTerm(GMPE):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
+        #
+        # Check if this GMPE has the necessary requirements
+        if not (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
+                'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            tmps = '{:s} does not use vs30 nor a defined reference velocity'
+            msg = tmps.format(str(self.gmpe))
+            raise AttributeError(msg)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -56,15 +63,6 @@ class NRCan15SiteTerm(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # Check if this GMPE has the necessary requirements
-        try:
-            if (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
-                    'vs30' in self.REQUIRES_SITES_PARAMETERS):
-                pass
-        except ValueError:
-            tmps = '{:s} does not use vs30 nor a defined reference velocity'
-            msg = tmps.format(str(self.gmpe))
-            raise(msg)
         # Prepare sites
         sites_rock = copy.deepcopy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
