@@ -220,7 +220,7 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor=performance.Monitor()):
+    def gen_outputs(self, riskinput, monitor, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -231,8 +231,10 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
-        with monitor('getting hazard'):
-            hazard_getter.init()
+        if hazard is None:
+            with monitor('getting hazard'):
+                hazard_getter.init()
+                hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
 
         # group the assets by taxonomy
@@ -242,14 +244,12 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy in group:
                 dic[taxonomy].append(
                     (sid, group[taxonomy], riskinput.epsilon_getter))
-        yield from self._gen_outputs(hazard_getter, dic)
+        yield from self._gen_outputs(hazard_getter, hazard, dic)
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard_getter, dic):
-        with self.monitor('getting hazard'):
-            hazard = hazard_getter.get_hazard()
+    def _gen_outputs(self, hazard_getter, hazard, dic):
         imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):

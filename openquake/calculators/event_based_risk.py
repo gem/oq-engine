@@ -72,9 +72,10 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     for ri in riskinputs:
-        mon = monitor('build risk curves', measuremem=False)
-        with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
+        with monitor('getting hazard'):
             ri.hazard_getter.init()
+            hazard = ri.hazard_getter.get_hazard()
+        mon = monitor('build risk curves', measuremem=False)
         eids = ri.hazard_getter.eids
         eid2idx = ri.hazard_getter.eid2idx
         A = len(ri.aids)
@@ -89,7 +90,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
         # update the result dictionary and the agg array with each output
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in riskmodel.gen_outputs(ri, monitor, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
@@ -260,8 +261,7 @@ class EbrCalculator(base.RiskCalculator):
         for key in ('curves-rlzs', 'curves-stats'):
             array = dic.get(key)  # shape (A, S, P)
             if array is not None:
-                for aid, arr in zip(aids, array):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :, :] = array
 
     def _save_maps(self, dic, aids):
         for key in ('loss_maps-rlzs', 'loss_maps-stats'):
@@ -270,8 +270,7 @@ class EbrCalculator(base.RiskCalculator):
                 loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
                 for lti, lt in enumerate(self.loss_maps_dt.names):
                     loss_maps[lt] = array[:, :, :, lti]
-                for aid, arr in zip(aids, loss_maps):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :] = loss_maps
 
     def combine(self, dummy, res):
         """
