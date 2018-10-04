@@ -77,9 +77,7 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
     hc_id = hcalc.datastore.calc_id
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq)
-    # disable concurrency in the second calculation to avoid fork issues
-    rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
-              hazard_calculation_id=hc_id, **params)
+    rcalc.run(pdb=pdb, exports=exports, hazard_calculation_id=hc_id, **params)
     return rcalc
 
 
