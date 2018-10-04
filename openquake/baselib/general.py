@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Utility functions of general interest.
 """
@@ -43,6 +42,13 @@ from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def duplicated(items):
+    """
+    :returns: True if the items are duplicated, False otherwise
+    """
+    return len(items) > len(set(items))
 
 
 def cached_property(method):

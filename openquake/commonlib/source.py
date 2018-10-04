@@ -16,23 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import re
 import copy
 import math
-import time
 import logging
 import operator
 import collections
 import numpy
 
-from openquake.baselib import performance, hdf5
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import (
-    groupby, group_array, gettemp, AccumDict, random_filter, cached_property)
-from openquake.hazardlib import (
-    source, sourceconverter, probability_map, stats, contexts)
+    groupby, group_array, gettemp, AccumDict, cached_property)
+from openquake.hazardlib import source, sourceconverter
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.commonlib import logictree
+from openquake.commonlib.rlzs_assoc import get_rlzs_assoc
 
 
 MINWEIGHT = source.MINWEIGHT
@@ -45,54 +43,21 @@ weight = operator.attrgetter('weight')
 rlz_dt = numpy.dtype([
     ('branch_path', 'S200'), ('gsims', 'S100'), ('weight', F32)])
 
+source_model_dt = numpy.dtype([
+    ('name', hdf5.vstr),
+    ('weight', F32),
+    ('path', hdf5.vstr),
+    ('num_rlzs', U32),
+    ('samples', U32),
+])
 
-def split_sources(srcs, min_mag):
-    """
-    :param srcs: sources
-    :returns: a pair (split sources, split time)
-    """
-    sources = []
-    split_time = {}  # src_id -> dt
-    for src in srcs:
-        t0 = time.time()
-        if min_mag and src.get_min_max_mag()[0] < min_mag:
-            splits = []
-            for s in src:
-                if min_mag and s.get_min_max_mag()[0] < min_mag:
-                    # discard some ruptures
-                    s.min_mag = min_mag
-                    s.num_ruptures = s.count_ruptures()
-                    if s.num_ruptures:
-                        splits.append(s)
-                else:
-                    splits.append(s)
-        else:
-            splits = list(src)
-        split_time[src.source_id] = time.time() - t0
-        sources.extend(splits)
-        has_serial = hasattr(src, 'serial')
-        has_samples = hasattr(src, 'samples')
-        if len(splits) > 1:
-            start = 0
-            for i, split in enumerate(splits):
-                split.source_id = '%s:%s' % (src.source_id, i)
-                split.src_group_id = src.src_group_id
-                split.ngsims = src.ngsims
-                split.ndists = src.ndists
-                if has_serial:
-                    nr = split.num_ruptures
-                    split.serial = src.serial[start:start + nr]
-                    start += nr
-                if has_samples:
-                    split.samples = src.samples
-        elif splits:  # single source
-            splits[0].ngsims = src.ngsims
-            splits[0].ndists = src.ndists
-            if has_serial:
-                splits[0].serial = src.serial
-            if has_samples:
-                splits[0].samples = src.samples
-    return sources, split_time
+src_group_dt = numpy.dtype(
+    [('grp_id', U32),
+     ('name', hdf5.vstr),
+     ('trti', U16),
+     ('effrup', I32),
+     ('totrup', I32),
+     ('sm_id', U32)])
 
 
 def gsim_names(rlz):
@@ -100,42 +65,6 @@ def gsim_names(rlz):
     Names of the underlying GSIMs separated by spaces
     """
     return ' '.join(str(v) for v in rlz.gsim_rlz.value)
-
-
-class LtRealization(object):
-    """
-    Composite realization build on top of a source model realization and
-    a GSIM realization.
-    """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
-        self.ordinal = ordinal
-        self.sm_lt_path = tuple(sm_lt_path)
-        self.gsim_rlz = gsim_rlz
-        self.weight = weight
-
-    def __repr__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
-
-    @property
-    def gsim_lt_path(self):
-        return self.gsim_rlz.lt_path
-
-    @property
-    def uid(self):
-        """An unique identifier for effective realizations"""
-        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.uid
-
-    def __lt__(self, other):
-        return self.ordinal < other.ordinal
-
-    def __eq__(self, other):
-        return repr(self) == repr(other)
-
-    def __ne__(self, other):
-        return repr(self) != repr(other)
-
-    def __hash__(self):
-        return hash(repr(self))
 
 
 def capitalize(words):
@@ -160,218 +89,6 @@ def _assert_equal_sources(nodes):
             assert eq, 'different parameters for source %s, run meld %s %s' % (
                 n['id'], f0, f1)
     return nodes
-
-
-class RlzsAssoc(object):
-    """
-    Realization association class. It should not be instantiated directly,
-    but only via the method :meth:
-    `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
-
-    :attr realizations: list of :class:`LtRealization` objects
-    :attr gsim_by_trt: list of dictionaries {trt: gsim}
-    :attr rlzs_assoc: dictionary {src_group_id, gsim: rlzs}
-    :attr rlzs_by_smodel: list of lists of realizations
-
-    For instance, for the non-trivial logic tree in
-    :mod:`openquake.qa_tests_data.classical.case_15`, which has 4 tectonic
-    region types and 4 + 2 + 2 realizations, there are the following
-    associations:
-
-    (0, 'BooreAtkinson2008()') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
-    (0, 'CampbellBozorgnia2008()') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
-    (1, 'Campbell2003()') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
-    (1, 'ToroEtAl2002()') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
-    (2, 'BooreAtkinson2008()') ['#4-SM2_a3pt2b0pt8-BA2008']
-    (2, 'CampbellBozorgnia2008()') ['#5-SM2_a3pt2b0pt8-CB2008']
-    (3, 'BooreAtkinson2008()') ['#6-SM2_a3b1-BA2008']
-    (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
-    """
-    def __init__(self, csm_info):
-        self.seed = csm_info.seed
-        self.csm_info = csm_info
-        self.num_samples = csm_info.num_samples
-        self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
-
-    def get_rlzs_by_gsim(self, trt_or_grp_id, sm_id=None):
-        """
-        :param trt_or_grp_id: a tectonic region type or a source group ID
-        :param sm_id: source model ordinal (or None)
-        :returns: a dictionary gsim -> rlzs
-        """
-        if isinstance(trt_or_grp_id, (int, U32)):  # grp_id
-            trt = self.csm_info.trt_by_grp[trt_or_grp_id]
-            sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
-        else:  # assume TRT string
-            trt = trt_or_grp_id
-        acc = collections.defaultdict(list)
-        if sm_id is None:  # full dictionary
-            for rlz, gsim_by_trt in zip(self.realizations, self.gsim_by_trt):
-                acc[gsim_by_trt[trt]].append(rlz.ordinal)
-        else:  # dictionary for the selected source model
-            for rlz in self.rlzs_by_smodel[sm_id]:
-                gsim_by_trt = self.gsim_by_trt[rlz.ordinal]
-                try:  # if there is a single TRT
-                    [gsim] = gsim_by_trt.values()
-                except ValueError:  # there is more than 1 TRT
-                    gsim = gsim_by_trt[trt]
-                acc[gsim].append(rlz.ordinal)
-        return collections.OrderedDict(
-            (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
-
-    def by_grp(self):
-        """
-        :returns: a dictionary grp -> [(gsim_idx, rlzis), ...]
-        """
-        dic = {}  # grp -> [(gsim_idx, rlzis), ...]
-        for sm in self.csm_info.source_models:
-            for sg in sm.src_groups:
-                if not sg.eff_ruptures:
-                    continue
-                rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
-                if not rlzs_by_gsim:
-                    continue
-                dic['grp-%02d' % sg.id] = [
-                    (gsim_idx, rlzs_by_gsim[gsim])
-                    for gsim_idx, gsim in enumerate(rlzs_by_gsim)]
-        return dic
-
-    def _init(self):
-        """
-        Finalize the initialization of the RlzsAssoc object by setting
-        the (reduced) weights of the realizations.
-        """
-        if self.num_samples:
-            assert len(self.realizations) == self.num_samples, (
-                len(self.realizations), self.num_samples)
-            tot_weight = sum(rlz.weight for rlz in self.realizations)
-            for rlz in self.realizations:
-                rlz.weight /= tot_weight
-        else:
-            tot_weight = sum(rlz.weight for rlz in self.realizations)
-            if tot_weight == 0:
-                raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-8:
-                # this may happen for rounding errors or because of the
-                # logic tree reduction; we ensure the sum of the weights is 1
-                for rlz in self.realizations:
-                    rlz.weight = rlz.weight / tot_weight
-
-    @property
-    def realizations(self):
-        """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel.values(), [])
-
-    @property
-    def weights(self):
-        """Array with the weight of the realizations"""
-        return numpy.array([rlz.weight for rlz in self.realizations])
-
-    def combine_pmaps(self, pmap_by_grp):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :returns: a list of probability maps, one per realization
-        """
-        grp = list(pmap_by_grp)[0]  # pmap_by_grp must be non-empty
-        num_levels = pmap_by_grp[grp].shape_y
-        pmaps = [probability_map.ProbabilityMap(num_levels, 1)
-                 for _ in self.realizations]
-        array = self.by_grp()
-        for grp in pmap_by_grp:
-            for gsim_idx, rlzis in array[grp]:
-                pmap = pmap_by_grp[grp].extract(gsim_idx)
-                for rlzi in rlzis:
-                    pmaps[rlzi] |= pmap
-        return pmaps
-
-    def compute_pmap_stats(self, pmap_by_grp, statfuncs):
-        """
-        :param pmap_by_grp: dictionary group string -> probability map
-        :param statfuncs: a list of statistical functions
-        :returns: a probability map containing all statistics
-        """
-        pmaps = self.combine_pmaps(pmap_by_grp)
-        return stats.compute_pmap_stats(pmaps, statfuncs, self.weights)
-
-    def get_rlz(self, rlzstr):
-        """
-        Get a Realization instance for a string of the form 'rlz-\d+'
-        """
-        mo = re.match('rlz-(\d+)', rlzstr)
-        if not mo:
-            return
-        return self.realizations[int(mo.group(1))]
-
-    def _add_realizations(self, offset, lt_model, all_trts, gsim_rlzs):
-        idx = numpy.arange(offset, offset + len(gsim_rlzs))
-        rlzs = []
-        for i, gsim_rlz in enumerate(gsim_rlzs):
-            weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
-            self.gsim_by_trt.append(dict(zip(all_trts, gsim_rlz.value)))
-            rlzs.append(rlz)
-        self.rlzs_by_smodel[lt_model.ordinal] = rlzs
-
-    def __len__(self):
-        array = self.by_grp()  # TODO: remove this
-        return sum(len(array[grp]) for grp in array)
-
-    def __repr__(self):
-        pairs = []
-        dic = self.by_grp()
-        for grp in sorted(dic):
-            grp_id = int(grp[4:])
-            gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in dic[grp]:
-                if len(rlzis) > 10:  # short representation
-                    rlzis = ['%d realizations' % len(rlzis)]
-                pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
-        return '<%s(size=%d, rlzs=%d)\n%s>' % (
-            self.__class__.__name__, len(self), len(self.realizations),
-            '\n'.join('%s: %s' % pair for pair in pairs))
-
-
-LENGTH = 256
-
-source_model_dt = numpy.dtype([
-    ('name', hdf5.vstr),
-    ('weight', F32),
-    ('path', hdf5.vstr),
-    ('num_rlzs', U32),
-    ('samples', U32),
-])
-
-src_group_dt = numpy.dtype(
-    [('grp_id', U32),
-     ('name', hdf5.vstr),
-     ('trti', U16),
-     ('effrup', I32),
-     ('totrup', I32),
-     ('sm_id', U32)])
-
-
-def accept_path(path, ref_path):
-    """
-    :param path: a logic tree path (list or tuple of strings)
-    :param ref_path: reference logic tree path
-    :returns: True if `path` is consistent with `ref_path`, False otherwise
-
-    >>> accept_path(['SM2'], ('SM2', 'a3b1'))
-    False
-    >>> accept_path(['SM2', '@'], ('SM2', 'a3b1'))
-    True
-    >>> accept_path(['@', 'a3b1'], ('SM2', 'a3b1'))
-    True
-    >>> accept_path('@@', ('SM2', 'a3b1'))
-    True
-    """
-    if len(path) != len(ref_path):
-        return False
-    for a, b in zip(path, ref_path):
-        if a != '@' and a != b:
-            return False
-    return True
 
 
 def get_field(data, field, default):
@@ -407,6 +124,8 @@ class CompositionInfo(object):
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
                    totweight=0)
+
+    get_rlzs_assoc = get_rlzs_assoc
 
     def __init__(self, gsim_lt, seed, num_samples, source_models, totweight=0):
         self.gsim_lt = gsim_lt
@@ -579,51 +298,7 @@ class CompositionInfo(object):
             for sg in smodel.src_groups:
                 sg.eff_ruptures = (count_ruptures(sg.id)
                                    if callable(count_ruptures)
-                                   else count_ruptures[sg.id])
-
-    def get_rlzs_assoc(self, sm_lt_path=None, trts=None):
-        """
-        :param sm_lt_path: logic tree path tuple used to select a source model
-        :param trts: tectonic region types to accept
-        """
-        assoc = RlzsAssoc(self)
-        offset = 0
-        trtset = set(self.gsim_lt.tectonic_region_types)
-        for smodel in self.source_models:
-            # discard source models with non-acceptable lt_path
-            if sm_lt_path and not accept_path(smodel.path, sm_lt_path):
-                continue
-
-            # collect the effective tectonic region types and ruptures
-            trts_ = set()
-            for sg in smodel.src_groups:
-                if sg.eff_ruptures:
-                    if (trts and sg.trt in trts) or not trts:
-                        trts_.add(sg.trt)
-
-            # recompute the GSIM logic tree if needed
-            if trtset != trts_:
-                before = self.gsim_lt.get_num_paths()
-                gsim_lt = self.gsim_lt.reduce(trts_)
-                after = gsim_lt.get_num_paths()
-                if sm_lt_path and before > after:
-                    # print the warning only when saving the logic tree,
-                    # i.e. when called with sm_lt_path in store_source_info
-                    logging.warn('Reducing the logic tree of %s from %d to %d '
-                                 'realizations', smodel.name, before, after)
-                gsim_rlzs = list(gsim_lt)
-                all_trts = gsim_lt.all_trts
-            else:
-                gsim_rlzs = self.gsim_rlzs
-                all_trts = self.gsim_lt.all_trts
-
-            rlzs = self._get_rlzs(smodel, gsim_rlzs, self.seed + offset)
-            assoc._add_realizations(offset, smodel, all_trts, rlzs)
-            offset += len(rlzs)
-
-        if assoc.realizations:
-            assoc._init()
-        return assoc
+                                   else count_ruptures.get(sg.id, 0))
 
     def get_source_model(self, src_group_id):
         """
@@ -703,9 +378,6 @@ class CompositeSourceModel(collections.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
-        # dictionary src_group_id, source_id -> SourceInfo,
-        # populated by the .split_in_blocks method
-        self.infos = {}
         try:
             dupl_sources = self.check_dupl_sources()
         except AssertionError:
@@ -713,37 +385,6 @@ class CompositeSourceModel(collections.Sequence):
             self.has_dupl_sources = 0
         else:
             self.has_dupl_sources = len(dupl_sources)
-
-    def split_all(self, min_mag=0):
-        """
-        Split all sources in the composite source model.
-
-        :param samples_factor: if given, sample the sources
-        :returns: a dictionary source_id -> split_time
-        """
-        sample_factor = os.environ.get('OQ_SAMPLE_SOURCES')
-        split_time = AccumDict()
-        for sm in self.source_models:
-            for src_group in sm.src_groups:
-                self.add_infos(src_group)
-                if getattr(src_group, 'src_interdep', None) == 'mutex':
-                    # mutex sources cannot be split, just set the mutex_weight
-                    for src, sw in zip(src_group, src_group.srcs_weights):
-                        src.mutex_weight = sw
-                else:
-                    # split regular sources
-                    srcs, stime = split_sources(src_group, min_mag)
-                    for src in src_group:
-                        s = src.source_id
-                        self.infos[s].split_time = stime[s]
-                    if sample_factor:
-                        # debugging tip to reduce the size of a calculation
-                        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
-                        # will run a computation 100 times smaller
-                        srcs = random_filter(srcs, float(sample_factor))
-                    src_group.sources = srcs
-                    split_time += stime
-        return split_time
 
     def grp_by_src(self):
         """
@@ -791,7 +432,8 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = []
             for src_group in sm.src_groups:
                 sg = copy.copy(src_group)
-                sg.sources = sources_by_grp.get(sg.id, [])
+                sg.sources = sorted(sources_by_grp.get(sg.id, []),
+                                    key=operator.attrgetter('id'))
                 src_groups.append(sg)
             newsm = logictree.LtSourceModel(
                 sm.names, sm.weight, sm.path, src_groups,
@@ -799,11 +441,11 @@ class CompositeSourceModel(collections.Sequence):
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              self.optimize_same_id)
-        new.info.update_eff_ruptures(new.get_num_ruptures().__getitem__)
-        new.infos = self.infos
+        new.info.update_eff_ruptures(new.get_num_ruptures())
+        new.info.tot_weight = new.get_weight()
         return new
 
-    def get_weight(self, weight):
+    def get_weight(self, weight=operator.attrgetter('weight')):
         """
         :param weight: source weight function
         :returns: total weight of the source model
@@ -874,8 +516,6 @@ class CompositeSourceModel(collections.Sequence):
                         if sm.samples > 1:
                             src.samples = sm.samples
                         sources.append(src)
-        if kind == 'all' and not sources:
-            raise RuntimeError('All sources were filtered away!')
         return sources
 
     @cached_property
@@ -941,18 +581,6 @@ class CompositeSourceModel(collections.Sequence):
         mw = math.ceil(totweight / ct)
         return max(mw, minweight)
 
-    def add_infos(self, sources):
-        """
-        Populate the .infos dictionary src_id -> <SourceInfo>
-        """
-        gsims = self.gsim_lt.values
-        for src in sources:
-            info = SourceInfo(src)
-            self.infos[info.source_id] = info
-            trt = src.tectonic_region_type
-            src.ngsims = len(gsims[trt])
-            src.ndists = contexts.get_num_distances(gsims[trt])
-
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
@@ -987,32 +615,3 @@ class CompositeSourceModel(collections.Sequence):
     def __len__(self):
         """Return the number of underlying source models"""
         return len(self.source_models)
-
-
-# ########################## SourceManager ########################### #
-
-class SourceInfo(object):
-    dt = numpy.dtype([
-        ('source_id', (bytes, 100)),       # 0
-        ('source_class', (bytes, 30)),     # 1
-        ('num_ruptures', numpy.uint32),    # 2
-        ('calc_time', numpy.float32),      # 3
-        ('split_time', numpy.float32),     # 4
-        ('num_sites', numpy.float32),      # 5
-        ('num_split',  numpy.uint32),      # 6
-        ('events', numpy.uint32),          # 7
-    ])
-
-    def __init__(self, src, calc_time=0, split_time=0, num_split=0):
-        self.source_id = src.source_id.rsplit(':', 1)[0]
-        self.source_class = src.__class__.__name__
-        self.num_ruptures = src.num_ruptures
-        self.num_sites = 0  # set later on
-        self.calc_time = calc_time
-        self.split_time = split_time
-        self.num_split = num_split
-        self.events = 0  # set in event based
-
-    def __repr__(self):
-        return '<%s>' % ' '.join('%s=%s' % (name, getattr(self, name))
-                                 for name in self.dt.names)

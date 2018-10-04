@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 6
 
 ============== ===================
 checksum32     3,056,992,103      
-date           2018-09-05T10:04:31
-engine_version 3.2.0-gitb4ef3a4b6c
+date           2018-10-03T15:01:35
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -74,21 +74,21 @@ source_model.xml 0      Active Shallow Crust 140          140
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= ========= ======
-source_id source_class       num_ruptures calc_time split_time num_sites num_split events
-========= ================== ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource  91           0.00668   7.629E-06  1.00000   1         0     
-2         ComplexFaultSource 49           0.00654   2.146E-06  1.00000   1         0     
-========= ================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         S    0     2     91           0.0       2.289E-05  0.0       1         0.0   
+0      2         C    2     8     49           0.0       1.025E-05  0.0       1         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================== ========= ======
-source_class       calc_time counts
-================== ========= ======
-ComplexFaultSource 0.00654   1     
-SimpleFaultSource  0.00668   1     
-================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+C    0.0       1     
+S    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -96,54 +96,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-==================== ======= ========= ======= ======= =========
-operation-duration   mean    stddev    min     max     num_tasks
-pickle_source_models 0.12447 NaN       0.12447 0.12447 1        
-count_eff_ruptures   0.00747 9.323E-05 0.00740 0.00753 2        
-preprocess           0.00406 6.840E-04 0.00357 0.00454 2        
-==================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=2, weight=196, duration=0 s, sources="2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   196     NaN    196 196 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=1, weight=91, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   91      NaN    91  91  1
-======== ======= ====== === === =
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.33087 NaN    0.33087 0.33087 1      
+split_filter       0.00327 NaN    0.00327 0.00327 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-==================== ====================================================================== ========
-task                 sent                                                                   received
-pickle_source_models monitor=0 B fnames=0 B converter=0 B                                   155 B   
-count_eff_ruptures   sources=2.51 KB param=1012 B monitor=614 B srcfilter=440 B gsims=240 B 716 B   
-preprocess           srcs=2.2 KB monitor=638 B srcfilter=506 B param=72 B                   2.36 KB 
-==================== ====================================================================== ========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    1.99 KB 
+split_filter       srcs=1.57 KB monitor=425 B srcfilter=253 B sample_factor=21 B seed=15 B 1.71 KB 
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
-========================== ========= ========= ======
-operation                  time_sec  memory_mb counts
-========================== ========= ========= ======
-total pickle_source_models 0.12447   0.0       1     
-managing sources           0.02308   0.0       1     
-total count_eff_ruptures   0.01494   4.74609   2     
-total preprocess           0.00811   0.87109   2     
-store source_info          0.00553   0.0       1     
-aggregate curves           5.293E-04 0.0       2     
-splitting sources          2.379E-04 0.0       1     
-========================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.33087  0.0       1     
+updating source_info     0.01041  0.0       1     
+total split_filter       0.00327  0.0       1     
+======================== ======== ========= ======
