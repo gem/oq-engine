@@ -56,6 +56,11 @@ class NRCan15SiteTerm(GMPE):
             tmps = '{:s} does not use vs30 nor a defined reference velocity'
             msg = tmps.format(str(self.gmpe))
             raise AttributeError(msg)
+        #
+        # Check compatibility of reference velocity
+        if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
+                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
