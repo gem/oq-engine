@@ -50,6 +50,10 @@ class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
+    #: GMPE not tested against independent implementation so raise
+    #: not verified warning
+    non_verified = True
+
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         See :meth:`superclass method
