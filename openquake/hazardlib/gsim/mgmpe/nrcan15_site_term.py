@@ -58,8 +58,9 @@ class NRCan15SiteTerm(GMPE):
         """
         # Check if this GMPE has the necessary requirements
         try:
-            (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
-             'vs30' in self.REQUIRES_SITES_PARAMETERS)
+            if (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
+                    'vs30' in self.REQUIRES_SITES_PARAMETERS):
+                pass
         except ValueError:
             tmps = '{:s} does not use vs30 nor a defined reference velocity'
             msg = tmps.format(str(self.gmpe))
@@ -68,18 +69,12 @@ class NRCan15SiteTerm(GMPE):
         sites_rock = copy.deepcopy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock,
-                                                      rup,
-                                                      dists,
-                                                      imt,
-                                                      stds_types)
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
+                                                      imt, stds_types)
         if not str(imt) == 'PGA':
             # compute mean and standard deviation on rock
             mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(sites_rock,
-                                                                    rup,
-                                                                    dists,
-                                                                    imt,
-                                                                    stds_types)
+                    rup, dists, imt, stds_types)
         else:
             mean_rock = mean
         fa = self.BA08_AB06(sites.vs30, imt, np.exp(mean_rock))

@@ -45,6 +45,10 @@ from openquake.hazardlib.gsim.can15.sinter import SInterCan15Mid
 
 class AtkinsonMacias2009NSHMP2014(AtkinsonMacias2009):
     """
+    Implements an adjusted version of the Atkinson and Macias (2009) GMPE.
+    The motion is scaled B/C conditions following the approach described in
+    Atkinson and Adams (2013) and implemented in
+    :mod:`openquake.hazardlib.gsim.can15.sinter`.
     """
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
