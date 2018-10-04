@@ -408,9 +408,12 @@ def view_portfolio_loss(token, dstore):
     The loss for the full portfolio, for each realization and loss type,
     extracted from the event loss table.
     """
-    data = portfolio_loss(dstore)
-    return rst_table([[data.mean(), data.std(ddof=1)]],
-                     header=['mean', 'stddev'])
+    data = portfolio_loss(dstore)  # shape (R, L)
+    loss_types = list(dstore['oqparam'].loss_dt().names)
+    header = ['portfolio_loss'] + loss_types
+    mean = ['mean'] + [row.mean() for row in data.T]
+    stddev = ['stddev'] + [row.std(ddof=1) for row in data.T]
+    return rst_table([mean, stddev], header)
 
 
 def sum_table(records):
