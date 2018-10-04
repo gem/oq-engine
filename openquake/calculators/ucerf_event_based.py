@@ -358,7 +358,7 @@ class UCERFRiskCalculator(EbrCalculator):
         self.I = oq.insured_losses + 1
         min_iml = self.get_min_iml(oq)
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
-                              ('loss', (F32, (self.L, self.I)))])
+                              ('loss', (F32, (self.L,)))])
         monitor = self.monitor('compute_losses')
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
