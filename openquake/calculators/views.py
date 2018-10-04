@@ -390,7 +390,7 @@ def portfolio_loss(dstore):
 @view.add('portfolio_losses')
 def view_portfolio_losses(token, dstore):
     """
-    The loss for the full portfolio, for each realization and loss type,
+    The losses for the full portfolio, for each realization and loss type,
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
@@ -405,8 +405,8 @@ def view_portfolio_losses(token, dstore):
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The loss for the full portfolio, for each realization and loss type,
-    extracted from the event loss table.
+    The mean and stddev loss for the full portfolio for each loss type,
+    extracted from the event loss table, averaged over the realizations
     """
     data = portfolio_loss(dstore)  # shape (R, L)
     loss_types = list(dstore['oqparam'].loss_dt().names)
