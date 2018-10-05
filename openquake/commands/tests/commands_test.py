@@ -45,7 +45,7 @@ from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_5
+from openquake.qa_tests_data.event_based import case_5, case_16
 from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
@@ -120,6 +120,13 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        save = 'openquake.calculators.reportwriter.ReportWriter.save'
+        with Print.patch() as p, mock.patch(save, lambda self, fname: None):
+            info.func(None, None, None, None, None, True, path)
+        self.assertIn('report.rst', str(p))
+
+    def test_report_ebr(self):
+        path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
             info.func(None, None, None, None, None, True, path)

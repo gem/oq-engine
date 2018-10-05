@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     3,146,040,075      
-date           2018-09-25T14:28:25
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1792, num_levels = 50
@@ -78,12 +78,12 @@ source_model.xml 0      Active Shallow Crust 2,348        2,558
 source_model.xml 1      Subduction Interface 3,345        3,945       
 ================ ====== ==================== ============ ============
 
-============= =====
-#TRT models   2    
-#eff_ruptures 5,693
-#tot_ruptures 6,503
-#tot_weight   0    
-============= =====
+============= =======
+#TRT models   2      
+#eff_ruptures 5,693  
+#tot_ruptures 6,503  
+#tot_weight   963,985
+============= =======
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -119,8 +119,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      F         C    0     8     2,558        4.39749   48         57,344    32        30    
-1      D         C    8     12    3,945        6.74704   100        73,472    41        264   
+0      F         C    0     8     2,558        3.98342   44         57,344    32        30    
+1      D         C    8     12    3,945        6.44758   90         73,472    41        264   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -128,7 +128,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    11        2     
+C    10        2     
 ==== ========= ======
 
 Duplicated sources
@@ -137,45 +137,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.29881 NaN     0.29881 0.29881 1        
-split_filter       3.99431 NaN     3.99431 3.99431 1        
-build_ruptures     1.24255 0.43994 0.94420 2.35638 9        
-compute_gmfs       0.35946 0.13663 0.24158 0.50726 4        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.22471 NaN     0.22471 0.22471 1      
+split_filter       3.62658 NaN     3.62658 3.62658 1      
+build_ruptures     1.16258 0.43381 0.91523 2.28003 9      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ================================================================================================= ========
-task               sent                                                                                              received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                                              2.13 KB 
-split_filter       srcs=27.27 KB monitor=446 B srcfilter=220 B sample_factor=21 B seed=15 B                          1.04 MB 
-build_ruptures     srcs=1.04 MB param=3.74 KB monitor=3.37 KB srcfilter=1.93 KB                                      11.25 MB
-compute_gmfs       sources_or_ruptures=10.91 MB param=19.21 KB monitor=1.35 KB rlzs_by_gsim=1.19 KB src_filter=880 B 12.85 MB
-================== ================================================================================================= ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     2.13 KB 
+split_filter       srcs=27.27 KB monitor=439 B srcfilter=220 B sample_factor=21 B seed=15 B 1.04 MB 
+build_ruptures     srcs=1.04 MB param=3.74 KB monitor=3.23 KB srcfilter=1.93 KB             11.25 MB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total build_ruptures     11        2.19531   9     
-updating source_info     4.00470   0.25781   1     
-total split_filter       3.99431   0.23047   1     
-total compute_gmfs       1.43784   2.04297   4     
-building hazard          1.22773   1.52734   4     
-saving gmf_data/indices  0.73205   0.0       1     
-building riskinputs      0.60390   0.0       1     
-total read_source_models 0.29902   0.0       3     
-saving ruptures          0.13151   0.0       49    
-making contexts          0.09278   0.0       322   
-saving gmfs              0.06138   0.0       4     
-reading exposure         0.04518   0.0       1     
-managing sources         0.03088   13        1     
-building ruptures        0.00936   0.77344   4     
-GmfGetter.init           0.00785   0.0       4     
-store source_info        0.00507   0.0       1     
-setting event years      0.00189   0.0       1     
-aggregating hcurves      6.387E-04 0.0       4     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     10       2.37500   9     
+updating source_info     3.64196  0.0       1     
+total split_filter       3.62658  0.26172   1     
+saving ruptures          2.31776  9.18359   1     
+total read_source_models 0.22471  0.0       1     
+making contexts          0.08766  0.0       322   
+reading exposure         0.07407  0.0       1     
+store source_info        0.00554  0.0       1     
+setting event years      0.00201  0.0       1     
+======================== ======== ========= ======
