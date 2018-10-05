@@ -3,8 +3,8 @@ classical damage hazard
 
 ============== ===================
 checksum32     3,129,914,875      
-date           2018-10-04T15:36:33
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:44
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 79
@@ -120,10 +120,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00558    0.0       15        0.0   
-1      2         S    2     4     4            0.0       2.146E-05  0.0       1         0.0   
+0      1         S    0     2     482          0.0       0.00597    0.0       15        0.0   
+1      2         S    2     4     4            0.0       2.360E-05  0.0       1         0.0   
 2      1         S    0     2     482          0.0       0.00433    0.0       15        0.0   
-3      2         X    2     398   1            0.0       7.868E-06  0.0       1         0.0   
+3      2         X    2     398   1            0.0       7.629E-06  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -143,8 +143,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01327 0.00570 0.00924 0.01730 2      
-split_filter       0.03497 NaN     0.03497 0.03497 1      
+read_source_models 0.01397 0.00667 0.00925 0.01868 2      
+split_filter       0.03512 NaN     0.03512 0.03512 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -160,8 +160,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.04774   0.0       1     
-total split_filter       0.03497   0.0       1     
-total read_source_models 0.02654   0.0       2     
-reading exposure         5.777E-04 0.0       1     
+updating source_info     0.04714   0.0       1     
+total split_filter       0.03512   0.0       1     
+total read_source_models 0.02793   0.0       2     
+reading exposure         6.177E-04 0.0       1     
 ======================== ========= ========= ======

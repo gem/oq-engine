@@ -3,8 +3,8 @@ Virtual Island - City C, 2 SES, grid=0.1
 
 ============== ===================
 checksum32     3,146,040,075      
-date           2018-10-04T15:36:41
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1792, num_levels = 50
@@ -119,8 +119,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      F         C    0     8     2,558        3.96633   40         57,344    32        30    
-1      D         C    8     12    3,945        6.22380   82         73,472    41        264   
+0      F         C    0     8     2,558        3.98342   44         57,344    32        30    
+1      D         C    8     12    3,945        6.44758   90         73,472    41        264   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -139,9 +139,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.19440 NaN     0.19440 0.19440 1      
-split_filter       3.31805 NaN     3.31805 3.31805 1      
-build_ruptures     1.13634 0.38851 0.92636 2.13596 9      
+read_source_models 0.22471 NaN     0.22471 0.22471 1      
+split_filter       3.62658 NaN     3.62658 3.62658 1      
+build_ruptures     1.16258 0.43381 0.91523 2.28003 9      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -158,13 +158,13 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total build_ruptures     10       2.06641   9     
-updating source_info     3.33341  0.25781   1     
-total split_filter       3.31805  0.0       1     
-saving ruptures          2.17422  10        1     
-total read_source_models 0.19440  0.0       1     
-making contexts          0.08833  0.0       322   
-reading exposure         0.06352  0.0       1     
-store source_info        0.00534  0.0       1     
-setting event years      0.00182  0.0       1     
+total build_ruptures     10       2.37500   9     
+updating source_info     3.64196  0.0       1     
+total split_filter       3.62658  0.26172   1     
+saving ruptures          2.31776  9.18359   1     
+total read_source_models 0.22471  0.0       1     
+making contexts          0.08766  0.0       322   
+reading exposure         0.07407  0.0       1     
+store source_info        0.00554  0.0       1     
+setting event years      0.00201  0.0       1     
 ======================== ======== ========= ======

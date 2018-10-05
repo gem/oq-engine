@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ===================
 checksum32     3,283,112,543      
-date           2018-10-04T15:36:50
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:05:02
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     11,132       0.0       30         0.0       484       0.0   
+0      1         A    0     4     11,132       0.0       28         0.0       484       0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.03717 NaN    0.03717 0.03717 1      
-split_filter       0.10745 NaN    0.10745 0.10745 1      
+read_source_models 0.04061 NaN    0.04061 0.04061 1      
+split_filter       0.10809 NaN    0.10809 0.10809 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,7 +113,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.13026  0.0       1     
-total split_filter       0.10745  0.0       1     
-total read_source_models 0.03717  0.0       1     
+updating source_info     0.12459  0.0       1     
+total split_filter       0.10809  0.25000   1     
+total read_source_models 0.04061  0.0       1     
 ======================== ======== ========= ======

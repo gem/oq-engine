@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ===================
 checksum32     3,678,589,439      
-date           2018-10-04T15:36:37
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:48
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -62,11 +62,11 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ========= ====== ========= ========= =======
-operation-duration mean      stddev min       max       outputs
-read_source_models 5.665E-04 NaN    5.665E-04 5.665E-04 1      
-split_filter       0.00306   NaN    0.00306   0.00306   1      
-================== ========= ====== ========= ========= =======
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00119 NaN    0.00119 0.00119 1      
+split_filter       0.00314 NaN    0.00314 0.00314 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
@@ -78,10 +78,10 @@ split_filter       srcs=1.26 KB monitor=425 B srcfilter=220 B sample_factor=21 B
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-updating source_info     0.00814   0.0       1     
-total split_filter       0.00306   0.0       1     
-total read_source_models 5.665E-04 0.0       1     
-======================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+updating source_info     0.00934  0.0       1     
+total split_filter       0.00314  0.0       1     
+total read_source_models 0.00119  0.0       1     
+======================== ======== ========= ======

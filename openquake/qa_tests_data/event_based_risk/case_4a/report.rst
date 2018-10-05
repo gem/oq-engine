@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     2,621,435,700      
-date           2018-10-04T15:36:41
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:52
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 11
@@ -62,8 +62,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         X    0     396   1            0.0       1.431E-05  0.0       1         0.0   
-0      3         S    396   398   482          0.0       0.00505    0.0       15        0.0   
+0      1         X    0     396   1            0.0       1.335E-05  0.0       1         0.0   
+0      3         S    396   398   482          0.0       0.00473    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -83,8 +83,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00971 NaN    0.00971 0.00971 1      
-split_filter       0.01696 NaN    0.01696 0.01696 1      
+read_source_models 0.01052 NaN    0.01052 0.01052 1      
+split_filter       0.01792 NaN    0.01792 0.01792 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -100,8 +100,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.02615   0.0       1     
-total split_filter       0.01696   0.0       1     
-total read_source_models 0.00971   0.0       1     
-reading exposure         3.660E-04 0.0       1     
+updating source_info     0.02504   0.25781   1     
+total split_filter       0.01792   0.0       1     
+total read_source_models 0.01052   0.0       1     
+reading exposure         3.653E-04 0.0       1     
 ======================== ========= ========= ======
