@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ===================
 checksum32     583,572,055        
-date           2018-09-25T14:27:50
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-05T03:04:39
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 200
@@ -93,11 +93,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      f1        C    0     4     2,308        22        0.04743    37        37        9,232 
-1      p1        P    0     1     156          0.60733   9.537E-06  1.00000   1         15    
-1      p2        P    1     2     156          0.37776   5.007E-06  1.00000   1         15    
-1      p3        P    2     3     156          0.37111   4.053E-06  1.00000   1         15    
-1      p4        P    3     4     156          0.38187   4.292E-06  1.00000   1         15    
+0      f1        C    0     4     2,308        20        0.03320    37        37        9,232 
+1      p1        P    0     1     156          0.51631   9.537E-06  1.00000   1         15    
+1      p2        P    1     2     156          0.35957   3.815E-06  1.00000   1         15    
+1      p3        P    2     3     156          0.38857   2.623E-06  1.00000   1         15    
+1      p4        P    3     4     156          0.35909   2.623E-06  1.00000   1         15    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -105,8 +105,8 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-C    22        1     
-P    1.73807   4     
+C    20        1     
+P    1.62354   4     
 ==== ========= ======
 
 Duplicated sources
@@ -115,13 +115,13 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.05662 0.07608 0.00283 0.11042 2        
-split_filter       0.03011 NaN     0.03011 0.03011 1        
-classical          0.72368 0.31285 0.20969 1.74082 34       
-build_hazard_stats 0.00859 NaN     0.00859 0.00859 1        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.05934 0.07714 0.00479 0.11388 2      
+split_filter       0.02423 NaN     0.02423 0.02423 1      
+classical          0.66036 0.28874 0.17906 1.62600 34     
+build_hazard_stats 0.00807 NaN     0.00807 0.00807 1      
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
@@ -160,19 +160,19 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          24        0.82031   34    
-iter_ruptures            11        0.0       41    
-get_poes                 7.68008   0.0       2,932 
-make_contexts            4.88879   0.0       2,932 
-store source_info        0.16106   0.0       34    
-total read_source_models 0.11325   0.27734   2     
-updating source_info     0.04085   0.0       1     
-total split_filter       0.03011   0.0       1     
-aggregate curves         0.02948   0.0       34    
-managing sources         0.01255   0.0       1     
-total build_hazard_stats 0.00859   0.06250   1     
-combine pmaps            0.00775   0.06250   1     
-saving probability maps  0.00283   0.0       1     
-saving statistics        7.246E-04 0.0       1     
-compute mean             4.916E-04 0.0       1     
+total classical          22        0.89453   34    
+iter_ruptures            10        0.0       41    
+get_poes                 6.94141   0.0       2,932 
+make_contexts            4.48206   0.0       2,932 
+total read_source_models 0.11867   0.19141   2     
+store source_info        0.11372   0.0       34    
+updating source_info     0.03311   0.0       1     
+total split_filter       0.02423   0.16797   1     
+aggregate curves         0.02302   0.0       34    
+managing sources         0.01164   0.0       1     
+total build_hazard_stats 0.00807   0.03906   1     
+combine pmaps            0.00729   0.03906   1     
+saving probability maps  0.00245   0.0       1     
+saving statistics        6.874E-04 0.0       1     
+compute mean             5.007E-04 0.0       1     
 ======================== ========= ========= ======

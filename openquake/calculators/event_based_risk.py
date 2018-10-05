@@ -68,31 +68,29 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    results = []
-    mon = monitor('build risk curves', measuremem=False)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
     for ri in riskinputs:
-        with monitor('%s.init' % ri.hazard_getter.__class__.__name__):
+        with monitor('getting hazard'):
             ri.hazard_getter.init()
+            hazard = ri.hazard_getter.get_hazard()
+        mon = monitor('build risk curves', measuremem=False)
         eids = ri.hazard_getter.eids
         eid2idx = ri.hazard_getter.eid2idx
         A = len(ri.aids)
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         agg = numpy.zeros((E, R, L * I), F32)
-        avg = AccumDict(
-            accum={} if ri.by_site or not param['avg_losses']
-            else numpy.zeros(A, F64))
+        avg = numpy.zeros((A, R, L * I), F32)
         result = dict(aids=ri.aids, avglosses=avg)
+        aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
             P = len(builder.return_periods)
             all_curves = numpy.zeros((A, R, P), builder.loss_dt)
-            aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         # update the result dictionary and the agg array with each output
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in riskmodel.gen_outputs(ri, monitor, hazard):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
@@ -104,11 +102,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
+                    idx = aid2idx[aid]
                     aval = asset.value(loss_type)
                     losses = aval * ratios
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
-                            idx = aid2idx[aid]
                             for i in range(I):
                                 lt = loss_type + '_ins' * i
                                 all_curves[idx, r][lt] = builder.build_curve(
@@ -116,13 +114,9 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
                     # average losses
                     if param['avg_losses']:
-                        rat = ratios.sum(axis=0) * param['ses_ratio']
+                        rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
                         for i in range(I):
-                            lba = avg[l + L * i, r]
-                            try:
-                                lba[aid] += rat[i]
-                            except KeyError:
-                                lba[aid] = rat[i]
+                            avg[idx, r, l + L * i] = rat[i]
 
                     # agglosses
                     for i in range(I):
@@ -147,8 +141,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
         # store info about the GMFs, must be done at the end
         result['gmdata'] = ri.gmdata
-        results.append(result)
-    return results
+        yield result
 
 
 @base.calculators.add('event_based_risk')
@@ -189,10 +182,6 @@ class EbrCalculator(base.RiskCalculator):
         # order (i.e. consistent with the one used in ebr from ruptures)
         self.E = len(self.eids)
         eps = self.epsilon_getter()()
-        # FIXME: commented because it can be misleading
-        # if not oq.ignore_covs:
-        #     logging.info('Generating %s of epsilons',
-        #                  humansize(self.A * self.E * 4))
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
@@ -206,7 +195,6 @@ class EbrCalculator(base.RiskCalculator):
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
-        self.num_losses = numpy.zeros((self.A, self.R), U32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
@@ -253,41 +241,27 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
 
-    def save_losses(self, dic, offset=0):
+    def save_losses(self, dic):
         """
         Save the event loss tables incrementally.
 
         :param dic:
             dictionary with agglosses, avglosses
-        :param offset:
-            realization offset
         """
         aids = dic.pop('aids')
-        agglosses = dic.pop('agglosses')
-        avglosses = dic.pop('avglosses')
-        with self.monitor('saving event loss table', autoflush=True):
-            idx, agg = agglosses
-            self.agglosses[idx] += agg
-
-        if not hasattr(self, 'vals'):
-            self.vals = self.assetcol.values()
-        with self.monitor('saving avg_losses-rlzs'):
-            for (li, r), ratios in avglosses.items():
-                l = li if li < self.L else li - self.L
-                vs = self.vals[self.riskmodel.loss_types[l]]
-                self.dset[aids, r, li] += numpy.array(
-                    [ratios.get(aid, 0) * vs[aid] for aid in aids])
+        idx, agg = dic.pop('agglosses')
+        self.agglosses[idx] += agg
+        if self.oqparam.avg_losses:
+            self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
-
         self.taskno += 1
 
     def _save_curves(self, dic, aids):
         for key in ('curves-rlzs', 'curves-stats'):
             array = dic.get(key)  # shape (A, S, P)
             if array is not None:
-                for aid, arr in zip(aids, array):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :, :] = array
 
     def _save_maps(self, dic, aids):
         for key in ('loss_maps-rlzs', 'loss_maps-stats'):
@@ -296,16 +270,15 @@ class EbrCalculator(base.RiskCalculator):
                 loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
                 for lti, lt in enumerate(self.loss_maps_dt.names):
                     loss_maps[lt] = array[:, :, :, lti]
-                for aid, arr in zip(aids, loss_maps):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, :] = loss_maps
 
-    def combine(self, dummy, results):
+    def combine(self, dummy, res):
         """
         :param dummy: unused parameter
-        :param res: a list of result dictionaries
+        :param res: a result dictionary
         """
-        for res in results:
-            self.save_losses(res, offset=0)
+        with self.monitor('saving losses', measuremem=True):
+            self.save_losses(res)
         return 1
 
     def post_execute(self, result):

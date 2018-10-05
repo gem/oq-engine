@@ -156,7 +156,6 @@ import itertools
 import traceback
 import collections
 import multiprocessing.dummy
-from datetime import datetime
 import psutil
 import numpy
 try:
@@ -394,9 +393,11 @@ def safely_call(func, args, monitor=dummy_mon):
                 err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
                              count=count)
                 zsocket.send(err)
+            mon.duration = 0
+            mon.counts = 0
+            mon.children.clear()
             if res.msg == 'TASK_ENDED':
                 break
-            mon.duration = 0
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
@@ -439,10 +440,12 @@ class IterResult(object):
             return ()
         t0 = time.time()
         self.received = []
+        first_time = True
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
-            if msg:
+            if msg and first_time:
                 logging.warn(msg)
+                first_time = False  # warn only once
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result

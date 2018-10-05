@@ -49,7 +49,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-logversion = True
 
 
 class InvalidCalculationID(Exception):
@@ -121,6 +120,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
+        if 'performance_data' not in self.datastore:
+            self.datastore.create_dset('performance_data', perf_dt)
 
     def monitor(self, operation='', **kw):
         """
@@ -158,17 +159,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         Run the calculation and return the exported outputs.
         """
-        global logversion
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             self._monitor.hdf5 = self.datastore.hdf5
-            if 'performance_data' not in self.datastore:
-                self.datastore.create_dset('performance_data', perf_dt)
             self.set_log_format()
-            if logversion:  # make sure this is logged only once
-                logging.info('Running %s', self.oqparam.inputs['job_ini'])
-                logging.info('Using engine version %s', engine_version)
-                logversion = False
+            logging.info('Running %s [--hc=%s]',
+                         self.oqparam.inputs['job_ini'],
+                         self.oqparam.hazard_calculation_id)
+            logging.info('Using engine version %s', engine_version)
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
@@ -288,7 +286,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Set the attributes nbytes
         """
         # sanity check that eff_ruptures have been set, i.e. are not -1
-        csm_info = self.datastore['csm_info']
+        try:
+            csm_info = self.datastore['csm_info']
+        except KeyError:
+            csm_info = self.datastore['csm_info'] = self.csm.info
         for sm in csm_info.source_models:
             for sg in sm.src_groups:
                 assert sg.eff_ruptures != -1, sg
@@ -444,6 +445,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+        if self.riskmodel:
+            self.save_riskmodel()
 
     def init(self):
         """
@@ -476,14 +479,20 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol, self.riskmodel.loss_types)
             readinput.exposure = None  # reset the global
+        # reduce the riskmodel to the relevant taxonomies
+        taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
+                         if taxo != '?')
+        if len(self.riskmodel.taxonomies) > len(taxonomies):
+            logging.info('Reducing risk model from %d to %d taxonomies',
+                         len(self.riskmodel.taxonomies), len(taxonomies))
+            self.riskmodel = self.riskmodel.reduce(taxonomies)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
+            oq.minimum_intensity = self.riskmodel.min_iml
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
@@ -498,19 +507,23 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         logging.info('Reading the risk model if present')
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
-            if 'composite_risk_model' in parent:
+            if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
-        # save the risk models and loss_ratios in the datastore
-        self.datastore['composite_risk_model'] = rm
-        attrs = self.datastore.getitem('composite_risk_model').attrs
-        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
-        self.datastore.set_nbytes('composite_risk_model')
-        self.datastore.hdf5.flush()
+
+    def save_riskmodel(self):
+        """
+        Save the risk models in the datastore
+        """
+        oq = self.oqparam
+        self.datastore[oq.risk_model] = rm = self.riskmodel
+        attrs = self.datastore.getitem(oq.risk_model).attrs
+        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+        self.datastore.set_nbytes(oq.risk_model)
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
