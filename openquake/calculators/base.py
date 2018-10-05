@@ -449,6 +449,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+        if self.riskmodel:
+            self.save_riskmodel()
 
     def init(self):
         """
@@ -517,7 +519,6 @@ class HazardCalculator(BaseCalculator):
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
-        self.save_riskmodel()
 
     def save_riskmodel(self):
         """
