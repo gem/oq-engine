@@ -295,8 +295,11 @@ class CompositeRiskModel(collections.Mapping):
         """
         new = copy.copy(self)
         new.taxonomies = sorted(taxonomies)
-        new._riskmodels = {taxo: rm for taxo, rm in self._riskmodels.items()
-                           if taxo in taxonomies}
+        new._riskmodels = {}
+        for taxo, rm in self._riskmodels.items():
+            if taxo in taxonomies:
+                new._riskmodels[taxo] = rm
+                rm.compositemodel = new
         return new
 
     def __toh5__(self):
