@@ -23,6 +23,7 @@
 import numpy as np
 
 from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
+from openquake.hazardlib.const import StdDev
 
 
 def get_sigma(imt):
@@ -56,6 +57,9 @@ class WesternCan15Mid(BooreAtkinson2011):
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+    #: Standard deviation types supported
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
