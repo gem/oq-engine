@@ -3,8 +3,8 @@ Event Based from NonParametric source
 
 ============== ===================
 checksum32     4,272,018,576      
-date           2018-10-04T15:36:37
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:48
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 3, num_levels = 7
@@ -45,7 +45,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         N    0     420   4            0.0       1.667E-04  0.0       3         0.0   
+0      1         N    0     420   4            0.0       1.366E-04  0.0       3         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -64,8 +64,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.04657 NaN    0.04657 0.04657 1      
-split_filter       0.00462 NaN    0.00462 0.00462 1      
+read_source_models 0.04962 NaN    0.04962 0.04962 1      
+split_filter       0.00394 NaN    0.00394 0.00394 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -81,7 +81,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.04657  0.0       1     
-updating source_info     0.01061  0.0       1     
-total split_filter       0.00462  0.0       1     
+total read_source_models 0.04962  0.0       1     
+updating source_info     0.01009  0.0       1     
+total split_filter       0.00394  0.0       1     
 ======================== ======== ========= ======

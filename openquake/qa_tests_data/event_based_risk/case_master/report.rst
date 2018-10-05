@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     571,516,522        
-date           2018-10-04T15:36:41
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -132,11 +132,11 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      1         S    0     2     482          0.21802   0.00590    105       15        0.0    
-1      2         S    2     4     4            0.02262   2.170E-05  7.00000   1         9.00000
-2      1         S    0     2     482          0.18144   0.00445    105       15        1.00000
-3      2         X    2     398   1            2.553E-04 8.821E-06  7.00000   1         0.0    
-4      buc06pt05 N    0     24    2            0.00106   9.727E-05  14        2         1.00000
+0      1         S    0     2     482          0.23838   0.00546    105       15        0.0    
+1      2         S    2     4     4            0.01990   2.122E-05  7.00000   1         9.00000
+2      1         S    0     2     482          0.20105   0.00440    105       15        1.00000
+3      2         X    2     398   1            2.494E-04 8.583E-06  7.00000   1         0.0    
+4      buc06pt05 N    0     24    2            0.00106   9.394E-05  14        2         1.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -145,8 +145,8 @@ Computation times by source typology
 code calc_time counts
 ==== ========= ======
 N    0.00106   1     
-S    0.42207   3     
-X    2.553E-04 1     
+S    0.45933   3     
+X    2.494E-04 1     
 ==== ========= ======
 
 Duplicated sources
@@ -157,9 +157,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.01562 0.01597 0.00492 0.03397 3      
-split_filter       0.03024 NaN     0.03024 0.03024 1      
-build_ruptures     0.01708 0.00882 0.00258 0.03633 31     
+read_source_models 0.01138 0.00738 0.00471 0.01931 3      
+split_filter       0.04168 NaN     0.04168 0.04168 1      
+build_ruptures     0.01812 0.01000 0.00274 0.04355 31     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -176,13 +176,13 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total build_ruptures     0.52963   0.0       31    
-saving ruptures          0.12183   0.0       1     
-total read_source_models 0.04685   0.22266   3     
-updating source_info     0.03931   0.0       1     
-total split_filter       0.03024   0.0       1     
-making contexts          0.01986   0.0       6     
-store source_info        0.00585   0.0       1     
-setting event years      0.00109   0.0       1     
-reading exposure         7.415E-04 0.0       1     
+total build_ruptures     0.56183   0.0       31    
+saving ruptures          0.13154   0.0       1     
+updating source_info     0.05273   0.0       1     
+total split_filter       0.04168   0.0       1     
+total read_source_models 0.03415   0.0       3     
+making contexts          0.01531   0.0       6     
+store source_info        0.00685   0.0       1     
+setting event years      0.00127   0.0       1     
+reading exposure         7.312E-04 0.0       1     
 ======================== ========= ========= ======

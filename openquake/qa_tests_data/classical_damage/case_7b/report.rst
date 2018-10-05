@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     172,806,574        
-date           2018-10-04T15:36:33
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:44
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 24
@@ -96,7 +96,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00910    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00577    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -115,8 +115,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00299 NaN    0.00299 0.00299 1      
-split_filter       0.02106 NaN    0.02106 0.02106 1      
+read_source_models 0.00387 NaN    0.00387 0.00387 1      
+split_filter       0.02081 NaN    0.02081 0.02081 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -132,8 +132,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.02824   0.0       1     
-total split_filter       0.02106   0.0       1     
-total read_source_models 0.00299   0.0       1     
-reading exposure         3.738E-04 0.0       1     
+updating source_info     0.02905   0.0       1     
+total split_filter       0.02081   0.07031   1     
+total read_source_models 0.00387   0.0       1     
+reading exposure         5.097E-04 0.0       1     
 ======================== ========= ========= ======
