@@ -226,6 +226,19 @@ exposure = None  # set as side effect when the user reads the site mesh
 gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
 # this hack is necessary, otherwise we would have to parse the file twice
 
+vs30s = None  # set as side effect when the user reads the site mesh
+# this hack is necessary, otherwise we would have to parse sites.csv twice
+
+
+def get_csv_header(fname, sep=','):
+    """
+    :param fname: a CSV file
+    :param sep: the separator (default comma)
+    :returns: the first line of fname
+    """
+    with open(fname, 'U') as f:
+        return next(f).split(sep)
+
 
 def get_mesh(oqparam):
     """
@@ -235,31 +248,32 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids
+    global pmap, exposure, gmfs, eids, vs30s
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
-        has_header = csv_data[0].startswith('site_id')
-        if has_header:  # strip site_id
-            data = []
-            for i, line in enumerate(csv_data[1:]):
-                row = line.replace(',', ' ').split()
-                sid = row[0]
-                if sid != str(i):
+        fname = oqparam.inputs['sites']
+        header = get_csv_header(fname)
+        if header[0] == 'site_id':  # strip site_id
+            data, vs30s = [], []
+            for i, row in enumerate(csv.DictReader(open(fname, 'U'))):
+                if row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
-                        oqparam.inputs['sites'], i, sid))
-                data.append(' '.join(row[1:]))
+                        fname, i, row['site_id']))
+                data.append(' '.join([row['lon'], row['lat']]))
+                if 'vs30' in row:
+                    vs30s.append(row['vs30'])
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
-            data = [line.replace(',', ' ') for line in csv_data]
+            data = [line.replace(',', ' ') for line in open(fname, 'U')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
-        c = coords[start:stop] if has_header else sorted(coords[start:stop])
+        c = (coords[start:stop] if header[0] == 'site_id'
+             else sorted(coords[start:stop]))
         return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
@@ -327,7 +341,11 @@ def get_site_collection(oqparam, mesh=None):
     """
     mesh = mesh or get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    if oqparam.inputs.get('site_model'):
+    if 'vs30' in req_site_params and vs30s:
+        sitecol = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+        sitecol.array['vs30'] = F32(vs30s)
+    elif oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
