@@ -111,8 +111,9 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to %d km from site (%s %s)',
-                             int(distance), lon, lat)
+                logging.warn('Association to (%.1f %.1f) from site #%d '
+                             '(%.1f %.1f) %d km', obj['lon'], obj['lat'],
+                             sid, lon, lat, int(distance))
             elif mode == 'filter':
                 pass  # do not associate
             elif mode == 'strict':

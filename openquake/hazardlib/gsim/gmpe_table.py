@@ -323,7 +323,7 @@ class GMPETable(GMPE):
                         os.path.join(self.GMPE_DIR, gmpe_table))
             else:
                 raise IOError("GMPE Table Not Defined!")
-        super().__init__()
+        super().__init__(gmpe_table=gmpe_table)
         self.imls = None
         self.stddevs = {}
         self.m_w = None

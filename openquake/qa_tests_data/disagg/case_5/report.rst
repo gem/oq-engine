@@ -3,8 +3,8 @@ CGS2017 PSHA model (Colombia), EventBased PSHA - test -  v.1 - 2018/02/11
 
 ============== ===================
 checksum32     3,691,355,175      
-date           2018-09-25T14:27:45
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-05T03:04:34
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 19
@@ -88,8 +88,8 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
-0      buc06pt05 N    0     76    7            0.00874   5.307E-04  7.00000   7         7.00000
-1      buc16pt75 N    0     240   8            0.00501   4.063E-04  8.00000   8         8.00000
+0      buc06pt05 N    0     76    7            0.00678   4.640E-04  7.00000   7         7.00000
+1      buc16pt75 N    0     240   8            0.00431   3.262E-04  8.00000   8         8.00000
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
@@ -97,7 +97,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-N    0.01375   2     
+N    0.01109   2     
 ==== ========= ======
 
 Duplicated sources
@@ -106,13 +106,13 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.00777 0.00200 0.00635 0.00918 2        
-split_filter       0.00540 NaN     0.00540 0.00540 1        
-classical          0.01796 NaN     0.01796 0.01796 1        
-build_hazard_stats 0.01101 NaN     0.01101 0.01101 1        
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.00500 0.00217 0.00347 0.00653 2      
+split_filter       0.00515 NaN     0.00515 0.00515 1      
+classical          0.01495 NaN     0.01495 0.01495 1      
+build_hazard_stats 0.01197 NaN     0.01197 0.01197 1      
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
@@ -151,19 +151,19 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          0.01796   0.36719   1     
-total read_source_models 0.01553   0.0       2     
-updating source_info     0.01354   0.0       1     
-total build_hazard_stats 0.01101   0.53906   1     
-combine pmaps            0.00991   0.53906   1     
-get_poes                 0.00618   0.0       15    
-total split_filter       0.00540   0.0       1     
-managing sources         0.00521   0.0       1     
-make_contexts            0.00449   0.0       15    
-saving probability maps  0.00281   0.0       1     
-store source_info        0.00260   0.0       1     
-iter_ruptures            0.00155   0.0       15    
-saving statistics        8.743E-04 0.0       1     
-compute mean             6.616E-04 0.0       1     
-aggregate curves         3.052E-04 0.0       1     
+total classical          0.01495   0.34766   1     
+updating source_info     0.01268   0.0       1     
+total build_hazard_stats 0.01197   0.41016   1     
+combine pmaps            0.01097   0.41016   1     
+total read_source_models 0.01000   0.0       2     
+total split_filter       0.00515   0.0       1     
+get_poes                 0.00476   0.0       15    
+make_contexts            0.00386   0.0       15    
+managing sources         0.00365   0.0       1     
+store source_info        0.00295   0.0       1     
+saving probability maps  0.00264   0.0       1     
+iter_ruptures            0.00126   0.0       15    
+saving statistics        7.856E-04 0.0       1     
+compute mean             6.783E-04 0.0       1     
+aggregate curves         2.582E-04 0.0       1     
 ======================== ========= ========= ======

@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, AccumDict
 from openquake.risklib import scientific, riskmodels
 
@@ -42,7 +43,7 @@ def read_composite_risk_model(dstore):
     :returns: a :class:`CompositeRiskModel` instance
     """
     oqparam = dstore['oqparam']
-    crm = dstore.getitem('composite_risk_model')
+    crm = dstore.getitem(oqparam.risk_model)
     rmdict, retrodict = AccumDict(), AccumDict()
     rmdict.limit_states = crm.attrs['limit_states']
     for quotedtaxonomy, rm in crm.items():
@@ -51,7 +52,7 @@ def read_composite_risk_model(dstore):
         retrodict[taxo] = {}
         for lt in rm:
             lt = str(lt)  # ensure Python 2-3 compatibility
-            rf = dstore['composite_risk_model/%s/%s' % (quotedtaxonomy, lt)]
+            rf = dstore['%s/%s/%s' % (oqparam.risk_model, quotedtaxonomy, lt)]
             if len(rmdict.limit_states):
                 # rf is a FragilityFunctionList
                 rf = rf.build(rmdict.limit_states,
@@ -137,6 +138,11 @@ class CompositeRiskModel(collections.Mapping):
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
+        iml = collections.defaultdict(list)
+        for taxo, rm in self._riskmodels.items():
+            for lt, rf in rm.risk_functions.items():
+                iml[rf.imt].append(rf.imls[0])
+        self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
     def get_extra_imts(self, imts):
         """
@@ -150,13 +156,6 @@ class CompositeRiskModel(collections.Mapping):
                 if imt not in imts:
                     extra_imts.add(imt)
         return extra_imts
-
-    def get_min_iml(self):
-        iml = collections.defaultdict(list)
-        for taxo, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions.items():
-                iml[rf.imt].append(rf.imls[0])
-        return {imt: min(iml[imt]) for imt in iml}
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
@@ -220,7 +219,7 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def gen_outputs(self, riskinput, monitor=performance.Monitor()):
+    def gen_outputs(self, riskinput, monitor, hazard=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -231,8 +230,10 @@ class CompositeRiskModel(collections.Mapping):
         """
         self.monitor = monitor
         hazard_getter = riskinput.hazard_getter
-        with monitor('getting hazard'):
-            hazard_getter.init()
+        if hazard is None:
+            with monitor('getting hazard'):
+                hazard_getter.init()
+                hazard = hazard_getter.get_hazard()
         sids = hazard_getter.sids
 
         # group the assets by taxonomy
@@ -242,14 +243,12 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy in group:
                 dic[taxonomy].append(
                     (sid, group[taxonomy], riskinput.epsilon_getter))
-        yield from self._gen_outputs(hazard_getter, dic)
+        yield from self._gen_outputs(hazard_getter, hazard, dic)
 
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
-    def _gen_outputs(self, hazard_getter, dic):
-        with self.monitor('getting hazard'):
-            hazard = hazard_getter.get_hazard()
+    def _gen_outputs(self, hazard_getter, hazard, dic):
         imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
@@ -288,6 +287,20 @@ class CompositeRiskModel(collections.Mapping):
                         out.rlzi = rlzi
                         out.eids = eids
                         yield out
+
+    def reduce(self, taxonomies):
+        """
+        :param taxonomies: a set of taxonomies
+        :returns: a new CompositeRiskModel reduced to the given taxonomies
+        """
+        new = copy.copy(self)
+        new.taxonomies = sorted(taxonomies)
+        new._riskmodels = {}
+        for taxo, rm in self._riskmodels.items():
+            if taxo in taxonomies:
+                new._riskmodels[taxo] = rm
+                rm.compositemodel = new
+        return new
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())

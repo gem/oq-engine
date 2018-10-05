@@ -1,6 +1,31 @@
   [Michele Simionato]
+  * Reduced the data transfer in the risk model by only considering the
+    taxonomies relevant for the exposure
+  * Extended `oq engine --run` to accept a comma-separated list of files
+  * Optimized the saving of the risk results in event based in the case of
+    many sites and changed the command `oq show portfolio_loss` to show
+    mean and standard deviation of the portfolio loss for each loss type
+
+  [Marco Pagani]
+  * Added a first [preliminary] version of the GMM for the Canada model
+    represented in an analytical form.
+  * Added a modified version of Atkinson and Macias to be used for the
+    calculation of hazard in NSHMP2014.
+
+  [Michele Simionato]
+  * Made it possible to run the risk over an hazard calculation of another user
+  * Worked around the OverflowError: cannot serialize a bytes object larger
+    than 4 GiB in event based calculations
+  * Started using Python 3.6 features
+  * Fixed the check on vulnerability function ID uniqueness for NRML 0.5
+  * Ruptures and GMFs are now computed concurrently, thus mitigating the
+    issue of slow tasks
+  * Changed the name of the files containing the disaggregation outputs:
+    instead of longitude and latitude they contain the site ID now
   * If a worker runs close to out of memory, now a warning appears in the
     main log
+  * 'lons' and 'lats' are now spelled 'lon' and 'lat' in
+    the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
 
   [Daniele Viganò]
   * Fixed a bug about 'The openquake master lost its controlling terminal'

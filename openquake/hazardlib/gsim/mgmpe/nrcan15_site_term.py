@@ -46,8 +46,21 @@ class NRCan15SiteTerm(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name):
+        super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
+        #
+        # Check if this GMPE has the necessary requirements
+        if not (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
+                'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            tmps = '{:s} does not use vs30 nor a defined reference velocity'
+            msg = tmps.format(str(self.gmpe))
+            raise AttributeError(msg)
+        #
+        # Check compatibility of reference velocity
+        if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
+                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -55,22 +68,16 @@ class NRCan15SiteTerm(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # Check if this GMPE can be used
-        assert (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
-                'vs30' in self.REQUIRES_SITES_PARAMETERS)
         # Prepare sites
         sites_rock = copy.deepcopy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites=sites_rock,
-                                                      rup=rup, dists=dists,
-                                                      imt=imt,
-                                                      stddev_types=stds_types)
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
+                                                      imt, stds_types)
         if not str(imt) == 'PGA':
             # compute mean and standard deviation on rock
-            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
-                sites=sites_rock, rup=rup, dists=dists, imt=imt,
-                stddev_types=stds_types)
+            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(sites_rock,
+                    rup, dists, imt, stds_types)
         else:
             mean_rock = mean
         fa = self.BA08_AB06(sites.vs30, imt, np.exp(mean_rock))

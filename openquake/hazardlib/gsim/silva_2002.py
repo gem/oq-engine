@@ -82,6 +82,10 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     #: Required distance measure is rjb
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
