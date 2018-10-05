@@ -3,8 +3,8 @@ Classical BCR test
 
 ============== ===================
 checksum32     1,808,877,325      
-date           2018-09-25T14:27:39
-engine_version 3.3.0-git8ffb37de56
+date           2018-10-05T03:04:27
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 11, num_levels = 8
@@ -100,9 +100,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      229       A    0     4     264          0.34094   0.79157    203       38        50    
-0      231       A    4     8     414          0.72173   1.25918    697       69        131   
-0      232       A    8     12    150          0.30114   0.29520    270       30        44    
+0      229       A    0     4     264          0.32794   0.77234    203       38        50    
+0      231       A    4     8     414          0.63440   1.19095    697       69        131   
+0      232       A    8     12    150          0.22954   0.28549    270       30        44    
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -110,7 +110,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-A    1.36381   3     
+A    1.19187   3     
 ==== ========= ======
 
 Duplicated sources
@@ -119,13 +119,13 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-read_source_models 0.03717 NaN     0.03717 0.03717 1        
-split_filter       0.06371 NaN     0.06371 0.06371 1        
-classical          1.37321 NaN     1.37321 1.37321 1        
-build_hazard_stats 0.00722 0.00381 0.00440 0.01407 11       
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04925 NaN     0.04925 0.04925 1      
+split_filter       0.05996 NaN     0.05996 0.05996 1      
+classical          1.20013 NaN     1.20013 1.20013 1      
+build_hazard_stats 0.00670 0.00304 0.00414 0.01342 11     
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
@@ -154,7 +154,7 @@ Data transfer
 ================== ======================================================================= ========
 task               sent                                                                    received
 read_source_models monitor=0 B fnames=0 B converter=0 B                                    3.85 KB 
-split_filter       srcs=3.48 KB monitor=446 B srcfilter=253 B sample_factor=21 B seed=14 B 36.64 KB
+split_filter       srcs=3.48 KB monitor=439 B srcfilter=253 B sample_factor=21 B seed=14 B 36.64 KB
 classical          group=36.69 KB param=546 B monitor=345 B gsims=308 B src_filter=220 B   3.29 KB 
 build_hazard_stats pgetter=34.64 KB monitor=3.8 KB hstats=737 B                            4.59 KB 
 ================== ======================================================================= ========
@@ -164,21 +164,21 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total classical          1.37321   0.67969   1     
-make_contexts            0.53974   0.0       792   
-get_poes                 0.45027   0.0       744   
-iter_ruptures            0.34538   0.0       137   
-total build_hazard_stats 0.07942   0.63672   11    
-updating source_info     0.07648   0.0       1     
-combine pmaps            0.07028   0.63672   11    
-total split_filter       0.06371   0.78125   1     
-total read_source_models 0.03734   0.0       3     
-building riskinputs      0.02532   0.0       1     
-saving statistics        0.00639   0.0       11    
-compute mean             0.00533   0.0       11    
-managing sources         0.00492   0.0       1     
-store source_info        0.00246   0.0       1     
-saving probability maps  0.00150   0.0       1     
-reading exposure         4.675E-04 0.0       1     
-aggregate curves         4.160E-04 0.0       1     
+total classical          1.20013   0.84766   1     
+make_contexts            0.46622   0.0       792   
+get_poes                 0.40171   0.0       744   
+iter_ruptures            0.29973   0.0       137   
+updating source_info     0.07393   0.0       1     
+total build_hazard_stats 0.07365   0.65625   11    
+combine pmaps            0.06469   0.65625   11    
+total split_filter       0.05996   0.14844   1     
+total read_source_models 0.04925   0.0       1     
+building riskinputs      0.02455   0.0       1     
+saving statistics        0.00641   0.0       11    
+compute mean             0.00558   0.0       11    
+managing sources         0.00541   0.0       1     
+store source_info        0.00361   0.0       1     
+saving probability maps  0.00134   0.0       1     
+reading exposure         5.181E-04 0.0       1     
+aggregate curves         3.390E-04 0.0       1     
 ======================== ========= ========= ======

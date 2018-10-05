@@ -58,8 +58,9 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
+    with monitor('getting hazard'):
         riskinput.hazard_getter.init()
+        hazard = riskinput.hazard_getter.get_hazard()
     eids = riskinput.hazard_getter.eids
     A = len(riskinput.aids)
     E = len(eids)
@@ -68,12 +69,11 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L))])
     agg = numpy.zeros((E, R, L), F32)
-    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
-                    else numpy.zeros(A, F64))
+    avg = numpy.zeros((A, R, L), F32)
     result = dict(aids=riskinput.aids, avglosses=avg)
 
     # update the result dictionary and the agg array with each output
-    for out in riskmodel.gen_outputs(riskinput, monitor):
+    for out in riskmodel.gen_outputs(riskinput, monitor, hazard):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
@@ -84,17 +84,12 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
             loss_type = riskmodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape (E, I)
+                ratios = loss_ratios[a]  # shape (E, 1)
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)
                 # average losses
                 if param['avg_losses']:
-                    rat = ratios.sum(axis=0) * param['ses_ratio']
-                    lba = avg[l, r]
-                    try:
-                        lba[aid] += rat
-                    except KeyError:
-                        lba[aid] = rat
+                    avg[aid, :, :] = losses.sum(axis=0) * param['ses_ratio']
 
                 # this is the critical loop: it is important to keep it
                 # vectorized in terms of the event indices
@@ -283,7 +278,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def gen_args(self, monitor):
+    def from_sources(self, param, monitor):
         """
         Generate a task for each branch
         """
@@ -297,12 +292,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                param = dict(ses_seeds=ses_seeds, samples=sm.samples,
-                             oqparam=oq, save_ruptures=oq.save_ruptures,
-                             filter_distance=oq.filter_distance,
-                             gmf=oq.ground_motion_fields,
-                             min_iml=self.get_min_iml(oq))
+                param = param.copy()
+                param['samples'] = sm.samples
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
@@ -366,7 +358,7 @@ class UCERFRiskCalculator(EbrCalculator):
         self.I = oq.insured_losses + 1
         min_iml = self.get_min_iml(oq)
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
-                              ('loss', (F32, (self.L, self.I)))])
+                              ('loss', (F32, (self.L,)))])
         monitor = self.monitor('compute_losses')
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
@@ -393,7 +385,6 @@ class UCERFRiskCalculator(EbrCalculator):
         res = parallel.Starmap(
             compute_losses, self.gen_args(),
             self.monitor()).submit_all()
-        self.vals = self.assetcol.values()
         self.eff_ruptures = AccumDict(accum=0)
         num_events = self.save_results(res, num_rlzs)
         self.csm.info.update_eff_ruptures(self.eff_ruptures)
@@ -452,10 +443,10 @@ class UCERFRiskCalculator(EbrCalculator):
             agglosses['rlzi'] += offset
             self.datastore.extend('losses_by_event', agglosses)
         with self.monitor('saving avg_losses-rlzs'):
-            avglosses = dic.pop('avglosses')
-            for (l, r), ratios in avglosses.items():
-                lt = self.riskmodel.loss_types[l]
-                self.dset[:, r + offset, l] += ratios * self.vals[lt]
+            avglosses = dic.pop('avglosses')  # shape (A, R, L)
+            A, R, L = avglosses.shape
+            for r in range(R):
+                self.dset[:, r + offset, :] += avglosses[:, r, :]
         self.taskno += 1
 
     def post_execute(self, result):

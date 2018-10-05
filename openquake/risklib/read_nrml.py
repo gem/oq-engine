@@ -103,6 +103,7 @@ def get_vulnerability_functions_05(node, fname):
             raise InvalidFile(
                 'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
                 (taxonomy, fname, vfun.lineno))
+        taxonomies.add(taxonomy)
         num_probs = None
         if vfun['dist'] == 'PM':
             loss_ratios, probs = [], []

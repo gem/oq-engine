@@ -66,7 +66,8 @@ class LossCurveExporter(object):
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
-        self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+        oqparam = dstore['oqparam']
+        self.loss_types = dstore.get_attr(oqparam.risk_model, 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
     def parse(self, what):
