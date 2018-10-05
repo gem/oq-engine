@@ -509,21 +509,25 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
-        # save the risk models and loss_ratios in the datastore
-        self.datastore[oq.risk_model] = rm
+        self.save_riskmodel()
+
+    def save_riskmodel(self):
+        """
+        Save the risk models in the datastore
+        """
+        oq = self.oqparam
+        self.datastore[oq.risk_model] = rm = self.riskmodel
         attrs = self.datastore.getitem(oq.risk_model).attrs
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         self.datastore.set_nbytes(oq.risk_model)
-        self.datastore.hdf5.flush()
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
