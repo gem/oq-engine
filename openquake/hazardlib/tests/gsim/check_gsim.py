@@ -293,7 +293,12 @@ def _parse_csv_line(headers, values, req_site_params):
             setattr(dctx, param[len('dist_'):], numpy.array([value]))
         elif param.startswith('rup_'):
             # value is a rupture context attribute
-            value = float(value)
+            try:
+                value = float(value)
+            except ValueError:
+                if value != 'undefined':
+                    raise
+
             setattr(rctx, param[len('rup_'):], value)
         elif param == 'component_type':
             pass
