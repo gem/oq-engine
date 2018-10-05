@@ -138,6 +138,11 @@ class CompositeRiskModel(collections.Mapping):
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
+        iml = collections.defaultdict(list)
+        for taxo, rm in self._riskmodels.items():
+            for lt, rf in rm.risk_functions.items():
+                iml[rf.imt].append(rf.imls[0])
+        self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
     def get_extra_imts(self, imts):
         """
@@ -151,13 +156,6 @@ class CompositeRiskModel(collections.Mapping):
                 if imt not in imts:
                     extra_imts.add(imt)
         return extra_imts
-
-    def get_min_iml(self):
-        iml = collections.defaultdict(list)
-        for taxo, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions.items():
-                iml[rf.imt].append(rf.imls[0])
-        return {imt: min(iml[imt]) for imt in iml}
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
