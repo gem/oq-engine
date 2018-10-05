@@ -315,7 +315,7 @@ def get_site_model(oqparam, req_site_params):
     return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam, mesh=None, site_model=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -324,6 +324,8 @@ def get_site_collection(oqparam, mesh=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param mesh:
         the mesh to use; if None, it is extracted from the job.ini
+    :param site_model:
+        the site_model to use, if any
     """
     mesh = mesh or get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params

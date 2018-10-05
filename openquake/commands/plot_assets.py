@@ -42,6 +42,9 @@ def plot_assets(calc_id=-1):
               color='gray')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
     p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
+    if 'site_model' in dstore:
+        sm = dstore['site_model']
+        p.scatter(sm['lon'], sm['lat'], marker='x', color='orange')
     p.show()
 
 
