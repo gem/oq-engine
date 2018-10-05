@@ -382,7 +382,6 @@ class OqParam(valid.ParamSet):
                 else:
                     imtls[imt] = imls
         self.risk_imtls = imtls
-
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
