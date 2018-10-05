@@ -207,6 +207,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
+                readinput.gmfs = None
+                readinput.eids = None
+                readinput.vs30 = []
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
