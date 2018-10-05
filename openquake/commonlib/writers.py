@@ -19,7 +19,6 @@
 import os
 import re
 import ast
-import logging
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -110,6 +109,7 @@ htranslator = HeaderTranslator(
     '(lon):float64',
     '(lat):float64',
     '(depth):float64',
+    '(vs30):float64',
 )
 
 
