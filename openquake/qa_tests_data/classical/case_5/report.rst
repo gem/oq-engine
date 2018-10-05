@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ===================
 checksum32     2,343,185,032      
-date           2018-10-04T15:36:51
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:05:03
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         C    0     6     49           0.0       2.480E-05  0.0       1         0.0   
+0      1         C    0     6     49           0.0       2.146E-05  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.09614 NaN    0.09614 0.09614 1      
-split_filter       0.00255 NaN    0.00255 0.00255 1      
+read_source_models 0.10832 NaN    0.10832 0.10832 1      
+split_filter       0.00240 NaN    0.00240 0.00240 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,7 +113,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.09614  0.0       1     
-updating source_info     0.00759  0.0       1     
-total split_filter       0.00255  0.0       1     
+total read_source_models 0.10832  0.0       1     
+updating source_info     0.00765  0.0       1     
+total split_filter       0.00240  0.0       1     
 ======================== ======== ========= ======

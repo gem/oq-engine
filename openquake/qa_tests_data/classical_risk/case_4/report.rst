@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     3,002,809,595      
-date           2018-10-04T15:36:10
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:17
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -134,8 +134,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 2.13521 NaN     2.13521 2.13521 1      
-split_filter       0.22779 0.05211 0.19095 0.26464 2      
+read_source_models 2.72344 NaN     2.72344 2.72344 1      
+split_filter       0.22967 0.03561 0.20449 0.25485 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -151,8 +151,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 2.13521   0.45312   1     
-updating source_info     1.02609   1.09375   1     
-total split_filter       0.45559   1.68359   2     
-reading exposure         4.079E-04 0.0       1     
+total read_source_models 2.72344   0.51172   1     
+updating source_info     1.18405   1.15234   1     
+total split_filter       0.45934   1.66016   2     
+reading exposure         6.464E-04 0.0       1     
 ======================== ========= ========= ======

@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2018-10-04T15:36:55
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:05:08
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -89,9 +89,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     91           0.0       3.529E-05  0.0       1         0.0   
-0      2         C    2     8     49           0.0       1.240E-05  0.0       1         0.0   
-1      1         S    0     2     91           0.0       1.144E-05  0.0       1         0.0   
+0      1         S    0     2     91           0.0       2.575E-05  0.0       1         0.0   
+0      2         C    2     8     49           0.0       1.144E-05  0.0       1         0.0   
+1      1         S    0     2     91           0.0       1.049E-05  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -110,14 +110,14 @@ source_id calc_time num_dupl
 ========= ========= ========
 1         0.0       2       
 ========= ========= ========
-Total time in duplicated sources: 0/0 (79%)
+Total time in duplicated sources: 0/0 (76%)
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.07633 0.07045 0.02652 0.12614 2      
-split_filter       0.00578 NaN     0.00578 0.00578 1      
+read_source_models 0.08061 0.07184 0.02981 0.13141 2      
+split_filter       0.00474 NaN     0.00474 0.00474 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -133,7 +133,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.15266  0.32422   2     
-updating source_info     0.01148  0.0       1     
-total split_filter       0.00578  0.0       1     
+total read_source_models 0.16123  0.26172   2     
+updating source_info     0.00989  0.0       1     
+total split_filter       0.00474  0.0       1     
 ======================== ======== ========= ======

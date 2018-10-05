@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2018-10-04T15:36:34
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:45
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 2, num_levels = 4
@@ -45,15 +45,15 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     1,752        0.0       28         0.0       292       0.0   
-0      2         A    4     8     582          0.0       2.90910    0.0       97        0.0   
-0      3         A    8     12    440          0.0       1.41725    0.0       57        0.0   
+0      1         A    0     4     1,752        0.0       26         0.0       292       0.0   
+0      2         A    4     8     582          0.0       2.71888    0.0       97        0.0   
+0      3         A    8     12    440          0.0       1.34332    0.0       57        0.0   
 0      4         A    12    16    267          0.0       0.0        0.0       0         0.0   
 0      5         A    16    20    518          0.0       0.0        0.0       0         0.0   
 0      6         A    20    24    316          0.0       0.0        0.0       0         0.0   
 0      7         A    24    28    1,028        0.0       0.0        0.0       0         0.0   
 0      8         A    28    32    447          0.0       0.0        0.0       0         0.0   
-0      9         A    32    36    222          0.0       0.04994    0.0       2         0.0   
+0      9         A    32    36    222          0.0       0.05138    0.0       2         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -72,8 +72,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.43120 NaN    0.43120 0.43120 1      
-split_filter       0.54564 NaN    0.54564 0.54564 1      
+read_source_models 0.55231 NaN    0.55231 0.55231 1      
+split_filter       0.55603 NaN    0.55603 0.55603 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -89,7 +89,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.56941  0.25781   1     
-total split_filter       0.54564  0.50391   1     
-total read_source_models 0.43120  0.0       1     
+updating source_info     0.58194  0.0       1     
+total split_filter       0.55603  1.06250   1     
+total read_source_models 0.55231  0.0       1     
 ======================== ======== ========= ======

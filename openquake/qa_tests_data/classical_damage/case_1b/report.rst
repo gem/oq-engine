@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     2,300,210,911      
-date           2018-10-04T15:36:33
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:44
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 7
@@ -112,8 +112,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00315 NaN    0.00315 0.00315 1      
-split_filter       0.01991 NaN    0.01991 0.01991 1      
+read_source_models 0.00411 NaN    0.00411 0.00411 1      
+split_filter       0.02055 NaN    0.02055 0.02055 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -129,8 +129,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.02727   0.0       1     
-total split_filter       0.01991   0.0       1     
-total read_source_models 0.00315   0.0       1     
-reading exposure         3.319E-04 0.0       1     
+updating source_info     0.02852   0.0       1     
+total split_filter       0.02055   0.0       1     
+total read_source_models 0.00411   0.0       1     
+reading exposure         3.500E-04 0.0       1     
 ======================== ========= ========= ======

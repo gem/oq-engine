@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ===================
 checksum32     98,343,102         
-date           2018-10-04T15:36:39
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:51
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -45,7 +45,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     3,000        0.0       3.123E-05  0.0       1         0.0   
+0      1         P    0     1     3,000        0.0       3.099E-05  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -64,8 +64,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00426 NaN    0.00426 0.00426 1      
-split_filter       0.01101 NaN    0.01101 0.01101 1      
+read_source_models 0.00440 NaN    0.00440 0.00440 1      
+split_filter       0.02959 NaN    0.02959 0.02959 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -81,7 +81,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.01670  0.0       1     
-total split_filter       0.01101  0.50000   1     
-total read_source_models 0.00426  0.0       1     
+updating source_info     0.03697  0.0       1     
+total split_filter       0.02959  0.27734   1     
+total read_source_models 0.00440  0.0       1     
 ======================== ======== ========= ======
