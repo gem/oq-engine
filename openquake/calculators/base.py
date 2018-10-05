@@ -445,6 +445,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+        if self.riskmodel:
+            self.save_riskmodel()
 
     def init(self):
         """
@@ -477,14 +479,20 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol, self.riskmodel.loss_types)
             readinput.exposure = None  # reset the global
+        # reduce the riskmodel to the relevant taxonomies
+        taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
+                         if taxo != '?')
+        if len(self.riskmodel.taxonomies) > len(taxonomies):
+            logging.info('Reducing risk model from %d to %d taxonomies',
+                         len(self.riskmodel.taxonomies), len(taxonomies))
+            self.riskmodel = self.riskmodel.reduce(taxonomies)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
+            oq.minimum_intensity = self.riskmodel.min_iml
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
@@ -498,21 +506,24 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
-        # save the risk models and loss_ratios in the datastore
-        self.datastore[oq.risk_model] = rm
+
+    def save_riskmodel(self):
+        """
+        Save the risk models in the datastore
+        """
+        oq = self.oqparam
+        self.datastore[oq.risk_model] = rm = self.riskmodel
         attrs = self.datastore.getitem(oq.risk_model).attrs
-        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
+        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes(oq.risk_model)
-        self.datastore.hdf5.flush()
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
