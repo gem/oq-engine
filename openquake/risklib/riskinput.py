@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, AccumDict
 from openquake.risklib import scientific, riskmodels
 
@@ -288,6 +289,18 @@ class CompositeRiskModel(collections.Mapping):
                         out.rlzi = rlzi
                         out.eids = eids
                         yield out
+
+    def reduce(self, taxonomies):
+        """
+        :param taxonomies: a set of taxonomies
+        :returns: a new CompositeRiskModel reduced to the given taxonomies
+        """
+        new = copy.deepcopy(self)
+        new.taxonomies = sorted(taxonomies)
+        for taxonomy in sorted(self._riskmodels):
+            if taxonomy not in taxonomies:
+                del self._riskmodels[taxonomy]
+        return new
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())

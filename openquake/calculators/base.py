@@ -481,6 +481,10 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
                 self.oqparam, haz_sitecol, self.riskmodel.loss_types)
             readinput.exposure = None  # reset the global
+        # reduce the riskmodel to the relevant taxonomies
+        taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
+                         if taxo != '?')
+        self.riskmodel = self.riskmodel.reduce(taxonomies)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
