@@ -3,8 +3,8 @@ Scenario QA Test for occupants
 
 ============== ===================
 checksum32     95,847,934         
-date           2018-10-04T15:36:22
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:32
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 3, num_levels = 15
@@ -86,5 +86,5 @@ Slowest operations
 ================ ========= ========= ======
 operation        time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.534E-04 0.0       1     
+reading exposure 6.146E-04 0.0       1     
 ================ ========= ========= ======

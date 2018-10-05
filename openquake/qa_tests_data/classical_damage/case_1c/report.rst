@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ===================
 checksum32     1,299,541,683      
-date           2018-10-04T15:36:34
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:45
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 8
@@ -93,7 +93,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00574    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00392    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -112,8 +112,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00303 NaN    0.00303 0.00303 1      
-split_filter       0.02126 NaN    0.02126 0.02126 1      
+read_source_models 0.00356 NaN    0.00356 0.00356 1      
+split_filter       0.01927 NaN    0.01927 0.01927 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -129,8 +129,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.02875   0.0       1     
-total split_filter       0.02126   0.0       1     
-total read_source_models 0.00303   0.0       1     
-reading exposure         3.424E-04 0.0       1     
+updating source_info     0.02645   0.0       1     
+total split_filter       0.01927   0.0       1     
+total read_source_models 0.00356   0.0       1     
+reading exposure         4.013E-04 0.0       1     
 ======================== ========= ========= ======

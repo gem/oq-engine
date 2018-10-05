@@ -3,8 +3,8 @@ event based hazard
 
 ============== ===================
 checksum32     3,637,986,905      
-date           2018-10-04T15:36:41
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 1
@@ -60,7 +60,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          0.0       0.00411    0.0       15        0.0   
+0      1         S    0     2     482          0.0       0.00560    0.0       15        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -79,8 +79,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.00295 NaN    0.00295 0.00295 1      
-split_filter       0.01960 NaN    0.01960 0.01960 1      
+read_source_models 0.00379 NaN    0.00379 0.00379 1      
+split_filter       0.01925 NaN    0.01925 0.01925 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -96,8 +96,8 @@ Slowest operations
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-updating source_info     0.02720   0.0       1     
-total split_filter       0.01960   0.0       1     
-total read_source_models 0.00295   0.0       1     
-reading exposure         5.448E-04 0.0       1     
+updating source_info     0.02751   0.0       1     
+total split_filter       0.01925   0.0       1     
+total read_source_models 0.00379   0.0       1     
+reading exposure         5.398E-04 0.0       1     
 ======================== ========= ========= ======

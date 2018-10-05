@@ -3,8 +3,8 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 
 ============== ===================
 checksum32     17,280,623         
-date           2018-10-04T15:36:55
-engine_version 3.3.0-gitf22d3f2c70
+date           2018-10-05T03:05:08
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 3, num_levels = 17
@@ -100,10 +100,10 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         P    0     1     15           0.0       2.933E-05  0.0       1         0.0   
-1      2         P    1     2     15           0.0       1.049E-05  0.0       1         0.0   
-2      1         A    0     4     240          0.0       0.09017    0.0       16        0.0   
-3      1         A    0     4     240          0.0       0.08329    0.0       16        0.0   
+0      1         P    0     1     15           0.0       3.004E-05  0.0       1         0.0   
+1      2         P    1     2     15           0.0       1.192E-05  0.0       1         0.0   
+2      1         A    0     4     240          0.0       0.08190    0.0       16        0.0   
+3      1         A    0     4     240          0.0       0.07675    0.0       16        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -123,8 +123,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00538 0.00451 0.00219 0.00857 2      
-split_filter       0.01617 NaN     0.01617 0.01617 1      
+read_source_models 0.00560 0.00253 0.00381 0.00739 2      
+split_filter       0.01565 NaN     0.01565 0.01565 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -140,7 +140,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.02357  0.0       1     
-total split_filter       0.01617  0.0       1     
-total read_source_models 0.01075  0.0       2     
+updating source_info     0.02406  0.0       1     
+total split_filter       0.01565  0.0       1     
+total read_source_models 0.01119  0.0       2     
 ======================== ======== ========= ======
