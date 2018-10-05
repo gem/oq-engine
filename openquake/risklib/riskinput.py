@@ -293,11 +293,10 @@ class CompositeRiskModel(collections.Mapping):
         :param taxonomies: a set of taxonomies
         :returns: a new CompositeRiskModel reduced to the given taxonomies
         """
-        new = copy.deepcopy(self)
+        new = copy.copy(self)
         new.taxonomies = sorted(taxonomies)
-        for taxonomy in sorted(self._riskmodels):
-            if taxonomy not in taxonomies:
-                del self._riskmodels[taxonomy]
+        new._riskmodels = {taxo: rm for taxo, rm in self._riskmodels.items()
+                           if taxo in taxonomies}
         return new
 
     def __toh5__(self):
