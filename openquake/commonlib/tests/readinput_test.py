@@ -251,23 +251,6 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam.inputs = dict(site_model=sitemodel())
         self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
-    def test_get_far_away_parameter(self):
-        oqparam = mock.Mock()
-        oqparam.gsim = valid.GSIM['ToroEtAl2002SHARE']()
-        oqparam.hazard_calculation_id = None
-        oqparam.base_path = '/'
-        oqparam.maximum_distance = 100
-        oqparam.max_site_model_distance = 5
-        oqparam.sites = [(1.0, 0, 0), (2.0, 0, 0)]
-        oqparam.inputs = dict(site_model=sitemodel())
-        with mock.patch('logging.warn') as warn:
-            readinput.get_site_collection(oqparam)
-        # check that the warning was raised
-        self.assertEqual(
-            warn.call_args[0],
-            ('Association to (%.1f %.1f) from site #%d (%.1f %.1f) %d km',
-             0.0, 0.0, 1, 2.0, 0.0, 222))
-
 
 class ExposureTestCase(unittest.TestCase):
     exposure = general.gettemp('''\

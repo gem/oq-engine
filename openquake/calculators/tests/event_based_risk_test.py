@@ -253,15 +253,16 @@ stddev         838           555
             'expected/portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
-        # this is a case with exposure and region_grid_spacing
+        # this is a case with exposure and region_grid_spacing with discarded
+        # assets
         self.run_calc(case_miriam.__file__, 'job2.ini')
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
         assetcol = self.calc.datastore['assetcol']
-        self.assertEqual(len(sitecol), 21)
+        self.assertEqual(len(sitecol), 7)
         self.assertGreater(sitecol.vs30.sum(), 0)
-        self.assertEqual(len(assetcol), 548)
+        self.assertEqual(len(assetcol), 533)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):

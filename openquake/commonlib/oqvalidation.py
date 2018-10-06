@@ -135,7 +135,6 @@ class OqParam(valid.ParamSet):
     save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
-    max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     shakemap_id = valid.Param(valid.nice_string, None)
     site_effects = valid.Param(valid.boolean, True)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
