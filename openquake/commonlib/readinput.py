@@ -345,18 +345,9 @@ def get_site_collection(oqparam, mesh=None):
         except ValueError:
             # this is the normal case
             depth = None
-        if mesh is None:
-            # extract the site collection directly from the site model
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-        else:
-            # associate the site parameters to the mesh
-            sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in req_site_params:
-                sitecol._set(name, params[name])
+        # extract the site collection directly from the site model
+        sitecol = site.SiteCollection.from_points(
+            sm['lon'], sm['lat'], depth, sm, req_site_params)
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
