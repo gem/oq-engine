@@ -296,6 +296,12 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
+# NB: the site mesh comes from
+# 0. the sites parameter
+# 1. the sites_csv file
+# 2. the grid
+# 3. the site model
+# 4. the exposure
 def get_site_model(oqparam, req_site_params):
     """
     Convert the NRML file into an array of site parameters.
@@ -325,7 +331,7 @@ def get_site_model(oqparam, req_site_params):
     return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam, mesh=None, site_model=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -334,30 +340,33 @@ def get_site_collection(oqparam, mesh=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param mesh:
         the mesh to use; if None, it is extracted from the job.ini
+    :param site_model:
+        the site_model to use, if any
     """
     mesh = mesh or get_mesh(oqparam)
-    req_site_params = get_gsim_lt(oqparam).req_site_params
-    if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam, req_site_params)
+    if site_model is not None:
+        req_site_params = site_model.dtype.names
         try:
             # in the future we could have elevation in the site model
-            depth = sm['depth']
+            depth = site_model['depth']
         except ValueError:
             # this is the normal case
             depth = None
         if mesh is None:
             # extract the site collection directly from the site model
             sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
+                site_model['lon'], site_model['lat'], depth, site_model,
+                req_site_params)
         else:
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             sc, params = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+                site_model, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
     else:  # use the default site params
+        req_site_params = get_gsim_lt(oqparam).req_site_params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')

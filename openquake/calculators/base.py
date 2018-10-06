@@ -547,12 +547,17 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_riskmodel()  # must be called first
-
         if oq.hazard_calculation_id:
             with datastore.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
         else:
-            haz_sitecol = readinput.get_site_collection(oq)
+            if oq.inputs.get('site_model'):
+                req_site_params = readinput.get_gsim_lt(oq).req_site_params
+                sm = readinput.get_site_model(oq, req_site_params)
+                self.datastore['site_model'] = sm
+            else:
+                sm = None
+            haz_sitecol = readinput.get_site_collection(oq, site_model=sm)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
