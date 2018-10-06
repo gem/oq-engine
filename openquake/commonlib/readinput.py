@@ -894,7 +894,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
-    if oqparam.region_grid_spacing:
+    if oqparam.region_grid_spacing and not oqparam.hazard_calculation_id:
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol
 
