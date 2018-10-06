@@ -296,6 +296,12 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
+# NB: the site mesh comes from
+# 0. the sites parameter
+# 1. the sites_csv file
+# 2. the grid
+# 3. the site model
+# 4. the exposure
 def get_site_model(oqparam, req_site_params):
     """
     Convert the NRML file into an array of site parameters.
