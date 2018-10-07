@@ -35,7 +35,7 @@ than 20 lines of code:
        oq = readinput.get_oqparam(job_ini)
        sitecol = readinput.get_site_collection(oq)
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
-       csm = readinput.get_composite_source_model(oq).filter(src_filter)
+       csm = readinput.get_composite_source_model(oq, srcfilter=src_filter)
        rlzs_assoc = csm.info.get_rlzs_assoc()
        for i, sm in enumerate(csm.source_models):
            for rlz in rlzs_assoc.rlzs_by_smodel[i]:
