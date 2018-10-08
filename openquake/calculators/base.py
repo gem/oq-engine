@@ -574,11 +574,9 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs:
-                self.sitecol, self.assetcol, discarded = self.read_shakemap(
+                self.sitecol, self.assetcol = self.read_shakemap(
                     haz_sitecol, assetcol)
                 self.datastore['assetcol'] = self.assetcol
-                if len(discarded):
-                    self.datastore['discarded'] = discarded
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             elif hasattr(self, 'sitecol') and general.not_equal(
