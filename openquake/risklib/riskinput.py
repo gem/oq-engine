@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import operator
 import logging
 import collections
 from urllib.parse import unquote_plus
 import numpy
 
-from openquake.baselib import hdf5, performance
+from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, AccumDict
 from openquake.risklib import scientific, riskmodels
 
@@ -137,6 +138,11 @@ class CompositeRiskModel(collections.Mapping):
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
+        iml = collections.defaultdict(list)
+        for taxo, rm in self._riskmodels.items():
+            for lt, rf in rm.risk_functions.items():
+                iml[rf.imt].append(rf.imls[0])
+        self.min_iml = {imt: min(iml[imt]) for imt in iml}
 
     def get_extra_imts(self, imts):
         """
@@ -150,13 +156,6 @@ class CompositeRiskModel(collections.Mapping):
                 if imt not in imts:
                     extra_imts.add(imt)
         return extra_imts
-
-    def get_min_iml(self):
-        iml = collections.defaultdict(list)
-        for taxo, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions.items():
-                iml[rf.imt].append(rf.imls[0])
-        return {imt: min(iml[imt]) for imt in iml}
 
     def make_curve_params(self, oqparam):
         # the CurveParams are used only in classical_risk, classical_bcr
@@ -288,6 +287,20 @@ class CompositeRiskModel(collections.Mapping):
                         out.rlzi = rlzi
                         out.eids = eids
                         yield out
+
+    def reduce(self, taxonomies):
+        """
+        :param taxonomies: a set of taxonomies
+        :returns: a new CompositeRiskModel reduced to the given taxonomies
+        """
+        new = copy.copy(self)
+        new.taxonomies = sorted(taxonomies)
+        new._riskmodels = {}
+        for taxo, rm in self._riskmodels.items():
+            if taxo in taxonomies:
+                new._riskmodels[taxo] = rm
+                rm.compositemodel = new
+        return new
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())

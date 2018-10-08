@@ -6,6 +6,7 @@
 
 import numpy as np
 
+from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlab
@@ -54,6 +55,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
                                                      stddev_types)
         cff = self.SITE_COEFFS[imt]
         mean_adj = np.log(np.exp(mean) * 10**cff['mf'])
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stddevs
 
     # These are the coefficients included in Table 1 of Atkinson and Adams
@@ -93,6 +95,7 @@ class SSlabCan15Low(SSlabCan15Mid):
         # Adams, 2013; page 992)
         delta = np.log(10.**(0.15))
         mean_adj = mean - delta
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stddevs
 
 
@@ -114,4 +117,5 @@ class SSlabCan15Upp(SSlabCan15Mid):
         # Adams, 2013; page 992)
         delta = np.log(10.**(0.15))
         mean_adj = mean + delta
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stddevs
