@@ -51,6 +51,7 @@ NORMALIZATION_FACTOR = 1E-2
 RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
+F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -354,7 +355,7 @@ def get_site_collection(oqparam, mesh=None):
     if 'vs30' in req_site_params and vs30s:
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-        sitecol.array['vs30'] = F32(vs30s)
+        sitecol.array['vs30'] = F64(vs30s)
     elif oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
