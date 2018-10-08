@@ -147,7 +147,7 @@ To exit from the OpenQuake development environment type `deactivate`. Before usi
 To load the virtual environment automatically at every login, add the following line at the bottom of your `~/.bashrc` (Linux) or `~/.profile` (macOS):
 
 ```bash
-source $HOME/openquake/qoenv/bin/activate
+source $HOME/openquake/oqenv/bin/activate
 ```
 
 You can also add a short-hand command to enable it:
