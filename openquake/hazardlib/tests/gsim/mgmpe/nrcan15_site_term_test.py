@@ -99,3 +99,8 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_raise_error(self):
+        """ Tests that exception is raised """
+        with self.assertRaises(AttributeError):
+            mgmpe = NRCan15SiteTerm(gmpe_name='FukushimaTanaka1990')
