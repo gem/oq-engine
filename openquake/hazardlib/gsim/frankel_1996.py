@@ -95,6 +95,10 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     #: Required distance measure is rhypo
     REQUIRES_DISTANCES = set(('rhypo', ))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
