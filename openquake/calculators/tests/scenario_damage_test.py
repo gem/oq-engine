@@ -70,7 +70,7 @@ RM       4,000
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
-        # this is a case with more hazard sites than exposure sites
+        # this is a case with a large grid
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
         total = extract(self.calc.datastore, 'agg_damages/structural')
