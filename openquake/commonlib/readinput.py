@@ -870,7 +870,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        sitecol, assets_by = geo.utils.assoc(
+        sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
@@ -887,6 +887,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
+        discarded = []
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
@@ -896,7 +897,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         oqparam.time_event, exposure.occupancy_periods)
     if oqparam.region_grid_spacing and not oqparam.hazard_calculation_id:
         assetcol = assetcol.reduce_also(sitecol)
-    return sitecol, assetcol
+    return sitecol, assetcol, discarded
 
 
 def _get_gmfs(oqparam):

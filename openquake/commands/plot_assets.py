@@ -42,6 +42,9 @@ def plot_assets(calc_id=-1):
               color='gray')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
     p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
+    if 'discarded' in dstore:
+        disc = dstore['discarded']
+        p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
     p.show()
 
 

@@ -493,8 +493,11 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         with self.monitor('reading exposure', autoflush=True):
-            self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
-                self.oqparam, haz_sitecol, self.riskmodel.loss_types)
+            self.sitecol, self.assetcol, discarded = (
+                readinput.get_sitecol_assetcol(
+                    self.oqparam, haz_sitecol, self.riskmodel.loss_types))
+            if len(discarded):
+                self.datastore['discarded'] = discarded
             readinput.exposure = None  # reset the global
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
@@ -571,9 +574,11 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(self.oqparam.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs:
-                self.sitecol, self.assetcol = self.read_shakemap(
+                self.sitecol, self.assetcol, discarded = self.read_shakemap(
                     haz_sitecol, assetcol)
                 self.datastore['assetcol'] = self.assetcol
+                if len(discarded):
+                    self.datastore['discarded'] = discarded
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
             elif hasattr(self, 'sitecol') and general.not_equal(
@@ -707,9 +712,11 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
-            sitecol, shakemap = get_sitecol_shakemap(
+            sitecol, shakemap, discarded = get_sitecol_shakemap(
                 smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
+            if len(discarded):
+                self.datastore['discarded'] = discarded
             assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')
