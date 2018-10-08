@@ -236,7 +236,8 @@ def get_mesh(oqparam):
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
+        csv_data = open(oqparam.inputs['sites'], 'U',
+                        encoding='utf-8-sig').readlines()  # skip BOM if any
         has_header = csv_data[0].startswith('site_id')
         if has_header:  # strip site_id
             data = []
