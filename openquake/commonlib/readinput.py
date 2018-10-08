@@ -860,7 +860,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
                 cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
         # extracting the hazard grid from the exposure
-        haz_distance = oqparam.region_grid_spacing
+        haz_distance = oqparam.region_grid_spacing * 1.414  # 1.414 = sqrt(2)
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
                          haz_distance, oqparam.asset_hazard_distance)

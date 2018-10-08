@@ -262,7 +262,7 @@ stddev         838           555
         assetcol = self.calc.datastore['assetcol']
         self.assertEqual(len(sitecol), 7)
         self.assertGreater(sitecol.vs30.sum(), 0)
-        self.assertEqual(len(assetcol), 533)
+        self.assertEqual(len(assetcol), 548)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_7a(self):
