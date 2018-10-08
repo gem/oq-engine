@@ -231,7 +231,7 @@ def get_csv_header(fname, sep=','):
     :param sep: the separator (default comma)
     :returns: the first line of fname
     """
-    with open(fname, 'U', encoding='utf-u-sig') as f:
+    with open(fname, 'U', encoding='utf-8-sig') as f:
         return next(f).split(sep)
 
 
@@ -255,7 +255,7 @@ def get_mesh(oqparam):
         if header[0] == 'site_id':  # strip site_id
             data, vs30s = [], []
             for i, row in enumerate(
-                    csv.DictReader(open(fname, 'U', encoding='utf-u-sig'))):
+                    csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
                 if row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
@@ -266,7 +266,7 @@ def get_mesh(oqparam):
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ')
-                    for line in open(fname, 'U', encoding='utf-u-sig')]
+                    for line in open(fname, 'U', encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
