@@ -27,6 +27,9 @@ from openquake.baselib import sap, performance
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import assoc
+from openquake.commonlib.writers import write_csv
+from openquake.commonlib.util import compose_arrays
+
 
 F32 = numpy.float32
 vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
@@ -65,12 +68,13 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing):
             lons, lats = mesh.lons, mesh.lats
         sitecol = site.SiteCollection.from_points(lons, lats)
         vs30 = read_vs30(vs30_csv)
-        sitecol, assetcol, discarded = assoc(
+        sitecol, vs30, _discarded = assoc(
             vs30, sitecol, grid_spacing * 1.414, 'filter')
+        sids = numpy.arange(len(vs30), dtype=numpy.uint32)
+        sites = compose_arrays(sids, vs30, 'site_id')
+        write_csv('sites.csv', sites)
     print(sitecol)
-    print(len(assetcol))
-    if len(discarded):
-        print('Some assets were discarded')
+    print('Saved %d rows in sites.csv' % len(vs30))
     print(mon)
 
 
