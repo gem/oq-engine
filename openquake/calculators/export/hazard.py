@@ -623,13 +623,17 @@ def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
-    sitemesh = get_mesh(dstore['sitecol'])
+    sc = dstore['sitecol'].array
+    if 'vs30' in sc.dtype.names:
+        arr = sc[['lon', 'lat', 'vs30']]
+    else:
+        arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
     if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
-        sids = numpy.arange(len(sitemesh), dtype=U32)
-        sites = util.compose_arrays(sids, sitemesh, 'site_id')
+        sids = numpy.arange(len(arr), dtype=U32)
+        sites = util.compose_arrays(sids, arr, 'site_id')
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['rlzi', 'sid', 'eid'])
