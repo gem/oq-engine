@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extracted the sites preferably from the site model and changed the
+    asset-site association procedure to remove sites and assets when possible
   * Added a cutoff when storing a PoE=1 from a CSV file, thus avoiding NaNs
     in classical_damage calculations
   * Reduced the data transfer in the risk model by only considering the

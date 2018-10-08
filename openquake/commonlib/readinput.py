@@ -678,7 +678,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models
     :param srcfilter:
-        if not None, perform a preprocess operation on the sources
+        if not None, use it to prefilter the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -895,7 +895,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
-    if oqparam.region_grid_spacing and not oqparam.hazard_calculation_id:
+    if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
+            and 'hazard_curves' not in oqparam.inputs):
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
