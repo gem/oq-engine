@@ -439,7 +439,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         grid_spacing = 10
         exposure_csv = os.path.join(inputdir, 'exposure_res.csv')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
-        prepare_site_model.func(exposure_csv, vs30_csv, grid_spacing, output)
+        sitecol = prepare_site_model.func(
+            exposure_csv, vs30_csv, grid_spacing, output)
+        self.assertEqual(len(sitecol), 149)  # 149 non-empty grid points
 
         # test no grid
-        prepare_site_model.func(exposure_csv, vs30_csv, 0, output)
+        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, output)
+        self.assertEqual(len(sc), 148)  # 148 assets

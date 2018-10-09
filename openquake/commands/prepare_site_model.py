@@ -74,16 +74,19 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
         else:
             lons, lats = mesh.lons, mesh.lats
             mode = 'warn'
-        sitecol = site.SiteCollection.from_points(lons, lats)
-        vs30 = read_vs30(vs30_csv.split(','))
+        sitecol = site.SiteCollection.from_points(
+            lons, lats, req_site_params={'vs30'})
+        vs30orig = read_vs30(vs30_csv.split(','))
         sitecol, vs30, _discarded = assoc(
-            vs30, sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
+            vs30orig, sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
+        sitecol.array['vs30'] = vs30['vs30']
         sids = numpy.arange(len(vs30), dtype=numpy.uint32)
         sites = compose_arrays(sids, vs30, 'site_id')
         write_csv(output, sites)
     print(sitecol)
-    print('Saved %d rows in sites.csv' % len(vs30))
+    print('Saved %d rows in %s' % (len(sitecol), output))
     print(mon)
+    return sitecol
 
 
 prepare_site_model.arg('exposure_csv', 'exposure with header')
