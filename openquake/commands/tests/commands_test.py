@@ -39,6 +39,7 @@ from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands.check_input import check_input
+from openquake.commands.prepare_site_model import prepare_site_model
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.calculators.views import view
@@ -429,3 +430,16 @@ class CheckInputTestCase(unittest.TestCase):
         job_ini = os.path.join(list(test_data.__path__)[0],
                                'event_based_hazard/job.ini')
         check_input.func(job_ini)
+
+
+class PrepareSiteModelTestCase(unittest.TestCase):
+    def test(self):
+        inputdir = os.path.dirname(case_16.__file__)
+        output = gettemp(suffix='csv')
+        grid_spacing = 10
+        exposure_csv = os.path.join(inputdir, 'exposure_res.csv')
+        vs30_csv = os.path.join(inputdir, 'vs30.csv')
+        prepare_site_model.func(exposure_csv, vs30_csv, grid_spacing, output)
+
+        # test no grid
+        prepare_site_model.func(exposure_csv, vs30_csv, 0, output)

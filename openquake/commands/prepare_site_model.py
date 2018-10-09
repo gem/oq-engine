@@ -32,52 +32,61 @@ from openquake.commonlib.util import compose_arrays
 
 
 F32 = numpy.float32
+SQRT2 = 1.414
+FIVEKM = 5  # asset-site maximum distance in the case of no grid
 vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
 
 
-def read_vs30(fname):
-    data = [tuple(line.split(','))
-            for line in open(fname, 'U', encoding='utf-8-sig')]
+def read_vs30(fnames):
+    data = []
+    for fname in fnames:
+        for line in open(fname, 'U', encoding='utf-8-sig'):
+            data.append(tuple(line.split(',')))
     return numpy.array(data, vs30_dt)
 
 
-def read_exposure(fname):
-    lons, lats = [], []
-    f = open(fname, 'U', encoding='utf-8-sig')
-    next(f)
-    with f:
-        for line in f:
-            _id, lon, lat = line.split(',')[:3]
-            lons.append(lon)
-            lats.append(lat)
+def read_exposure(fnames):
+    lonlats = set()
+    for fname in fnames:
+        f = open(fname, 'U', encoding='utf-8-sig')
+        next(f)
+        with f:
+            for line in f:
+                _id, lon, lat = line.split(',')[:3]
+                lonlats.add((lon, lat))
+    lons, lats = zip(*sorted(lonlats))
     return Mesh(numpy.array(lons, F32), numpy.array(lats, F32))
 
 
 @sap.Script
-def prepare_site_model(exposure_csv, vs30_csv, grid_spacing):
+def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
+                       output='sites.csv'):
     """
     Prepare a site_model.csv file from an exposure, a vs30 csv file
     and a grid spacing which can be 0 (meaning no grid).
     """
     with performance.Monitor(measuremem=True) as mon:
-        mesh = read_exposure(exposure_csv)
+        mesh = read_exposure(exposure_csv.split(','))
         if grid_spacing:
             grid = mesh.get_convex_hull().discretize(grid_spacing)
             lons, lats = grid.lons, grid.lats
+            mode = 'filter'
         else:
             lons, lats = mesh.lons, mesh.lats
+            mode = 'warn'
         sitecol = site.SiteCollection.from_points(lons, lats)
-        vs30 = read_vs30(vs30_csv)
+        vs30 = read_vs30(vs30_csv.split(','))
         sitecol, vs30, _discarded = assoc(
-            vs30, sitecol, grid_spacing * 1.414, 'filter')
+            vs30, sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
         sids = numpy.arange(len(vs30), dtype=numpy.uint32)
         sites = compose_arrays(sids, vs30, 'site_id')
-        write_csv('sites.csv', sites)
+        write_csv(output, sites)
     print(sitecol)
     print('Saved %d rows in sites.csv' % len(vs30))
     print(mon)
 
 
-prepare_site_model.arg('exposure_csv', 'exposure')
-prepare_site_model.arg('vs30_csv', 'USGS file')
-prepare_site_model.arg('grid_spacing', 'grid spacing in km (or 0)', type=float)
+prepare_site_model.arg('exposure_csv', 'exposure with header')
+prepare_site_model.arg('vs30_csv', 'USGS file lon,lat,vs30 with no header')
+prepare_site_model.opt('grid_spacing', 'grid spacing in km (or 0)', type=float)
+prepare_site_model.opt('output', 'output file')
