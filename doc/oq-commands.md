@@ -224,8 +224,10 @@ by the grid spacing multiply by the square root of 2, so by enlarging
 the grid spacing you can avoid discarding the assets.
 
 In large risk calculation one wants to *use the gridded mode always* because:
-1) the results are the nearly the same than without the grid and 2) the
-calculation is a lot faster and uses a lot less memory with a grid.
+
+1) the results are the nearly the same than without the grid and
+2) the calculation is a lot faster and uses a lot less memory with a grid.
+
 Basically by using a grid you can turn an impossible calculation into a possible
 one. You should always use a grid unless you are doing a site specific analysis.
 
