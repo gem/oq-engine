@@ -195,7 +195,7 @@ class EasternCan15Upp(EasternCan15Mid):
             stddev_types = [StdDev.TOTAL]
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        stddevs = [[np.ones(len(dists.repi))*get_sigma(imt)]]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         delta = self._get_delta(stds, dists)
         mean = mean + stds + delta
         mean = np.squeeze(mean)
