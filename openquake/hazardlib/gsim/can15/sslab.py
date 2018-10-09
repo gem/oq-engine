@@ -6,6 +6,7 @@
 
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -37,6 +38,9 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+    #: Supported standard deviations
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
