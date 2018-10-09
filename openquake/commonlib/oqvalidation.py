@@ -284,6 +284,12 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+        # check grid + sites
+        if self.region_grid_spacing and (
+                'sites' in self.inputs or 'site_model' in self.inputs):
+            logging.warn('Using a grid together with specifying explicitly '
+                         'the sites is deprecated')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
