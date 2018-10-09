@@ -63,7 +63,8 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
                        output='sites.csv'):
     """
     Prepare a site_model.csv file from an exposure, a vs30 csv file
-    and a grid spacing which can be 0 (meaning no grid).
+    and a grid spacing which can be 0 (meaning no grid). In case of
+    no grid warnings are raised for long distance associations.
     """
     with performance.Monitor(measuremem=True) as mon:
         mesh = read_exposure(exposure_csv.split(','))
@@ -85,8 +86,6 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
         write_csv(output, sites)
     print(sitecol)
     print('Saved %d rows in %s' % (len(sitecol), output))
-    if not grid_spacing and discarded:
-        print('%d sites with assets were discarded' % len(discarded))
     print(mon)
     return sitecol
 

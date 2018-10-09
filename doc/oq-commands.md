@@ -213,23 +213,25 @@ optional arguments:
                         output file
 ```
 
-The command work in two modes: with non-gridded exposures (the default) and
-with gridded exposures. In the first case the assets are aggregated in unique
-locations and for each location the vs30 coming from the closest vs30 record
-is taken. There is a limit of 5 km on the closeness: if the closest vs30 record
-is more than 5 km away from the hazard location, that location is discarded.
-This can be correct (i.e. in your exposure for France you can have assets
-in Polinesia that should be discarded) or an issue: you would lose
-assets just because the closest site parameter is few kilometers away.
-It that is the case the best approach is to use the gridded mode: by
-passing a grid spacing parameter a grid containing of all the exposure
-is built and the points with assets are associated to the vs30 records.
-In this mode the maximum association distance is given by the grid spacing
-multiply by the square root of 2, so by enlarging the grid spacing you
-can avoid discarding the assets.
+The command work in two modes: with non-gridded exposures (the
+default) and with gridded exposures. In the first case the assets are
+aggregated in unique locations and for each location the vs30 coming
+from the closest vs30 record is taken. In the second case, i.e. when a
+grid spacing parameter is passed, a grid containing of all the
+exposure is built and the points with assets are associated to the
+vs30 records. The maximum association distance is given
+by the grid spacing multiply by the square root of 2, so by enlarging
+the grid spacing you can avoid discarding the assets.
 
 In large risk calculation one wants to *use the gridded mode always* because:
 1) the results are the nearly the same than without the grid and 2) the
 calculation is a lot faster and uses a lot less memory with a grid.
 Basically by using a grid you can turn an impossible calculation into a possible
 one. You should always use a grid unless you are doing a site specific analysis.
+
+The command is able to manage multiple files at once, just use commas with
+no spaces to separate the files. Here is an example of usage:
+
+```bash
+$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv,Vs30/Bolivia.csv --grid-spacing=10
+```
