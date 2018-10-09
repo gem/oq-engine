@@ -182,3 +182,54 @@ Be warned that for large calculations the extraction will likely be slower
 than the entire calculation. In this case you should extract only the
 sites you are interested in, while this command extracts everything.
 The extract/export system will be extended in the near future.
+
+prepare_site_model
+------------------
+
+The command `oq prepare_site_model`, new in engine 3.3, is quite useful
+if you have a vs30 file with fields lon, lat, vs30 - the USGS provides such
+files for the whole world - and you want to generate a site model from it.
+Normally this feature is used for risk calculations: given an exposure,
+one wants to generate a collection of hazard sites covering the exposure
+and with vs30 values extracted from the vs30 file with a nearest neighbour
+algorithm.
+
+```bash
+$ oq help prepare_site_model
+usage: oq prepare_site_model [-h] [-g 0] [-o sites.csv] exposure_csv vs30_csv
+
+Prepare a site_model.csv file from an exposure, a vs30 csv file and a grid
+spacing which can be 0 (meaning no grid).
+
+positional arguments:
+  exposure_csv          exposure with header
+  vs30_csv              USGS file lon,lat,vs30 with no header
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -g 0, --grid-spacing 0
+                        grid spacing in km (or 0)
+  -o sites.csv, --output sites.csv
+                        output file
+```
+
+The command work in two modes: with non-gridded exposures (the default) and
+with gridded exposures. In the first case the assets are aggregated in unique
+locations and for each location the vs30 coming from the closest vs30 record
+is taken. There is a limit of 5 km on the closeness: if the closest vs30 record
+is more than 5 km away from the hazard location, that location is discarded.
+This can be correct (i.e. in your exposure for France you can have assets
+in Polinesia that should be discarded) or an issue: you would lose
+assets just because the closest site parameter is few kilometers away.
+It that is the case the best approach is to use the gridded mode: by
+passing a grid spacing parameter a grid containing of all the exposure
+is built and the points with assets are associated to the vs30 records.
+In this mode the maximum association distance is given by the grid spacing
+multiply by the square root of 2, so by enlarging the grid spacing you
+can avoid discarding the assets.
+
+In large risk calculation one wants to *use the gridded mode always* because:
+1) the results are the nearly the same than without the grid and 2) the
+calculation is a lot faster and uses a lot less memory with a grid.
+Basically by using a grid you can turn an impossible calculation into a possible
+one. You should always use a grid unless you are doing a site specific analysis.

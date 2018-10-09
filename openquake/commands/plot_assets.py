@@ -34,10 +34,9 @@ def plot_assets(calc_id=-1):
     fig = p.figure()
     ax = fig.add_subplot(111)
     if oq.region:
-        pp = PolygonPatch(shapely.wkt.loads(oq.region), alpha=0.01)
+        pp = PolygonPatch(shapely.wkt.loads(oq.region), alpha=0.1)
         ax.add_patch(pp)
-    else:
-        ax.grid(True)
+    ax.grid(True)
     p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
               color='gray')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')

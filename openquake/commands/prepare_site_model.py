@@ -77,7 +77,7 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
         sitecol = site.SiteCollection.from_points(
             lons, lats, req_site_params={'vs30'})
         vs30orig = read_vs30(vs30_csv.split(','))
-        sitecol, vs30, _discarded = assoc(
+        sitecol, vs30, discarded = assoc(
             vs30orig, sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
         sitecol.array['vs30'] = vs30['vs30']
         sids = numpy.arange(len(vs30), dtype=numpy.uint32)
@@ -85,6 +85,8 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
         write_csv(output, sites)
     print(sitecol)
     print('Saved %d rows in %s' % (len(sitecol), output))
+    if not grid_spacing and discarded:
+        print('%d sites with assets were discarded' % len(discarded))
     print(mon)
     return sitecol
 

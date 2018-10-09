@@ -501,6 +501,10 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, haz_sitecol, self.riskmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
+                if not self.oqparam.discard_assets:
+                    raise RuntimeError(
+                        '%d sites with assets were discarded; use '
+                        'oq plot_assets to see them' % len(discarded))
             readinput.exposure = None  # reset the global
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
