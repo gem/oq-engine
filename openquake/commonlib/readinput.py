@@ -231,7 +231,7 @@ def get_csv_header(fname, sep=','):
     :param sep: the separator (default comma)
     :returns: the first line of fname
     """
-    with open(fname, 'U') as f:
+    with open(fname, 'U', encoding='utf-8-sig') as f:
         return next(f).split(sep)
 
 
@@ -254,7 +254,8 @@ def get_mesh(oqparam):
         header = get_csv_header(fname)
         if header[0] == 'site_id':  # strip site_id
             data, vs30s = [], []
-            for i, row in enumerate(csv.DictReader(open(fname, 'U'))):
+            for i, row in enumerate(
+                    csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
                 if row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
@@ -264,7 +265,8 @@ def get_mesh(oqparam):
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
-            data = [line.replace(',', ' ') for line in open(fname, 'U')]
+            data = [line.replace(',', ' ')
+                    for line in open(fname, 'U', encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
@@ -707,7 +709,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models
     :param srcfilter:
-        if not None, perform a preprocess operation on the sources
+        if not None, use it to prefilter the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
