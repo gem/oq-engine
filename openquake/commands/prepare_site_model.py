@@ -25,7 +25,6 @@ $ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv \
 import numpy
 from openquake.baselib import sap, performance, datastore
 from openquake.hazardlib import site
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
 from openquake.commonlib.writers import write_csv
@@ -58,17 +57,16 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
             exposure_xml).get_mesh_assets_by_site()
-        mon.hdf5['assetcol'] = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats)
+        mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats, req_site_params={'vs30'})
         if grid_spacing:
             grid = mesh.get_convex_hull().discretize(grid_spacing)
-            lons, lats = grid.lons, grid.lats
+            haz_sitecol = site.SiteCollection.from_points(
+                grid.lons, grid.lats, req_site_params={'vs30'})
             mode = 'filter'
         else:
-            lons, lats = mesh.lons, mesh.lats
+            haz_sitecol = assetcol
             mode = 'warn'
-        haz_sitecol = site.SiteCollection.from_points(
-            lons, lats, req_site_params={'vs30'})
         if grid_spacing:
             # reduce the grid to the sites with assets
             haz_sitecol, assets_by, discarded = assoc(
