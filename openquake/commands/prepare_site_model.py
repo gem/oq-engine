@@ -54,7 +54,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
     and a grid spacing which can be 0 (meaning no grid). In case of
     no grid warnings are raised for long distance associations.
     """
-    with performance.Monitor(hdf5=datastore.hdf5new(), measuremem=True) as mon:
+    hdf5 = datastore.hdf5new()
+    with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
             exposure_xml).get_mesh_assets_by_site()
         if grid_spacing:
@@ -83,7 +84,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
         sites = compose_arrays(sids, vs30, 'site_id')
         write_csv(output, sites)
     if discarded:
-        print('WARNING: discarded %d sites [oq plot_assets]' % len(discarded))
+        print('Discarded %d sites with assets [use oq plot_assets]' % len(
+            discarded))
     print('Saved %d rows in %s' % (len(sitecol), output))
     print(mon)
     return sitecol
