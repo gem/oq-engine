@@ -23,10 +23,11 @@ $ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv \
                         Vs30/usgs_vs30_data/Ecuador.csv 10
 """
 import numpy
-from openquake.baselib import sap, performance
+from openquake.baselib import sap, performance, datastore
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import assoc
+from openquake.risklib.asset import Exposure
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import compose_arrays
 
@@ -45,29 +46,17 @@ def read_vs30(fnames):
     return numpy.array(data, vs30_dt)
 
 
-def read_exposure(fnames):
-    lonlats = set()
-    for fname in fnames:
-        f = open(fname, 'U', encoding='utf-8-sig')
-        next(f)
-        with f:
-            for line in f:
-                _id, lon, lat = line.split(',')[:3]
-                lonlats.add((lon, lat))
-    lons, lats = zip(*sorted(lonlats))
-    return Mesh(numpy.array(lons, F32), numpy.array(lats, F32))
-
-
 @sap.Script
-def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
+def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
                        output='sites.csv'):
     """
-    Prepare a site_model.csv file from an exposure, a vs30 csv file
+    Prepare a site_model.csv file from an exposure xml file, a vs30 csv file
     and a grid spacing which can be 0 (meaning no grid). In case of
     no grid warnings are raised for long distance associations.
     """
-    with performance.Monitor(measuremem=True) as mon:
-        mesh = read_exposure(exposure_csv.split(','))
+    with performance.Monitor(hdf5=datastore.hdf5new(), measuremem=True) as mon:
+        mesh, assets_by_site = Exposure.read(
+            exposure_xml).get_mesh_assets_by_site()
         if grid_spacing:
             grid = mesh.get_convex_hull().discretize(grid_spacing)
             lons, lats = grid.lons, grid.lats
@@ -75,22 +64,32 @@ def prepare_site_model(exposure_csv, vs30_csv, grid_spacing=0,
         else:
             lons, lats = mesh.lons, mesh.lats
             mode = 'warn'
-        sitecol = site.SiteCollection.from_points(
+        haz_sitecol = site.SiteCollection.from_points(
             lons, lats, req_site_params={'vs30'})
+        if grid_spacing:
+            # reduce the grid to the sites with assets
+            haz_sitecol, assets_by, discarded = assoc(
+                assets_by_site, haz_sitecol, grid_spacing * SQRT2, mode)
+            haz_sitecol.make_complete()
         vs30orig = read_vs30(vs30_csv.split(','))
         sitecol, vs30, discarded = assoc(
-            vs30orig, sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
+            vs30orig, haz_sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
         sitecol.array['vs30'] = vs30['vs30']
+        mon.hdf5['assetcol'] = haz_sitecol
+        mon.hdf5['sitecol'] = sitecol
+        if discarded:
+            mon.hdf5['discarded'] = numpy.array(discarded)
         sids = numpy.arange(len(vs30), dtype=numpy.uint32)
         sites = compose_arrays(sids, vs30, 'site_id')
         write_csv(output, sites)
-    print(sitecol)
+    if discarded:
+        print('WARNING: discarded %d sites [oq plot_assets]' % len(discarded))
     print('Saved %d rows in %s' % (len(sitecol), output))
     print(mon)
     return sitecol
 
 
-prepare_site_model.arg('exposure_csv', 'exposure with header')
+prepare_site_model.arg('exposure_xml', 'exposure with header')
 prepare_site_model.arg('vs30_csv', 'USGS file lon,lat,vs30 with no header')
 prepare_site_model.opt('grid_spacing', 'grid spacing in km (or 0)', type=float)
 prepare_site_model.opt('output', 'output file')
