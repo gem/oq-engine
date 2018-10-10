@@ -58,6 +58,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
             exposure_xml).get_mesh_assets_by_site()
+        mon.hdf5['assetcol'] = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats)
         if grid_spacing:
             grid = mesh.get_convex_hull().discretize(grid_spacing)
             lons, lats = grid.lons, grid.lats
@@ -70,13 +72,12 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
         if grid_spacing:
             # reduce the grid to the sites with assets
             haz_sitecol, assets_by, discarded = assoc(
-                assets_by_site, haz_sitecol, grid_spacing * SQRT2, mode)
+                assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
             haz_sitecol.make_complete()
         vs30orig = read_vs30(vs30_csv.split(','))
         sitecol, vs30, discarded = assoc(
             vs30orig, haz_sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
         sitecol.array['vs30'] = vs30['vs30']
-        mon.hdf5['assetcol'] = haz_sitecol
         mon.hdf5['sitecol'] = sitecol
         if discarded:
             mon.hdf5['discarded'] = numpy.array(discarded)
