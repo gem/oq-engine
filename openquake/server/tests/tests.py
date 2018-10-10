@@ -153,7 +153,7 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.c.get(extract_url + 'asset_values/0')
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
-        self.assertEqual(len(got['array']), 49)
+        self.assertEqual(len(got['array']), 49)  # 49 assets on site 0
         self.assertEqual(resp.status_code, 200)
 
         # check asset_tags

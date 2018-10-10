@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Extracted the sites preferably from the site model and changed the
     asset-site association procedure to remove sites and assets when possible
+  * Reduced the site collection instead of just filtering it; this fixes
+    a source filtering bug and changes the numbers in case of GMF-correlation
   * Added a command `oq prepare_site_model` to prepare a sites.csv file
     containing the vs30 and changed the engine to use it
   * Added a cutoff when storing a PoE=1 from a CSV file, thus avoiding NaNs

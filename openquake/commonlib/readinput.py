@@ -918,6 +918,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         oqparam.time_event, exposure.occupancy_periods)
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs):
+        # TODO: think if we should remove this in presence of GMF-correlation
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
