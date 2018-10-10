@@ -356,7 +356,7 @@ def get_site_collection(oqparam, mesh=None):
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params = geo.utils.assoc(
+            sc, params, discarded = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
@@ -904,7 +904,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         mode = 'strict' if oqparam.region_grid_spacing else 'filter'
-        sitecol, assets_by = geo.utils.assoc(
+        sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
