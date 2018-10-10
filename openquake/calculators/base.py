@@ -710,7 +710,7 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
-            sitecol, shakemap = get_sitecol_shakemap(
+            sitecol, shakemap, _discarded = get_sitecol_shakemap(
                 smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
             assetcol = assetcol.reduce_also(sitecol)
