@@ -65,6 +65,7 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
+    discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
@@ -283,6 +284,12 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
+
+        # check grid + sites
+        if self.region_grid_spacing and (
+                'sites' in self.inputs or 'site_model' in self.inputs):
+            logging.warn('Using a grid together with specifying explicitly '
+                         'the sites is deprecated')
 
     def check_gsims(self, gsims):
         """
