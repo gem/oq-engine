@@ -68,22 +68,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-class LargeExposureGrid(Exception):
-    msg = '''
-    The point of automatic gridding of the exposure is to reduce the hazard
-    mesh, however you are increasing it from %d points to %d points. Or your
-    region_grid_spacing (%d km) is too small or the bounding box of your
-    exposure is too large. Currently you have longitudes in the range [%d, %d]
-    and latitudes in the range [%d, %d], please plot your assets and check.'''
-
-    def __init__(self, exposure_mesh, hazard_mesh, spacing):
-        l1 = len(exposure_mesh)
-        l2 = len(hazard_mesh)
-        lon1, lon2 = exposure_mesh.lons.min(), exposure_mesh.lons.max()
-        lat1, lat2 = exposure_mesh.lats.min(), exposure_mesh.lats.max()
-        self.args = [self.msg % (l2, l1, spacing, lon1, lon2, lat1, lat2)]
-
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -908,7 +892,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         poly = exposure.mesh.get_convex_hull()
         mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
             oqparam.region_grid_spacing)
-        num_sites = len(haz_sitecol)
         haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
