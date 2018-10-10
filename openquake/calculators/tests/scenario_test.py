@@ -154,5 +154,5 @@ class ScenarioTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'scenario')
     def test_case_10(self):
         # test importing an exposure with automatic gridding
-        with self.assertRaises(LargeExposureGrid):
-            self.run_calc(case_10.__file__, 'job.ini')
+        self.run_calc(case_10.__file__, 'job.ini')
+        self.assertEqual(self.calc.datastore['sitecol'], 66)

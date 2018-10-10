@@ -908,9 +908,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         poly = exposure.mesh.get_convex_hull()
         mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
             oqparam.region_grid_spacing)
-        if len(mesh) > len(haz_sitecol):
-            raise LargeExposureGrid(mesh, haz_sitecol.mesh,
-                                    oqparam.region_grid_spacing)
+        num_sites = len(haz_sitecol)
         haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
@@ -947,6 +945,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
+    if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
+            and 'hazard_curves' not in oqparam.inputs):
+        assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol
 
 
