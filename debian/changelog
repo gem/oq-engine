@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Reduced the site collection instead of just filtering it; this saves
+    space and memory and change the numbers only in the case of GMF-correlation
   * Added a command `oq prepare_site_model` to prepare a sites.csv file
     containing the vs30 and changed the engine to use it
   * Added a cutoff when storing a PoE=1 from a CSV file, thus avoiding NaNs
