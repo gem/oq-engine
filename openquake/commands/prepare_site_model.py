@@ -22,6 +22,7 @@ Here is an example of usage:
 $ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv \
                         Vs30/usgs_vs30_data/Ecuador.csv 10
 """
+import logging
 import numpy
 from openquake.baselib import sap, performance, datastore
 from openquake.hazardlib import site
@@ -33,7 +34,6 @@ from openquake.commonlib.util import compose_arrays
 
 F32 = numpy.float32
 SQRT2 = 1.414
-FIVEKM = 5  # asset-site maximum distance in the case of no grid
 vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
 
 
@@ -47,12 +47,15 @@ def read_vs30(fnames):
 
 @sap.Script
 def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
-                       output='sites.csv'):
+                       site_param_distance=5, output='sites.csv'):
     """
     Prepare a site_model.csv file from an exposure xml file, a vs30 csv file
-    and a grid spacing which can be 0 (meaning no grid). In case of
-    no grid warnings are raised for long distance associations.
+    and a grid spacing which can be 0 (meaning no grid). Sites far away from
+    the vs30 records are discarded and you can see them with the command
+    `oq plot_assets`. It is up to you decide if you need to fix your exposure
+    or if it is right to ignore the discarded sites.
     """
+    logging.basicConfig(level=logging.INFO)
     hdf5 = datastore.hdf5new()
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
@@ -63,18 +66,19 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
             grid = mesh.get_convex_hull().discretize(grid_spacing)
             haz_sitecol = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params={'vs30'})
-            mode = 'filter'
-        else:
-            haz_sitecol = assetcol
-            mode = 'warn'
-        if grid_spacing:
-            # reduce the grid to the sites with assets
-            haz_sitecol, assets_by, discarded = assoc(
+            logging.info('Reducing exposure grid with %d locations to %d sites'
+                         ' with assets', len(haz_sitecol), len(assets_by_site))
+            haz_sitecol, assets_by, _discarded = assoc(
                 assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
             haz_sitecol.make_complete()
+        else:
+            haz_sitecol = assetcol
         vs30orig = read_vs30(vs30_csv.split(','))
+        logging.info('Associating %d hazard sites to %d site parameters',
+                     len(haz_sitecol), len(vs30orig))
         sitecol, vs30, discarded = assoc(
-            vs30orig, haz_sitecol, grid_spacing * SQRT2 or FIVEKM, mode)
+            vs30orig, haz_sitecol,
+            grid_spacing * SQRT2 or site_param_distance, 'filter')
         sitecol.array['vs30'] = vs30['vs30']
         mon.hdf5['sitecol'] = sitecol
         if discarded:
@@ -83,14 +87,16 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
         sites = compose_arrays(sids, vs30, 'site_id')
         write_csv(output, sites)
     if discarded:
-        print('Discarded %d sites with assets [use oq plot_assets]' % len(
-            discarded))
-    print('Saved %d rows in %s' % (len(sitecol), output))
-    print(mon)
+        logging.info('Discarded %d sites with assets [use oq plot_assets]',
+                     len(discarded))
+    logging.info('Saved %d rows in %s' % (len(sitecol), output))
+    logging.info(mon)
     return sitecol
 
 
-prepare_site_model.arg('exposure_xml', 'exposure with header')
+prepare_site_model.arg('exposure_xml', 'exposure in XML format')
 prepare_site_model.arg('vs30_csv', 'USGS file lon,lat,vs30 with no header')
 prepare_site_model.opt('grid_spacing', 'grid spacing in km (or 0)', type=float)
+prepare_site_model.opt('site_param_distance',
+                       'sites over this distance are discarded', type=float)
 prepare_site_model.opt('output', 'output file')
