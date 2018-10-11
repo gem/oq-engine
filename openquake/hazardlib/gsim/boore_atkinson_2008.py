@@ -235,12 +235,11 @@ class BooreAtkinson2008(GMPE):
         # equation (13b)
         idx = np.where((vs30 > V1) & (vs30 <= V2))
         bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+                   np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
         idx = np.where((vs30 > V2) & (vs30 < Vref))
         bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
-
         return bnl
 
     def _compute_non_linear_term(self, pga4nl, bnl):
@@ -270,7 +269,7 @@ class BooreAtkinson2008(GMPE):
 
         # equation (8c)
         idx = pga4nl > a2
-        fnl[idx] = bnl[idx] * np.log(pga4nl[idx] / 0.1)
+        fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
 
         return fnl
 
