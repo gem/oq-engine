@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an attribute .srcidx to every event based rupture and exported it
+    in the .csv file
   * Fixed an issue with the Byte Order Mark (BOM) for CSV exposures prepared
     with Microsoft Excel
   * Reduced the site collection instead of just filtering it; this fixes
