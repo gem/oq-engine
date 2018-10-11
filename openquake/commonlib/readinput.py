@@ -68,22 +68,6 @@ class DuplicatedPoint(Exception):
     """
 
 
-class LargeExposureGrid(Exception):
-    msg = '''
-    The point of automatic gridding of the exposure is to reduce the hazard
-    mesh, however you are increasing it from %d points to %d points. Or your
-    region_grid_spacing (%d km) is too small or the bounding box of your
-    exposure is too large. Currently you have longitudes in the range [%d, %d]
-    and latitudes in the range [%d, %d], please plot your assets and check.'''
-
-    def __init__(self, exposure_mesh, hazard_mesh, spacing):
-        l1 = len(exposure_mesh)
-        l2 = len(hazard_mesh)
-        lon1, lon2 = exposure_mesh.lons.min(), exposure_mesh.lons.max()
-        lat1, lat2 = exposure_mesh.lats.min(), exposure_mesh.lats.max()
-        self.args = [self.msg % (l2, l1, spacing, lon1, lon2, lat1, lat2)]
-
-
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -247,7 +231,7 @@ def get_csv_header(fname, sep=','):
     :param sep: the separator (default comma)
     :returns: the first line of fname
     """
-    with open(fname, 'U') as f:
+    with open(fname, 'U', encoding='utf-8-sig') as f:
         return next(f).split(sep)
 
 
@@ -270,7 +254,8 @@ def get_mesh(oqparam):
         header = get_csv_header(fname)
         if header[0] == 'site_id':  # strip site_id
             data, vs30s = [], []
-            for i, row in enumerate(csv.DictReader(open(fname, 'U'))):
+            for i, row in enumerate(
+                    csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
                 if row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
@@ -280,7 +265,8 @@ def get_mesh(oqparam):
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
-            data = [line.replace(',', ' ') for line in open(fname, 'U')]
+            data = [line.replace(',', ' ')
+                    for line in open(fname, 'U', encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
         c = (coords[start:stop] if header[0] == 'site_id'
@@ -372,7 +358,7 @@ def get_site_collection(oqparam, mesh=None):
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params = geo.utils.assoc(
+            sc, params, discarded = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
@@ -723,7 +709,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models
     :param srcfilter:
-        if not None, perform a preprocess operation on the sources
+        if not None, use it to prefilter the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -908,9 +894,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         poly = exposure.mesh.get_convex_hull()
         mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
             oqparam.region_grid_spacing)
-        if len(mesh) > len(haz_sitecol):
-            raise LargeExposureGrid(mesh, haz_sitecol.mesh,
-                                    oqparam.region_grid_spacing)
         haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
@@ -923,7 +906,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         mode = 'strict' if oqparam.region_grid_spacing else 'filter'
-        sitecol, assets_by = geo.utils.assoc(
+        sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
@@ -947,6 +930,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
+    if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
+            and 'hazard_curves' not in oqparam.inputs):
+        # TODO: think if we should remove this in presence of GMF-correlation
+        assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol
 
 

@@ -28,20 +28,28 @@ def plot_assets(calc_id=-1):
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
     dstore = datastore.read(calc_id)
-    oq = dstore['oqparam']
+    try:
+        region = dstore['oqparam'].region
+    except KeyError:
+        region = None
     sitecol = dstore['sitecol']
-    assetcol = dstore['assetcol'].array
+    try:
+        assetcol = dstore['assetcol'].value
+    except AttributeError:
+        assetcol = dstore['assetcol'].array
     fig = p.figure()
     ax = fig.add_subplot(111)
-    if oq.region:
-        pp = PolygonPatch(shapely.wkt.loads(oq.region), alpha=0.01)
+    if region:
+        pp = PolygonPatch(shapely.wkt.loads(region), alpha=0.1)
         ax.add_patch(pp)
-    else:
-        ax.grid(True)
+    ax.grid(True)
     p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
               color='gray')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
     p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
+    if 'discarded' in dstore:
+        disc = dstore['discarded']
+        p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
     p.show()
 
 
