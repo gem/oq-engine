@@ -85,8 +85,8 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
-              ' trt strike dip rake boundary').split()
+    header = ('rupid multiplicity mag centroid_lon centroid_lat '
+              'centroid_depth trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     rows = []
