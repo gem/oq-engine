@@ -444,5 +444,5 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), 6)  # 6 non-empty grid points
 
         # test no grid
-        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, output)
-        self.assertEqual(len(sc), 148)  # 148 assets
+        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, 10, output)
+        self.assertEqual(len(sc), 4)  # 4 sites within 10 km from the params
