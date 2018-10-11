@@ -208,4 +208,5 @@ def _build_eb_ruptures(src, num_occ_by_rup, cmaker, s_sites, rup_mon):
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx, sam_idx))
         if events:
-            yield EBRupture(rup, indices, numpy.array(events, event_dt))
+            yield EBRupture(rup, src.id, indices,
+                            numpy.array(events, event_dt))
