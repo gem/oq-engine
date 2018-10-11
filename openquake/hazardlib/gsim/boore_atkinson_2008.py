@@ -234,13 +234,14 @@ class BooreAtkinson2008(GMPE):
 
         # equation (13b)
         idx = np.where((vs30 > V1) & (vs30 <= V2))
-        bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+        if np.any(idx):
+            bnl[idx] = (C['b1'] - C['b2']) * \
+                np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
         idx = np.where((vs30 > V2) & (vs30 < Vref))
-        bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
-
+        if np.any(idx):
+            bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
         return bnl
 
     def _compute_non_linear_term(self, pga4nl, bnl):
@@ -256,21 +257,24 @@ class BooreAtkinson2008(GMPE):
 
         # equation (8a)
         idx = pga4nl <= a1
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
+        if np.any(idx):
+            fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
 
         # equation (8b)
         idx = np.where((pga4nl > a1) & (pga4nl <= a2))
-        delta_x = np.log(a2 / a1)
-        delta_y = bnl[idx] * np.log(a2 / pga_low)
-        c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
-        d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
-            c * (np.log(pga4nl[idx] / a1) ** 2) + \
-            d * (np.log(pga4nl[idx] / a1) ** 3)
+        if np.any(idx):
+            delta_x = np.log(a2 / a1)
+            delta_y = bnl[idx] * np.log(a2 / pga_low)
+            c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
+            d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
+            fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
+                c * (np.log(pga4nl[idx] / a1) ** 2) + \
+                d * (np.log(pga4nl[idx] / a1) ** 3)
 
         # equation (8c)
         idx = pga4nl > a2
-        fnl[idx] = bnl[idx] * np.log(pga4nl[idx] / 0.1)
+        if np.any(idx):
+            fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
 
         return fnl
 
