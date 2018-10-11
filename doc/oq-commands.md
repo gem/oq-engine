@@ -183,6 +183,32 @@ than the entire calculation. In this case you should extract only the
 sites you are interested in, while this command extracts everything.
 The extract/export system will be extended in the near future.
 
+plotting commands
+------------------
+
+The engine provides several plotting commands. They are all experimental
+and subject to change. The official away to plot the engine results is
+by using the QGIS plugin. Still, the `oq plot` commands are useful for
+debugging purpose. Here I will describe only the `plot_assets` command,
+which allows to plot the exposure used in a calculation together with
+the hazard sites:
+
+```bash
+$ oq help plot_assets
+usage: oq plot_assets [-h] [calc_id]
+
+Plot the sites and the assets
+
+positional arguments:
+  calc_id     a computation id [default: -1]
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
+
+This is particularly interesting when the hazard sites do not coincide
+with the asset locations, which is normal when gridding the exposure.
+
 prepare_site_model
 ------------------
 
@@ -196,19 +222,25 @@ algorithm.
 
 ```bash
 $ oq help prepare_site_model
-usage: oq prepare_site_model [-h] [-g 0] [-o sites.csv] exposure_csv vs30_csv
+usage: oq prepare_site_model [-h] [-g 0] [-s 5] [-o sites.csv]
+                             exposure_xml vs30_csv
 
 Prepare a site_model.csv file from an exposure, a vs30 csv file and a grid
-spacing which can be 0 (meaning no grid).
+spacing which can be 0 (meaning no grid). Sites far away from the vs30
+records are discarded and you can see them with the command `oq plot_assets`.
+It is up to you decide if you need to fix your exposure or if it is right
+to ignore the discarded sites.
 
 positional arguments:
-  exposure_csv          exposure with header
+  exposure_xml          exposure in XML format
   vs30_csv              USGS file lon,lat,vs30 with no header
 
 optional arguments:
   -h, --help            show this help message and exit
   -g 0, --grid-spacing 0
                         grid spacing in km (or 0)
+  -s 5, --site-param-distance 5
+                        sites over this distance are discarded
   -o sites.csv, --output sites.csv
                         output file
 ```
@@ -216,12 +248,13 @@ optional arguments:
 The command work in two modes: with non-gridded exposures (the
 default) and with gridded exposures. In the first case the assets are
 aggregated in unique locations and for each location the vs30 coming
-from the closest vs30 record is taken. In the second case, i.e. when a
-grid spacing parameter is passed, a grid containing of all the
-exposure is built and the points with assets are associated to the
-vs30 records. The maximum association distance is given
-by the grid spacing multiply by the square root of 2, so by enlarging
-the grid spacing you can avoid discarding the assets.
+from the closest vs30 record is taken. If the closest vs30 record is
+over the `site_param_distance` - which by default is 5 km - the site
+is discarded.  In the second case, i.e. when a `grid_spacing`
+parameter is passed, a grid containing of all the exposure is built
+and the points with assets are associated to the vs30 records. The
+`site_param_distance` parameter is ignored, and the grid spacing
+multiplied by the square root of 2 is used instead.
 
 In large risk calculation one wants to *use the gridded mode always* because:
 
@@ -229,7 +262,7 @@ In large risk calculation one wants to *use the gridded mode always* because:
 2) the calculation is a lot faster and uses a lot less memory with a grid.
 
 Basically by using a grid you can turn an impossible calculation into a possible
-one. You should always use a grid unless you are doing a site specific analysis.
+one. You should always use a grid unless there are very few sites.
 
 The command is able to manage multiple files at once, just use commas with
 no spaces to separate the files. Here is an example of usage:
