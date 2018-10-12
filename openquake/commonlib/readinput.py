@@ -284,14 +284,16 @@ def get_mesh(oqparam):
     elif 'gmfs' in oqparam.inputs:
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
-    elif oqparam.region and oqparam.region_grid_spacing:
-        poly = geo.Polygon.from_wkt(oqparam.region)
+    elif oqparam.region_grid_spacing:
+        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
+                else exposure.mesh.get_convex_hull())
         try:
-            mesh = poly.discretize(oqparam.region_grid_spacing)
+            mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except Exception:
             raise ValueError(
-                'Could not discretize region %(region)s with grid spacing '
+                'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
@@ -326,17 +328,15 @@ def get_site_model(oqparam, req_site_params):
     return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param mesh:
-        the mesh to use; if None, it is extracted from the job.ini
     """
-    mesh = mesh or get_mesh(oqparam)
+    mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'vs30' in req_site_params and vs30s:
         sitecol = site.SiteCollection.from_points(
@@ -889,12 +889,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         raise InvalidFile(
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
-    if oqparam.region_grid_spacing and not oqparam.region:
-        # extract the hazard grid from the exposure
-        poly = exposure.mesh.get_convex_hull()
-        mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
-            oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
+    if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -905,9 +900,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
+        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+        if oqparam.region_grid_spacing:  # it is normal to discard sites
+            discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -923,6 +920,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
+        discarded = []
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
@@ -934,7 +932,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and 'hazard_curves' not in oqparam.inputs):
         # TODO: think if we should remove this in presence of GMF-correlation
         assetcol = assetcol.reduce_also(sitecol)
-    return sitecol, assetcol
+    return sitecol, assetcol, discarded
 
 
 def _get_gmfs(oqparam):
