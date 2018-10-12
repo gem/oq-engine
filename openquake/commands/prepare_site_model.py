@@ -63,7 +63,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
         mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, req_site_params={'vs30'})
         if grid_spacing:
-            grid = mesh.get_convex_hull().discretize(grid_spacing)
+            grid = mesh.get_convex_hull().dilate(
+                grid_spacing).discretize(grid_spacing)
             haz_sitecol = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params={'vs30'})
             logging.info('Reducing exposure grid with %d locations to %d sites'
