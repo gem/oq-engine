@@ -212,7 +212,6 @@ class BooreAtkinson2008(GMPE):
         """
         # non linear slope
         bnl = self._compute_non_linear_slope(vs30, C)
-
         # compute the actual non-linear term
         return self._compute_non_linear_term(pga4nl, bnl)
 
