@@ -327,17 +327,15 @@ def get_site_model(oqparam, req_site_params):
     return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param mesh:
-        the mesh to use; if None, it is extracted from the job.ini
     """
-    mesh = mesh or get_mesh(oqparam)
+    mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'vs30' in req_site_params and vs30s:
         sitecol = site.SiteCollection.from_points(
@@ -890,12 +888,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         raise InvalidFile(
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
-    if oqparam.region_grid_spacing and not oqparam.region:
-        # extract the hazard grid from the exposure
-        poly = exposure.mesh.get_convex_hull()
-        mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
-            oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
+    if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -906,7 +899,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
+        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
         if oqparam.region_grid_spacing:  # it is normal to discard sites
