@@ -288,7 +288,8 @@ def get_mesh(oqparam):
         poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
                 else exposure.mesh.get_convex_hull())
         try:
-            mesh = poly.discretize(oqparam.region_grid_spacing)
+            mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except Exception:
             raise ValueError(
