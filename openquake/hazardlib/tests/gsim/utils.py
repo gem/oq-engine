@@ -37,13 +37,16 @@ class BaseGSIMTestCase(unittest.TestCase):
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)
+        if hasattr(gsim, 'DO_NOT_CHECK_DISTANCES'):
+            d_att = d_att.difference(gsim.DO_NOT_CHECK_DISTANCES)
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
         self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
-        self.assertTrue(
-            numpy.all(ctxs),
-            msg='Contexts objects have been changed by method '
-                'get_mean_and_stddevs')
+        if not hasattr(gsim, 'DO_NOT_CHECK_DISTANCES'):
+            self.assertTrue(
+                numpy.all(ctxs),
+                msg='Contexts objects have been changed by method '
+                    'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()

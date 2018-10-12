@@ -289,15 +289,15 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='scenario',
-                gsim='AbrahamsonSilva1997',
+                gsim='AbrahamsonSilva2008',
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGA',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn("Please set a value for 'reference_vs30_value', this is"
-                      " required by the GSIM AbrahamsonSilva1997",
-                      str(ctx.exception))
+        self.assertIn(
+            "Please set a value for 'reference_depth_to_1pt0km_per_sec', this "
+            "is required by the GSIM AbrahamsonSilva2008", str(ctx.exception))
 
     def test_uniform_hazard_spectra(self):
         with self.assertRaises(ValueError) as ctx:
@@ -380,3 +380,15 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("iml_disagg and poes_disagg cannot be set at the "
                       "same time", str(ctx.exception))
+
+    def test_optimize_same_id_sources(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs=fakeinputs,
+                sites='0.1 0.2',
+                maximum_distance='400',
+                intensity_measure_types='PGA',
+                optimize_same_id_sources='true',
+            ).validate()
+        self.assertIn('can be true only in the classical\ncalculators',
+                      str(ctx.exception))

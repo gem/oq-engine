@@ -43,6 +43,11 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
+def rvs(distribution, *size):
+    array = distribution.rvs(size)
+    return array
+
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
@@ -110,8 +115,8 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        try:  # read the seed from self.rupture.rupture if possible
-            seed = seed or self.rupture.rupture.seed
+        try:  # read the seed from self.rupture.serial
+            seed = seed or self.rupture.serial
         except AttributeError:
             pass
         if seed is not None:
@@ -153,8 +158,8 @@ class GmfComputer(object):
             distribution = scipy.stats.truncnorm(
                 - self.truncation_level, self.truncation_level)
 
-        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
-           set([StdDev.TOTAL]):
+        num_sids = len(self.sids)
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
             # of interest.
@@ -168,8 +173,8 @@ class GmfComputer(object):
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
-            total_residual = stddev_total * distribution.rvs(
-                size=(len(self.sids), num_events))
+            total_residual = stddev_total * rvs(
+                distribution, num_sids, num_events)
             gmf = gsim.to_imt_unit_values(mean + total_residual)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
@@ -178,20 +183,19 @@ class GmfComputer(object):
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
-            intra_residual = stddev_intra * distribution.rvs(
-                size=(len(self.sids), num_events))
+            intra_residual = stddev_intra * rvs(
+                distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
                 ir = self.correlation_model.apply_correlation(
-                    self.sites, imt, intra_residual)
+                    self.sites, imt, intra_residual, stddev_intra)
                 # this fixes a mysterious bug: ir[row] is actually
                 # a matrix of shape (E, 1) and not a vector of size E
                 intra_residual = numpy.zeros(ir.shape)
                 for i, val in numpy.ndenumerate(ir):
                     intra_residual[i] = val
 
-            inter_residual = stddev_inter * distribution.rvs(
-                size=num_events)
+            inter_residual = stddev_inter * rvs(distribution, num_events)
 
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)

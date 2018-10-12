@@ -23,12 +23,12 @@ from openquake.hazardlib import stats
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, param, monitor):
+def classical_damage(riskinputs, riskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -39,10 +39,11 @@ def classical_damage(riskinput, riskmodel, param, monitor):
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     result = AccumDict(accum=AccumDict())
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for l, out in enumerate(outputs):
-            ordinals = [a.ordinal for a in outputs.assets]
-            result[l, outputs.rlzi] += dict(zip(ordinals, out))
+    for ri in riskinputs:
+        for outputs in riskmodel.gen_outputs(ri, monitor):
+            for l, out in enumerate(outputs):
+                ordinals = [a.ordinal for a in outputs.assets]
+                result[l, outputs.rlzi] += dict(zip(ordinals, out))
     return result
 
 

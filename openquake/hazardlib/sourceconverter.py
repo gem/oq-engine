@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
 import collections
+import pickle
 import time
 import os
+import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import groupby, warn
+from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
@@ -87,29 +89,17 @@ class SourceGroup(collections.Sequence):
         # return SourceGroups, ordered by TRT string
         return sorted(source_stats_dict.values())
 
-    @property
-    def srcs_weights(self):
-        """
-        The weights of the underlying sources. If not specified, returns
-        an array of 1s.
-        """
-        if self._srcs_weights is None:
-            return list(numpy.ones(len(self.sources)))
-        return self._srcs_weights
-
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None, grp_probability=None,
+                 rup_interdep='indep', grp_probability=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1,
                  tot_ruptures=0):
         # checks
         self.trt = trt
-        self._check_init_variables(sources, name, src_interdep, rup_interdep,
-                                   srcs_weights)
+        self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.sources = []
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
-        self._srcs_weights = srcs_weights
         self.grp_probability = grp_probability
         self.min_mag = min_mag
         self.max_mag = max_mag
@@ -121,8 +111,8 @@ class SourceGroup(collections.Sequence):
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
 
-    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
-                              srcs_weights):
+    def _check_init_variables(self, src_list, name,
+                              src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):
             raise ValueError('source interdependence incorrect %s ' %
                              src_interdep)
@@ -185,6 +175,24 @@ class SourceGroup(collections.Sequence):
     def __len__(self):
         return len(self.sources)
 
+    def __toh5__(self):
+        array = numpy.zeros(len(self), hdf5.vuint8)
+        for i, src in enumerate(self.sources):
+            array[i] = memoryview(pickle.dumps(src, pickle.HIGHEST_PROTOCOL))
+        attrs = dict(
+            trt=self.trt,
+            name=self.name,
+            src_interdep=self.src_interdep,
+            rup_interdep=self.rup_interdep,
+            grp_probability=self.grp_probability or '')
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.sources = []
+        for row in array:
+            self.sources.append(pickle.loads(memoryview(row)))
+
 
 def get_set_num_ruptures(src):
     """
@@ -196,21 +204,18 @@ def get_set_num_ruptures(src):
         dt = time.time() - t0
         clsname = src.__class__.__name__
         if dt > 10:
-            # NB: I am not using logging.warn because it hangs when called
-            # from a worker with processpool distribution; see
-            # https://github.com/gem/oq-engine/pull/3923
             if 'Area' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the '
-                     'area discretization is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'area discretization is too small', src, dt)
             elif 'ComplexFault' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the c'
-                     'omplex_fault_mesh_spacing is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the c'
+                             'omplex_fault_mesh_spacing is too small', src, dt)
             elif 'SimpleFault' in clsname:
-                warn('%s.count_ruptures took %d seconds, perhaps the '
-                     'rupture_mesh_spacing is too small', src, dt)
+                logging.warn('%s.count_ruptures took %d seconds, perhaps the '
+                             'rupture_mesh_spacing is too small', src, dt)
             else:
                 # multiPointSource
-                warn('count_ruptures %s took %d seconds', src, dt)
+                logging.warn('count_ruptures %s took %d seconds', src, dt)
     return src.num_ruptures
 
 
@@ -327,13 +332,15 @@ class RuptureConverter(object):
     def convert_surfaces(self, surface_nodes):
         """
         Utility to convert a list of surface nodes into a single hazardlib
-        surface. There are three possibilities:
+        surface. There are four possibilities:
 
         1. there is a single simpleFaultGeometry node; returns a
            :class:`openquake.hazardlib.geo.simpleFaultSurface` instance
         2. there is a single complexFaultGeometry node; returns a
            :class:`openquake.hazardlib.geo.complexFaultSurface` instance
-        3. there is a list of PlanarSurface nodes; returns a
+        3. there is a single griddedSurface node; returns a
+           :class:`openquake.hazardlib.geo.GriddedSurface` instance
+        4. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
 
         :param surface_nodes: surface nodes as just described
@@ -458,7 +465,7 @@ class RuptureConverter(object):
                         for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
                 ebr = source.rupture.EBRupture(
-                    rup, (), numpy.array(events, event_dt))
+                    rup, 0, (), numpy.array(events, event_dt))
                 ebrs.append(ebr)
         return coll
 
@@ -470,6 +477,7 @@ class SourceConverter(RuptureConverter):
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None):
+        self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.complex_fault_mesh_spacing = (
@@ -762,11 +770,14 @@ class SourceConverter(RuptureConverter):
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
-        grp_probability = node.attrib.get('grp_probability')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
         sg = SourceGroup(trt)
+        sg.name = node.attrib.get('name')
+        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
+        sg.grp_probability = node.attrib.get('grp_probability')
         for src_node in node:
             src = self.convert_node(src_node)
             # transmit the group attributes to the underlying source
@@ -780,44 +791,26 @@ class SourceConverter(RuptureConverter):
             sg.update(src)
         if srcs_weights is not None:
             if len(srcs_weights) != len(node):
-                raise ValueError('There are %d srcs_weights but %d source(s)'
-                                 % (len(srcs_weights), len(node)))
-        sg.name = node.attrib.get('name')
-        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
-        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg._srcs_weights = srcs_weights
-        sg.grp_probability = grp_probability
+                raise ValueError(
+                    'There are %d srcs_weights but %d source(s) in %s'
+                    % (len(srcs_weights), len(node), self.fname))
+            for src, sw in zip(sg, srcs_weights):
+                src.mutex_weight = sw
         return sg
 
 # ################### MultiPointSource conversion ######################## #
 
 
-def _npd(nodes):
-    # convert the nodalPlaneDistributions into a tuple
-    lst = []
-    for node in nodes:
-        lst.append((node['probability'],
-                    node['rake'], node['strike'], node['dip']))
-    return tuple(lst)
-
-
-def _hd(nodes):
-    # convert the hypocenterDistributions into a tuple
-    lst = []
-    for node in nodes:
-        lst.append((node['probability'], node['depth']))
-    return tuple(lst)
-
-
-def get_key(node):
+def dists(node):
     """
-    Convert the given pointSource node into a tuple
+    :returns: hpdist, npdist and magScaleRel from the given pointSource node
     """
-    return (
-        ~node.magScaleRel, ~node.ruptAspectRatio,
-        ~node.pointGeometry.upperSeismoDepth,
-        ~node.pointGeometry.lowerSeismoDepth,
-        _hd(node.hypoDepthDist), _npd(node.nodalPlaneDist))
+    hd = tuple((node['probability'], node['depth'])
+               for node in node.hypoDepthDist)
+    npd = tuple(
+        ((node['probability'], node['rake'], node['strike'], node['dip']))
+        for node in node.nodalPlaneDist)
+    return hd, npd, ~node.magScaleRel
 
 
 def collapse(array):
@@ -859,26 +852,34 @@ def mfds2multimfd(mfds):
 
 
 def _pointsources2multipoints(srcs, i):
+    # converts pointSources with the same hpdist, npdist and msr into a
+    # single multiPointSource.
     allsources = []
-    for key, sources in groupby(srcs, get_key).items():
+    for (hd, npd, msr), sources in groupby(srcs, dists).items():
         if len(sources) == 1:  # there is a single source
             allsources.extend(sources)
             continue
-        msr, rar, usd, lsd, hd, npd = key
         mfds = [src[3] for src in sources]
         points = []
+        usd = []
+        lsd = []
+        rar = []
         for src in sources:
-            points.extend(~src.pointGeometry.Point.pos)
+            pg = src.pointGeometry
+            points.extend(~pg.Point.pos)
+            usd.append(~pg.upperSeismoDepth)
+            lsd.append(~pg.lowerSeismoDepth)
+            rar.append(~src.ruptAspectRatio)
         geom = Node('multiPointGeometry')
         geom.append(Node('gml:posList', text=points))
-        geom.append(Node('upperSeismoDepth', text=usd))
-        geom.append(Node('lowerSeismoDepth', text=lsd))
+        geom.append(Node('upperSeismoDepth', text=collapse(usd)))
+        geom.append(Node('lowerSeismoDepth', text=collapse(lsd)))
         node = Node(
             'multiPointSource',
             dict(id='mps-%d' % i, name='multiPointSource-%d' % i),
             nodes=[geom])
-        node.append(Node("magScaleRel", text=msr))
-        node.append(Node("ruptAspectRatio", text=rar))
+        node.append(Node("magScaleRel", text=collapse(msr)))
+        node.append(Node("ruptAspectRatio", text=collapse(rar)))
         node.append(mfds2multimfd(mfds))
         node.append(Node('nodalPlaneDist', nodes=[
             Node('nodalPlane', dict(probability=prob, rake=rake,
@@ -892,15 +893,17 @@ def _pointsources2multipoints(srcs, i):
     return i, allsources
 
 
-def update_source_model(sm_node):
+def update_source_model(sm_node, fname):
     """
     :param sm_node: a sourceModel Node object containing sourceGroups
     """
     i = 0
     for group in sm_node:
+        if 'srcs_weights' in group.attrib:
+            raise InvalidFile('srcs_weights must be removed in %s' % fname)
         if not group.tag.endswith('sourceGroup'):
             raise InvalidFile('wrong NRML, got %s instead of '
-                              'sourceGroup' % group.tag)
+                              'sourceGroup in %s' % (group.tag, fname))
         psrcs = []
         others = []
         for src in group:

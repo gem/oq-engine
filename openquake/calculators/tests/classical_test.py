@@ -15,6 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import mock
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
@@ -176,6 +179,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_12(self):
+        # test Modified GMPE
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
@@ -186,15 +190,13 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
              'hazard_map-mean.csv'], case_13.__file__)
 
-        # test recomputing the hazard maps, i.e. with --hc
-        # must be run sequentially to avoid the usual heisenbug
+        # test recomputing the hazard maps
         self.run_calc(
-            case_13.__file__, 'job.ini', exports='csv', poes='0.2',
+            case_13.__file__, 'job.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
-            concurrent_tasks='0', gsim_logic_tree_file='',
-            source_model_logic_tree_file='')
+            gsim_logic_tree_file='', source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
         # test extract/hazard/rlzs
@@ -209,10 +211,10 @@ class ClassicalTestCase(CalculatorTestCase):
                                    'hcurves/SA(0.2)/rlz-001',
                                    'hcurves/SA(0.2)/rlz-002',
                                    'hcurves/SA(0.2)/rlz-003'])
-        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
-                                 'hmaps/poe-0.2/rlz-001',
-                                 'hmaps/poe-0.2/rlz-002',
-                                 'hmaps/poe-0.2/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.1/rlz-000',
+                                 'hmaps/poe-0.1/rlz-001',
+                                 'hmaps/poe-0.1/rlz-002',
+                                 'hmaps/poe-0.1/rlz-003'])
 
         # test extract/hcurves/rlz-0 also works, used by the npz exports
         haz = dict(extract(self.calc.datastore, 'hcurves'))
@@ -228,13 +230,26 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
+        # test preclassical and OQ_SAMPLE_SOURCES
+        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='.1'):
+            self.run_calc(
+                case_14.__file__, 'job.ini', calculation_mode='preclassical')
+        rpt = view('ruptures_per_trt', self.calc.datastore)
+        self.assertEqual(rpt, """\
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+simple_fault.xml 0      Active Shallow Crust 66           447         
+================ ====== ==================== ============ ============""")
+        # test classical
         self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
         ], case_14.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_15(self):  # full enumeration
+    def test_case_15(self):
+        # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
@@ -336,9 +351,7 @@ hazard_uhs-mean.csv
 
         # extracting hmaps
         hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
-        self.assertEqual(
-            hmaps.dtype.names,
-            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
+        self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
@@ -407,12 +420,12 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
-        checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 3294662884)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+        checksum = self.calc.datastore['/'].attrs['checksum32']
+        self.assertEqual(checksum, 865392691)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_24(self):  # UHS

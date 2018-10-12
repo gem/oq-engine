@@ -28,4 +28,4 @@ class AkkarEtAl2013(AkkarEtAlRjb2014):
     the call AkkarEtAl2013 is retained as legacy. The AkkarEtAl2013 GMPE
     is now implemented as AkkarEtAlRjb2014
     """
-    deprecated = True
+    superseded_by = AkkarEtAlRjb2014

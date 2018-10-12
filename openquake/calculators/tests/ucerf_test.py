@@ -62,7 +62,6 @@ class UcerfTestCase(CalculatorTestCase):
         # check the generated hazard maps
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
-                      concurrent_tasks='0',  # avoid usual fork bug
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
         # check the GMFs
@@ -139,8 +138,8 @@ class UcerfTestCase(CalculatorTestCase):
         # check the right number of events was stored
         self.assertEqual(len(self.calc.datastore['events']), 79)
 
-        fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+        fname = gettemp(view('portfolio_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
 
         # check the mean losses_by_period
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
