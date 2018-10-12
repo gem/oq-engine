@@ -21,8 +21,7 @@ import shutil
 import tempfile
 import mock
 import unittest
-import collections
-from io import BytesIO, StringIO
+from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -195,28 +194,6 @@ export_dir = %s
             readinput.get_mesh(oq)
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
         os.unlink(sites_csv)
-
-    def test_wrong_discretization(self):
-        source = general.gettemp("""
-[general]
-calculation_mode = event_based
-region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
-region_grid_spacing = 5.0
-maximum_distance=1
-truncation_level=3
-random_seed=5
-reference_vs30_type = measured
-reference_vs30_value = 600.0
-reference_depth_to_2pt5km_per_sec = 5.0
-reference_depth_to_1pt0km_per_sec = 100.0
-intensity_measure_types = PGA
-investigation_time = 50.
-source_model_file = fake.xml
-""")
-        oqparam = readinput.get_oqparam(source)
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_site_collection(oqparam)
-        self.assertIn('Could not discretize region', str(ctx.exception))
 
     def test_invalid_magnitude_distance_filter(self):
         source = general.gettemp("""
