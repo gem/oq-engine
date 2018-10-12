@@ -453,21 +453,6 @@ class AssetCollection(object):
         sitecol.make_complete()
         return new
 
-    def values(self, aids=None):
-        """
-        :param aids: asset indices where to compute the values (None means all)
-        :returns: a structured array of asset values by loss type
-        """
-        if aids is None:
-            aids = range(len(self))
-        loss_dt = numpy.dtype([(str(lt), F32) for lt in self.loss_types])
-        vals = numpy.zeros(len(aids), loss_dt)  # asset values by loss_type
-        for i, aid in enumerate(aids):
-            asset = self[aid]
-            for lt in self.loss_types:
-                vals[i][lt] = asset.value(lt, self.time_event)
-        return vals
-
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
@@ -534,7 +519,6 @@ def build_asset_array(assets_by_site, tagnames=()):
     """
     :param assets_by_site: a list of lists of assets
     :param tagnames: a list of tag names
-    :param time_event: a time event string (or None)
     :returns: an array `assetcol`
     """
     for assets in assets_by_site:
@@ -714,7 +698,7 @@ class Exposure(object):
 
     @classmethod
     def read(cls, fname, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False):
+             ignore_missing_costs=(), asset_nodes=False, check_dupl=True):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -736,7 +720,7 @@ class Exposure(object):
             assets.text, os.path.dirname(param['fname']))
         if asset_nodes:  # this is useful for the GED4ALL import script
             return nodes
-        exposure._populate_from(nodes, param)
+        exposure._populate_from(nodes, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
@@ -818,11 +802,13 @@ class Exposure(object):
                             logging.info('Read %d assets', i)
                     yield asset
 
-    def _populate_from(self, asset_nodes, param):
+    def _populate_from(self, asset_nodes, param, check_dupl):
         asset_refs = set()
         for idx, asset_node in enumerate(asset_nodes):
             asset_id = asset_node['id']
-            if asset_id in asset_refs:
+            # check_dupl is False only in oq prepare_site_model since
+            # in that case we are only interested in the asset locations
+            if check_dupl and asset_id in asset_refs:
                 raise nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             self._add_asset(idx, asset_node, param)

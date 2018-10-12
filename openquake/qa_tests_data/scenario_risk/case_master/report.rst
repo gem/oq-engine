@@ -3,8 +3,8 @@ scenario risk
 
 ============== ===================
 checksum32     818,655,088        
-date           2018-06-26T14:58:39
-engine_version 3.2.0-gitb0cd949   
+date           2018-10-03T15:00:41
+engine_version 3.3.0-gitd9f5dca908
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -80,29 +80,13 @@ tax3     1.00000 NaN    1   1   1         1
 *ALL*    1.00000 0.0    1   1   7         7         
 ======== ======= ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-scenario_risk      0.03035 0.00333 0.02366 0.03305 7        
-================== ======= ======= ======= ======= =========
-
-Data transfer
--------------
-============= ================================================================= =========
-task          sent                                                              received 
-scenario_risk riskmodel=45.27 KB riskinput=23.96 KB monitor=2.88 KB param=623 B 174.54 KB
-============= ================================================================= =========
-
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total scenario_risk      0.21243  6.95703   7     
-computing risk           0.08636  0.37109   7     
-getting hazard           0.06575  4.68359   14    
-building riskinputs      0.00397  0.0       1     
-unpickling scenario_risk 0.00373  0.0       7     
-building epsilons        0.00142  0.0       1     
-======================== ======== ========= ======
+=================== ======== ========= ======
+operation           time_sec memory_mb counts
+=================== ======== ========= ======
+building riskinputs 0.02285  0.0       1     
+computing gmfs      0.02132  0.23047   1     
+saving gmfs         0.01080  0.0       1     
+reading exposure    0.00135  0.0       1     
+=================== ======== ========= ======

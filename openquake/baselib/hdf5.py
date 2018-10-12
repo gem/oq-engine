@@ -32,6 +32,7 @@ from openquake.baselib.python3compat import decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
+vuint8 = h5py.special_dtype(vlen=numpy.uint8)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
@@ -281,15 +282,14 @@ class File(h5py.File):
         :param key: name of the dataset
         :param data: data to store as a list of arrays
         """
-        dt = data[0].dtype
-        vdt = h5py.special_dtype(vlen=dt)
         shape = (None,) + data[0].shape[:-1]
         try:
             dset = self[key]
         except KeyError:
+            vdt = h5py.special_dtype(vlen=data[0].dtype)
             dset = create(self, key, vdt, shape, fillvalue=None)
-        nbytes = 0
-        totlen = 0
+        nbytes = dset.attrs.get('nbytes', 0)
+        totlen = dset.attrs.get('totlen', 0)
         for i, val in enumerate(data):
             nbytes += val.nbytes
             totlen += len(val)
@@ -298,7 +298,7 @@ class File(h5py.File):
         for i, arr in enumerate(data):
             dset[length + i] = arr
         dset.attrs['nbytes'] = nbytes
-        dset.attrs['avg_len'] = totlen / len(data)
+        dset.attrs['totlen'] = totlen
 
     def save_attrs(self, path, attrs, **kw):
         items = list(attrs.items()) + list(kw.items())

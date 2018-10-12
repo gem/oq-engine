@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
+from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
@@ -57,7 +57,7 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), numpy.float64))
+            lst.append(('%s-%s' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, pcurve in pmap.items():
         curve = curves[sid]
@@ -210,7 +210,7 @@ def make_hmap(pmap, imtls, poes):
     :returns: a ProbabilityMap with size (N, M * P, 1)
     """
     M, P = len(imtls), len(poes)
-    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap)
+    hmap = probability_map.ProbabilityMap.build(M * P, 1, pmap, dtype=F32)
     if len(pmap) == 0:
         return hmap  # empty hazard map
     for i, imt in enumerate(imtls):
@@ -238,7 +238,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
         hcurves = pmap.value
     except AttributeError:
         hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F64)
+    dtlist = [('%s-%s' % (imt, poe), F32)
               for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
@@ -317,8 +317,8 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('multiplicity', U16), ('eidx', U32),
-            ('occurrence_rate', F64),
+            ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
+            ('eidx', U32), ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
             ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
@@ -342,7 +342,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.multiplicity, ebr.eidx1, rate,
+                (ebr.serial, ebr.srcidx, ebr.multiplicity, ebr.eidx1, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -355,20 +355,20 @@ class RuptureSerializer(object):
     `ruptures` and `sids`.
     """
     rupture_dt = numpy.dtype([
-        ('serial', U32), ('grp_id', U16), ('code', U8),
-        ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
-        ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+        ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+        ('eidx1', U32), ('eidx2', U32), ('gidx1', U32), ('gidx2', U32),
+        ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
     @classmethod
-    def get_array_nbytes(cls, ebruptures):
+    def get_array_nbytes(cls, ebruptures, offset):
         """
         Convert a list of EBRuptures into a numpy composite array
         """
         lst = []
-        geom = []
+        geoms = []
         nbytes = 0
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
@@ -379,24 +379,25 @@ class RuptureSerializer(object):
             assert sz < TWO16, 'The rupture mesh spacing is too small'
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
-            tup = (ebrupture.serial, ebrupture.grp_id, rup.code,
-                   ebrupture.eidx1, ebrupture.eidx2,
-                   getattr(ebrupture, 'pmfx', -1),
-                   rup.seed, rup.mag, rup.rake, rate, hypo, sy, sz)
+            points = mesh.reshape(3, -1).T   # shape (n, 3)
+            n = len(points)
+            tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+                   rup.code, ebrupture.eidx1, ebrupture.eidx2,
+                   offset, offset + n, getattr(ebrupture, 'pmfx', -1),
+                   rup.mag, rup.rake, rate, hypo, sy, sz)
+            offset += n
             lst.append(tup)
-            geom.append(mesh.reshape(3, -1))
+            geoms.append(numpy.array([tuple(p) for p in points], point3d))
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
+        geom = numpy.concatenate(geoms)
         return numpy.array(lst, cls.rupture_dt), geom, nbytes
 
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
-        if datastore['oqparam'].save_ruptures:
-            datastore.create_dset('ruptures', self.rupture_dt, fillvalue=None,
-                                  attrs={'nbytes': 0})
-            datastore.create_dset('rupgeoms', hdf5.vfloat32,
-                                  shape=(None, 3), fillvalue=None)
+        datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
+        datastore.create_dset('rupgeoms', point3d)
 
     def save(self, ebruptures, eidx=0):
         """
@@ -420,11 +421,12 @@ class RuptureSerializer(object):
                 pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
 
         # store the ruptures in a compact format
-        array, geom, nbytes = self.get_array_nbytes(ebruptures)
+        offset = len(self.datastore['rupgeoms'])
+        array, geom, nbytes = self.get_array_nbytes(ebruptures, offset)
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
         dset = self.datastore.extend(
             'ruptures', array, nbytes=previous + nbytes)
-        self.datastore.hdf5.save_vlen('rupgeoms', geom)
+        self.datastore.extend('rupgeoms', geom)
 
         # save nbytes occupied by the PMFs
         if pmfbytes:

@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 2
 ==================================
 
 ============== ===================
-checksum32     3,954,449,156      
-date           2018-06-26T14:58:07
-engine_version 3.2.0-gitb0cd949   
+checksum32     2,757,562,625      
+date           2018-10-05T03:04:51
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -40,53 +40,21 @@ source                  `source_model.xml <source_model.xml>`_
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
-========= ======= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 3,000        3,000       
-================ ====== ==================== ============ ============
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  3,000        4.63544   0.0        1.00000   1         3     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         P    0     1     3,000        0.0       3.123E-05  0.0       1         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  4.63544   1     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -94,41 +62,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =========
-operation-duration mean    stddev min     max     num_tasks
-RtreeFilter        0.00415 NaN    0.00415 0.00415 1        
-compute_hazard     4.64495 NaN    4.64495 4.64495 1        
-================== ======= ====== ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.00373 NaN    0.00373 0.00373 1      
+split_filter       0.01026 NaN    0.01026 0.01026 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============== ============================================================================================ ========
-task           sent                                                                                         received
-RtreeFilter    srcs=0 B srcfilter=0 B monitor=0 B                                                           13.02 KB
-compute_hazard sources_or_ruptures=13.05 KB param=2.32 KB monitor=323 B rlzs_by_gsim=290 B src_filter=246 B 4.33 KB 
-============== ============================================================================================ ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     1.55 KB 
+split_filter       srcs=12.99 KB monitor=428 B srcfilter=220 B sample_factor=21 B seed=14 B 13.02 KB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               4.68452   0.0       1     
-total compute_hazard           4.64495   7.65234   1     
-building ruptures              4.64144   6.92578   1     
-store source_info              0.00831   0.0       1     
-saving ruptures                0.00762   0.0       1     
-reading composite source model 0.00549   0.0       1     
-total prefilter                0.00415   0.0       1     
-saving gmfs                    0.00356   0.0       1     
-saving gmf_data/indices        0.00246   0.0       1     
-unpickling compute_hazard      8.585E-04 0.0       1     
-making contexts                8.302E-04 0.0       3     
-building hazard                6.635E-04 0.0       1     
-aggregating hcurves            4.196E-04 0.0       1     
-GmfGetter.init                 2.935E-04 0.0       1     
-reading site collection        2.851E-04 0.0       1     
-unpickling prefilter           2.558E-04 0.0       1     
-splitting sources              2.170E-04 0.0       1     
-building hazard curves         1.047E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+updating source_info     0.01585  0.0       1     
+total split_filter       0.01026  0.0       1     
+total read_source_models 0.00373  0.0       1     
+======================== ======== ========= ======

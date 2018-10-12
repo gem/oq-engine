@@ -21,8 +21,7 @@ import shutil
 import tempfile
 import mock
 import unittest
-import collections
-from io import BytesIO, StringIO
+from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -196,28 +195,6 @@ export_dir = %s
         self.assertIn('expected site_id=0, got 1', str(ctx.exception))
         os.unlink(sites_csv)
 
-    def test_wrong_discretization(self):
-        source = general.gettemp("""
-[general]
-calculation_mode = event_based
-region = 27.685048 85.280857, 27.736719 85.280857, 27.733376 85.355358, 27.675015 85.355358
-region_grid_spacing = 5.0
-maximum_distance=1
-truncation_level=3
-random_seed=5
-reference_vs30_type = measured
-reference_vs30_value = 600.0
-reference_depth_to_2pt5km_per_sec = 5.0
-reference_depth_to_1pt0km_per_sec = 100.0
-intensity_measure_types = PGA
-investigation_time = 50.
-source_model_file = fake.xml
-""")
-        oqparam = readinput.get_oqparam(source)
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_site_collection(oqparam)
-        self.assertIn('Could not discretize region', str(ctx.exception))
-
     def test_invalid_magnitude_distance_filter(self):
         source = general.gettemp("""
 [general]
@@ -265,7 +242,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # check that the warning was raised
         self.assertEqual(
             warn.call_args[0],
-            ('Association to %d km from site (%s %s)', 222, 2.0, 0.0))
+            ('Association to (%.1f %.1f) from site #%d (%.1f %.1f) %d km',
+             0.0, 0.0, 1, 2.0, 0.0, 222))
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -526,147 +504,6 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         self.assertIn("Expected cost types ['structural']", str(ctx.exception))
 
 
-class ReadCsvTestCase(unittest.TestCase):
-    def test_get_mesh_csvdata_ok(self):
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-PGV 12.0 42.2 0.54 0.55 0.56
-""")
-        mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        assert_allclose(mesh.lons, [12., 12., 12.])
-        assert_allclose(mesh.lats, [42., 42.1, 42.2])
-        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
-                                      [0.44, 0.45, 0.46],
-                                      [0.64, 0.65, 0.66]])
-        assert_allclose(data['PGV'], [[0.24, 0.25, 0.26],
-                                      [0.34, 0.35, 0.36],
-                                      [0.54, 0.55, 0.56]])
-
-    def test_get_mesh_csvdata_different_levels(self):
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25
-PGV 12.0 42.1 0.34 0.35
-PGV 12.0 42.2 0.54 0.55
-""")
-        mesh, data = readinput.get_mesh_csvdata(
-            fakecsv, ['PGA', 'PGV'], [3, 2], valid.probabilities)
-        assert_allclose(mesh.lons, [12., 12., 12.])
-        assert_allclose(mesh.lats, [42., 42.1, 42.2])
-        assert_allclose(data['PGA'], [[0.14, 0.15, 0.16],
-                                      [0.44, 0.45, 0.46],
-                                      [0.64, 0.65, 0.66]])
-        assert_allclose(data['PGV'], [[0.24, 0.25],
-                                      [0.34, 0.35],
-                                      [0.54, 0.55]])
-
-    def test_get_mesh_csvdata_err1(self):
-        # a negative probability
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 -0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-PGV 12.0 42.2 0.54 0.55 0.56
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertIn('line 4', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err2(self):
-        # a duplicated point
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.1 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-""")
-        with self.assertRaises(readinput.DuplicatedPoint) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertIn('line 5', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err3(self):
-        # a missing location for PGV
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15 0.16
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64 0.65 0.66
-PGV 12.0 42.0 0.24 0.25 0.26
-PGV 12.0 42.1 0.34 0.35 0.36
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA', 'PGV'], [3, 3], valid.probabilities)
-        self.assertEqual(str(ctx.exception),
-                         'Inconsistent locations between PGA and PGV')
-
-    def test_get_mesh_csvdata_err4(self):
-        # inconsistent number of levels
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15
-PGA 12.0 42.1 0.44 0.45 0.46
-PGA 12.0 42.2 0.64
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGA'], [2], valid.probabilities)
-        self.assertIn('Found 3 values, expected 2', str(ctx.exception))
-
-    def test_get_mesh_csvdata_err5(self):
-        # unexpected IMT
-        fakecsv = StringIO(u"""\
-PGA 12.0 42.0 0.14 0.15
-PGA 12.0 42.1 0.44 0.45
-PGA 12.0 42.2 0.64 0.65
-""")
-        with self.assertRaises(ValueError) as ctx:
-            readinput.get_mesh_csvdata(
-                fakecsv, ['PGV'], [3], valid.probabilities)
-        self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
-
-    def test_get_mesh_hcurves_ok(self):
-        fakecsv = StringIO(u"""\
-0 0, 0.42 0.24 0.14, 0.25 0.16 0.08
-0 1, 0.42 0.24 0.14, 0.45 0.40 0.18
-0 2, 0.42 0.24 0.14, 0.65 0.64 0.60
-0 3, 0.42 0.24 0.14, 0.25 0.21 0.20
-0 4, 0.42 0.24 0.04, 0.35 0.31 0.30
-0 5, 0.42 0.24 0.04, 0.55 0.51 0.50
-""")
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.inputs = dict(hazard_curves=fakecsv)
-        oqparam.imtls = collections.OrderedDict([
-            ('PGA', [0.1, 0.2, 0.3]),
-            ('PGV', [0.11, 0.22, 0.33])])
-        mesh, data = readinput.get_mesh_hcurves(oqparam)
-        assert_allclose(mesh.lons, [0., 0., 0., 0., 0., 0.])
-        assert_allclose(mesh.lats, [0., 1., 2., 3., 4., 5.])
-        assert_allclose(data['PGA'], [[0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.14],
-                                      [0.42, 0.24, 0.04],
-                                      [0.42, 0.24, 0.04]])
-        assert_allclose(data['PGV'], [[0.25, 0.16, 0.08],
-                                      [0.45, 0.4, 0.18],
-                                      [0.65, 0.64, 0.6],
-                                      [0.25, 0.21, 0.2],
-                                      [0.35, 0.31, 0.3],
-                                      [0.55, 0.51, 0.5]])
-
-
 class TestReadGmfXmlTestCase(unittest.TestCase):
     """
     Read the GMF from a NRML file
@@ -805,7 +642,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        readinput.reduce_source_model(smlt, [])
+        readinput.reduce_source_model(smlt, [], False)
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):

@@ -23,11 +23,8 @@ Utilities to build a report writer generating a .rst report for a calculation
 from openquake.baselib.python3compat import decode
 import os
 import sys
-import mock
 from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput
-from openquake.calculators.classical import (
-    ClassicalCalculator, count_eff_ruptures)
 from openquake.calculators import views
 
 
@@ -91,7 +88,7 @@ class ReportWriter(object):
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'source_info' in ds:
+        if 'csm_info' in ds:
             self.add('ruptures_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')
@@ -106,7 +103,7 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info'])
-            if 'classical' in tasks or 'count_eff_ruptures' in tasks:
+            if 'classical' in tasks:
                 self.add('task_hazard:0')
                 self.add('task_hazard:-1')
             self.add('job_info')
@@ -131,6 +128,7 @@ def build_report(job_ini, output_dir=None):
         the directory where the report is written (default the input directory)
     """
     oq = readinput.get_oqparam(job_ini)
+    oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
@@ -138,12 +136,7 @@ def build_report(job_ini, output_dir=None):
 
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    p = mock.patch.object
-    with p(ClassicalCalculator, 'core_task', count_eff_ruptures):
-        calc.oqparam.ground_motion_fields = False
-        calc.read_inputs.__func__.__defaults__ = (False,)  # no split sources
-        calc.pre_execute()
-        calc.execute()
+    calc.pre_execute()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

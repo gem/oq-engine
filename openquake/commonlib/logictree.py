@@ -36,7 +36,7 @@ from collections import namedtuple
 from decimal import Decimal
 import numpy
 from openquake.baselib import hdf5, node, parallel
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -462,9 +462,8 @@ class FakeSmlt(object):
         self.seed = seed
         self.num_samples = num_samples
         self.tectonic_region_types = set()
-
-    def on_each_source(self):
-        return False
+        self.on_each_source = False
+        self.num_paths = 1
 
     def gen_source_models(self, gsim_lt):
         """
@@ -593,9 +592,10 @@ class SourceModelLogicTree(object):
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
 
+    @property
     def on_each_source(self):
         """
-        :returns: True if the logic tree is defined on each source
+        True if there is an applyToSources for each source.
         """
         return (self.info.applytosources and
                 self.info.applytosources == self.source_ids)
@@ -661,11 +661,14 @@ class SourceModelLogicTree(object):
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
             if self.root_branchset is None:  # not set yet
+                self.num_paths = 1
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
             for branch in branchset.branches:
                 new_open_ends.add(branch)
+            self.num_paths *= len(branchset.branches)
+
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
@@ -1040,7 +1043,7 @@ class SourceModelLogicTree(object):
         Converts "applyToSources" filter value by just splitting it to a list.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = ss = filters['applyToSources'].split()
+            filters['applyToSources'] = filters['applyToSources'].split()
         return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
@@ -1227,12 +1230,13 @@ class SourceModelLogicTree(object):
                 branchsets_and_uncertainties.append((branchset, branch.value))
             branchset = branch.child_branchset
 
+        if not branchsets_and_uncertainties:
+            return  # nothing changed
+
         def apply_uncertainties(source):
-            if not branchsets_and_uncertainties:
-                return False  # nothing changed
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
-            return True  # the source was changed
+
         return apply_uncertainties
 
     def samples_by_lt_path(self):
@@ -1323,11 +1327,10 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
-    def store_gmpe_tables(self, dstore):
+    def store_gmpe_tables(self, dest):
         """
         Store the GMPE tables in HDF5 format inside the datastore
         """
-        dest = dstore.hdf5
         dirname = os.path.dirname(self.fname)
         for gmpe_table in sorted(self.gmpe_tables):
             hdf5path = os.path.join(dirname, gmpe_table)
@@ -1335,9 +1338,9 @@ class GsimLogicTree(object):
                 for group in f:
                     name = '%s/%s' % (gmpe_table, group)
                     if hasattr(f[group], 'value'):  # dataset, not group
-                        dstore[name] = f[group].value
+                        dest[name] = f[group].value
                         for k, v in f[group].attrs.items():
-                            dstore[name].attrs[k] = v
+                            dest[name].attrs[k] = v
                     else:
                         grp = dest.require_group(gmpe_table)
                         f.copy(group, grp)
@@ -1433,11 +1436,9 @@ class GsimLogicTree(object):
                                 raise InvalidLogicTree(
                                     'Found duplicated IMTs in gsimByImt')
                             gsim = MultiGMPE(gsim_by_imt=gsimdict)
-                    elif isinstance(uncertainty.text, str):
-                        uncertainty.text = gsim = self.instantiate(
-                            uncertainty.text.strip(), uncertainty.attrib)
-                    else:  # already converted
-                        gsim = uncertainty.text
+                    else:
+                        gsim = self.instantiate(uncertainty.text.strip(),
+                                                uncertainty.attrib)
                     if gsim in self.values[trt]:
                         raise InvalidLogicTree('%s: duplicated gsim %s' %
                                                (self.fname, gsim))
@@ -1446,7 +1447,7 @@ class GsimLogicTree(object):
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
                 assert sum(weights) == 1, weights
-                if len(branch_ids) > len(set(branch_ids)):
+                if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
         if len(trts) > len(set(trts)):
@@ -1529,8 +1530,8 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-def parallel_pickle_source_models(gsim_lt, source_model_lt,
-                                  converter, monitor):
+def parallel_read_source_models(gsim_lt, source_model_lt,
+                                converter, monitor):
     """
     Convert the source model files listed in the logic tree
     into picked files.
@@ -1549,8 +1550,6 @@ def parallel_pickle_source_models(gsim_lt, source_model_lt,
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(
-        nrml.pickle_source_models,
-        (sorted(fnames), converter, monitor),
+        nrml.read_source_models, (sorted(fnames), converter, monitor),
         distribute=dist).reduce()
-    parallel.Starmap.shutdown()  # close the processpool
     return dic
