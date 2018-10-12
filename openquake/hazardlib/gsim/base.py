@@ -21,12 +21,13 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import re
 import abc
 import math
 import warnings
 import functools
-from scipy.special import ndtr
 import numpy
+from scipy.special import ndtr
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
@@ -56,36 +57,8 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-class MetaGSIM(abc.ABCMeta):
-    """
-    Metaclass controlling the instantiation mechanism.
-    A GroundShakingIntensityModel subclass with an
-    attribute deprecated=True will print a deprecation warning when
-    instantiated. A subclass with an attribute non_verified=True will
-    print a UserWarning.
-    """
-    deprecated = False
-    non_verified = False
-
-    def __init__(cls, name, bases, dct):
-        registry[name] = cls
-
-    def __call__(cls, **kwargs):
-        if cls.deprecated:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.__base__.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        self = super().__call__(**kwargs)
-        self.kwargs = kwargs
-        return self
-
-
 @functools.total_ordering
-class GroundShakingIntensityModel(metaclass=MetaGSIM):
+class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
 
@@ -101,7 +74,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
@@ -178,6 +150,24 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     minimum_distance = 0  # can be set by the engine
+    superseded_by = None
+    non_verified = False
+
+    @classmethod
+    def __init_subclass__(cls):
+        registry[cls.__name__] = cls
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        cls = self.__class__
+        if cls.superseded_by:
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.superseded_by.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        if cls.non_verified:
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -420,7 +410,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return hash(str(self))
 
     def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        kwargs = ', '.join('%s=%r' % kv for kv in self.kwargs.items())
         return "%s(%s)" % (self.__class__.__name__, kwargs)
 
     def __repr__(self):
@@ -500,6 +490,13 @@ def _norm_sf(values):
     return ndtr(- values)
 
 
+ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
+                             'COEFFS_SITE_RESPONSE']
+
+
 class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
@@ -524,6 +521,38 @@ class GMPE(GroundShakingIntensityModel):
         Returns numpy array of exponents of ``values``.
         """
         return numpy.exp(values)
+
+    def set_parameters(self):
+        """
+        Combines the parameters of the GMPE provided at the construction level
+        with the ones originally assigned to the backbone modified GMPE.
+        """
+        # Creating the list of keys
+        keys = {}
+        for key in dir(self):
+            if not callable(getattr(self, key)) and not re.search('^_', key):
+                # keys[key] = set(())
+                keys[key] = getattr(self, key)
+        # Setting parameters
+        for key in dir(self.gmpe):
+            if key in keys and not callable(getattr(self.gmpe, key)):
+                if re.search('^[A-Z]', key) and not re.search('^C', key):
+                    tmps = getattr(self.gmpe, key)
+                    try:
+                        keys[key] |= tmps
+                    except TypeError:
+                        if (key in ADMITTED_STR_PARAMETERS or
+                                key in ADMITTED_FLOAT_PARAMETERS):
+                            keys[key] = tmps
+                        elif (key in ADMITTED_TABLE_PARAMETERS):
+                            pass
+                        else:
+                            raise NameError('This is not a recognized type ' %
+                                            key)
+                    else:
+                        keys[key] = tmps
+        for key in keys:
+            setattr(self, key, keys[key])
 
 
 class IPE(GroundShakingIntensityModel):

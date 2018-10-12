@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============== ===================
-checksum32     3,029,642,047      
-date           2018-06-05T06:38:37
-engine_version 3.2.0-git65c4735   
+checksum32     571,516,522        
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 46
@@ -42,7 +42,7 @@ gsim_logic_tree                     `gsim_logic_tree.xml <gsim_logic_tree.xml>`_
 job_ini                             `job.ini <job.ini>`_                                                            
 nonstructural_vulnerability         `nonstructural_vulnerability_model.xml <nonstructural_vulnerability_model.xml>`_
 occupants_vulnerability             `occupants_vulnerability_model.xml <occupants_vulnerability_model.xml>`_        
-source                              `6.05.xml <6.05.xml>`_                                                          
+source                              `6.05.hdf5 <6.05.hdf5>`_                                                        
 source                              `source_model_1.xml <source_model_1.xml>`_                                      
 source                              `source_model_2.xml <source_model_2.xml>`_                                      
 source_model_logic_tree             `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                    
@@ -96,15 +96,15 @@ source_model_1.xml 0      Active Shallow Crust 482          482
 source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 482          482         
 source_model_2.xml 3      Stable Shallow Crust 1            1           
-6.05.xml           4      Deep Seismicity      2            2           
+6.05.hdf5          4      Deep Seismicity      2            2           
 ================== ====== ==================== ============ ============
 
-============= ===
-#TRT models   5  
-#eff_ruptures 971
-#tot_ruptures 971
-#tot_weight   0  
-============= ===
+============= =====
+#TRT models   5    
+#eff_ruptures 971  
+#tot_ruptures 971  
+#tot_weight   2,569
+============= =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -129,23 +129,25 @@ tax3     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ========================== ============ ========= ========== ========= ========= ======
-source_id source_class               num_ruptures calc_time split_time num_sites num_split events
-========= ========================== ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource          482          0.53386   1.440E-04  7.00000   30        1     
-2         CharacteristicFaultSource  1            0.03193   2.146E-06  7.00000   2         9     
-buc06pt05 NonParametricSeismicSource 2            0.00291   1.526E-05  7.00000   2         2     
-========= ========================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         S    0     2     482          0.23838   0.00546    105       15        0.0    
+1      2         S    2     4     4            0.01990   2.122E-05  7.00000   1         9.00000
+2      1         S    0     2     482          0.20105   0.00440    105       15        1.00000
+3      2         X    2     398   1            2.494E-04 8.583E-06  7.00000   1         0.0    
+4      buc06pt05 N    0     24    2            0.00106   9.394E-05  14        2         1.00000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-========================== ========= ======
-source_class               calc_time counts
-========================== ========= ======
-CharacteristicFaultSource  0.03193   1     
-NonParametricSeismicSource 0.00291   1     
-SimpleFaultSource          0.53386   1     
-========================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+N    0.00106   1     
+S    0.45933   3     
+X    2.494E-04 1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -153,37 +155,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00600 0.00325 0.00221 0.01136 34       
-compute_ruptures   0.04700 0.01973 0.00596 0.07674 15       
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.01138 0.00738 0.00471 0.01931 3      
+split_filter       0.04168 NaN     0.04168 0.04168 1      
+build_ruptures     0.01812 0.01000 0.00274 0.04355 31     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================ ================================================================================ ========
-task             sent                                                                             received
-RtreeFilter      srcs=53.47 KB monitor=11.49 KB srcfilter=9.26 KB                                 55.63 KB
-compute_ruptures sources=42.59 KB param=16.92 KB monitor=5.17 KB src_filter=3.41 KB gsims=3.13 KB 15.7 KB 
-================ ================================================================================ ========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=1.08 KB converter=957 B fnames=576 B                             16.3 KB 
+split_filter       srcs=17.88 KB monitor=381 B srcfilter=220 B sample_factor=21 B seed=14 B 26.49 KB
+build_ruptures     srcs=54.8 KB param=19.38 KB monitor=11.14 KB srcfilter=6.66 KB           68 KB   
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-total compute_ruptures          0.70497   8.71875   15    
-EventBasedRuptureCalculator.run 0.52510   0.0       1     
-managing sources                0.28227   0.0       1     
-total prefilter                 0.20412   4.75781   34    
-making contexts                 0.03095   0.0       6     
-reading composite source model  0.02243   0.0       1     
-saving ruptures                 0.01284   0.0       15    
-unpickling prefilter            0.00849   0.0       34    
-store source_info               0.00639   0.0       1     
-reading site collection         0.00415   0.0       1     
-unpickling compute_ruptures     0.00381   0.0       15    
-reading exposure                0.00169   0.0       1     
-setting event years             0.00140   0.0       1     
-splitting sources               6.709E-04 0.0       1     
-=============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total build_ruptures     0.56183   0.0       31    
+saving ruptures          0.13154   0.0       1     
+updating source_info     0.05273   0.0       1     
+total split_filter       0.04168   0.0       1     
+total read_source_models 0.03415   0.0       3     
+making contexts          0.01531   0.0       6     
+store source_info        0.00685   0.0       1     
+setting event years      0.00127   0.0       1     
+reading exposure         7.312E-04 0.0       1     
+======================== ========= ========= ======

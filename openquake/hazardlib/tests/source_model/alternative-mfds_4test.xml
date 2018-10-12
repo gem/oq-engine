@@ -9,7 +9,6 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
         rup_interdep="indep"
         src_interdep="indep"
-        srcs_weights="1.0"
         tectonicRegion="Active Shallow Crust"
         >
             <simpleFaultSource
@@ -48,7 +47,6 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
         rup_interdep="indep"
         src_interdep="indep"
-        srcs_weights="1.0"
         tectonicRegion="Subduction Interface"
         >
             <characteristicFaultSource

@@ -25,6 +25,8 @@ from openquake.baselib.general import split_in_blocks, not_equal
 from openquake.hazardlib.geo.utils import fix_lon, cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
+U32LIMIT = 2 ** 32
+
 
 class Site(object):
     """
@@ -112,9 +114,6 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
-    'lons': numpy.float64,
-    'lats': numpy.float64,
-    'depths': numpy.float64,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -174,12 +173,12 @@ class SiteCollection(object):
         self.complete = self
         n = len(shakemap_array)
         dtype = numpy.dtype([(p, site_param_dt[p])
-                             for p in 'sids lons lats depths vs30'.split()])
+                             for p in 'sids vs30'.split()])
         self.array = arr = numpy.zeros(n, dtype)
         arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
-        arr['lons'] = shakemap_array['lon']
-        arr['lats'] = shakemap_array['lat']
-        arr['depths'] = numpy.zeros(n)
+        arr['lon'] = shakemap_array['lon']
+        arr['lat'] = shakemap_array['lat']
+        arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
         arr.flags.writeable = False
         return self
@@ -201,22 +200,23 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
+        assert len(lons) < U32LIMIT, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
-        req = ['sids', 'lons', 'lats', 'depths'] + sorted(
-            par for par in req_site_params if par not in ('lons', 'lats'))
+        req = ['sids', 'lon', 'lat', 'depth'] + sorted(
+            par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
         self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
         self.array = arr = numpy.zeros(len(lons), self.dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
-        arr['lons'] = fix_lon(numpy.array(lons))
-        arr['lats'] = numpy.array(lats)
-        arr['depths'] = numpy.array(depths)
+        arr['lon'] = fix_lon(numpy.array(lons))
+        arr['lat'] = numpy.array(lats)
+        arr['depth'] = numpy.array(depths)
         if sitemodel is None:
             pass
         elif hasattr(sitemodel, 'reference_vs30_value'):
@@ -269,16 +269,16 @@ class SiteCollection(object):
         Build a complete SiteCollection from a list of Site objects
         """
         dtlist = ([(p, site_param_dt[p])
-                   for p in ('sids', 'lons', 'lats', 'depths')] +
+                   for p in ('sids', 'lon', 'lat', 'depth')] +
                   [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
                    if p in site_param_dt])
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
         for i in range(len(arr)):
             arr['sids'][i] = i
-            arr['lons'][i] = sites[i].location.longitude
-            arr['lats'][i] = sites[i].location.latitude
-            arr['depths'][i] = sites[i].location.depth
+            arr['lon'][i] = sites[i].location.longitude
+            arr['lat'][i] = sites[i].location.latitude
+            arr['depth'][i] = sites[i].location.depth
             arr['vs30'][i] = sites[i].vs30
             arr['vs30measured'][i] = sites[i].vs30measured
             arr['z1pt0'][i] = sites[i].z1pt0
@@ -371,7 +371,7 @@ class SiteCollection(object):
         :returns: a filtered SiteCollection of sites within the region
         """
         mask = numpy.array([
-            geometry.Point(rec['lons'], rec['lats']).within(region)
+            geometry.Point(rec['lon'], rec['lat']).within(region)
             for rec in self.array])
         return self.filter(mask)
 
@@ -383,7 +383,7 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self.array['lons'], self.array['lats']
+        lons, lats = self.array['lon'], self.array['lat']
         if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
@@ -401,6 +401,8 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
+        if name in ('lons', 'lats', 'depths'):  # legacy names
+            return self.array[name[:-1]]
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]

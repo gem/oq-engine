@@ -103,6 +103,7 @@ def get_vulnerability_functions_05(node, fname):
             raise InvalidFile(
                 'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
                 (taxonomy, fname, vfun.lineno))
+        taxonomies.add(taxonomy)
         num_probs = None
         if vfun['dist'] == 'PM':
             loss_ratios, probs = [], []
@@ -197,7 +198,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             array['stddev'][i] = node['stddev']
     elif ff['format'] == 'discrete':
         attrs['imls'] = ~imls
-        valid.check_levels(attrs['imls'], attrs['imt'])
+        valid.check_levels(attrs['imls'], attrs['imt'], min_iml)
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
@@ -238,8 +239,7 @@ def get_fragility_model(node, fname):
     for ff in ffs:
         imt_taxo = ff.imls['imt'], ff['id']
         array, attrs = ffconvert(fname, limit_states, ff)
-        ffl = scientific.FragilityFunctionList(array)
-        vars(ffl).update(attrs)
+        ffl = scientific.FragilityFunctionList(array, **attrs)
         fmodel[imt_taxo] = ffl
     return fmodel
 

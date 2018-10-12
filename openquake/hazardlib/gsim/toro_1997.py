@@ -31,7 +31,7 @@ from openquake.hazardlib.imt import PGA, SA
 
 class ToroEtAl1997MblgNSHMP2008(GMPE):
     """
-    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Sneider
+    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Schneider
     and published in "Model of Strong Ground Motions from Earthquakes in
     Central and Eastern North America: Best Estimates and Uncertainties"
     (Seismological Research Letters, Volume 68, Number 1, 1997) as utilized
@@ -85,6 +85,9 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
 
     #: Required distance measure is rjb
     REQUIRES_DISTANCES = set(('rjb', ))
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

@@ -85,8 +85,8 @@ def export_ruptures_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('rupid multiplicity mag centroid_lon centroid_lat centroid_depth'
-              ' trt strike dip rake boundary').split()
+    header = ('rupid multiplicity mag centroid_lon centroid_lat '
+              'centroid_depth trt strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     rows = []
@@ -118,7 +118,7 @@ def export_site_model(ekey, dstore):
         for hdffield in rec.dtype.names:
             if hdffield == 'sids':  # skip
                 continue
-            elif hdffield == 'depths' and rec[hdffield] == 0:
+            elif hdffield == 'depth' and rec[hdffield] == 0:
                 continue
             xmlfield = hdf2xml.get(hdffield, hdffield)
             if hdffield == 'vs30measured':
@@ -246,22 +246,22 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_csv(key, dest, sitemesh, pmap, pdic, comment):
+def export_hmaps_csv(key, dest, sitemesh, array, pdic, comment):
     """
     Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
-    :param pmap: a ProbabilityMap
+    :param array: an array of shape (N, P * I)
     :param pdic: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
     """
-    if isinstance(pmap, dict):  # old format
-        array = calc.convert_to_array(pmap, len(sitemesh), pdic)
-    else:  # new format for engine >= 3.2
-        array = pmap
-    curves = util.compose_arrays(sitemesh, array)
+    imts = list(pdic)
+    poes = pdic[imts[0]]
+    dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
+                      for imt in imts for poe in poes])
+    curves = util.compose_arrays(sitemesh, array.view(dt)[:, 0])
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -301,7 +301,7 @@ def export_hcurves_by_imt_csv(
         for sid, lon, lat, dep in zip(
                 range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             if isinstance(array, dict):  # is a pmap, for old versions
-                poes = array.setdefault(sid, 0).array[slc]
+                poes = array.setdefault(sid, 0, F32).array[slc]
             else:  # is an array for recent versions of the engine
                 poes = array[sid, slc]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
@@ -391,9 +391,9 @@ def export_hcurves_csv(ekey, dstore):
                 comment=comment)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = dstore['hmaps/' + kind]
+            hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         elif key == 'hcurves':
             fnames.extend(
                 export_hcurves_by_imt_csv(
@@ -475,6 +475,8 @@ def export_hcurves_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.HazardCurveXMLWriter
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
+        if hasattr(hcurves, 'array'):
+            hcurves = hcurves.array[:, 0]
         if kind.startswith('rlz-'):
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
@@ -483,15 +485,15 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
-        for imt in oq.imtls:
-            slc = oq.imtls(imt)
-            imt = from_string(imt)
+        for im in oq.imtls:
+            slc = oq.imtls(im)
+            imt = from_string(im)
             fname = name[:-len_ext] + '-' + imt.name + '.' + fmt
             data = [HazardCurve(Location(site), poes[slc])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
-                               imls=oq.imtls[imt.name], imt=imt.name,
+                               imls=oq.imtls[im], imt=imt.name,
                                sa_period=getattr(imt, 'period', None) or None,
                                sa_damping=getattr(imt, 'damping', None),
                                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
@@ -621,13 +623,17 @@ def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     imts = list(oq.imtls)
-    sitemesh = get_mesh(dstore['sitecol'])
+    sc = dstore['sitecol'].array
+    if 'vs30' in sc.dtype.names:
+        arr = sc[['lon', 'lat', 'vs30']]
+    else:
+        arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
     gmfa = dstore['gmf_data']['data'].value
     if eid is None:  # we cannot use extract here
         f = dstore.build_fname('sitemesh', '', 'csv')
-        sids = numpy.arange(len(sitemesh), dtype=U32)
-        sites = util.compose_arrays(sids, sitemesh, 'site_id')
+        sids = numpy.arange(len(arr), dtype=U32)
+        sites = util.compose_arrays(sids, arr, 'site_id')
         writers.write_csv(f, sites)
         fname = dstore.build_fname('gmf', 'data', 'csv')
         gmfa.sort(order=['rlzi', 'sid', 'eid'])

@@ -82,13 +82,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_2d.__file__, 'job_h.ini,job_r.ini',
                             exports='csv')
         # this is also a case with a single site but an exposure grid,
-        # to test the corner case
+        # to test a corner case
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agg_losses/occupants')
-        aac(tot.array, [0.028281], atol=1E-5)
+        aac(tot.array, [0.031716], atol=1E-5)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')

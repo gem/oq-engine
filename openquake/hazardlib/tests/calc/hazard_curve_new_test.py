@@ -145,10 +145,14 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        src.src_group_id = [0]
+        src.src_group_id = 0
+        src.mutex_weight = 1
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
-        param = dict(imtls=self.imtls, filter_distance='rjb')
+        param = dict(imtls=self.imtls, filter_distance='rjb',
+                     src_interdep=group.src_interdep,
+                     rup_interdep=group.rup_interdep,
+                     grp_probability=group.grp_probability)
         crv = classical(group, self.sites, gsim_by_trt, param)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv[0].array[:, 0], decimal=4)
@@ -188,6 +192,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
 
 class NankaiTestCase(unittest.TestCase):
     # use a source model for the Nankai region provided by M. Pagani
+    # also tests the case of undefined rake
     def test(self):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
         groups = nrml.to_python(source_model, SourceConverter(

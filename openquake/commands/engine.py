@@ -34,11 +34,10 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
-def get_job_id(job_id, username=None):
-    username = username or getpass.getuser()
-    job = logs.dbcmd('get_job', job_id, username)
+def get_job_id(job_id):
+    job = logs.dbcmd('get_job', job_id)
     if not job:
-        sys.exit('Job %s of %s not found' % (job_id, username))
+        sys.exit('Job %s not found' % job_id)
     return job.id
 
 
@@ -165,12 +164,17 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        job_ini = os.path.expanduser(run)
-        open(job_ini, 'rb').read()  # IOError if the file does not exist
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-        run_job(os.path.expanduser(run), log_level, log_file,
-                exports, hazard_calculation_id=hc_id)
+        job_inis = os.path.expanduser(run).split(',')
+        if len(job_inis) > 2 and hc_id:
+            sys.exit('The multi-run functionality only works without --hc')
+        for i, job_ini in enumerate(job_inis):
+            open(job_ini, 'rb').read()  # IOError if the file does not exist
+            job_id = run_job(job_ini, log_level, log_file,
+                             exports, hazard_calculation_id=hc_id)
+            if i == 0:  # use the first calculation as base for the others
+                hc_id = job_id
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
