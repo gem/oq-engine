@@ -24,7 +24,7 @@ from openquake.hazardlib.gsim.can15.western import (get_sigma,
                                                     WesternCan15Upp)
 
 
-class WesternRuptureDimensionTestCase(unittest.TestCase):
+class GetSigmaTestCase(unittest.TestCase):
     """
     This class tests the calculation of sigma values for the GMPEs included
     in the NRCan15 model
@@ -34,24 +34,24 @@ class WesternRuptureDimensionTestCase(unittest.TestCase):
         """ Test the calculation of sigma for short periods"""
         imt = PGA()
         computed = get_sigma(imt)
-        expected = 0.23
+        expected = np.log(10**0.23)
         np.testing.assert_almost_equal(computed, expected)
 
     def test_get_sigma_sa0(self):
         """ Test the calculation of sigma for short periods"""
         imt = SA(0.6)
         computed = get_sigma(imt)
-        expected = 0.25
+        expected = np.log(10**0.25)
         np.testing.assert_almost_equal(computed, expected)
         #
         imt = SA(0.4)
         computed = get_sigma(imt)
-        expected = 0.24
+        expected = np.log(10**0.24)
         np.testing.assert_almost_equal(computed, expected)
         #
         imt = SA(1.2)
         computed = get_sigma(imt)
-        expected = 0.27
+        expected = np.log(10**0.27)
         np.testing.assert_almost_equal(computed, expected)
 
 
