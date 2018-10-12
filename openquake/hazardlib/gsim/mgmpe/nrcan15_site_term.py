@@ -103,7 +103,7 @@ class NRCan15SiteTerm(GMPE):
             amplification factor.
         """
         fa = np.ones_like(vs30)
-        print(vs30, np.isscalar(vs30), type(vs30))
+        print(vs30, pgar, np.isscalar(vs30), type(vs30))
         if np.isscalar(vs30):
             vs30 = np.array([vs30])
             pgar = np.array([pgar])
