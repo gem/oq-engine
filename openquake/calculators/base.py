@@ -496,8 +496,21 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         with self.monitor('reading exposure', autoflush=True):
-            self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
-                self.oqparam, haz_sitecol, self.riskmodel.loss_types)
+            self.sitecol, self.assetcol, discarded = (
+                readinput.get_sitecol_assetcol(
+                    self.oqparam, haz_sitecol, self.riskmodel.loss_types))
+            if len(discarded):
+                self.datastore['discarded'] = discarded
+                msg = ('%d sites with assets were discarded; use '
+                       '`oq plot_assets` to see them' % len(discarded))
+                if hasattr(self, 'rup') or self.oqparam.discard_assets:
+                    # just log a warning in case of scenario from rupture
+                    # or when discard_assets is set to True
+                    logging.warn(msg)
+                else:  # raise an error
+                    self.datastore['sitecol'] = self.sitecol
+                    self.datastore['assetcol'] = self.assetcol
+                    raise RuntimeError(msg)
             readinput.exposure = None  # reset the global
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
@@ -710,9 +723,11 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
-            sitecol, shakemap, _discarded = get_sitecol_shakemap(
+            sitecol, shakemap, discarded = get_sitecol_shakemap(
                 smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
+            if len(discarded):
+                self.datastore['discarded'] = discarded
             assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')

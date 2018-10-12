@@ -908,6 +908,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         mode = 'strict' if oqparam.region_grid_spacing else 'filter'
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+        if oqparam.region_grid_spacing:  # it is normal to discard sites
+            discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -923,6 +925,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
+        discarded = []
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
@@ -934,7 +937,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and 'hazard_curves' not in oqparam.inputs):
         # TODO: think if we should remove this in presence of GMF-correlation
         assetcol = assetcol.reduce_also(sitecol)
-    return sitecol, assetcol
+    return sitecol, assetcol, discarded
 
 
 def _get_gmfs(oqparam):
