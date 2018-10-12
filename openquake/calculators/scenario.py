@@ -55,7 +55,7 @@ class ScenarioCalculator(base.HazardCalculator):
         E = oq.number_of_ground_motion_fields
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = numpy.arange(E)
-        ebr = EBRupture(self.rup, self.sitecol.sids, events)
+        ebr = EBRupture(self.rup, 0, self.sitecol.sids, events)
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
@@ -74,7 +74,7 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gmfa = collections.OrderedDict()
         if 'rupture_model' not in self.oqparam.inputs:
             return self.gmfa
-        with self.monitor('computing gmfs', autoflush=True):
+        with self.monitor('computing gmfs'):
             E = self.oqparam.number_of_ground_motion_fields
             for gsim in self.gsims:
                 gmfa = self.computer.compute(gsim, E)  # shape (I, N, E)

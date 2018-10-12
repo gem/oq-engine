@@ -45,8 +45,6 @@ else:
     # RabbitMQ broker (default)
     broker_url = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
                  config.amqp
-    # Redis broker (works only on Trusty)
-    # broker_url = 'redis://%(host)s:6379/0' % amqp
 
     # broker_pool_limit enables a connections pool so Celery can reuse
     # a single connection to RabbitMQ. Value 10 is the default from
@@ -58,9 +56,6 @@ else:
     # AMQP result backend (default)
     result_backend = 'rpc://'
     result_persistent = False
-
-    # Redis result backend (works only on Trusty)
-    # result_backend = 'redis://%(host)s:6379/0' % amqp
 
     # task_acks_late and worker_prefetch_multiplier settings help evenly
     # distribute tasks across the cluster. This configuration is intended
@@ -74,5 +69,6 @@ else:
     task_acks_late = True
     worker_prefetch_multiplier = 1
     result_cache_max = 1
+    task_ignore_result = True
 
     imports = ["openquake.baselib.parallel"]

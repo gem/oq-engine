@@ -33,6 +33,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib.slots import with_slots
 
 U32 = numpy.uint32
+F32 = numpy.float32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
@@ -103,6 +104,7 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict warn filter', mode
         dic = {}
+        discarded = []
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
@@ -111,10 +113,11 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to %d km from site (%s %s)',
-                             int(distance), lon, lat)
+                logging.warn('Association to (%.1f %.1f) from site #%d '
+                             '(%.1f %.1f) %d km', obj['lon'], obj['lat'],
+                             sid, lon, lat, int(distance))
             elif mode == 'filter':
-                pass  # do not associate
+                discarded.append(obj)
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
@@ -123,7 +126,8 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
         return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]))
+                numpy.array([dic[sid] for sid in sorted(dic)]),
+                discarded)
 
     def assoc2(self, assets_by_site, assoc_dist, mode):
         """
@@ -137,7 +141,9 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict warn filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
+        site_dt = numpy.dtype([('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
+        discarded = []
         for assets in assets_by_site:
             lon, lat = assets[0].location
             obj, distance = self.get_closest(lon, lat)
@@ -151,6 +157,9 @@ class _GeographicObjects(object):
             elif mode == 'warn':
                 logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
                              assets, lon, lat)
+                discarded.extend(assets)
+            else:
+                discarded.extend(assets)
         sids = sorted(assets_by_sid)
         if not sids:
             raise SiteAssociationError(
@@ -159,7 +168,9 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        return self.objects.filtered(sids), assets_by_site
+        discarded = numpy.array(
+            sorted(set(asset.location for asset in discarded)), site_dt)
+        return self.objects.filtered(sids), assets_by_site, discarded
 
 
 def assoc(objects, sitecol, assoc_dist, mode):

@@ -30,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
-GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
+GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -65,6 +65,7 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
+    discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
@@ -86,6 +87,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
+    individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
@@ -104,7 +106,7 @@ class OqParam(valid.ParamSet):
     max_loss_curves = valid.Param(valid.boolean, False)
     mean_loss_curves = valid.Param(valid.boolean, True)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
-    minimum_magnitude = valid.Param(valid.positivefloat, 0)
+    minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -142,6 +144,8 @@ class OqParam(valid.ParamSet):
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     specific_assets = valid.Param(valid.namelist, [])
+    nodal_dist_collapsing_distance = valid.Param(valid.positivefloat, None)
+    hypo_dist_collapsing_distance = valid.Param(valid.positivefloat, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
@@ -205,6 +209,9 @@ class OqParam(valid.ParamSet):
         self._file_type, self._risk_files = get_risk_files(self.inputs)
 
         self.check_source_model()
+        if (self.hazard_calculation_id and
+                self.calculation_mode == 'ucerf_risk'):
+            raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'warn')
             self.check_missing('gsim_logic_tree', 'warn')
@@ -232,17 +239,6 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
-
-        # checks for hazard outputs
-        if not self.hazard_stats():
-            if self.uniform_hazard_spectra:
-                raise InvalidFile(
-                    '%(job_ini)s: uniform_hazard_spectra=true is inconsistent '
-                    'with mean_hazard_curves=false' % self.inputs)
-            elif self.hazard_maps:
-                raise InvalidFile(
-                    '%(job_ini)s: hazard_maps=true is inconsistent '
-                    'with mean_hazard_curves=false' % self.inputs)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -289,6 +285,12 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+        # check grid + sites
+        if self.region_grid_spacing and (
+                'sites' in self.inputs or 'site_model' in self.inputs):
+            logging.warn('Using a grid together with specifying explicitly '
+                         'the sites is deprecated')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
@@ -309,7 +311,7 @@ class OqParam(valid.ParamSet):
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
-                    if param in ('lons', 'lats'):  # no check
+                    if param in ('lon', 'lat', 'vs30'):  # no check
                         continue
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
@@ -387,7 +389,6 @@ class OqParam(valid.ParamSet):
                 else:
                     imtls[imt] = imls
         self.risk_imtls = imtls
-
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
@@ -503,6 +504,17 @@ class OqParam(valid.ParamSet):
         return 'risk' if ('risk' in self.calculation_mode or
                           'damage' in self.calculation_mode or
                           'bcr' in self.calculation_mode) else 'hazard'
+
+    @property
+    def risk_model(self):
+        """
+        :returns: 'fragility', 'vulnerability' or the empty string
+        """
+        if self.job_type == 'hazard':
+            return ('fragility' if self.file_type == 'fragility'
+                    else 'vulnerability')
+        return ('fragility' if 'damage' in self.calculation_mode
+                else 'vulnerability')
 
     def is_valid_shakemap(self):
         """
@@ -635,7 +647,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_export_dir(self):
         """
-        The `export_dir` parameter must refer to a directory,
+        export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
         if not self.export_dir:
@@ -644,12 +656,11 @@ class OqParam(valid.ParamSet):
                          % self.export_dir)
             return True
         elif not os.path.exists(self.export_dir):
-            # check that we can write on the parent directory
-            pdir = os.path.dirname(self.export_dir)
-            can_write = os.path.exists(pdir) and os.access(pdir, os.W_OK)
-            if can_write:
-                os.mkdir(self.export_dir)
-            return can_write
+            try:
+                os.makedirs(self.export_dir)
+            except PermissionError:
+                return False
+            return True
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
@@ -665,11 +676,11 @@ class OqParam(valid.ParamSet):
         if 'damage' in self.calculation_mode:
             return any(
                 key.endswith('_fragility') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'fragility' in parent_datasets
         elif 'risk' in self.calculation_mode:
             return any(
                 key.endswith('_vulnerability') for key in self.inputs
-            ) or 'composite_risk_model' in parent_datasets
+            ) or 'vulnerability' in parent_datasets
         return True
 
     def is_valid_complex_fault_mesh_spacing(self):
@@ -681,6 +692,20 @@ class OqParam(valid.ParamSet):
         if rms and not getattr(self, 'complex_fault_mesh_spacing', None):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
+
+    def is_valid_optimize_same_id_sources(self):
+        """
+        The `optimize_same_id_sources` can be true only in the classical
+        calculators.
+        """
+        if (self.optimize_same_id_sources and
+                'classical' in self.calculation_mode or
+                'disagg' in self.calculation_mode):
+            return True
+        elif self.optimize_same_id_sources:
+            return False
+        else:
+            return True
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

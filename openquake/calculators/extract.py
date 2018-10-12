@@ -57,8 +57,6 @@ def extract_(dstore, dspath):
     extract('sitecol', dstore). It is also possibly to extract the
     attributes, for instance with extract('sitecol.attrs', dstore).
     """
-    if dspath.endswith('.attrs'):
-        return ArrayWrapper(0, dstore.get_attrs(dspath[:-6]))
     obj = dstore[dspath]
     if isinstance(obj, Dataset):
         return ArrayWrapper(obj.value, obj.attrs)
@@ -167,20 +165,20 @@ def extract_hazard(dstore, what):
     nsites = len(sitecol)
     M = len(oq.imtls)
     P = len(oq.poes)
-    for kind, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
+    for statname, pmap in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         for imt in oq.imtls:
-            key = 'hcurves/%s/%s' % (imt, kind)
+            key = 'hcurves/%s/%s' % (imt, statname)
             arr = numpy.zeros((nsites, len(oq.imtls[imt])))
             for sid in pmap:
                 arr[sid] = pmap[sid].array[oq.imtls(imt), 0]
             logging.info('extracting %s', key)
             yield key, arr
         try:
-            hmap = dstore['hmaps/' + kind]
-        except KeyError:  # for kind=rlz-XXX
+            hmap = dstore['hmaps/' + statname]
+        except KeyError:  # for statname=rlz-XXX
             hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
         for p, poe in enumerate(oq.poes):
-            key = 'hmaps/poe-%s/%s' % (poe, kind)
+            key = 'hmaps/poe-%s/%s' % (poe, statname)
             arr = numpy.zeros((nsites, M))
             idx = [m * P + p for m in range(M)]
             for sid in pmap:
@@ -231,6 +229,17 @@ def hazard_items(dic, mesh, *extras, **kw):
     yield 'all', util.compose_arrays(mesh, array)
 
 
+def _get_dict(dstore, name, imts, imls):
+    dic = {}
+    dtlist = []
+    for imt, imls in zip(imts, imls):
+        dt = numpy.dtype([(str(iml), F32) for iml in imls])
+        dtlist.append((imt, dt))
+    for statname, curves in dstore[name].items():
+        dic[statname] = curves.value.view(dtlist).flatten()
+    return dic
+
+
 @extract.add('hcurves')
 def extract_hcurves(dstore, what):
     """
@@ -242,13 +251,7 @@ def extract_hcurves(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol, complete=False)
-    dic = {}
-    dtlist = []
-    for imt, imls in oq.imtls.items():
-        dt = numpy.dtype([(str(iml), F32) for iml in imls])
-        dtlist.append((imt, dt))
-    for kind, hcurves in dstore['hcurves'].items():
-        dic[kind] = hcurves.value.view(dtlist).flatten()
+    dic = _get_dict(dstore, 'hcurves', oq.imtls, oq.imtls.values())
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -261,7 +264,7 @@ def extract_hmaps(dstore, what):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     mesh = get_mesh(sitecol)
-    dic = {kind: dstore['hmaps/' + kind] for kind in dstore['hmaps']}
+    dic = _get_dict(dstore, 'hmaps', oq.imtls, [oq.poes] * len(oq.imtls))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -275,8 +278,8 @@ def extract_uhs(dstore, what):
     mesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
-    for kind, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[kind] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+    for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
+        dic[name] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
@@ -475,8 +478,9 @@ def build_damage_dt(dstore, mean_std=True):
        a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...) or
        loss_type -> (ds1, ds2, ...) depending on the flag mean_std
     """
+    oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr('composite_risk_model', 'limit_states'))
+        dstore.get_attr(oq.risk_model, 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -486,7 +490,7 @@ def build_damage_dt(dstore, mean_std=True):
         else:
             dt_list.append((ds, F32))
     damage_dt = numpy.dtype(dt_list)
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    loss_types = dstore.get_attr(oq.risk_model, 'loss_types')
     return numpy.dtype([(str(lt), damage_dt) for lt in loss_types])
 
 
@@ -547,3 +551,14 @@ def extract_mean_std_curves(dstore, what):
     for imt in getter.imtls:
         yield 'imls/' + imt, getter.imtls[imt]
         yield 'poes/' + imt, arr[:, getter.imtls(imt)]
+
+
+@extract.add('composite_risk_model.attrs')
+def crm_attrs(dstore, what):
+    """
+    :returns:
+        the attributes of the risk model, i.e. limit_states, loss_types,
+        min_iml and covs, needed by the risk exporters.
+    """
+    name = dstore['oqparam'].risk_model
+    return ArrayWrapper(0, dstore.get_attrs(name))

@@ -79,9 +79,13 @@ class ContextMaker(object):
 
     def __init__(self, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
+        param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        param = param or {}
+        self.hypo_dist_collapsing_distance = param.get(
+            'hypo_dist_collapsing_distance')
+        self.nodal_dist_collapsing_distance = param.get(
+            'nodal_dist_collapsing_distance')
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -211,6 +215,16 @@ class ContextMaker(object):
             initvalue=rup_indep)
         eff_ruptures = 0
         with self.ir_mon:
+            if hasattr(src, 'location'):
+                dist = src.location.distance_to_mesh(sites).min()
+                if (self.hypo_dist_collapsing_distance is not None and
+                        dist > self.hypo_dist_collapsing_distance):
+                    # disable floating
+                    src.hypocenter_distribution.reduce()
+                if (self.nodal_dist_collapsing_distance is not None and
+                        dist > self.nodal_dist_collapsing_distance):
+                    # disable spinning
+                    src.nodal_plane_distribution.reduce()
             rups = list(src.iter_ruptures())
         # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
         # discards far away ruptures: len(rups) < src.num_ruptures can happen

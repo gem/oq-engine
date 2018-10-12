@@ -2,9 +2,9 @@ Event Based Risk QA Test 2
 ==========================
 
 ============== ===================
-checksum32     4,290,565,281      
-date           2018-06-05T06:38:30
-engine_version 3.2.0-git65c4735   
+checksum32     3,857,499,779      
+date           2018-10-05T03:05:02
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 3, num_levels = 15
@@ -98,21 +98,21 @@ W/1      1.00000 NaN     1   1   1         1
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            0.00951   3.815E-06  1.00000   1         8     
-2         PointSource  6            0.00725   1.907E-06  1.00000   1         14    
-3         PointSource  6            0.00687   1.192E-06  1.00000   1         20    
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         P    0     1     6            0.00620   2.217E-05  1.00000   1         8.00000
+0      2         P    1     2     6            0.00966   8.345E-06  1.00000   1         6.00000
+0      3         P    2     3     6            0.00982   6.437E-06  1.00000   1         6.00000
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  0.02363   3     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    0.02568   3     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -120,37 +120,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.00312 1.586E-04 0.00295 0.00326 3        
-compute_ruptures   0.03194 NaN       0.03194 0.03194 1        
-================== ======= ========= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.00117 NaN     0.00117 0.00117 1      
+split_filter       0.00271 NaN     0.00271 0.00271 1      
+build_ruptures     0.01135 0.00248 0.00849 0.01289 3      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================ ====================================================================== ========
-task             sent                                                                   received
-RtreeFilter      srcs=3.91 KB monitor=1.01 KB srcfilter=837 B                           4.05 KB 
-compute_ruptures sources=2.47 KB param=831 B monitor=353 B src_filter=233 B gsims=127 B 11.3 KB 
-================ ====================================================================== ========
+================== ======================================================================= ========
+task               sent                                                                    received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                    2.2 KB  
+split_filter       srcs=2.09 KB monitor=439 B srcfilter=220 B sample_factor=21 B seed=14 B 2.23 KB 
+build_ruptures     srcs=4.15 KB monitor=1.08 KB param=885 B srcfilter=660 B                16.45 KB
+================== ======================================================================= ========
 
 Slowest operations
 ------------------
-=============================== ========= ========= ======
-operation                       time_sec  memory_mb counts
-=============================== ========= ========= ======
-EventBasedRuptureCalculator.run 0.32211   0.0       1     
-managing sources                0.18716   0.0       1     
-total compute_ruptures          0.03194   7.37500   1     
-total prefilter                 0.00935   2.47656   3     
-making contexts                 0.00914   0.0       9     
-saving ruptures                 0.00577   0.0       1     
-store source_info               0.00506   0.0       1     
-reading composite source model  0.00345   0.0       1     
-reading site collection         0.00341   0.0       1     
-reading exposure                0.00166   0.0       1     
-unpickling compute_ruptures     0.00162   0.0       1     
-setting event years             0.00154   0.0       1     
-unpickling prefilter            8.292E-04 0.0       3     
-splitting sources               3.400E-04 0.0       1     
-=============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     0.03406  0.0       3     
+saving ruptures          0.03265  0.0       1     
+making contexts          0.00930  0.0       9     
+updating source_info     0.00788  0.0       1     
+store source_info        0.00473  0.0       1     
+total split_filter       0.00271  0.0       1     
+setting event years      0.00122  0.0       1     
+total read_source_models 0.00117  0.0       1     
+reading exposure         0.00105  0.0       1     
+======================== ======== ========= ======

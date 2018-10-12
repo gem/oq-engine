@@ -23,9 +23,6 @@ case "$1" in
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
-    if pgrep supervisord 2>&1 > /dev/null; then
-        supervisorctl reload
-    fi
     for dir in /opt/openquake/lib/python2.7/site-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /opt/openquake/lib/python2.7/site-packages/openquake.engine-*egg-info
     do
         rm -rf $dir

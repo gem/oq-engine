@@ -189,5 +189,5 @@ xmlns:gml="http://www.opengis.net/gml"
         converter = SourceConverter(50., 1., 10, 0.1, 10.)
         with self.assertRaises(ValueError) as ctx:
             parse(fname, converter)
-        self.assertEqual('There are 2 srcs_weights but 1 source(s)',
-                         str(ctx.exception))
+        self.assertIn('There are 2 srcs_weights but 1 source(s)',
+                      str(ctx.exception))

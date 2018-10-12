@@ -105,7 +105,7 @@ def upgrade_file(path, multipoint):
                             nodes=srcs)
                        for i, (trt, srcs) in enumerate(dic.items(), 1)]
         if multipoint:
-            sourceconverter.update_source_model(node0)
+            sourceconverter.update_source_model(node0, path + '.bak')
     with open(path, 'wb') as f:
         nrml.write([node0], f, gml=gml)
 
@@ -135,7 +135,7 @@ def upgrade_nrml(directory, dry_run, multipoint):
                     if 'sourceModel' in tag and multipoint:
                         print('upgrading to multiPointSources', path)
                         node0 = nrml.read(path)[0]
-                        sourceconverter.update_source_model(node0)
+                        sourceconverter.update_source_model(node0, path)
                         with open(path, 'wb') as f:
                             nrml.write([node0], f, gml=True)
                 elif 'nrml/0.4' in xmlns and (

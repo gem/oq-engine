@@ -63,6 +63,7 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_discrete(self):
+        # a test producing NaNs
         self.run_calc(case_2.__file__, 'job_discrete.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)

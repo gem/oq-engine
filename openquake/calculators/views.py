@@ -173,8 +173,7 @@ def view_times_by_source_class(token, dstore):
     """
     Returns the calculation times depending on the source typology
     """
-    totals = sum_tbl(
-        dstore['source_info'], 'source_class', ['calc_time'])
+    totals = sum_tbl(dstore['source_info'], 'code', ['calc_time'])
     return rst_table(totals)
 
 
@@ -208,12 +207,15 @@ def view_contents(token, dstore):
     """
     Returns the size of the contents of the datastore and its total size
     """
-    oq = dstore['oqparam']
+    try:
+        desc = dstore['oqparam'].description
+    except KeyError:
+        desc = ''
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
         dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
-    return rst_table(rows, header=(oq.description, '')) + total
+    return rst_table(rows, header=(desc, '')) + total
 
 
 @view.add('csm_info')
@@ -324,12 +326,13 @@ def view_job_info(token, dstore):
     data = [['task', 'sent', 'received']]
     for task in dstore['task_info']:
         dset = dstore['task_info/' + task]
-        argnames = dset.attrs['argnames'].split()
-        totsent = dset.attrs['sent']
-        sent = ['%s=%s' % (a, humansize(s))
-                for s, a in sorted(zip(totsent, argnames), reverse=True)]
-        recv = dset['received'].sum()
-        data.append((task, ' '.join(sent), humansize(recv)))
+        if 'argnames' in dset.attrs:
+            argnames = dset.attrs['argnames'].split()
+            totsent = dset.attrs['sent']
+            sent = ['%s=%s' % (a, humansize(s))
+                    for s, a in sorted(zip(totsent, argnames), reverse=True)]
+            recv = dset['received'].sum()
+            data.append((task, ' '.join(sent), humansize(recv)))
     return rst_table(data)
 
 
@@ -342,7 +345,7 @@ def avglosses_data_transfer(token, dstore):
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = dstore['csm_info'].get_num_rlzs()
-    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
+    L = len(dstore.get_attr(oq.risk_model, 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
@@ -377,25 +380,43 @@ def view_totlosses(token, dstore):
 
 
 # for event based risk
-@view.add('portfolio_loss')
-def view_portfolio_loss(token, dstore):
+def portfolio_loss(dstore):
+    array = dstore['losses_by_event'].value
+    L, = array.dtype['loss'].shape
+    R = dstore['csm_info'].get_num_rlzs()
+    data = numpy.zeros((R, L), F32)
+    for row in array:
+        data[row['rlzi']] += row['loss']
+    return data
+
+
+@view.add('portfolio_losses')
+def view_portfolio_losses(token, dstore):
     """
-    The loss for the full portfolio, for each realization and loss type,
+    The losses for the full portfolio, for each realization and loss type,
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    R = dstore['csm_info'].get_num_rlzs()
-    by_rlzi = group_array(dstore['losses_by_event'].value, 'rlzi')
-    data = numpy.zeros(R, loss_dt)
-    rlzids = [str(r) for r in range(R)]
-    for r in range(R):
-        loss = by_rlzi[r]['loss'].sum(axis=0)
-        for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = loss[l]
+    data = portfolio_loss(dstore).view(loss_dt)[:, 0]
+    rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
+
+
+@view.add('portfolio_loss')
+def view_portfolio_loss(token, dstore):
+    """
+    The mean and stddev loss for the full portfolio for each loss type,
+    extracted from the event loss table, averaged over the realizations
+    """
+    data = portfolio_loss(dstore)  # shape (R, L)
+    loss_types = list(dstore['oqparam'].loss_dt().names)
+    header = ['portfolio_loss'] + loss_types
+    mean = ['mean'] + [row.mean() for row in data.T]
+    stddev = ['stddev'] + [row.std(ddof=1) for row in data.T]
+    return rst_table([mean, stddev], header)
 
 
 def sum_table(records):
@@ -583,10 +604,11 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration mean stddev min max num_tasks'.split()]
+    data = ['operation-duration mean stddev min max outputs'.split()]
     for task in dstore['task_info']:
         val = dstore['task_info/' + task]['duration']
-        data.append(stats(task, val))
+        if len(val):
+            data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -617,10 +639,8 @@ def view_task_hazard(token, dstore):
         return 'Missing source_data'
     if 'classical' in tasks:
         data = dstore['task_info/classical'].value
-    elif 'count_eff_ruptures' in tasks:
-        data = dstore['task_info/count_eff_ruptures'].value
     else:
-        data = dstore['task_info/compute_hazard'].value
+        data = dstore['task_info/compute_gmfs'].value
     data.sort(order='duration')
     rec = data[int(token.split(':')[1])]
     taskno = rec['taskno']
@@ -721,17 +741,17 @@ def view_dupl_sources(token, dstore):
     info = dstore['source_info']
     items = sorted(group_array(info.value, 'source_id').items())
     tbl = []
-    tot_calc_time = 0
+    tot_time = 0
     for source_id, records in items:
         if len(records) > 1:  # dupl
             calc_time = records['calc_time'].sum()
-            tot_calc_time += calc_time
+            tot_time += calc_time + records['split_time'].sum()
             tbl.append((source_id, calc_time, len(records)))
     if tbl and info.attrs['has_dupl_sources']:
-        tot = info['calc_time'].sum()
-        percent = tot_calc_time / tot * 100
-        m = '\nTotal calc_time in duplicated sources: %d/%d (%d%%)' % (
-            tot_calc_time, tot, percent)
+        tot = info['calc_time'].sum() + info['split_time'].sum()
+        percent = tot_time / tot * 100
+        m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (
+            tot_time, tot, percent)
         return rst_table(tbl, ['source_id', 'calc_time', 'num_dupl']) + m
     else:
         return 'There are no duplicated sources'
@@ -752,6 +772,16 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('global_gmfs')
+def view_global_gmfs(token, dstore):
+    """
+    Display GMFs averaged on everything for debugging purposes
+    """
+    imtls = dstore['oqparam'].imtls
+    row = dstore['gmf_data/data']['gmv'].mean(axis=0)
+    return rst_table([row], header=imtls)
 
 
 @view.add('mean_disagg')

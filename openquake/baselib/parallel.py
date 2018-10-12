@@ -152,7 +152,6 @@ import pickle
 import inspect
 import logging
 import operator
-import functools
 import itertools
 import traceback
 import collections
@@ -200,26 +199,6 @@ def oq_distribute(task=None):
                          'in order to be able to run %s with celery' %
                          task.__name__)
     return dist
-
-
-def check_mem_usage(monitor=Monitor(),
-                    soft_percent=None, hard_percent=None):
-    """
-    Display a warning if we are running out of memory
-
-    :param int mem_percent: the memory limit as a percentage
-    """
-    soft_percent = soft_percent or config.memory.soft_mem_limit
-    hard_percent = hard_percent or config.memory.hard_mem_limit
-    used_mem_percent = psutil.virtual_memory().percent
-    if used_mem_percent > hard_percent:
-        raise MemoryError('Using more memory than allowed by configuration '
-                          '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
-                          (used_mem_percent, hard_percent))
-    elif used_mem_percent > soft_percent:
-        hostname = socket.gethostname()
-        logging.warn('Using over %d%% of the memory in %s!',
-                     used_mem_percent, hostname)
 
 
 class Pickled(object):
@@ -305,11 +284,14 @@ class Result(object):
     :param val: value to return or exception instance
     :param mon: Monitor instance
     :param tb_str: traceback string (empty if there was no exception)
+    :param msg: message string (default empty)
     """
-    def __init__(self, val, mon, tb_str=''):
+    def __init__(self, val, mon, tb_str='', msg='', count=0):
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
+        self.msg = msg
+        self.count = count
 
     def get(self):
         """
@@ -326,7 +308,7 @@ class Result(object):
         return val
 
     @classmethod
-    def new(cls, func, args, mon):
+    def new(cls, func, args, mon, splice=False, count=0):
         """
         :returns: a new Result instance
         """
@@ -334,13 +316,31 @@ class Result(object):
             with mon:
                 val = func(*args)
         except StopIteration:
-            res = None
+            res = Result(None, mon, msg='TASK_ENDED')
         except Exception:
             _etype, exc, tb = sys.exc_info()
-            res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
+            res = Result(exc, mon, ''.join(traceback.format_tb(tb)),
+                         count=count)
         else:
-            res = Result(val, mon)
+            res = Result(val, mon, count=count)
+        res.splice = splice
         return res
+
+
+def check_mem_usage(soft_percent=None, hard_percent=None):
+    """
+    Display a warning if we are running out of memory
+    """
+    soft_percent = soft_percent or config.memory.soft_mem_limit
+    hard_percent = hard_percent or config.memory.hard_mem_limit
+    used_mem_percent = psutil.virtual_memory().percent
+    if used_mem_percent > hard_percent:
+        raise MemoryError('Using more memory than allowed by configuration '
+                          '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
+                          (used_mem_percent, hard_percent))
+    elif used_mem_percent > soft_percent:
+        msg = 'Using over %d%% of the memory in %s!'
+        return msg % (used_mem_percent, socket.gethostname())
 
 
 dummy_mon = Monitor()
@@ -358,11 +358,13 @@ def safely_call(func, args, monitor=dummy_mon):
     :param func: the function to call
     :param args: the arguments
     """
+    isgenfunc = inspect.isgeneratorfunction(func)
     monitor.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
     if monitor is dummy_mon:  # in the DbServer
+        assert not isgenfunc, func
         return Result.new(func, args, monitor)
 
     mon = args[-1]
@@ -371,21 +373,34 @@ def safely_call(func, args, monitor=dummy_mon):
     if mon is not monitor:
         mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    res = Result.new(func, args, mon)
-    if monitor.backurl is None:
-        return res
     with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
-        try:
-            zsocket.send(res)
-        except Exception:  # like OverflowError
-            _etype, exc, tb = sys.exc_info()
-            err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-            zsocket.send(err)
-    return zsocket.num_sent
+        msg = check_mem_usage()  # warn if too much memory is used
+        if msg:
+            zsocket.send(Result(None, mon, msg=msg))
+        if inspect.isgeneratorfunction(func):
+            gfunc = func
+        else:
+            def gfunc(*args):
+                yield func(*args)
+        gobj = gfunc(*args)
+        for count in itertools.count():
+            res = Result.new(next, (gobj,), mon, count=count)
+            # StopIteration -> TASK_ENDED
+            try:
+                zsocket.send(res)
+            except Exception:  # like OverflowError
+                _etype, exc, tb = sys.exc_info()
+                err = Result(exc, mon, ''.join(traceback.format_tb(tb)),
+                             count=count)
+                zsocket.send(err)
+            mon.duration = 0
+            mon.counts = 0
+            mon.children.clear()
+            if res.msg == 'TASK_ENDED':
+                break
 
 
 if OQ_DISTRIBUTE.startswith('celery'):
-    from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
 
@@ -393,13 +408,8 @@ if OQ_DISTRIBUTE.startswith('celery'):
     app.config_from_object('openquake.engine.celeryconfig')
     safetask = task(safely_call, queue='celery')  # has to be global
 
-    def _iter_native(task_ids, results):  # helper
-        for task_id, result_dict in ResultSet(results).iter_native():
-            task_ids.remove(task_id)
-            yield result_dict['result']
-
 elif OQ_DISTRIBUTE == 'dask':
-    from dask.distributed import Client, as_completed
+    from dask.distributed import Client
 
 
 class IterResult(object):
@@ -408,8 +418,8 @@ class IterResult(object):
         an iterator over Result objects
     :param taskname:
         the name of the task
-    :param num_tasks:
-        the total number of expected tasks
+    :param done_total:
+        a function returning the number of done tasks and the total
     :param sent:
         the number of bytes sent (0 if OQ_DISTRIBUTE=no)
     :param progress:
@@ -417,47 +427,25 @@ class IterResult(object):
     :param hdf5:
         if given, hdf5 file where to append the performance information
     """
-    def __init__(self, iresults, taskname, argnames, num_tasks, sent,
-                 progress=logging.info, hdf5=None):
+    def __init__(self, iresults, taskname, argnames, sent, hdf5=None):
         self.iresults = iresults
         self.name = taskname
         self.argnames = ' '.join(argnames)
-        self.num_tasks = num_tasks
         self.sent = sent
-        self.progress = progress
         self.hdf5 = hdf5
         self.received = []
-        if self.num_tasks:
-            self.log_percent = self._log_percent()
-            next(self.log_percent)
-        else:
-            self.progress('No %s tasks were submitted', self.name)
-        self.progress('Sent %s of data in %s task(s)',
-                      humansize(sent.sum()), num_tasks)
-
-    def _log_percent(self):
-        yield 0
-        done = 1
-        prev_percent = 0
-        while done < self.num_tasks:
-            if done == 1:  # first time
-                self.progress('Submitting %s "%s" tasks', self.num_tasks,
-                              self.name)
-            percent = int(float(done) / self.num_tasks * 100)
-            if percent > prev_percent:
-                self.progress('%s %3d%%', self.name, percent)
-                prev_percent = percent
-            yield done
-            done += 1
-        self.progress('%s 100%%', self.name)
-        yield done
 
     def __iter__(self):
+        if self.iresults == ():
+            return ()
+        t0 = time.time()
         self.received = []
-        if self.num_tasks == 0:
-            return
+        first_time = True
         for result in self.iresults:
-            check_mem_usage()  # log a warning if too much memory is used
+            msg = check_mem_usage()  # log a warning if too much memory is used
+            if msg and first_time:
+                logging.warn(msg)
+                first_time = False  # warn only once
             if isinstance(result, BaseException):
                 # this happens with WorkerLostError with celery
                 raise result
@@ -467,20 +455,21 @@ class IterResult(object):
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool':
-                mem_gb = memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids) / GB
+                mem_gb = (memory_rss(os.getpid()) + sum(
+                    memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
                 mem_gb = numpy.nan
-            next(self.log_percent)
-            if not self.name.startswith('_'):  # no info for private tasks
-                self.save_task_info(result.mon, mem_gb)
-            yield val
-
+            self.save_task_info(result.mon, mem_gb)
+            if result.splice:
+                yield from val
+            else:
+                yield val
         if self.received:
             tot = sum(self.received)
-            max_per_task = max(self.received)
-            self.progress('Received %s of data, maximum per task %s',
-                          humansize(tot), humansize(max_per_task))
+            max_per_output = max(self.received)
+            logging.info('Received %s from %d outputs in %d seconds, biggest '
+                         'output=%s', humansize(tot), len(self.received),
+                         time.time() - t0, humansize(max_per_output))
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
@@ -533,31 +522,27 @@ def init_workers():
     else:
         # if the parent dies, the children die
         prctl.set_pdeathsig(signal.SIGKILL)
-    return os.getpid()
 
 
-def _wakeup(sec, mon):
-    """Waiting function, used to wake up the process pool"""
-    time.sleep(sec)
-    return os.getpid()
+running_tasks = []  # currently running tasks
 
 
 class Starmap(object):
-    task_ids = []
-    pids = []
     calc_id = None
     hdf5 = None
+    pids = ()
 
     @classmethod
     def init(cls, poolsize=None, distribute=OQ_DISTRIBUTE):
         if distribute == 'processpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.Pool(poolsize, init_workers)
-            m = Monitor('wakeup')
-            ires = cls(
-                _wakeup, [(.2, m) for _ in range(cls.pool._processes)]
-            ).submit_all(logging.debug)
-            cls.pids = list(ires)
-            cls.task_ids = []
+            orig_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            # we use spawn here to avoid deadlocks with logging, see
+            # https://github.com/gem/oq-engine/pull/3923 and
+            # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
+            cls.pool = multiprocessing.get_context('spawn').Pool(
+                poolsize, init_workers)
+            signal.signal(signal.SIGINT, orig_handler)
+            cls.pids = [proc.pid for proc in cls.pool._pool]
         elif distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(poolsize)
         elif distribute == 'no' and hasattr(cls, 'pool'):
@@ -566,7 +551,7 @@ class Starmap(object):
             cls.dask_client = Client()
 
     @classmethod
-    def shutdown(cls, poolsize=None):
+    def shutdown(cls):
         if hasattr(cls, 'pool'):
             cls.pool.close()
             cls.pool.terminate()
@@ -600,20 +585,28 @@ class Starmap(object):
         arg0 = args[0]  # this is assumed to be a sequence
         args = args[1:]
         mon = args[-1]
-        if maxweight:
-            chunks = block_splitter(arg0, maxweight, weight, key)
-        else:
-            chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
-        task_args = [(ch,) + args for ch in chunks]
-        return cls(task, task_args, mon, distribute).submit_all(progress)
+        if maxweight:  # block_splitter is lazy
+            task_args = ((blk,) + args for blk in block_splitter(
+                arg0, maxweight, weight, key))
+        else:  # split_in_blocks is eager
+            task_args = [(blk,) + args for blk in split_in_blocks(
+                arg0, concurrent_tasks or 1, weight, key)]
+        return cls(task, task_args, mon, distribute, progress).submit_all()
 
-    def __init__(self, task_func, task_args, monitor=None, distribute=None):
+    def __init__(self, task_func, task_args=(), monitor=None, distribute=None,
+                 progress=logging.info):
         self.__class__.init(distribute=distribute or OQ_DISTRIBUTE)
         self.task_func = task_func
         self.monitor = monitor or Monitor(task_func.__name__)
+        self.calc_id = getattr(self.monitor, 'calc_id', None)
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
         self.distribute = distribute or oq_distribute(task_func)
+        self.progress = progress
+        try:
+            self.num_tasks = len(self.task_args)
+        except TypeError:  # generators have no len
+            self.num_tasks = None
         # a task can be a function, a class or an instance with a __call__
         if inspect.isfunction(task_func):
             self.argnames = inspect.getargspec(task_func).args
@@ -625,6 +618,7 @@ class Starmap(object):
             config.dbserver.listen, config.dbserver.receiver_ports)
         self.sent = numpy.zeros(len(self.argnames))
         self.monitor.backurl = None  # overridden later
+        self.tasks = []  # populated by .submit
         h5 = self.monitor.hdf5
         task_info = 'task_info/' + self.name
         if h5 and task_info not in h5:  # first time
@@ -633,116 +627,112 @@ class Starmap(object):
         if h5 and 'performance_data' not in h5:
             hdf5.create(h5, 'performance_data', perf_dt)
 
-    @property
-    def num_tasks(self):
+    def log_percent(self):
         """
-        The number of tasks, if known, or the empty string otherwise.
+        Log the progress of the computation in percentage
         """
-        try:
-            return len(self.task_args)
-        except TypeError:  # generators have no len
-            return ''
-        # NB: returning -1 breaks openquake.hazardlib.tests.calc.
-        # hazard_curve_new_test.HazardCurvesTestCase02 :-(
+        done = self.total - self.todo
+        percent = int(float(done) / self.total * 100)
+        if not hasattr(self, 'prev_percent'):  # first time
+            self.prev_percent = 0
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent.sum()), self.total)
+        elif percent > self.prev_percent:
+            self.progress('%s %3d%%', self.name, percent)
+            self.prev_percent = percent
+        return done
 
-    def _genargs(self, pickle=True):
+    def submit(self, *args):
         """
-        Add .task_no and .weight to the monitor and yield back
-        the arguments by pickling them.
+        Submit the given arguments to the underlying task
         """
-        for task_no, args in enumerate(self.task_args, 1):
-            mon = args[-1]
-            assert isinstance(mon, Monitor), mon
-            # add incremental task number and task weight
-            mon.task_no = task_no
-            self.calc_id = getattr(mon, 'calc_id', None)
-            if pickle:
-                args = pickle_sequence(args)
-                self.sent += numpy.array([len(p) for p in args])
-            yield args
+        global running_tasks
+        if not hasattr(self, 'socket'):  # first time
+            running_tasks = self.tasks
+            self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.monitor.backurl = 'tcp://%s:%s' % (
+                config.dbserver.host, self.socket.port)
+        mon = args[-1]
+        assert isinstance(mon, Monitor), mon
+        # add incremental task number and task weight
+        mon.task_no = len(self.tasks) + 1
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist != 'no':
+            args = pickle_sequence(args)
+            self.sent += numpy.array([len(p) for p in args])
+        res = getattr(self, dist + '_submit')(args)
+        self.tasks.append(res)
 
-    def submit_all(self, progress=logging.info):
+    def submit_all(self):
         """
         :returns: an IterResult object
         """
-        if self.num_tasks == 1 or self.distribute == 'no':
-            it = self._iter_sequential()
-        else:
-            it = getattr(self, '_iter_' + self.distribute)()
-        num_tasks = next(it)
-        return IterResult(it, self.name, self.argnames, num_tasks,
-                          self.sent, progress, self.monitor.hdf5)
+        for args in self.task_args:
+            self.submit(*args)
+        return self.get_results()
 
-    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+    def get_results(self):
+        """
+        :returns: an :class:`IterResult` instance
+        """
+        return IterResult(self._loop(), self.name, self.argnames,
+                          self.sent, self.monitor.hdf5)
+
+    def reduce(self, agg=operator.add, acc=None):
         """
         Submit all tasks and reduce the results
         """
-        return self.submit_all(progress).reduce(agg, acc)
+        return self.submit_all().reduce(agg, acc)
 
     def __iter__(self):
         return iter(self.submit_all())
 
-    def _iter_sequential(self):
-        allargs = list(self._genargs(pickle=False))
-        yield len(allargs)
-        for args in allargs:
-            yield safely_call(self.task_func, args, self.monitor)
+    def no_submit(self, args):
+        return safely_call(self.task_func, args, self.monitor)
 
-    def _iter_processpool(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        yield from self.pool.imap_unordered(safefunc, allargs)
+    def processpool_submit(self, args):
+        return self.pool.apply_async(
+            safely_call, (self.task_func, args, self.monitor))
 
-    _iter_threadpool = _iter_processpool
+    threadpool_submit = processpool_submit
 
-    def _loop(self, ierr, isocket, num_results):
-        yield num_results
-        for err, res in zip(ierr, isocket):
-            if isinstance(err, Exception):  # TaskRevokedError
-                raise err
-            elif self.calc_id and self.calc_id != res.mon.calc_id:
-                logging.warn('Discarding a result from job %d, since this '
-                             'is job %d', res.mon.calc_id, self.calc_id)
-                continue
-            yield res
+    def celery_submit(self, args):
+        return safetask.delay(self.task_func, args, self.monitor)
 
-    def _iter_celery(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, socket.port)
-            results = []
-            for piks in self._genargs():
-                res = safetask.delay(self.task_func, piks, self.monitor)
-                # populating Starmap.task_ids, used in celery_cleanup
-                self.task_ids.append(res.task_id)
-                results.append(res)
-            yield from self._loop(_iter_native(self.task_ids, results),
-                                  iter(socket), len(results))
-
-    def _iter_zmq(self):
-        with Socket(self.receiver, zmq.PULL, 'bind') as socket:
-            self.monitor.backurl = 'tcp://%s:%s' % (
-                config.dbserver.host, socket.port)
+    def zmq_submit(self, args):
+        if not hasattr(self, 'sender'):
             task_in_url = 'tcp://%s:%s' % (config.dbserver.host,
                                            config.zworkers.task_in_port)
-            with Socket(task_in_url, zmq.PUSH, 'connect') as sender:
-                num_results = 0
-                for args in self._genargs():
-                    sender.send((self.task_func, args, self.monitor))
-                    num_results += 1
-            yield from self._loop(range(num_results), iter(socket),
-                                  num_results)
+            self.sender = Socket(task_in_url, zmq.PUSH, 'connect').__enter__()
+        return self.sender.send((self.task_func, args, self.monitor))
 
-    def _iter_dask(self):
-        safefunc = functools.partial(safely_call, self.task_func,
-                                     monitor=self.monitor)
-        allargs = list(self._genargs())
-        yield len(allargs)
-        cl = self.dask_client
-        for fut in as_completed(cl.map(safefunc, cl.scatter(allargs))):
-            yield fut.result()
+    def dask_submit(self, args):
+        return self.dask_client.submit(safely_call, self.task_func, args,
+                                       self.monitor)
+
+    def _loop(self):
+        if not hasattr(self, 'socket'):  # no submit was ever made
+            return ()
+        if hasattr(self, 'sender'):
+            self.sender.__exit__(None, None, None)
+        isocket = iter(self.socket)
+        self.total = self.todo = len(self.tasks)
+        while self.todo:
+            res = next(isocket)
+            if self.calc_id and self.calc_id != res.mon.calc_id:
+                logging.warn('Discarding a result from job %s, since this '
+                             'is job %d', res.mon.calc_id, self.calc_id)
+                continue
+            elif res.msg == 'TASK_ENDED':
+                self.log_percent()
+                self.todo -= 1
+            elif res.msg:
+                logging.warn(res.msg)
+            else:
+                yield res
+        self.log_percent()
+        self.socket.__exit__(None, None, None)
+        self.tasks.clear()
 
 
 def sequential_apply(task, args, concurrent_tasks=cpu_count * 3,
