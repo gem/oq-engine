@@ -106,8 +106,9 @@ class NRCan15SiteTerm(GMPE):
         print(vs30, pgar, np.isscalar(vs30), type(vs30))
         if np.isscalar(vs30):
             vs30 = np.array([vs30])
+        if np.isscalar(pgar):
             pgar = np.array([pgar])
-            print(vs30, pgar)
+        print(vs30, pgar)
         #
         # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
         # motion will not be deamplified further
@@ -141,6 +142,7 @@ class NRCan15SiteTerm(GMPE):
         idx = np.where(vs < 760.)
         if np.size(idx) > 0:
             C = self.COEFFS_BA08[imt]
+            import pdb; pdb.set_trace()
             nl = BooreAtkinson2008()._get_site_amplification_non_linear(
                 vs[idx], pgar[idx], C)
             lin = BooreAtkinson2008()._get_site_amplification_linear(
