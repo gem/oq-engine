@@ -146,6 +146,30 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
 
+    def test_gm_calculationBA08_1site(self):
+        """ Test mean and std calculation - BA08 - Vs30 constant"""
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
+        # Set parameters
+        sites = Dummy.get_site_collection(1, vs30=400.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rjb = np.array([10])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = BooreAtkinson2008()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected)
+        np.testing.assert_almost_equal(stds, stds_expected)
+
+
     def test_gm_calculationBA08_vs30variable(self):
         """ Test mean and std calculation - BA08 - Vs30 variable"""
         # Modified gmpe
