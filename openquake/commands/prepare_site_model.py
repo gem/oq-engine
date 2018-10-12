@@ -59,7 +59,7 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
     hdf5 = datastore.hdf5new()
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
-            exposure_xml).get_mesh_assets_by_site()
+            exposure_xml, check_dupl=False).get_mesh_assets_by_site()
         mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, req_site_params={'vs30'})
         if grid_spacing:
