@@ -284,14 +284,15 @@ def get_mesh(oqparam):
     elif 'gmfs' in oqparam.inputs:
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
-    elif oqparam.region and oqparam.region_grid_spacing:
-        poly = geo.Polygon.from_wkt(oqparam.region)
+    elif oqparam.region_grid_spacing:
+        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
+                else exposure.mesh.get_convex_hull())
         try:
             mesh = poly.discretize(oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except Exception:
             raise ValueError(
-                'Could not discretize region %(region)s with grid spacing '
+                'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
