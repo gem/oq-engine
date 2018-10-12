@@ -103,12 +103,10 @@ class NRCan15SiteTerm(GMPE):
             amplification factor.
         """
         fa = np.ones_like(vs30)
-        print(vs30, pgar, np.isscalar(vs30), type(vs30))
         if np.isscalar(vs30):
             vs30 = np.array([vs30])
         if np.isscalar(pgar):
             pgar = np.array([pgar])
-        print(vs30, pgar)
         #
         # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
         # motion will not be deamplified further
@@ -117,7 +115,6 @@ class NRCan15SiteTerm(GMPE):
         #
         # Computing motion on rock
         idx = np.where(vs30 > 760)
-        print(idx, np.size(idx))
         if np.size(idx) > 0:
             """
             # This is the original implementation - Since this code is
