@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Extracted the sites preferably from the site model and changed the
-    asset-site association procedure to remove sites and assets when possible
+  * Added an attribute .srcidx to every event based rupture and stored it
   * Fixed an issue with the Byte Order Mark (BOM) for CSV exposures prepared
     with Microsoft Excel
   * Reduced the site collection instead of just filtering it; this fixes
