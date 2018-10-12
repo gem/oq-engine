@@ -503,7 +503,9 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['discarded'] = discarded
                 msg = ('%d sites with assets were discarded; use '
                        '`oq plot_assets` to see them' % len(discarded))
-                if self.oqparam.discard_assets:  # just log a warning
+                if hasattr(self, 'rup') or self.oqparam.discard_assets:
+                    # just log a warning in case of scenario from rupture
+                    # or when discard_assets is set to True
                     logging.warn(msg)
                 else:  # raise an error
                     self.datastore['sitecol'] = self.sitecol
