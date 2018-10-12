@@ -309,7 +309,7 @@ class EventBasedTestCase(CalculatorTestCase):
 ======= ======= =======
 PGA     SA(0.3) SA(0.6)
 ======= ======= =======
-0.00455 0.00212 0.00174
+0.00460 0.00214 0.00175
 ======= ======= =======''')
 
     @attr('qa', 'hazard', 'event_based')
