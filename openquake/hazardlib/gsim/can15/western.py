@@ -36,11 +36,11 @@ def get_sigma(imt):
         A float representing the total sigma value
     """
     if imt.period < 0.2:
-        return 0.23
+        return np.log(10**0.23)
     elif imt.period > 1.0:
-        return 0.27
+        return np.log(10**0.27)
     else:
-        return 0.23 + (imt.period - 0.2)/0.8 * 0.04
+        return np.log(10**(0.23 + (imt.period - 0.2)/0.8 * 0.04))
 
 
 class WesternCan15Mid(BooreAtkinson2011):
