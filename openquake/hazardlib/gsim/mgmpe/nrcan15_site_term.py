@@ -142,7 +142,6 @@ class NRCan15SiteTerm(GMPE):
         idx = np.where(vs < 760.)
         if np.size(idx) > 0:
             C = self.COEFFS_BA08[imt]
-            import pdb; pdb.set_trace()
             nl = BooreAtkinson2008()._get_site_amplification_non_linear(
                 vs[idx], pgar[idx], C)
             lin = BooreAtkinson2008()._get_site_amplification_linear(
