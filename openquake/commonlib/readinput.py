@@ -288,7 +288,8 @@ def get_mesh(oqparam):
         poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
                 else exposure.mesh.get_convex_hull())
         try:
-            mesh = poly.discretize(oqparam.region_grid_spacing)
+            mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except Exception:
             raise ValueError(
@@ -893,6 +894,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
+        if oqparam.region_grid_spacing:  # it is normal to discard sites
+            discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):

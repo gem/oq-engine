@@ -501,12 +501,16 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, haz_sitecol, self.riskmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
-                if not self.oqparam.discard_assets:
+                msg = ('%d sites with assets were discarded; use '
+                       '`oq plot_assets` to see them' % len(discarded))
+                if hasattr(self, 'rup') or self.oqparam.discard_assets:
+                    # just log a warning in case of scenario from rupture
+                    # or when discard_assets is set to True
+                    logging.warn(msg)
+                else:  # raise an error
                     self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
-                    raise RuntimeError(
-                        '%d sites with assets were discarded; use '
-                        '`oq plot_assets` to see them' % len(discarded))
+                    raise RuntimeError(msg)
             readinput.exposure = None  # reset the global
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
