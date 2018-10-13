@@ -128,7 +128,12 @@ class GmfComputer(object):
                 gs = gsim[str(imt)]  # MultiGMPE
             else:
                 gs = gsim  # regular GMPE
-            result[imti] = self._compute(None, gs, num_events, imt)
+            try:
+                result[imti] = self._compute(None, gs, num_events, imt)
+            except Exception as exc:
+                raise exc.__class__(
+                    '%s for %s, %s' % (exc, gs, imt)
+                ).with_traceback(exc.__traceback__)
         return result
 
     def _compute(self, seed, gsim, num_events, imt):
