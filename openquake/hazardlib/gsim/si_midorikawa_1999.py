@@ -70,7 +70,6 @@ def _construct_surface(lons, lats, upper_depth, lower_depth):
     mesh = RectangularMesh(
         np.tile(lons, (2, 1)), np.tile(lats, (2, 1)), depths
     )
-
     return SimpleFaultSurface(mesh)
 
 
@@ -90,7 +89,6 @@ def _get_min_distance_to_sub_trench(lons, lats):
     """
     trench = _construct_surface(SUB_TRENCH_LONS, SUB_TRENCH_LATS, 0., 10.)
     sites = Mesh(lons, lats, None)
-
     return np.abs(trench.get_rx_distance(sites))
 
 
@@ -110,17 +108,24 @@ def _get_min_distance_to_volcanic_front(lons, lats):
     return vf.get_rx_distance(sites)
 
 
-def _apply_subduction_trench_correction(mean, x_tr, H, rrup):
+def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
     """
     Implement equation for subduction trench correction as described in
     equation 3.5.2-1, page 3-148 of "Technical Reports on National Seismic
     Hazard Maps for Japan"
     """
-    V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
-    V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
-    corr = V2
-    if H > 30:
-        corr *= V1
+    if imt.name == 'PGV':
+        V1 = 10 ** ((-4.021e-5 * x_tr + 9.905e-3) * (H - 30))
+        V2 = np.maximum(1., (10 ** (-0.012)) * ((rrup / 300.) ** 2.064))
+        corr = V2
+        if H > 30:
+            corr *= V1
+    else:
+        V1 = 10 ** ((-8.1e-5 * x_tr + 2.0e-2) * (H - 30))
+        V2 = np.maximum(1., (10 ** (+0.13)) * ((rrup / 300.) ** 3.2))
+        corr = V2
+        if H > 30:
+            corr *= V1
     return np.log(np.exp(mean) * corr)
 
 
@@ -276,9 +281,7 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup,
                               d=-0.02)
         stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-
         mean = self._apply_amplification_factor(mean)
-
         return mean, stddevs
 
     def _get_stddevs(self, stddev_types, pgv):
@@ -294,7 +297,6 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         std[pgv > 50] = 0.15
         # convert from log10 to ln
         std = np.log(10 ** std)
-
         return [std for stddev_type in stddev_types]
 
 
@@ -316,11 +318,9 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
         """
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
-
         x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
             mean, x_tr, rup.hypo_depth, dists.rrup)
-
         return mean, stddevs
 
 
@@ -342,10 +342,8 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
         """
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
-
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
-
         return mean, stddevs
 
 
@@ -372,9 +370,7 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
         """
         mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0.12)
         stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-
         mean = self._apply_amplification_factor(mean)
-
         return mean, stddevs
 
 
@@ -396,11 +392,9 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
         """
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
-
         x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
             mean, x_tr, rup.hypo_depth, dists.rrup)
-
         return mean, stddevs
 
 
@@ -422,8 +416,6 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
         """
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
-
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
         mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
-
         return mean, stddevs
