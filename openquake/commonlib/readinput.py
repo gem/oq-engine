@@ -350,18 +350,9 @@ def get_site_collection(oqparam):
         except ValueError:
             # this is the normal case
             depth = None
-        if mesh is None:
-            # extract the site collection directly from the site model
-            sitecol = site.SiteCollection.from_points(
-                sm['lon'], sm['lat'], depth, sm, req_site_params)
-        else:
-            # associate the site parameters to the mesh
-            sitecol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params, discarded = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in req_site_params:
-                sitecol._set(name, params[name])
+        # extract the site collection directly from the site model
+        sitecol = site.SiteCollection.from_points(
+            sm['lon'], sm['lat'], depth, sm, req_site_params)
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
@@ -890,7 +881,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
     if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing
+        # extracting the hazard grid from the exposure
+        haz_distance = oqparam.region_grid_spacing * 1.414  # 1.414 = sqrt(2)
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
                          haz_distance, oqparam.asset_hazard_distance)
@@ -900,9 +892,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+            exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
         if oqparam.region_grid_spacing:  # it is normal to discard sites
             discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
@@ -913,9 +904,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         logging.info(
             'Associated %d assets to %d sites', num_assets, len(sitecol))
         if num_assets < tot_assets:
-            logging.warn('Discarded %d assets outside the '
-                         'asset_hazard_distance of %d km',
-                         tot_assets - num_assets, haz_distance)
+            logging.error('Discarded %d assets outside the '
+                          'asset_hazard_distance of %d km',
+                          tot_assets - num_assets, haz_distance)
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol

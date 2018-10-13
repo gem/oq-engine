@@ -70,14 +70,14 @@ RM       4,000
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_1c(self):
-        # this is a case with more hazard sites than exposure sites
+        # this is a case with a large grid
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
         total = extract(self.calc.datastore, 'agg_damages/structural')
         aae([[0.4906653, 0.3249882, 0.0708492, 0.0211334, 0.092364]],
             total)  # shape (R, D) = (1, 5)
 
-        # check extract gmf_data works with a filtered site collection
+        # check extract gmf_data works
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (1,))
 

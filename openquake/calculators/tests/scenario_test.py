@@ -21,7 +21,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10)
+    case_9)
 from openquake.baselib.node import floatformat
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -148,9 +148,3 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(data1['PGA'].shape, (3, 10))
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)
-
-    @attr('qa', 'hazard', 'scenario')
-    def test_case_10(self):
-        # test importing an exposure with automatic gridding
-        self.run_calc(case_10.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['sitecol']), 66)

@@ -253,7 +253,8 @@ stddev         838           555
             'expected/portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
-        # this is a case with exposure and region_grid_spacing=1
+        # this is a case with exposure and region_grid_spacing with discarded
+        # assets
         self.run_calc(case_miriam.__file__, 'job2.ini')
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
