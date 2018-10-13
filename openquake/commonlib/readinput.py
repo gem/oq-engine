@@ -355,14 +355,18 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
-            # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             if oqparam.region_grid_spacing:
+                # associate the site parameters to the grid assuming they
+                # have been prepared correctly, i.e. they are on the location
+                # of the assets; discard empty sites silently
                 sitecol, params, discarded = geo.utils.assoc(
                     sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
                 sitecol.make_complete()
-            else:  # do not discard assets
+            else:
+                # associate the site parameters to the sites without
+                # discarding any site but warning for far away parameters
                 sc, params, discarded = geo.utils.assoc(
                     sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
