@@ -62,16 +62,13 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         for spec of input and result values.
         """
         # Zhao et al. 2006 - Vs30 + Rrup
-        mean, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                   stddev_types)
-        cff = self.SITE_COEFFS[imt]
-        mean_zh06 = np.log(np.exp(mean) * cff['mf'])
+        mean_zh06, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                        stddev_types)
         #
         # Atkinson and Macias (2009) - Rrup
         gmpe = AtkinsonMacias2009()
         mean_am09, stds2 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        mean_am09 += np.log(cff['mf'])
         #
         # Abrahamson et al. (2015) - Rrup + vs30 + backarc
         gmpe = AbrahamsonEtAl2015SInter()
@@ -82,11 +79,12 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         gmpe = GhofraniAtkinson2014()
         mean_ga14, stds4 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        mean_ga14 = np.log(np.exp(mean_ga14) * cff['mf'])
         # Computing adjusted mean and stds
-        mean_adj = np.log(np.exp(mean_zh06)*0.1 + np.exp(mean_am09)*0.5 +
-                          np.exp(mean_ab15)*0.2 + np.exp(mean_ga14)*0.2)
-        stds_adj = [np.ones(len(dists.rrup))*get_sigma(imt)]
+        cff = self.SITE_COEFFS[imt]
+        mean_adj = np.log(np.exp(mean_zh06)*0.1*cff['mf'] +
+                          np.exp(mean_am09)*0.5 +
+                          np.exp(mean_ab15)*0.2 +
+                          np.exp(mean_ga14)*0.2*cff['mf'])
         return mean_adj
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
