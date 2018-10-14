@@ -138,7 +138,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
         num_occ_by_rup = _sample_ruptures(
-            src, mutex_weight, param['ses_per_logic_tree_path'], samples)
+            src, mutex_weight, param['ses_per_logic_tree_path'],
+            samples, cmaker.get_ruptures(src, s_sites))
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -152,7 +153,7 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def _sample_ruptures(src, prob, num_ses, num_samples):
+def _sample_ruptures(src, prob, num_ses, num_samples, ruptures):
     """
     Sample the ruptures contained in the given source.
 
@@ -160,13 +161,14 @@ def _sample_ruptures(src, prob, num_ses, num_samples):
     :param prob: a probability (1 for indep sources, < 1 for mutex sources)
     :param num_ses: the number of Stochastic Event Sets to generate
     :param num_samples: how many samples for the given source
+    :param get_ruptures: ContextMaker.get_ruptures
     :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # the dictionary `num_occ_by_rup` contains a dictionary
     # ses_id -> num_occurrences for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
-    for rup_no, rup in enumerate(src.iter_ruptures()):
+    for rup_no, rup in enumerate(ruptures):
         rup.serial = src.serial[rup_no]
         numpy.random.seed(rup.serial)
         for sam_idx in range(num_samples):

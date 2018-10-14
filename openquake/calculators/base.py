@@ -385,11 +385,15 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
+        hdist = self.oqparam.hypo_dist_collapsing_distance
+        ndist = self.oqparam.nodal_dist_collapsing_distance
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
-            logging.info('Rupture floating factor=%s', f)
+            op = '<' if hdist is not None else '='
+            logging.info('Rupture floating factor %s %s', op, f)
         if s != 1:
-            logging.info('Rupture spinning factor=%s', s)
+            op = '<' if ndist is not None else '='
+            logging.info('Rupture spinning factor %s %s', op, s)
 
     def read_inputs(self):
         """
