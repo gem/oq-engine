@@ -45,7 +45,7 @@ class OceanicCan15Mid(WesternCan15Mid):
         rupl.mag -= 0.5
         mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
                                                      stddev_types)
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         return mean, stddevs
 
 
@@ -67,7 +67,7 @@ class OceanicCan15Low(WesternCan15Mid):
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean - delta
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         return mean_adj, stddevs
 
 
@@ -89,5 +89,5 @@ class OceanicCan15Upp(WesternCan15Mid):
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean + delta
-        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         return mean_adj, stddevs
