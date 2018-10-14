@@ -711,28 +711,6 @@ def view_flat_hcurves(token, dstore):
     return rst_table(res)
 
 
-@view.add('flat_hmaps')
-def view_flat_hmaps(token, dstore):
-    """
-    Display the flat hazard maps for the calculation. They are
-    used for debugging purposes when comparing the results of two
-    calculations. They are the mean over the sites of the mean hazard
-    maps.
-    """
-    oq = dstore['oqparam']
-    assert oq.poes
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    nsites = len(dstore['sitecol'])
-    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
-    mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()
-    hmaps = calc.make_hmap(mean, oq.imtls, oq.poes)
-    array = calc.convert_to_array(hmaps, nsites, pdic)
-    res = numpy.zeros(1, array.dtype)
-    for name in array.dtype.names:
-        res[name] = array[name].mean()
-    return rst_table(res)
-
-
 @view.add('dupl_sources')
 def view_dupl_sources(token, dstore):
     """
@@ -772,6 +750,24 @@ def view_global_poes(token, dstore):
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
     return rst_table(tbl, header=header)
+
+
+@view.add('global_hmaps')
+def view_global_hmaps(token, dstore):
+    """
+    Display the flat hazard maps for the calculation. They are
+    used for debugging purposes when comparing the results of two
+    calculations. They are the mean over the sites of the mean hazard
+    maps.
+    """
+    oq = dstore['oqparam']
+    dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
+                      for imt in oq.imtls for poe in oq.poes])
+    array = dstore['hmaps/mean'].value.view(dt)[:, 0]
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].mean()
+    return rst_table(res)
 
 
 @view.add('global_gmfs')
