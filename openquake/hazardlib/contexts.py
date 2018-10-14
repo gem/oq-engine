@@ -201,6 +201,29 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
+    def get_ruptures(self, src, sites):
+        """
+        :param src: a hazardlib source
+        :param sites: the sites affected by it
+        ;returns: the ruptures contained in the source
+        """
+        hdist = self.hypo_dist_collapsing_distance
+        ndist = self.nodal_dist_collapsing_distance
+        with self.ir_mon:
+            if hasattr(src, 'location'):
+                dist = src.location.distance_to_mesh(sites).min()
+                if hdist is not None and dist > hdist:  # disable floating
+                    src.hypocenter_distribution.reduce()
+                if ndist is not None and dist > ndist:  # disable spinning
+                    src.nodal_plane_distribution.reduce()
+            rups = list(src.iter_ruptures())
+        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
+        # discards far away ruptures: len(rups) < src.num_ruptures can happen
+        if len(rups) > src.num_ruptures:
+            raise ValueError('Expected at max %d ruptures, got %d' % (
+                src.num_ruptures, len(rups)))
+        return rups
+
     def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
@@ -214,23 +237,7 @@ class ContextMaker(object):
             len(imtls.array), len(self.gsims), sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        with self.ir_mon:
-            if hasattr(src, 'location'):
-                dist = src.location.distance_to_mesh(sites).min()
-                if (self.hypo_dist_collapsing_distance is not None and
-                        dist > self.hypo_dist_collapsing_distance):
-                    # disable floating
-                    src.hypocenter_distribution.reduce()
-                if (self.nodal_dist_collapsing_distance is not None and
-                        dist > self.nodal_dist_collapsing_distance):
-                    # disable spinning
-                    src.nodal_plane_distribution.reduce()
-            rups = list(src.iter_ruptures())
-        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
-        # discards far away ruptures: len(rups) < src.num_ruptures can happen
-        if len(rups) > src.num_ruptures:
-            raise ValueError('Expected at max %d ruptures, got %d' % (
-                src.num_ruptures, len(rups)))
+        rups = self.get_ruptures(src, sites)
         weight = 1. / len(rups)
         for rup in rups:
             rup.weight = weight
