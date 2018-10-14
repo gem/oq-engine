@@ -395,7 +395,7 @@ def get_gsim_lt(oqparam, trts=['*']):
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
-                            set([StdDev.TOTAL])):
+                            {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     trts = set(oqparam.minimum_magnitude) - {'default'}
     expected_trts = set(gsim_lt.values)
@@ -711,9 +711,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
-    smodels = []
-    gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    gsim_lt = get_gsim_lt(oqparam, source_model_lt.get_trts() or ['*'])
     if oqparam.number_of_logic_tree_samples == 0:
         logging.info('Potential number of logic tree paths = {:,d}'.format(
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
@@ -721,6 +720,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         logging.info('There is a logic tree on each source')
     if monitor is None:
         monitor = performance.Monitor()
+    smodels = []
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
