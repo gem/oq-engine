@@ -209,7 +209,8 @@ class EventBasedCalculator(base.HazardCalculator):
             return self.datastore.parent['csm_info']
 
     def init(self):
-        self.check_floating_spinning()
+        if hasattr(self, 'csm'):
+            self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
