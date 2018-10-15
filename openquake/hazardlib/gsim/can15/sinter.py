@@ -34,6 +34,9 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
+    #: Supported standard deviations
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+
     def _get_delta(self, dists):
         """
         Computes the additional delta to be used for the computation of the
@@ -50,7 +53,8 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         """
         mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
                                                 stddev_types)
-        return mean, stds
+        stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
+        return mean, stddevs
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

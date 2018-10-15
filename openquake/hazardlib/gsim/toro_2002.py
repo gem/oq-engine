@@ -29,7 +29,7 @@ from openquake.hazardlib.imt import PGA, SA
 
 class ToroEtAl2002(GMPE):
     """
-    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Sneider
+    Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Schneider
     and published in "Model of Strong Ground Motions from Earthquakes in
     Central and Eastern North America: Best Estimates and Uncertainties"
     (Seismological Research Letters, Volume 68, Number 1, 1997) and

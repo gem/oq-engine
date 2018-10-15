@@ -54,8 +54,8 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
-    def test_gm_calculation(self):
-        """ Test mean and std calculation """
+    def test_gm_calculation_soilBC(self):
+        """ Test mean and std calculation - AB06 on BC soil"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -77,8 +77,54 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
 
-    def test_gm_calculation_amplification(self):
-        """ Test mean and std calculation """
+    def test_gm_calculationAB06_hard_bedrock(self):
+        """ Test mean and std calculation - AB06 on vs30 hard bedrock"""
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
+        # Set parameters
+        sites = Dummy.get_site_collection(4, vs30=1999.0)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rrup = np.array([10., 20., 30., 40.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = AtkinsonBoore2006()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected)
+        np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_gm_calculationAB06(self):
+        """ Test mean and std calculation - AB06 on vs30 higher than 760 """
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
+        # Set parameters
+        sites = Dummy.get_site_collection(4, vs30=[1000., 1500., 1000., 1500.])
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rrup = np.array([10., 10., 40., 40.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = AtkinsonBoore2006()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected)
+        np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_gm_calculationBA08(self):
+        """ Test mean and std calculation - BA08 - Vs30 constant"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -99,3 +145,55 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # same results of the original gmpe
         np.testing.assert_almost_equal(mean, mean_expected)
         np.testing.assert_almost_equal(stds, stds_expected)
+
+    def test_gm_calculationBA08_1site(self):
+        """ Test mean and std calculation - BA08 - Vs30 constant"""
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
+        # Set parameters
+        sites = Dummy.get_site_collection(1, vs30=400.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rjb = np.array([10])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = BooreAtkinson2008()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean, mean_expected)
+        np.testing.assert_almost_equal(stds, stds_expected)
+
+
+    def test_gm_calculationBA08_vs30variable(self):
+        """ Test mean and std calculation - BA08 - Vs30 variable"""
+        # Modified gmpe
+        mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
+        # Set parameters
+        sites = Dummy.get_site_collection(3, vs30=[400., 600, 1000])
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rjb = np.array([10., 10., 10.])
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        # Computes results
+        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # Compute the expected results
+        gmpe = BooreAtkinson2008()
+        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
+                                                                 dists, imt,
+                                                                 stdt)
+        # Test that for reference soil conditions the modified GMPE gives the
+        # same results of the original gmpe
+        np.testing.assert_almost_equal(mean[:-1], mean_expected[:-1])
+        np.testing.assert_almost_equal(stds[:-1], stds_expected[:-1])
+
+    def test_raise_error(self):
+        """ Tests that exception is raised """
+        with self.assertRaises(AttributeError):
+            mgmpe = NRCan15SiteTerm(gmpe_name='FukushimaTanaka1990')
