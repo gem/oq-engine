@@ -135,7 +135,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
 
 
 prepare_site_model.arg('exposure_xml', 'exposure in XML format')
-prepare_site_model.arg('vs30_csv', 'USGS file lon,lat,vs30 with no header')
+prepare_site_model.arg('vs30_csv', 'USGS files lon,lat,vs30 with no header',
+                       nargs='+')
 prepare_site_model.opt('grid_spacing', 'grid spacing in km (or 0)', type=float)
 prepare_site_model.opt('site_param_distance',
                        'sites over this distance are discarded', type=float)
