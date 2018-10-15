@@ -1,5 +1,11 @@
+  [Michele Simionato]
+   * Replaced `nodal_dist_collapsing_distance` and
+     `hypo_dist_collapsing_distance` with `pointsource_distance` and made
+     use of them in the classical and event based calculators
+
   [Graeme Weatherill]
-  * Fixes to hmtk completeness tables for consistent rates and addition of     more special methods to catalogue 
+  * Fixes to hmtk completeness tables for consistent rates and addition of
+    more special methods to catalogue
 
   [Michele Simionato]
   * Restricted ChiouYoungs2008SWISS01 to StdDev.TOTAL to avoid a bug
