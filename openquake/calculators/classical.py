@@ -242,7 +242,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
-                    fix_ones(pmap)  # avoid saving PoEs == 1
+                    base.fix_ones(pmap)  # avoid saving PoEs == 1
                     key = 'poes/grp-%02d' % grp_id
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(key, trt=grp_trt[grp_id])
@@ -297,22 +297,6 @@ class PreCalculator(ClassicalCalculator):
             eff_ruptures[src.src_group_id] += src.num_ruptures
         self.store_csm_info(eff_ruptures)
         return {}
-
-
-def fix_ones(pmap):
-    """
-    Physically, an extremely small intensity measure level can have an
-    extremely large probability of exceedence, however that probability
-    cannot be exactly 1 unless the level is exactly 0. Numerically, the
-    PoE can be 1 and this give issues when calculating the damage (there
-    is a log(0) in
-    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-    Here we solve the issue by replacing the unphysical probabilities 1
-    with .9999999999999999 (the float64 closest to 1).
-    """
-    for sid in pmap:
-        array = pmap[sid].array
-        array[array == 1.] = .9999999999999999
 
 
 def build_hazard_stats(pgetter, hstats, monitor):

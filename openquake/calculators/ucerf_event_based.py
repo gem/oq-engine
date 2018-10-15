@@ -237,7 +237,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                         events.append((0, src.src_group_id, ses_idx, sample))
                     if events:
                         evs = numpy.array(events, stochastic.event_dt)
-                        ebruptures.append(EBRupture(rup, indices, evs))
+                        ebruptures.append(EBRupture(rup, src.id, indices, evs))
                         serial += 1
     res.num_events = len(stochastic.set_eids(ebruptures))
     res['ruptures'] = {src.src_group_id: ebruptures}
@@ -358,7 +358,7 @@ class UCERFRiskCalculator(EbrCalculator):
         self.I = oq.insured_losses + 1
         min_iml = self.get_min_iml(oq)
         elt_dt = numpy.dtype([('eid', U64), ('rlzi', U16),
-                              ('loss', (F32, (self.L, self.I)))])
+                              ('loss', (F32, (self.L,)))])
         monitor = self.monitor('compute_losses')
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 

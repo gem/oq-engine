@@ -240,25 +240,6 @@ def split_sources(srcs):
     return sources, split_time
 
 
-def preprocess(srcs, srcfilter, param, monitor):
-    """
-    :returns: a dict src_group_id -> sources
-    """
-    src = srcs[0]
-    if 'ses_per_logic_tree_path' in param:  # from event based
-        # keep only the sources producing ruptures
-        from openquake.hazardlib.calc.stochastic import sample_ruptures
-        ok = []
-        for src in srcfilter.filter(srcs):
-            gsims = param['gsims_by_trt'][src.tectonic_region_type]
-            dic = sample_ruptures([src], srcfilter, gsims, param, monitor)
-            vars(src).update(dic)
-            ok.append(src)
-    else:  # from classical
-        ok = list(srcfilter.filter(srcs))
-    return {src.src_group_id: ok}
-
-
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,

@@ -3,8 +3,8 @@ event based risk
 
 ============== ===================
 checksum32     1,223,742,661      
-date           2018-10-03T15:01:12
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-05T03:04:52
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 7, num_levels = 1
@@ -98,7 +98,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     482          1.56810   0.00457    105       15        385   
+0      1         S    0     2     482          0.70373   0.00546    105       15        385   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -106,7 +106,7 @@ Computation times by source typology
 ==== ========= ======
 code calc_time counts
 ==== ========= ======
-S    1.56810   1     
+S    0.70373   1     
 ==== ========= ======
 
 Duplicated sources
@@ -117,9 +117,9 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.00656 NaN     0.00656 0.00656 1      
-split_filter       0.02131 NaN     0.02131 0.02131 1      
-build_ruptures     0.11436 0.04166 0.05756 0.20656 14     
+read_source_models 0.00377 NaN     0.00377 0.00377 1      
+split_filter       0.01826 NaN     0.01826 0.01826 1      
+build_ruptures     0.05388 0.01373 0.03103 0.07876 14     
 ================== ======= ======= ======= ======= =======
 
 Data transfer
@@ -133,16 +133,16 @@ build_ruptures     srcs=20.13 KB monitor=5.03 KB param=4.09 KB srcfilter=3.01 KB
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total build_ruptures     1.60102  0.12500   14    
-making contexts          1.27197  0.0       259   
-saving ruptures          0.37294  0.25781   1     
-updating source_info     0.02845  0.0       1     
-total split_filter       0.02131  0.0       1     
-store source_info        0.00694  0.0       1     
-total read_source_models 0.00656  0.0       1     
-setting event years      0.00313  0.0       1     
-reading exposure         0.00111  0.0       1     
-======================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total build_ruptures     0.75432   0.15625   14    
+making contexts          0.51366   0.0       259   
+saving ruptures          0.15180   0.0       1     
+updating source_info     0.02496   0.0       1     
+total split_filter       0.01826   0.0       1     
+store source_info        0.00448   0.0       1     
+total read_source_models 0.00377   0.0       1     
+setting event years      0.00193   0.0       1     
+reading exposure         6.580E-04 0.0       1     
+======================== ========= ========= ======
