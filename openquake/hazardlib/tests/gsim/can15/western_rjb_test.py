@@ -18,13 +18,13 @@ import unittest
 import numpy as np
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.can15.western import (get_sigma,
-                                                    WesternCan15Mid,
-                                                    WesternCan15Low,
-                                                    WesternCan15Upp)
+from openquake.hazardlib.gsim.can15.western import get_sigma
+from openquake.hazardlib.gsim.can15.western_rjb import (WesternCan15RjbMid,
+                                                        WesternCan15RjbLow,
+                                                        WesternCan15RjbUpp)
 
 
-class WesternRuptureDimensionTestCase(unittest.TestCase):
+class GetSigmaTestCase(unittest.TestCase):
     """
     This class tests the calculation of sigma values for the GMPEs included
     in the NRCan15 model
@@ -34,45 +34,45 @@ class WesternRuptureDimensionTestCase(unittest.TestCase):
         """ Test the calculation of sigma for short periods"""
         imt = PGA()
         computed = get_sigma(imt)
-        expected = 0.23
+        expected = np.log(10**0.23)
         np.testing.assert_almost_equal(computed, expected)
 
     def test_get_sigma_sa0(self):
         """ Test the calculation of sigma for short periods"""
         imt = SA(0.6)
         computed = get_sigma(imt)
-        expected = 0.25
+        expected = np.log(10**0.25)
         np.testing.assert_almost_equal(computed, expected)
         #
         imt = SA(0.4)
         computed = get_sigma(imt)
-        expected = 0.24
+        expected = np.log(10**0.24)
         np.testing.assert_almost_equal(computed, expected)
         #
         imt = SA(1.2)
         computed = get_sigma(imt)
-        expected = 0.27
+        expected = np.log(10**0.27)
         np.testing.assert_almost_equal(computed, expected)
 
 
-class WesternCan15HighTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = WesternCan15Upp
+class WesternCan15RjbHighTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15RjbUpp
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_high.csv',
                    max_discrep_percentage=80.)
 
 
-class WesternCan15MidTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = WesternCan15Mid
+class WesternCan15RjbMidTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15RjbMid
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_med.csv',
                    max_discrep_percentage=80.)
 
 
-class WesternCan15LowTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = WesternCan15Low
+class WesternCan15RjbLowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WesternCan15RjbLow
 
     def test_mean(self):
         self.check('CAN15/GMPEt_Wcrust_low.csv',
