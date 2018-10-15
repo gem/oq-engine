@@ -137,18 +137,19 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         mutex_weight = getattr(src, 'mutex_weight', 1)
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        num_occ_by_rup = _sample_ruptures(
-            src, mutex_weight, param['ses_per_logic_tree_path'],
-            samples, cmaker.get_ruptures(src, s_sites))
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_ruptures *before* the filtering
-        ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
-                                       s_sites, monitor))
-        eb_ruptures.extend(ebrs)
-        eids = set_eids(ebrs)
-        dt = time.time() - t0
-        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
+        for ruptures, sites in cmaker.get_ruptures_sites(src, s_sites):
+            num_occ_by_rup = _sample_ruptures(
+                src, mutex_weight, param['ses_per_logic_tree_path'],
+                samples, ruptures)
+            # NB: the number of occurrences is very low, << 1, so it is
+            # more efficient to filter only the ruptures that occur, i.e.
+            # to call sample_ruptures *before* the filtering
+            ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
+                                           sites, monitor))
+            eb_ruptures.extend(ebrs)
+            eids = set_eids(ebrs)
+            dt = time.time() - t0
+            calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
@@ -161,7 +162,7 @@ def _sample_ruptures(src, prob, num_ses, num_samples, ruptures):
     :param prob: a probability (1 for indep sources, < 1 for mutex sources)
     :param num_ses: the number of Stochastic Event Sets to generate
     :param num_samples: how many samples for the given source
-    :param get_ruptures: ContextMaker.get_ruptures
+    :param ruptures: ruptures to sample
     :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # the dictionary `num_occ_by_rup` contains a dictionary
