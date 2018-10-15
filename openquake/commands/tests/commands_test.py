@@ -39,13 +39,14 @@ from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands.zip import zip as zip_cmd
 from openquake.commands.check_input import check_input
+from openquake.commands.prepare_site_model import prepare_site_model
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import upgrade_nrml
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_5
+from openquake.qa_tests_data.event_based import case_5, case_16
 from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi
@@ -120,6 +121,13 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        save = 'openquake.calculators.reportwriter.ReportWriter.save'
+        with Print.patch() as p, mock.patch(save, lambda self, fname: None):
+            info.func(None, None, None, None, None, True, path)
+        self.assertIn('report.rst', str(p))
+
+    def test_report_ebr(self):
+        path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
             info.func(None, None, None, None, None, True, path)
@@ -422,3 +430,19 @@ class CheckInputTestCase(unittest.TestCase):
         job_ini = os.path.join(list(test_data.__path__)[0],
                                'event_based_hazard/job.ini')
         check_input.func(job_ini)
+
+
+class PrepareSiteModelTestCase(unittest.TestCase):
+    def test(self):
+        inputdir = os.path.dirname(case_16.__file__)
+        output = gettemp(suffix='csv')
+        grid_spacing = 10
+        exposure_csv = os.path.join(inputdir, 'exposure.xml')
+        vs30_csv = os.path.join(inputdir, 'vs30.csv')
+        sitecol = prepare_site_model.func(
+            exposure_csv, vs30_csv, grid_spacing, output)
+        self.assertEqual(len(sitecol), 6)  # 6 non-empty grid points
+
+        # test no grid
+        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, 10, output)
+        self.assertEqual(len(sc), 4)  # 4 sites within 10 km from the params

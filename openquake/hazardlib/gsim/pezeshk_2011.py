@@ -203,6 +203,9 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     using the factors of Atkinson & Boore (2006) (Table 4)
     """
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

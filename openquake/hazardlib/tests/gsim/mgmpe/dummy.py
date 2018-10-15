@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy as np
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.site import Site, SiteCollection
@@ -35,7 +36,10 @@ class Dummy:
         for n in range(nelements):
             s = Site(Point(0, 0))
             for key in kwargs:
-                setattr(s, key, kwargs[key])
+                if np.size(kwargs[key]) > 1:
+                    setattr(s, key, kwargs[key][n])
+                else:
+                    setattr(s, key, kwargs[key])
             sites.append(s)
         return SiteCollection(sites)
 

@@ -3,8 +3,8 @@ Classical PSHA using Area Source
 
 ============== ===================
 checksum32     1,839,663,514      
-date           2018-10-03T15:01:46
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-05T03:05:08
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1, num_levels = 197
@@ -77,7 +77,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         A    0     4     260          0.0       1.13213    0.0       52        0.0   
+0      1         A    0     4     260          0.0       0.96129    0.0       52        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -96,8 +96,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.02271 NaN    0.02271 0.02271 1      
-split_filter       0.02912 NaN    0.02912 0.02912 1      
+read_source_models 0.01294 NaN    0.01294 0.01294 1      
+split_filter       0.02288 NaN    0.02288 0.02288 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -113,7 +113,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total split_filter       0.02912  0.0       1     
-total read_source_models 0.02271  0.0       1     
-updating source_info     0.01182  0.0       1     
+updating source_info     0.03210  0.0       1     
+total split_filter       0.02288  0.0       1     
+total read_source_models 0.01294  0.0       1     
 ======================== ======== ========= ======

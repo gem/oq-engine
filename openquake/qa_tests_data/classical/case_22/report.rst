@@ -3,8 +3,8 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 
 ============== ===================
 checksum32     3,294,662,884      
-date           2018-10-03T15:01:34
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-05T03:05:03
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 21, num_levels = 114
@@ -84,7 +84,7 @@ Slowest sources
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 0      1         M    0     2     160          0.0       0.0        0.0       0         0.0   
-1      2         M    0     12    1,104        0.0       0.00343    0.0       4         0.0   
+1      2         M    0     12    1,104        0.0       0.00396    0.0       4         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -103,8 +103,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ========= ======= ======= =======
 operation-duration mean    stddev    min     max     outputs
-read_source_models 0.00196 4.731E-04 0.00163 0.00230 2      
-split_filter       0.00423 NaN       0.00423 0.00423 1      
+read_source_models 0.00242 8.787E-04 0.00180 0.00304 2      
+split_filter       0.00549 NaN       0.00549 0.00549 1      
 ================== ======= ========= ======= ======= =======
 
 Data transfer
@@ -120,7 +120,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.01220  0.0       1     
-total split_filter       0.00423  0.0       1     
-total read_source_models 0.00392  0.20703   2     
+updating source_info     0.01131  0.0       1     
+total split_filter       0.00549  0.0       1     
+total read_source_models 0.00484  0.0       2     
 ======================== ======== ========= ======

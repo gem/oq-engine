@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ===================
 checksum32     1,369,868,782      
-date           2018-10-03T15:02:16
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-05T03:05:24
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 3, num_levels = 36
@@ -80,7 +80,7 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      VICM      A    0     8     2,430        0.0       0.42589    0.0       30        0.0   
+0      VICM      A    0     8     2,430        0.0       0.49202    0.0       30        0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -99,8 +99,8 @@ Information about the tasks
 ---------------------------
 ================== ======= ====== ======= ======= =======
 operation-duration mean    stddev min     max     outputs
-read_source_models 0.03144 NaN    0.03144 0.03144 1      
-split_filter       0.01977 NaN    0.01977 0.01977 1      
+read_source_models 0.01595 NaN    0.01595 0.01595 1      
+split_filter       0.01968 NaN    0.01968 0.01968 1      
 ================== ======= ====== ======= ======= =======
 
 Data transfer
@@ -116,7 +116,7 @@ Slowest operations
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-updating source_info     0.03597  0.0       1     
-total read_source_models 0.03144  0.0       1     
-total split_filter       0.01977  0.0       1     
+updating source_info     0.02717  0.0       1     
+total split_filter       0.01968  0.0       1     
+total read_source_models 0.01595  0.0       1     
 ======================== ======== ========= ======

@@ -1,9 +1,30 @@
   [Graeme Weatherill]
   * Fixes to hmtk completeness tables for consistent rates and addition of     more special methods to catalogue 
 
+  [Michele Simionato]
+  * Raised an error if assets are discarded because too far from the hazard
+    sites (before it was just a warning)
+  * Added an attribute .srcidx to every event based rupture and stored it
+  * Fixed an issue with the Byte Order Mark (BOM) for CSV exposures prepared
+    with Microsoft Excel
+  * Reduced the site collection instead of just filtering it; this fixes
+    a source filtering bug and changes the numbers in case of GMF-correlation
+  * Added a command `oq prepare_site_model` to prepare a sites.csv file
+    containing the vs30 and changed the engine to use it
+  * Added a cutoff when storing a PoE=1 from a CSV file, thus avoiding NaNs
+    in classical_damage calculations
+  * Reduced the data transfer in the risk model by only considering the
+    taxonomies relevant for the exposure
+  * Extended `oq engine --run` to accept a comma-separated list of files
+  * Optimized the saving of the risk results in event based in the case of
+    many sites and changed the command `oq show portfolio_loss` to show
+    mean and standard deviation of the portfolio loss for each loss type
+
   [Marco Pagani]
   * Added a first [preliminary] version of the GMM for the Canada model
     represented in an analytical form.
+  * Added a modified version of Atkinson and Macias to be used for the
+    calculation of hazard in NSHMP2014.
 
   [Michele Simionato]
   * Made it possible to run the risk over an hazard calculation of another user

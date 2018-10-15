@@ -49,7 +49,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-logversion = True
 
 
 class InvalidCalculationID(Exception):
@@ -71,6 +70,23 @@ PRECALC_MAP = dict(
     event_based_risk=['event_based', 'event_based_risk', 'ucerf_hazard'],
     ucerf_classical=['ucerf_psha'],
     ucerf_hazard=['ucerf_hazard'])
+
+
+def fix_ones(pmap):
+    """
+    Physically, an extremely small intensity measure level can have an
+    extremely large probability of exceedence, however that probability
+    cannot be exactly 1 unless the level is exactly 0. Numerically, the
+    PoE can be 1 and this give issues when calculating the damage (there
+    is a log(0) in
+    :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
+    Here we solve the issue by replacing the unphysical probabilities 1
+    with .9999999999999999 (the float64 closest to 1).
+    """
+    for sid in pmap:
+        array = pmap[sid].array
+        array[array == 1.] = .9999999999999999
+    return pmap
 
 
 def set_array(longarray, shortarray):
@@ -121,6 +137,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True)
         self.oqparam = oqparam
+        if 'performance_data' not in self.datastore:
+            self.datastore.create_dset('performance_data', perf_dt)
 
     def monitor(self, operation='', **kw):
         """
@@ -158,19 +176,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         """
         Run the calculation and return the exported outputs.
         """
-        global logversion
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             self._monitor.hdf5 = self.datastore.hdf5
-            if 'performance_data' not in self.datastore:
-                self.datastore.create_dset('performance_data', perf_dt)
             self.set_log_format()
-            if logversion:  # make sure this is logged only once
-                logging.info('Running %s from %s',
-                             self.oqparam.inputs['job_ini'],
-                             self.oqparam.hazard_calculation_id)
-                logging.info('Using engine version %s', engine_version)
-                logversion = False
+            logging.info('Running %s [--hc=%s]',
+                         self.oqparam.inputs['job_ini'],
+                         self.oqparam.hazard_calculation_id)
+            logging.info('Using engine version %s', engine_version)
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
@@ -207,6 +220,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
                 readinput.exposure = None
+                readinput.gmfs = None
+                readinput.eids = None
+                readinput.vs30s = None
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
@@ -407,7 +423,7 @@ class HazardCalculator(BaseCalculator):
             # that sets oq.investigation_time, so it must be called first
             self.load_riskmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore['poes/grp-00'] = readinput.pmap
+            self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
@@ -449,6 +465,8 @@ class HazardCalculator(BaseCalculator):
             self.rlzs_assoc = calc.rlzs_assoc
         else:
             self.read_inputs()
+        if self.riskmodel:
+            self.save_riskmodel()
 
     def init(self):
         """
@@ -478,17 +496,36 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         with self.monitor('reading exposure', autoflush=True):
-            self.sitecol, self.assetcol = readinput.get_sitecol_assetcol(
-                self.oqparam, haz_sitecol, self.riskmodel.loss_types)
+            self.sitecol, self.assetcol, discarded = (
+                readinput.get_sitecol_assetcol(
+                    self.oqparam, haz_sitecol, self.riskmodel.loss_types))
+            if len(discarded):
+                self.datastore['discarded'] = discarded
+                msg = ('%d sites with assets were discarded; use '
+                       '`oq plot_assets` to see them' % len(discarded))
+                if hasattr(self, 'rup') or self.oqparam.discard_assets:
+                    # just log a warning in case of scenario from rupture
+                    # or when discard_assets is set to True
+                    logging.warn(msg)
+                else:  # raise an error
+                    self.datastore['sitecol'] = self.sitecol
+                    self.datastore['assetcol'] = self.assetcol
+                    raise RuntimeError(msg)
             readinput.exposure = None  # reset the global
+        # reduce the riskmodel to the relevant taxonomies
+        taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
+                         if taxo != '?')
+        if len(self.riskmodel.taxonomies) > len(taxonomies):
+            logging.info('Reducing risk model from %d to %d taxonomies',
+                         len(self.riskmodel.taxonomies), len(taxonomies))
+            self.riskmodel = self.riskmodel.reduce(taxonomies)
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
         if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
+            oq.minimum_intensity = self.riskmodel.min_iml
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
@@ -502,21 +539,24 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
         self.save_params()  # re-save oqparam
-        # save the risk models and loss_ratios in the datastore
-        self.datastore[oq.risk_model] = rm
+
+    def save_riskmodel(self):
+        """
+        Save the risk models in the datastore
+        """
+        oq = self.oqparam
+        self.datastore[oq.risk_model] = rm = self.riskmodel
         attrs = self.datastore.getitem(oq.risk_model).attrs
-        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
+        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
         self.datastore.set_nbytes(oq.risk_model)
-        self.datastore.hdf5.flush()
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
@@ -683,9 +723,11 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('getting/reducing shakemap'):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
-            sitecol, shakemap = get_sitecol_shakemap(
+            sitecol, shakemap, discarded = get_sitecol_shakemap(
                 smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
                 oq.region_grid_spacing)
+            if len(discarded):
+                self.datastore['discarded'] = discarded
             assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')

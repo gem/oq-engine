@@ -88,7 +88,7 @@ class ReportWriter(object):
                 # required_params_per_trt makes no sense for GMFs from file
                 self.add('required_params_per_trt')
             self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'source_info' in ds:
+        if 'csm_info' in ds:
             self.add('ruptures_per_trt')
         if 'rup_data' in ds:
             self.add('ruptures_events')

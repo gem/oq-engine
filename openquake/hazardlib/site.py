@@ -25,6 +25,8 @@ from openquake.baselib.general import split_in_blocks, not_equal
 from openquake.hazardlib.geo.utils import fix_lon, cross_idl
 from openquake.hazardlib.geo.mesh import Mesh
 
+U32LIMIT = 2 ** 32
+
 
 class Site(object):
     """
@@ -198,6 +200,7 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
+        assert len(lons) < U32LIMIT, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),

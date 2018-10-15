@@ -49,6 +49,18 @@ class NRCan15SiteTerm(GMPE):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
+        #
+        # Check if this GMPE has the necessary requirements
+        if not (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
+                'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            tmps = '{:s} does not use vs30 nor a defined reference velocity'
+            msg = tmps.format(str(self.gmpe))
+            raise AttributeError(msg)
+        #
+        # Check compatibility of reference velocity
+        if hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+            assert (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 760 and
+                    self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 800)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
@@ -56,22 +68,16 @@ class NRCan15SiteTerm(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # Check if this GMPE can be used
-        assert (hasattr(self.gmpe, 'DEFINED_FOR_REFERENCE_VELOCITY') or
-                'vs30' in self.REQUIRES_SITES_PARAMETERS)
         # Prepare sites
         sites_rock = copy.deepcopy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
-        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites=sites_rock,
-                                                      rup=rup, dists=dists,
-                                                      imt=imt,
-                                                      stddev_types=stds_types)
+        mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
+                                                      imt, stds_types)
         if not str(imt) == 'PGA':
             # compute mean and standard deviation on rock
-            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
-                sites=sites_rock, rup=rup, dists=dists, imt=imt,
-                stddev_types=stds_types)
+            mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(sites_rock,
+                    rup, dists, imt, stds_types)
         else:
             mean_rock = mean
         fa = self.BA08_AB06(sites.vs30, imt, np.exp(mean_rock))
@@ -81,7 +87,8 @@ class NRCan15SiteTerm(GMPE):
     def BA08_AB06(self, vs30, imt, pgar):
         """
         Computes amplification factor similarly to what is done in the 2015
-        version of the Canada building code.
+        version of the Canada building code. An initial version of this code
+        was kindly provided by Michal Kolaj - Geological Survey of Canada
 
         :param vs30:
             Can be either a scalar or a :class:`~numpy.ndarray` instance
@@ -96,23 +103,47 @@ class NRCan15SiteTerm(GMPE):
             amplification factor.
         """
         fa = np.ones_like(vs30)
-        if np.any(vs30 > 760.):
+        if np.isscalar(vs30):
+            vs30 = np.array([vs30])
+        if np.isscalar(pgar):
+            pgar = np.array([pgar])
+        #
+        # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
+        # motion will not be deamplified further
+        vs = copy.copy(vs30)
+        vs[vs >= 2000] = 1999.
+        #
+        # Computing motion on rock
+        idx = np.where(vs30 > 760)
+        if np.size(idx) > 0:
+            """
+            # This is the original implementation - Since this code is
+            # experimental we keep it for possible further developments
             # For values of Vs30 greater than 760 a linear interpolation is
             # used between the gm factor at 2000 m/s and 760 m/s
             C2 = self.COEFFS_AB06r[imt]
-            fa[vs30 > 760.] = 10**(np.interp(np.log10(vs30[vs30 > 760.]),
-                                             np.log10([760.0, 2000.0]),
-                                             np.log10([1.0, C2['c']])))
-            fa = 1./fa
-        else:
-            # For values of Vs30 lower than 760 the amplification is computed
-            # using the site term of Boore and Atkinson (2008)
+            fa[idx] = 10**(np.interp(np.log10(vs[idx]),
+                                     np.log10([760.0, 2000.0]),
+                                     np.log10([1.0, C2['c']])))
+            """
             C = self.COEFFS_BA08[imt]
             nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-                np.array([vs30]), np.array([pgar]), C)
+                vs[idx], pgar[idx], C)
             lin = BooreAtkinson2008()._get_site_amplification_linear(
-                np.array([vs30]), C)
-            fa = np.exp(nl+lin)[0]
+                vs[idx], C)
+            tmp = np.exp(nl+lin)
+            fa[idx] = tmp
+        #
+        # For values of Vs30 lower than 760 the amplification is computed
+        # using the site term of Boore and Atkinson (2008)
+        idx = np.where(vs < 760.)
+        if np.size(idx) > 0:
+            C = self.COEFFS_BA08[imt]
+            nl = BooreAtkinson2008()._get_site_amplification_non_linear(
+                vs[idx], pgar[idx], C)
+            lin = BooreAtkinson2008()._get_site_amplification_linear(
+                vs[idx], C)
+            fa[idx] = np.exp(nl+lin)
         return fa
 
     COEFFS_AB06r = CoeffsTable(sa_damping=5, table="""\
