@@ -104,8 +104,8 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
             haz_sitecol = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params=req_site_params)
             logging.info(
-                'Associating exposure grid with %d locations to %d sites'
-                ' with assets', len(haz_sitecol), len(assets_by_site))
+                'Associating exposure grid with %d locations to %d '
+                'exposure sites', len(haz_sitecol), len(assets_by_site))
             haz_sitecol, assets_by, _discarded = assoc(
                 assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
             haz_sitecol.make_complete()
