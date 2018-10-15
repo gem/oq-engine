@@ -204,19 +204,25 @@ class ContextMaker(object):
         :param sites: the sites affected by it
         :yields: pairs (ruptures, sites)
         """
+        out = []
         with self.ir_mon:
             if hasattr(src, 'location'):
                 close_sites, far_sites = sites.split(
                     src.location, self.pointsource_distance)
                 if close_sites is None:  # all is far
-                    yield list(src.iter_ruptures(True, True)), far_sites
+                    out.append((list(src.iter_ruptures(True, True)),
+                                far_sites))
                 elif far_sites is None:  # all is close
-                    yield list(src.iter_ruptures(False, False)), close_sites
+                    out.append((list(src.iter_ruptures(False, False)),
+                                close_sites))
                 else:
-                    yield list(src.iter_ruptures(False, False)), close_sites
-                    yield list(src.iter_ruptures(True, True)), far_sites
+                    out.append((list(src.iter_ruptures(False, False)),
+                                close_sites))
+                    out.append((list(src.iter_ruptures(True, True)),
+                                far_sites))
             else:
-                yield list(src.iter_ruptures()), sites
+                out.append((list(src.iter_ruptures()), sites))
+        return out
 
     def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
         """
