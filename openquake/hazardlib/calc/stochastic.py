@@ -133,14 +133,14 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     # Compute and save stochastic event sets
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
-    collapse = param.get('pointsource_distance') == 0
+    reduce_ = param.get('pointsource_distance') == 0
     for src, sites in src_filter(sources):
         mutex_weight = getattr(src, 'mutex_weight', 1)
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
         with cmaker.ir_mon:
             if hasattr(src, 'location'):  # point source
-                ruptures = list(src.iter_ruptures(collapse, collapse))
+                ruptures = list(src.iter_ruptures(reduce_, reduce_))
             else:
                 ruptures = list(src.iter_ruptures())
         num_occ_by_rup = _sample_ruptures(
