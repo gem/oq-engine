@@ -133,23 +133,28 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     # Compute and save stochastic event sets
     cmaker = ContextMaker(gsims, src_filter.integration_distance,
                           param, monitor)
-    for src, s_sites in src_filter(sources):
+    collapse = param.get('pointsource_distance') == 0
+    for src, sites in src_filter(sources):
         mutex_weight = getattr(src, 'mutex_weight', 1)
         samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        for ruptures, sites in cmaker.get_ruptures_sites(src, s_sites):
-            num_occ_by_rup = _sample_ruptures(
-                src, mutex_weight, param['ses_per_logic_tree_path'],
-                samples, ruptures)
-            # NB: the number of occurrences is very low, << 1, so it is
-            # more efficient to filter only the ruptures that occur, i.e.
-            # to call sample_ruptures *before* the filtering
-            ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
-                                           sites, monitor))
-            eb_ruptures.extend(ebrs)
-            eids = set_eids(ebrs)
-            dt = time.time() - t0
-            calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
+        with cmaker.ir_mon:
+            if hasattr(src, 'location'):  # point source
+                ruptures = list(src.iter_ruptures(collapse, collapse))
+            else:
+                ruptures = list(src.iter_ruptures())
+        num_occ_by_rup = _sample_ruptures(
+            src, mutex_weight, param['ses_per_logic_tree_path'],
+            samples, ruptures)
+        # NB: the number of occurrences is very low, << 1, so it is
+        # more efficient to filter only the ruptures that occur, i.e.
+        # to call sample_ruptures *before* the filtering
+        ebrs = list(_build_eb_ruptures(src, num_occ_by_rup, cmaker,
+                                       sites, monitor))
+        eb_ruptures.extend(ebrs)
+        eids = set_eids(ebrs)
+        dt = time.time() - t0
+        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
