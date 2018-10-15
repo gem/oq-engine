@@ -222,6 +222,20 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
 
+    def test_split(self):
+        col = SiteCollection(self.SITES)
+        close_sites, far_sites = col.split(Point(10, 19), distance=200)
+        self.assertEqual(len(close_sites), 1)
+        self.assertEqual(len(far_sites), 3)
+
+        close_sites, far_sites = col.split(Point(10, 19), distance=0)
+        self.assertIsNone(close_sites)
+        self.assertEqual(len(far_sites), 4)
+
+        close_sites, far_sites = col.split(Point(10, 19), distance=None)
+        self.assertEqual(len(close_sites), 4)
+        self.assertIsNone(far_sites)
+
 
 class WithinBBoxTestCase(unittest.TestCase):
     # to understand this test case it is ESSENTIAL to plot sites and
