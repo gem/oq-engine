@@ -241,7 +241,7 @@ def read_csv(fname, sep=','):
     :param sep: separato (default the comma)
     :return: a structured array of floats
     """
-    with open(fname) as f:
+    with open(fname, encoding='utf-8-sig') as f:
         header = next(f).split(sep)
         dt = numpy.dtype([(h, float) for h in header])
         return numpy.loadtxt(f, dt, delimiter=sep)
@@ -323,7 +323,7 @@ def get_site_model(oqparam, req_site_params):
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
     fname = oqparam.inputs['site_model']
-    if fname.endswith('.csv'):
+    if isinstance(fname, str) and fname.endswith('.csv'):
         sm = read_csv(fname)
         sm.sort(order=['lon', 'lat'])
         return sm
