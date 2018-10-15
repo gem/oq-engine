@@ -110,6 +110,8 @@ htranslator = HeaderTranslator(
     '(lat):float64',
     '(depth):float64',
     '(vs30):float64',
+    '(z1pt0):float64',
+    '(z2pt5):float64',
 )
 
 

@@ -35,6 +35,44 @@ from openquake.commonlib.util import compose_arrays
 F32 = numpy.float32
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
+req_site_params = {'vs30', 'z1pt0', 'z2pt5'}
+
+
+def calculate_z1pt0(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 1.0 km/s velocity horizon (in m)
+
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    '''
+    c1 = 6.745
+    c2 = 1.35
+    c3 = 5.394
+    c4 = 4.48
+    z1pt0 = numpy.zeros_like(vs30)
+    z1pt0[vs30 < 180] = numpy.exp(c1)
+    idx = (vs30 >= 180) & (vs30 <= 500)
+    z1pt0[idx] = numpy.exp(c1 - c2 * numpy.log(vs30[idx] / 180.0))
+    idx = vs30 > 500
+    z1pt0[idx] = numpy.exp(c3 - c4 * numpy.log(vs30[idx] / 500.0))
+    return z1pt0
+
+
+def calculate_z2pt5_ngaw2(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
+    'NGA-West2 ground motion model for the average horizontal components of
+    PGA, PGV, and 5pct damped linear acceleration response spectra.'
+    Earthquake Spectra, 30(3), pp.1087–1114.
+
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    '''
+    c1 = 7.089
+    c2 = -1.144
+    z2pt5 = numpy.exp(c1 + numpy.log(vs30) * c2)
+    return z2pt5
 
 
 def read_vs30(fnames):
@@ -61,12 +99,12 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
         mesh, assets_by_site = Exposure.read(
             exposure_xml, check_dupl=False).get_mesh_assets_by_site()
         mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, req_site_params={'vs30'})
+            mesh.lons, mesh.lats, req_site_params=req_site_params)
         if grid_spacing:
             grid = mesh.get_convex_hull().dilate(
                 grid_spacing).discretize(grid_spacing)
             haz_sitecol = site.SiteCollection.from_points(
-                grid.lons, grid.lats, req_site_params={'vs30'})
+                grid.lons, grid.lats, req_site_params=req_site_params)
             logging.info('Reducing exposure grid with %d locations to %d sites'
                          ' with assets', len(haz_sitecol), len(assets_by_site))
             haz_sitecol, assets_by, _discarded = assoc(
@@ -81,12 +119,13 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
             vs30orig, haz_sitecol,
             grid_spacing * SQRT2 or site_param_distance, 'filter')
         sitecol.array['vs30'] = vs30['vs30']
+        sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
+        sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         mon.hdf5['sitecol'] = sitecol
         if discarded:
             mon.hdf5['discarded'] = numpy.array(discarded)
-        sids = numpy.arange(len(vs30), dtype=numpy.uint32)
-        sites = compose_arrays(sids, vs30, 'site_id')
-        write_csv(output, sites)
+        write_csv(output, sitecol.array[
+            ['lon', 'lat', 'vs30', 'z1pt0', 'z2pt5']])
     if discarded:
         logging.info('Discarded %d sites with assets [use oq plot_assets]',
                      len(discarded))
