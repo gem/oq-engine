@@ -98,7 +98,6 @@ def _save_image(fig, filename, filetype='png', resolution=300):
         fig.savefig(filename, dpi=resolution, format=filetype)
     else:
         pass
-    return
 
 
 def _get_catalogue_bin_limits(catalogue, dmag):
@@ -111,7 +110,7 @@ def _get_catalogue_bin_limits(catalogue, dmag):
         dmag)
     counter = np.histogram(catalogue.data['magnitude'], mag_bins)[0]
     idx = np.where(counter > 0)[0]
-    mag_bins = mag_bins[idx[0]:idx[-1] + 3]
+    mag_bins = mag_bins[idx[0]:(idx[-1] + 2)]
     return mag_bins
 
 
@@ -157,8 +156,6 @@ def plot_depth_histogram(
     ax.set_title('Depth Histogram')
 
     _save_image(fig, filename, filetype, dpi)
-
-    return
 
 
 def plot_magnitude_depth_density(
@@ -220,8 +217,6 @@ def plot_magnitude_depth_density(
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def plot_magnitude_time_scatter(
         catalogue, plot_error=False, fmt_string='o', filename=None,
@@ -262,13 +257,11 @@ def plot_magnitude_time_scatter(
 
     _save_image(fig, filename, filetype, dpi)
 
-    return
-
 
 def plot_magnitude_time_density(
         catalogue, mag_int, time_int, completeness=None,
-        normalisation=False, logscale=True, bootstrap=None, filename=None,
-        figure_size=(8, 6), filetype='png', dpi=300, ax=None):
+        normalisation=False, logscale=True, bootstrap=None, xlim=[], ylim=[],
+        filename=None, figure_size=(8, 6), filetype='png', dpi=300, ax=None):
     """
     Creates a plot of magnitude-time density
 
@@ -328,20 +321,25 @@ def plot_magnitude_time_density(
                    norm=norm_data)
     ax.set_xlabel('Time (year)')
     ax.set_ylabel('Magnitude')
-    ax.set_xlim(time_bins[0], time_bins[-1])
+    if len(xlim) == 2:
+        ax.set_xlim(xlim[0], xlim[1])
+    else:
+        ax.set_xlim(time_bins[0], time_bins[-1])
+    if len(ylim) == 2:
+        ax.set_ylim(ylim[0], ylim[1])
+    else:
+        ax.set_ylim(mag_bins[0], mag_bins[-1] + (mag_bins[-1] - mag_bins[-2]))
     # Fix the title
     if normalisation:
         fig.colorbar(im, label='Event Density', shrink=0.9, ax=ax)
     else:
         fig.colorbar(im, label='Event Count', shrink=0.9, ax=ax)
-
+    ax.grid(True)
     # Plot completeness
     if completeness is not None:
         _plot_completeness(ax, completeness, time_bins[0], time_bins[-1])
 
     _save_image(fig, filename, filetype, dpi)
-
-    return
 
 
 def _plot_completeness(ax, comw, start_time, end_time):
@@ -355,55 +353,68 @@ def _plot_completeness(ax, comw, start_time, end_time):
             where="post", linewidth=3, color='brown')
 
 
-def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
+def get_completeness_adjusted_table(catalogue, completeness, dmag,
+                                    offset=1.0E-5, end_year=None, plot=False,
+                                    figure_size=(8, 6), filename=None,
+                                    filetype='png', dpi=300, ax=None):
     """
     Counts the number of earthquakes in each magnitude bin and normalises
     the rate to annual rates, taking into account the completeness
     """
-    inc = 1E-7
+    if not end_year:
+        end_year = catalogue.end_year
     # Find the natural bin limits
     mag_bins = _get_catalogue_bin_limits(catalogue, dmag)
     obs_time = end_year - completeness[:, 0] + 1.
     obs_rates = np.zeros_like(mag_bins)
+    durations = np.zeros_like(mag_bins)
     n_comp = np.shape(completeness)[0]
-    for iloc in range(0, n_comp, 1):
+    for iloc in range(n_comp):
         low_mag = completeness[iloc, 1]
         comp_year = completeness[iloc, 0]
-        if iloc == n_comp - 1:
+        if iloc == (n_comp - 1):
             idx = np.logical_and(
-                catalogue.data['magnitude'] >= low_mag - (dmag / 2.),
+                catalogue.data['magnitude'] >= low_mag - offset,
                 catalogue.data['year'] >= comp_year)
-            high_mag = mag_bins[-1] + dmag
-            obs_idx = mag_bins >= (low_mag - dmag / 2.)
+            high_mag = mag_bins[-1]
+            obs_idx = mag_bins >= (low_mag - offset)
         else:
             high_mag = completeness[iloc + 1, 1]
             mag_idx = np.logical_and(
-                catalogue.data['magnitude'] >= low_mag - dmag / 2.,
-                catalogue.data['magnitude'] < high_mag)
+                catalogue.data['magnitude'] >= low_mag - offset,
+                catalogue.data['magnitude'] < (high_mag - offset))
 
             idx = np.logical_and(mag_idx,
-                                 catalogue.data['year'] >= comp_year - inc)
-            obs_idx = np.logical_and(mag_bins >= low_mag - dmag / 2.,
-                                     mag_bins < high_mag + dmag)
+                                 catalogue.data['year'] >= (comp_year - offset))
+            obs_idx = np.logical_and(mag_bins >= (low_mag - offset),
+                                     mag_bins < (high_mag + offset))
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
         temp_rates = temp_rates.astype(float) / obs_time[iloc]
-        if iloc == n_comp - 1:
-            # TODO This hack seems to fix the error in Numpy v.1.8.1
-            obs_rates[np.where(obs_idx)[0]] = temp_rates
-        else:
-            obs_rates[obs_idx[:-1]] = temp_rates
+        obs_rates[obs_idx[:-1]] = temp_rates
+        durations[obs_idx[:-1]] = obs_time[iloc]
     selector = np.where(obs_rates > 0.)[0]
-    mag_bins = mag_bins[selector[0]:selector[-1] + 1]
-    obs_rates = obs_rates[selector[0]:selector[-1] + 1]
+    mag_bins = mag_bins[selector]
+    obs_rates = obs_rates[selector]
+    durations = durations[selector]
     # Get cumulative rates
     cum_rates = np.array([sum(obs_rates[iloc:])
                           for iloc in range(0, len(obs_rates))])
-    out_idx = cum_rates > 0.
-    return np.column_stack([mag_bins[out_idx],
-                            obs_rates[out_idx],
-                            cum_rates[out_idx],
-                            np.log10(cum_rates[out_idx])])
+    if plot:
+        plt.figure(figsize=figure_size)
+        plt.semilogy(mag_bins + dmag / 2., obs_rates, "bo",
+                     label="Incremental")
+        plt.semilogy(mag_bins + dmag / 2., cum_rates, "rs",
+                     label="Cumulative")
+        plt.xlabel("Magnitude (M)", fontsize=16)
+        plt.ylabel("Annual Rate", fontsize=16)
+        plt.grid(True)
+        plt.legend(fontsize=16)
+        if filename:
+            plt.savefig(filename, format=filetype, dpi=dpi,
+                        bbox_inches="tight")
+    return np.column_stack([mag_bins, durations, obs_rates, cum_rates,
+                            np.log10(cum_rates)])
 
 
 def plot_observed_recurrence(
