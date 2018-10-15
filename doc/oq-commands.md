@@ -223,17 +223,17 @@ algorithm.
 ```bash
 $ oq help prepare_site_model
 usage: oq prepare_site_model [-h] [-g 0] [-s 5] [-o sites.csv]
-                             exposure_xml vs30_csv
+                             exposure_xml vs30_csv [vs30_csv ...]
 
-Prepare a site_model.csv file from an exposure, a vs30 csv file and a grid
-spacing which can be 0 (meaning no grid). Sites far away from the vs30
+Prepare a site_model.csv file from an exposure xml file, a vs30 csv file and a
+grid spacing which can be 0 (meaning no grid). Sites far away from the vs30
 records are discarded and you can see them with the command `oq plot_assets`.
-It is up to you decide if you need to fix your exposure or if it is right
-to ignore the discarded sites.
+It is up to you decide if you need to fix your exposure or if it is right to
+ignore the discarded sites.
 
 positional arguments:
   exposure_xml          exposure in XML format
-  vs30_csv              USGS file lon,lat,vs30 with no header
+  vs30_csv              USGS files lon,lat,vs30 with no header
 
 optional arguments:
   -h, --help            show this help message and exit
