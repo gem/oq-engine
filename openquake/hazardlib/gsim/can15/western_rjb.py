@@ -17,19 +17,22 @@
 
 """
 :module:`openquake.hazardlib.gsim.can15.western` implements
-:class:`OceanicCan15Mid`, :class:`OceanicCan15Low`, :class:`OceanicCan15Upp`
+:class:`WesternCan15RjbMid`, :class:`WesternCan15RjbLow`,
+:class:`WesternCan15RjbUpp`
 """
 
-import copy
 import numpy as np
-
-from openquake.hazardlib.gsim.can15.western import WesternCan15Mid
 from openquake.hazardlib.gsim.can15.western import get_sigma
+from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
+from openquake.hazardlib.const import StdDev
 
 
-class OceanicCan15Mid(WesternCan15Mid):
+class WesternCan15RjbMid(BooreAtkinson2011):
     """
-    Implements the GMPE for oceanic sources
+    Implements the Boore and Atkinson (2008) with adjustments proposed by
+    Boore and Atkinson (2011) and the modifications introduced for the
+    calculation of hazard for the fifth generation of Canada's hazard maps,
+    released in 2015.
     """
 
     #: GMPE not tested against independent implementation so raise
@@ -39,55 +42,46 @@ class OceanicCan15Mid(WesternCan15Mid):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """ """
-        rupl = copy.deepcopy(rup)
-        rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
-                                                     stddev_types)
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
-        return mean, stddevs
-
-
-class OceanicCan15Low(WesternCan15Mid):
-    """
-    Implements the GMPE for oceanic sources. This is the model giving lower
-    ground motion values.
-    """
+    #: Standard deviation types supported
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        rupl = copy.deepcopy(rup)
-        rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
+        # get original values
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
+        stds = [np.ones(len(dists.rjb))*get_sigma(imt)]
+        return mean, stds
+
+
+class WesternCan15RjbLow(WesternCan15RjbMid):
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        # get original values
+        mean, _ = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                               stddev_types)
         # adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
         tmp = 0.1+0.0007*dists.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean - delta
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean_adj, stddevs
 
 
-class OceanicCan15Upp(WesternCan15Mid):
-    """
-    Implements the GMPE for oceanic sources. This is the model giving higher
-    ground motion values.
-    """
+class WesternCan15RjbUpp(WesternCan15RjbMid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """ """
-        rupl = copy.deepcopy(rup)
-        rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
-                                                     stddev_types)
+        # get original values
+        mean, _ = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                               stddev_types)
         # Adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
         tmp = 0.1+0.0007*dists.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean + delta
-        stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
+        stddevs = [np.ones(len(dists.rjb))*get_sigma(imt)]
         return mean_adj, stddevs
