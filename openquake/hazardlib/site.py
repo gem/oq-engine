@@ -328,6 +328,15 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
+    def split(self, location, distance):
+        """
+        :returns: (close_sites, far_sites)
+        """
+        if distance is None:
+            distance = numpy.inf  # all close
+        close = location.distance_to_mesh(self) < distance
+        return self.filter(close), self.filter(~close)
+
     def __iter__(self):
         """
         Iterate through all :class:`sites <Site>` in the collection, yielding
