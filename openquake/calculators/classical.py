@@ -155,8 +155,7 @@ class ClassicalCalculator(base.HazardCalculator):
         param = dict(
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
-            hypo_dist_collapsing_distance=oq.hypo_dist_collapsing_distance,
-            nodal_dist_collapsing_distance=oq.nodal_dist_collapsing_distance)
+            pointsource_distance=oq.pointsource_distance)
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
