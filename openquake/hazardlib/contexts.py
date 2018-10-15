@@ -206,13 +206,13 @@ class ContextMaker(object):
         """
         with self.ir_mon:
             if hasattr(src, 'location'):
-                if self.pointsource_distance == 0:  # all is far
-                    yield list(src.iter_ruptures(True, True)), sites
-                elif self.pointsource_distance is None:  # all is close
-                    yield list(src.iter_ruptures(False, False)), sites
+                close_sites, far_sites = sites.split(
+                    src.location, self.pointsource_distance)
+                if close_sites is None:  # all is far
+                    yield list(src.iter_ruptures(True, True)), far_sites
+                elif far_sites is None:  # all is close
+                    yield list(src.iter_ruptures(False, False)), close_sites
                 else:
-                    close_sites, far_sites = sites.split(
-                        src.location, self.pointsource_distance)
                     yield list(src.iter_ruptures(False, False)), close_sites
                     yield list(src.iter_ruptures(True, True)), far_sites
             else:
