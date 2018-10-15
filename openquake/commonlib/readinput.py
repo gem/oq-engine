@@ -51,6 +51,7 @@ NORMALIZATION_FACTOR = 1E-2
 RUPTURES_PER_BLOCK = 10000  # used in split_filter
 TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
+F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -65,22 +66,6 @@ class DuplicatedPoint(Exception):
     """
     Raised when reading a CSV file with duplicated (lon, lat) pairs
     """
-
-
-class LargeExposureGrid(Exception):
-    msg = '''
-    The point of automatic gridding of the exposure is to reduce the hazard
-    mesh, however you are increasing it from %d points to %d points. Or your
-    region_grid_spacing (%d km) is too small or the bounding box of your
-    exposure is too large. Currently you have longitudes in the range [%d, %d]
-    and latitudes in the range [%d, %d], please plot your assets and check.'''
-
-    def __init__(self, exposure_mesh, hazard_mesh, spacing):
-        l1 = len(exposure_mesh)
-        l2 = len(hazard_mesh)
-        lon1, lon2 = exposure_mesh.lons.min(), exposure_mesh.lons.max()
-        lat1, lat2 = exposure_mesh.lats.min(), exposure_mesh.lats.max()
-        self.args = [self.msg % (l2, l1, spacing, lon1, lon2, lat1, lat2)]
 
 
 def collect_files(dirpath, cond=lambda fullname: True):
@@ -118,15 +103,25 @@ def extract_from_zip(path, candidates):
             if os.path.basename(f) in candidates]
 
 
+def normalize(key, fnames, base_path):
+    input_type, _ext = key.rsplit('_', 1)
+    filenames = []
+    for val in fnames:
+        if os.path.isabs(val):
+            raise ValueError('%s=%s is an absolute path' % (key, val))
+        filenames.append(os.path.normpath(os.path.join(base_path, val)))
+    return input_type, filenames
+
+
 def _update(params, items, base_path):
     for key, value in items:
-        if key.endswith(('_file', '_csv', '_hdf5')):
-            if os.path.isabs(value):
-                raise ValueError('%s=%s is an absolute path' % (key, value))
-            input_type, _ext = key.rsplit('_', 1)
-            params['inputs'][input_type] = (
-                os.path.normpath(os.path.join(base_path, value))
-                if value else '')
+        if key == 'hazard_curves_csv':
+            input_type, fnames = normalize(key, value.split(), base_path)
+            params['inputs'][input_type] = fnames
+        elif key.endswith(('_file', '_csv', '_hdf5')):
+            if value:
+                input_type, [fname] = normalize(key, [value], base_path)
+                params['inputs'][input_type] = fname
         else:
             params[key] = value
 
@@ -226,6 +221,19 @@ exposure = None  # set as side effect when the user reads the site mesh
 gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
 # this hack is necessary, otherwise we would have to parse the file twice
 
+vs30s = None  # set as side effect when the user reads the site mesh
+# this hack is necessary, otherwise we would have to parse sites.csv twice
+
+
+def get_csv_header(fname, sep=','):
+    """
+    :param fname: a CSV file
+    :param sep: the separator (default comma)
+    :returns: the first line of fname
+    """
+    with open(fname, 'U', encoding='utf-8-sig') as f:
+        return next(f).split(sep)
+
 
 def get_mesh(oqparam):
     """
@@ -235,35 +243,38 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids
+    global pmap, exposure, gmfs, eids, vs30s
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
-        csv_data = open(oqparam.inputs['sites'], 'U').readlines()
-        has_header = csv_data[0].startswith('site_id')
-        if has_header:  # strip site_id
-            data = []
-            for i, line in enumerate(csv_data[1:]):
-                row = line.replace(',', ' ').split()
-                sid = row[0]
-                if sid != str(i):
+        fname = oqparam.inputs['sites']
+        header = get_csv_header(fname)
+        if header[0] == 'site_id':  # strip site_id
+            data, vs30s = [], []
+            for i, row in enumerate(
+                    csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
+                if row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
-                        oqparam.inputs['sites'], i, sid))
-                data.append(' '.join(row[1:]))
+                        fname, i, row['site_id']))
+                data.append(' '.join([row['lon'], row['lat']]))
+                if 'vs30' in row:
+                    vs30s.append(row['vs30'])
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
-            data = [line.replace(',', ' ') for line in csv_data]
+            data = [line.replace(',', ' ')
+                    for line in open(fname, 'U', encoding='utf-8-sig')]
         coords = valid.coordinates(','.join(data))
         start, stop = oqparam.sites_slice
-        c = coords[start:stop] if has_header else sorted(coords[start:stop])
+        c = (coords[start:stop] if header[0] == 'site_id'
+             else sorted(coords[start:stop]))
         return geo.Mesh.from_coords(c)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
-        if fname.endswith('.csv'):
+        if isinstance(fname, list):  # for csv
             mesh, pmap = get_pmap_from_csv(oqparam, fname)
         elif fname.endswith('.xml'):
             mesh, pmap = get_pmap_from_nrml(oqparam, fname)
@@ -273,14 +284,16 @@ def get_mesh(oqparam):
     elif 'gmfs' in oqparam.inputs:
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
-    elif oqparam.region and oqparam.region_grid_spacing:
-        poly = geo.Polygon.from_wkt(oqparam.region)
+    elif oqparam.region_grid_spacing:
+        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
+                else exposure.mesh.get_convex_hull())
         try:
-            mesh = poly.discretize(oqparam.region_grid_spacing)
+            mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
+                oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
         except Exception:
             raise ValueError(
-                'Could not discretize region %(region)s with grid spacing '
+                'Could not discretize region with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
     elif 'exposure' in oqparam.inputs:
         return exposure.mesh
@@ -315,19 +328,21 @@ def get_site_model(oqparam, req_site_params):
     return numpy.array(tuples, site_model_dt)
 
 
-def get_site_collection(oqparam, mesh=None):
+def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param mesh:
-        the mesh to use; if None, it is extracted from the job.ini
     """
-    mesh = mesh or get_mesh(oqparam)
+    mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    if oqparam.inputs.get('site_model'):
+    if 'vs30' in req_site_params and vs30s:
+        sitecol = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
+        sitecol.array['vs30'] = F64(vs30s)
+    elif oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
@@ -343,7 +358,7 @@ def get_site_collection(oqparam, mesh=None):
             # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params = geo.utils.assoc(
+            sc, params, discarded = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
@@ -694,7 +709,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param split_all:
         if True, split all the sources in the models
     :param srcfilter:
-        if not None, perform a preprocess operation on the sources
+        if not None, use it to prefilter the sources
     """
     smodels = []
     gsim_lt = get_gsim_lt(oqparam)
@@ -874,15 +889,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         raise InvalidFile(
             'Expected cost types %s but the exposure %r contains %s' % (
                 cost_types, expo, exposure.cost_types['name']))
-    if oqparam.region_grid_spacing and not oqparam.region:
-        # extract the hazard grid from the exposure
-        poly = exposure.mesh.get_convex_hull()
-        mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
-            oqparam.region_grid_spacing)
-        if len(mesh) > len(haz_sitecol):
-            raise LargeExposureGrid(mesh, haz_sitecol.mesh,
-                                    oqparam.region_grid_spacing)
-        haz_sitecol = get_site_collection(oqparam, mesh)  # redefine
+    if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing
         if haz_distance != oqparam.asset_hazard_distance:
             logging.info('Using asset_hazard_distance=%d km instead of %d km',
@@ -893,9 +900,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'strict' if oqparam.region_grid_spacing else 'filter'
-        sitecol, assets_by = geo.utils.assoc(
+        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
+        sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+        if oqparam.region_grid_spacing:  # it is normal to discard sites
+            discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -911,6 +920,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
+        discarded = []
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
@@ -918,52 +928,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
-
-    return sitecol, assetcol
-
-
-def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
-    """
-    Read CSV data in the format `IMT lon lat value1 ... valueN`.
-
-    :param csvfile:
-        a file or file-like object with the CSV data
-    :param imts:
-        a list of intensity measure types
-    :param num_values:
-        dictionary with the number of expected values per IMT
-    :param validvalues:
-        validation function for the values
-    :returns:
-        the mesh of points and the data as a dictionary
-        imt -> array of curves for each site
-    """
-    number_of_values = dict(zip(imts, num_values))
-    lon_lats = {imt: set() for imt in imts}
-    data = AccumDict()  # imt -> list of arrays
-    check_imt = valid.Choice(*imts)
-    for line, row in enumerate(csv.reader(csvfile, delimiter=' '), 1):
-        try:
-            imt = check_imt(row[0])
-            lon_lat = valid.longitude(row[1]), valid.latitude(row[2])
-            if lon_lat in lon_lats[imt]:
-                raise DuplicatedPoint(lon_lat)
-            lon_lats[imt].add(lon_lat)
-            values = validvalues(' '.join(row[3:]))
-            if len(values) != number_of_values[imt]:
-                raise ValueError('Found %d values, expected %d' %
-                                 (len(values), number_of_values[imt]))
-        except (ValueError, DuplicatedPoint) as err:
-            raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
-        data += {imt: [numpy.array(values)]}
-    points = lon_lats.pop(imts[0])
-    for other_imt, other_points in lon_lats.items():
-        if points != other_points:
-            raise ValueError('Inconsistent locations between %s and %s' %
-                             (imts[0], other_imt))
-    lons, lats = zip(*sorted(points))
-    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
+    if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
+            and 'hazard_curves' not in oqparam.inputs):
+        # TODO: think if we should remove this in presence of GMF-correlation
+        assetcol = assetcol.reduce_also(sitecol)
+    return sitecol, assetcol, discarded
 
 
 def _get_gmfs(oqparam):
@@ -1025,30 +994,36 @@ def _get_gmfs(oqparam):
     return eids, gmfs
 
 
-@deprecated('Reading hazard curves from CSV may change in the future')
-def get_pmap_from_csv(oqparam, fname):
+def get_pmap_from_csv(oqparam, fnames):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param fname:
-        a .txt file with format `IMT lon lat poe1 ... poeN`
+    :param fnames:
+        a space-separated list of .csv relative filenames
     :returns:
-        the site mesh and the hazard curves read by the .txt file
+        the site mesh and the hazard curves read by the .csv files
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
-    num_values = list(map(len, list(oqparam.imtls.values())))
-    with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves = get_mesh_csvdata(
-            csvfile, list(oqparam.imtls), num_values,
-            valid.decreasing_probabilities)
-    array = numpy.zeros((len(mesh), sum(num_values)))
-    for imt_ in hcurves:
-        array[:, oqparam.imtls(imt_)] = hcurves[imt_]
-    return mesh, ProbabilityMap.from_array(array, range(len(mesh)))
+
+    dic = {wrapper.imt: wrapper.array
+           for wrapper in map(writers.read_composite_array, fnames)}
+    array = dic[next(iter(dic))]
+    mesh = geo.Mesh(array['lon'], array['lat'])
+    num_levels = sum(len(imls) for imls in oqparam.imtls.values())
+    data = numpy.zeros((len(mesh), num_levels))
+    level = 0
+    for im in oqparam.imtls:
+        arr = dic[im]
+        for poe in arr.dtype.names[3:]:
+            data[:, level] = arr[poe]
+            level += 1
+        for field in ('lon', 'lat', 'depth'):  # sanity check
+            numpy.testing.assert_equal(arr[field], array[field])
+    return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
 def get_pmap_from_nrml(oqparam, fname):
@@ -1235,9 +1210,7 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if not fname:
-            continue
-        elif key == 'source':  # list of fnames and/or strings
+        if isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff

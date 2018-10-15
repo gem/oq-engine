@@ -65,6 +65,7 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, None)
+    discard_assets = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
@@ -284,6 +285,12 @@ class OqParam(valid.ParamSet):
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
 
+        # check grid + sites
+        if self.region_grid_spacing and (
+                'sites' in self.inputs or 'site_model' in self.inputs):
+            logging.warn('Using a grid together with specifying explicitly '
+                         'the sites is deprecated')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
@@ -304,7 +311,7 @@ class OqParam(valid.ParamSet):
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
-                    if param in ('lon', 'lat'):  # no check
+                    if param in ('lon', 'lat', 'vs30'):  # no check
                         continue
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
@@ -382,7 +389,6 @@ class OqParam(valid.ParamSet):
                 else:
                     imtls[imt] = imls
         self.risk_imtls = imtls
-
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 

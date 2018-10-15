@@ -3,8 +3,8 @@ Scenario Risk for Nepal with 20 assets
 
 ============== ===================
 checksum32     3,157,733,199      
-date           2018-10-03T15:00:40
-engine_version 3.3.0-gitd9f5dca908
+date           2018-10-05T03:04:32
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 20, num_levels = 8
@@ -57,6 +57,14 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008(): [0]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Exposure model
 --------------
 =============== ========
@@ -80,8 +88,8 @@ Slowest operations
 =================== ======== ========= ======
 operation           time_sec memory_mb counts
 =================== ======== ========= ======
-building riskinputs 0.04739  0.06250   1     
-saving gmfs         0.01671  0.0       1     
-computing gmfs      0.00296  0.03906   1     
-reading exposure    0.00175  0.0       1     
+building riskinputs 0.02973  0.0       1     
+saving gmfs         0.01026  0.0       1     
+computing gmfs      0.00198  0.0       1     
+reading exposure    0.00108  0.0       1     
 =================== ======== ========= ======
