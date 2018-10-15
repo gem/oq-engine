@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixes to hmtk completeness tables for consistent rates and addition of     more special methods to catalogue 
+
   [Michele Simionato]
   * Raised an error if assets are discarded because too far from the hazard
     sites (before it was just a warning)
