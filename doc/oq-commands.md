@@ -264,9 +264,9 @@ In large risk calculation one wants to *use the gridded mode always* because:
 Basically by using a grid you can turn an impossible calculation into a possible
 one. You should always use a grid unless there are very few sites.
 
-The command is able to manage multiple files at once, just use commas with
-no spaces to separate the files. Here is an example of usage:
+The command is able to manage multiple Vs30 files at once. Here is an example
+of usage:
 
 ```bash
-$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv,Vs30/Bolivia.csv --grid-spacing=10
+$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv Vs30/Bolivia.csv --grid-spacing=10
 ```
