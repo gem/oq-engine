@@ -1,4 +1,9 @@
+  [Graeme Weatherill]
+  * Fixes to hmtk completeness tables for consistent rates and addition of     more special methods to catalogue 
+
   [Michele Simionato]
+  * Restricted ChiouYoungs2008SWISS01 to StdDev.TOTAL to avoid a bug
+    when computing the GMFs with inter/intra stddevs
   * Raised an error if assets are discarded because too far from the hazard
     sites (before it was just a warning)
   * Added an attribute .srcidx to every event based rupture and stored it
