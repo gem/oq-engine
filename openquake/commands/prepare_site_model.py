@@ -29,8 +29,6 @@ from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib.util import compose_arrays
-
 
 F32 = numpy.float32
 SQRT2 = 1.414
@@ -105,14 +103,15 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
                 grid_spacing).discretize(grid_spacing)
             haz_sitecol = site.SiteCollection.from_points(
                 grid.lons, grid.lats, req_site_params=req_site_params)
-            logging.info('Reducing exposure grid with %d locations to %d sites'
-                         ' with assets', len(haz_sitecol), len(assets_by_site))
+            logging.info(
+                'Associating exposure grid with %d locations to %d sites'
+                ' with assets', len(haz_sitecol), len(assets_by_site))
             haz_sitecol, assets_by, _discarded = assoc(
                 assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
             haz_sitecol.make_complete()
         else:
             haz_sitecol = assetcol
-        vs30orig = read_vs30(vs30_csv.split(','))
+        vs30orig = read_vs30(vs30_csv)
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
         sitecol, vs30, discarded = assoc(
