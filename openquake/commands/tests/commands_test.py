@@ -440,9 +440,9 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         exposure_csv = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model.func(
-            exposure_csv, vs30_csv, grid_spacing, output)
+            exposure_csv, [vs30_csv], grid_spacing, output)
         self.assertEqual(len(sitecol), 6)  # 6 non-empty grid points
 
         # test no grid
-        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, 10, output)
+        sc = prepare_site_model.func(exposure_csv, [vs30_csv], 0, 10, output)
         self.assertEqual(len(sc), 4)  # 4 sites within 10 km from the params
