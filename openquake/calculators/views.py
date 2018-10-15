@@ -692,10 +692,10 @@ def view_hmap(token, dstore):
     return rst_table(array[:20])
 
 
-@view.add('flat_hcurves')
-def view_flat_hcurves(token, dstore):
+@view.add('global_hcurves')
+def view_global_hcurves(token, dstore):
     """
-    Display the flat hazard curves for the calculation. They are
+    Display the global hazard curves for the calculation. They are
     used for debugging purposes when comparing the results of two
     calculations. They are the mean over the sites of the mean hazard
     curves.
@@ -755,7 +755,7 @@ def view_global_poes(token, dstore):
 @view.add('global_hmaps')
 def view_global_hmaps(token, dstore):
     """
-    Display the flat hazard maps for the calculation. They are
+    Display the global hazard maps for the calculation. They are
     used for debugging purposes when comparing the results of two
     calculations. They are the mean over the sites of the mean hazard
     maps.
