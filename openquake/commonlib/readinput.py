@@ -242,7 +242,7 @@ def read_csv(fname, sep=','):
     :return: a structured array of floats
     """
     with open(fname, encoding='utf-8-sig') as f:
-        header = next(f).split(sep)
+        header = next(f).strip().split(sep)
         dt = numpy.dtype([(h, float) for h in header])
         return numpy.loadtxt(f, dt, delimiter=sep)
 
