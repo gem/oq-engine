@@ -237,3 +237,50 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     9.8619    1.0730
     10.000    1.0000
     """)
+
+
+class  PezeshkEtAl2011NEHRPBCv2(PezeshkEtAl2011):
+    """
+    Adaptation of Pezeshk et al. (2011) to amplify the ground motions from
+    the original hard rock (Vs30 > 2000 m/s) sites to the NEHRP B/C site class
+    using the factors of Atkinson (2013) (Table 2)
+    Note:
+    1) Correction at PGA is distance dependent in the original paper. Here
+    we use a fixed distance of 20km (factor -0.10)
+    2) All periods between 0.05s and PGA are kept constant at -0.10
+    3) All periods above 5s are kept constant at 0.00 (no correction)
+    """
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        C_AMP = self.SITE_COEFFS[imt]
+        # Get method from superclass
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
+        return mean + C_AMP["F"], stddevs
+
+    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""
+    IMT         F
+    pga        -0.10
+    0.010      -0.10
+    0.020      -0.10
+    0.030      -0.10
+    0.040      -0.10
+    0.050      −0.10
+    0.100       0.03
+    0.200       0.12
+    0.330       0.14
+    0.500       0.14
+    1.000       0.11
+    2.000       0.09
+    5.000       0.06
+    7.500       0.00
+    10.00       0.00
+    """)
