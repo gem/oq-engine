@@ -245,7 +245,7 @@ engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run', '--run', help='Run a job with the specified config file',
-            metavar='CONFIG_FILE', nargs='*')
+            metavar='JOB_INI', nargs='*')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
             help='List hazard calculation information', action='store_true')
 engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
