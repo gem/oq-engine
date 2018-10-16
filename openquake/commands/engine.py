@@ -169,7 +169,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if run:
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-        job_inis = os.path.expanduser(run).split(',')
+        job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) > 2 and hc_id:
             sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
@@ -245,7 +245,7 @@ engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run', '--run', help='Run a job with the specified config file',
-            metavar='CONFIG_FILE')
+            metavar='CONFIG_FILE', nargs='*')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
             help='List hazard calculation information', action='store_true')
 engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
