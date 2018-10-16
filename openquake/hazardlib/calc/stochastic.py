@@ -174,9 +174,10 @@ def _sample_ruptures(serial, mutex_weight, num_ses, num_samples, ruptures):
         else:
             ok = numpy.ones(n, bool)
         for idx in range(n):
-            if ok[idx] and num_occ[idx]:
+            n_occ = num_occ[idx]
+            if n_occ and ok[idx]:
                 sam_idx, ses_idx = divmod(idx, num_ses)
-                num_occ_by_rup[rup] += {(sam_idx, ses_idx + 1): num_occ[idx]}
+                num_occ_by_rup[rup] += {(sam_idx, ses_idx + 1): n_occ}
         rup.rup_no = rup_no + 1
     return num_occ_by_rup
 
