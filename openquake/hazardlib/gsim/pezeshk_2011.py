@@ -268,9 +268,9 @@ class  PezeshkEtAl2011NEHRPBCv2(PezeshkEtAl2011):
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT         F
-    pga        -0.10
-    0.010      -0.10
-    0.050      −0.10
+    pga         -0.10
+    0.010       -0.10
+    0.050       -0.10
     0.100       0.03
     0.200       0.12
     0.330       0.14
