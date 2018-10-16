@@ -217,7 +217,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
         return prob_no_exceed
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -227,10 +227,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         """
         # compute cdf from pmf
         cdf = numpy.cumsum(self.probs_occur)
-
-        rn = numpy.random.random()
-        [n_occ] = numpy.digitize([rn], cdf)
-
+        n_occ = numpy.digitize(numpy.random.random(n), cdf)
         return n_occ
 
 
@@ -287,7 +284,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         rate = self.occurrence_rate
         return tom.get_probability_one_occurrence(rate)
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
@@ -296,8 +293,8 @@ class ParametricProbabilisticRupture(BaseRupture):
         `openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
         of an assigned temporal occurrence model.
         """
-        return self.temporal_occurrence_model.sample_number_of_occurrences(
-            self.occurrence_rate)
+        r = self.occurrence_rate * self.temporal_occurrence_model.time_span
+        return numpy.random.poisson(r, n)
 
     def get_probability_no_exceedance(self, poes):
         """
