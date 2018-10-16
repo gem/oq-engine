@@ -332,8 +332,8 @@ class SiteCollection(object):
         """
         :returns: (close_sites, far_sites)
         """
-        if distance is None:
-            distance = numpy.inf  # all close
+        if distance is None:  # all close
+            return self, None
         close = location.distance_to_mesh(self) < distance
         return self.filter(close), self.filter(~close)
 
