@@ -200,7 +200,7 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
     """
     Adaptation of Pezeshk et al. (2011) to amplify the ground motions from
     the original hard rock (Vs30 > 2000 m/s) sites to the NEHRP B/C site class
-    using the factors of Atkinson (2013) (Table 2)
+    using the factors of Atkinson and Adams (2013) (Table 2)
     Note:
     1) Correction at PGA is distance dependent in the original paper. Here
     we use a fixed distance of 20km (factor -0.10)
