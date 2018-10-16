@@ -33,7 +33,7 @@ MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot_memory
 
 # fake a failed/executing calculation to check that it is not exported
-oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
+oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
 oq db set_status -1 executing
 
 # display the calculations
