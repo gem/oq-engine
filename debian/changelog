@@ -1,5 +1,6 @@
   [Michele Simionato]
-   * Replaced `nodal_dist_collapsing_distance` and
+  * Fixed the option `oq engine --config-file` that broke a few releases ago
+  * Replaced `nodal_dist_collapsing_distance` and
      `hypo_dist_collapsing_distance` with `pointsource_distance` and made
      use of them in the classical and event based calculators
 
