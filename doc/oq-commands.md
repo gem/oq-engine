@@ -256,7 +256,7 @@ and the points with assets are associated to the vs30 records. The
 `site_param_distance` parameter is ignored, and the grid spacing
 multiplied by the square root of 2 is used instead.
 
-In large risk calculation one wants to *use the gridded mode always* because:
+In large risk calculations one wants to *use the gridded mode always* because:
 
 1) the results are the nearly the same than without the grid and
 2) the calculation is a lot faster and uses a lot less memory with a grid.
