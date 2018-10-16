@@ -326,6 +326,9 @@ def get_site_model(oqparam, req_site_params):
     if isinstance(fname, str) and fname.endswith('.csv'):
         sm = read_csv(fname)
         sm.sort(order=['lon', 'lat'])
+        if ('site_id' in sm.dtype.names and
+                (sm['site_id'] != numpy.array(len(sm), U32)).any()):
+                raise InvalidFile('%s: sites not ordered by lon,lat' % fname)
         return sm
     nodes = nrml.read(fname).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
