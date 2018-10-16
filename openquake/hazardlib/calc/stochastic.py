@@ -143,9 +143,14 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
                 ruptures = list(src.iter_ruptures(reduce_, reduce_))
             else:
                 ruptures = list(src.iter_ruptures())
-        num_occ_by_rup = _sample_ruptures(
-            src, mutex_weight, param['ses_per_logic_tree_path'],
-            samples, ruptures)
+        if mutex_weight < 1:
+            num_occ_by_rup = _sample_mutex_ruptures(
+                src.serial, mutex_weight, param['ses_per_logic_tree_path'],
+                samples, ruptures)
+        else:
+            num_occ_by_rup = _sample_ruptures(
+                src.serial, param['ses_per_logic_tree_path'],
+                samples, ruptures)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -159,32 +164,41 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def _sample_ruptures(src, prob, num_ses, num_samples, ruptures):
-    """
-    Sample the ruptures contained in the given source.
-
-    :param src: a hazardlib source object
-    :param prob: a probability (1 for indep sources, < 1 for mutex sources)
-    :param num_ses: the number of Stochastic Event Sets to generate
-    :param num_samples: how many samples for the given source
-    :param ruptures: ruptures to sample
-    :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
-    """
+def _sample_mutex_ruptures(serial, prob, num_ses, num_samples, ruptures):
     # the dictionary `num_occ_by_rup` contains a dictionary
     # ses_id -> num_occurrences for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(ruptures):
-        rup.serial = src.serial[rup_no]
+        rup.serial = serial[rup_no]
         numpy.random.seed(rup.serial)
+        #ok = numpy.random.random(num_samples * num_ses) < prob
+        idx = 0
         for sam_idx in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
-                # sampling of mutex sources if prob < 1
-                ok = numpy.random.random() < prob if prob < 1 else True
-                if ok:
+                if numpy.random.random() < prob:
+                #if ok[idx]:  # sampling of mutex sources if prob < 1
                     num_occ = rup.sample_number_of_occurrences()
                     if num_occ:
                         num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
+                idx += 1
+        rup.rup_no = rup_no + 1
+    return num_occ_by_rup
+
+
+def _sample_ruptures(serial, num_ses, num_samples, ruptures):
+    # the dictionary `num_occ_by_rup` contains a dictionary
+    # ses_id -> num_occurrences for each occurring rupture
+    num_occ_by_rup = collections.defaultdict(AccumDict)
+    # generating ruptures for the given source
+    for rup_no, rup in enumerate(ruptures):
+        rup.serial = serial[rup_no]
+        numpy.random.seed(rup.serial)
+        for sam_idx in range(num_samples):
+            for ses_idx in range(1, num_ses + 1):
+                num_occ = rup.sample_number_of_occurrences()
+                if num_occ:
+                    num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
         rup.rup_no = rup_no + 1
     return num_occ_by_rup
 

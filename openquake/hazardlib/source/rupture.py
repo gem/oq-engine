@@ -297,8 +297,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         of an assigned temporal occurrence model.
         """
         return self.temporal_occurrence_model.sample_number_of_occurrences(
-            self.occurrence_rate
-        )
+            self.occurrence_rate)
 
     def get_probability_no_exceedance(self, poes):
         """
