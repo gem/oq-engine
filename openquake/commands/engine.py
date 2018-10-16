@@ -120,7 +120,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         logging.basicConfig(level=logging.INFO)
 
     if config_file:
-        config.load(os.path.abspath(os.path.expanduser(config_file)))
+        config.read(os.path.abspath(os.path.expanduser(config_file)))
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
