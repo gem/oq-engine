@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Better error message for ShakeMaps with zero stddev
   * Added a source_id-filtering feature in the job.ini
   * Added a check on non-homogeneous tectonic region types in a source group
   * Fixed the option `oq engine --config-file` that broke a few releases ago
