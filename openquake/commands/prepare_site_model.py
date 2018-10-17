@@ -98,12 +98,16 @@ def prepare_site_model(exposure_xml, vs30_csv,
     logging.basicConfig(level=logging.INFO)
     hdf5 = datastore.hdf5new()
     req_site_params = {'vs30'}
+    fields = ['lon', 'lat', 'vs30']
     if z1pt0:
         req_site_params.add('z1pt0')
+        fields.append('z1pt0')
     if z2pt5:
         req_site_params.add('z2pt5')
+        fields.append('z2pt5')
     if vs30measured:
         req_site_params.add('vs30measured')
+        fields.append('vs30measured')
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
             exposure_xml, check_dupl=False).get_mesh_assets_by_site()
@@ -137,8 +141,7 @@ def prepare_site_model(exposure_xml, vs30_csv,
         mon.hdf5['sitecol'] = sitecol
         if discarded:
             mon.hdf5['discarded'] = numpy.array(discarded)
-        write_csv(output, sitecol.array[
-            ['lon', 'lat', 'vs30', 'vs30measured', 'z1pt0', 'z2pt5']])
+        write_csv(output, sitecol.array[fields])
     if discarded:
         logging.info('Discarded %d sites with assets [use oq plot_assets]',
                      len(discarded))
