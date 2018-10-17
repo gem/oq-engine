@@ -143,6 +143,7 @@ class OqParam(valid.ParamSet):
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_slice = valid.Param(valid.simple_slice, (None, None))
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
+    source_id = valid.Param(valid.source_id, None)
     specific_assets = valid.Param(valid.namelist, [])
     pointsource_distance = valid.Param(valid.positivefloat, None)
     taxonomies_from_model = valid.Param(valid.boolean, False)

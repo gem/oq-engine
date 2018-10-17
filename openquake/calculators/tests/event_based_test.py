@@ -36,7 +36,7 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
-    case_17,  case_18, case_19, mutex)
+    case_17,  case_18, case_19, case_20, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -350,6 +350,12 @@ PGA     SA(0.3) SA(0.6)
     @attr('qa', 'hazard', 'event_based')
     def test_case_19(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_19.__file__, 'job.ini')
+        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-data.csv', gmf)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
+        self.run_calc(case_20.__file__, 'job.ini')
         [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
