@@ -783,7 +783,8 @@ class SourceConverter(RuptureConverter):
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
-                    if src_node['tectonicRegion'] != trt:
+                    src_trt = src_node.get('tectonicRegion')
+                    if src_trt and src_trt != trt:
                         with context(self.fname, src_node):
                             raise ValueError('Found %s, expected %s' %
                                              (src_node['tectonicRegion'], trt))
