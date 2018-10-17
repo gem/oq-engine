@@ -758,6 +758,14 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         return csm
 
     if 'event_based' in oqparam.calculation_mode:
+        if oqparam.pointsource_distance == 0:
+            # remove splitting/floating ruptures
+            for src in csm.get_sources():
+                if hasattr(src, 'hypocenter_distribution'):
+                    src.hypocenter_distribution.reduce()
+                    src.nodal_plane_distribution.reduce()
+                    src.num_ruptures = src.count_ruptures()
+
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
