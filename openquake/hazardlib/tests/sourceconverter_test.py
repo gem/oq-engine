@@ -171,3 +171,13 @@ class PointToMultiPointTestCase(unittest.TestCase):
             got = f.getvalue().decode('utf-8')
             print(got)
             self.assertEqual(got, multipoint)
+
+
+class SourceConverterTestCase(unittest.TestCase):
+    def test_wrong_trt(self):
+        # a group with sources of two different TRTs
+        testfile = os.path.join(testdir, 'wrong-trt.xml')
+        with self.assertRaises(ValueError) as ctx:
+            nrml.to_python(testfile)
+        self.assertIn('node pointSource: Found Cratonic, expected '
+                      'Active Shallow Crust, line 67', str(ctx.exception))
