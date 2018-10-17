@@ -604,6 +604,8 @@ class HazardCalculator(BaseCalculator):
             parent = self.datastore.parent
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
+            elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
+                raise ValueError('Missing exposure both in hazard and risk!')
             if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
