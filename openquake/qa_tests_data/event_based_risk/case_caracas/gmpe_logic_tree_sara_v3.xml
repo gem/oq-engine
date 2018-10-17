@@ -27,8 +27,8 @@
                     <uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch branchID="MontalvaEtAl2016SSlab">
-                    <uncertaintyModel>MontalvaEtAl2016SSlab</uncertaintyModel>
+                <logicTreeBranch branchID="MontalvaEtAl2017SSlab">
+                    <uncertaintyModel>MontalvaEtAl2017SSlab</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
