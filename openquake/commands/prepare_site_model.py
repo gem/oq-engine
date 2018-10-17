@@ -126,8 +126,7 @@ def prepare_site_model(exposure_xml, vs30_csv,
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
         sitecol, vs30, discarded = assoc(
-            vs30orig, haz_sitecol,
-            grid_spacing * SQRT2 or site_param_distance, 'filter')
+            vs30orig, haz_sitecol, site_param_distance, 'warn')
         sitecol.array['vs30'] = vs30['vs30']
         if z1pt0:
             sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
