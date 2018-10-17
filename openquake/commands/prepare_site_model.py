@@ -118,13 +118,14 @@ def prepare_site_model(exposure_xml, vs30_csv, grid_spacing=0,
             vs30orig, haz_sitecol,
             grid_spacing * SQRT2 or site_param_distance, 'filter')
         sitecol.array['vs30'] = vs30['vs30']
+        sitecol.array['vs30measured'] = False  # it is inferred
         sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
         sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         mon.hdf5['sitecol'] = sitecol
         if discarded:
             mon.hdf5['discarded'] = numpy.array(discarded)
         write_csv(output, sitecol.array[
-            ['lon', 'lat', 'vs30', 'z1pt0', 'z2pt5']])
+            ['lon', 'lat', 'vs30', 'vs30measured', 'z1pt0', 'z2pt5']])
     if discarded:
         logging.info('Discarded %d sites with assets [use oq plot_assets]',
                      len(discarded))
