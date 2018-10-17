@@ -179,11 +179,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             self._monitor.hdf5 = self.datastore.hdf5
-            self.set_log_format()
-            logging.info('Running %s [--hc=%s]',
-                         self.oqparam.inputs['job_ini'],
-                         self.oqparam.hazard_calculation_id)
-            logging.info('Using engine version %s', engine_version)
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
@@ -609,6 +604,8 @@ class HazardCalculator(BaseCalculator):
             parent = self.datastore.parent
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
+            elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
+                raise ValueError('Missing exposure both in hazard and risk!')
             if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
