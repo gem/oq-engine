@@ -208,7 +208,7 @@ class RunShowExportTestCase(unittest.TestCase):
         # nosetests openquake/commonlib/
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run(job_ini, 0, False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, False, 'info', None, '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
