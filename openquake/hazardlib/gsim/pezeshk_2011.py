@@ -221,7 +221,7 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
         # Get method from superclass
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
-        return mean + C_AMP["F"], stddevs
+        return mean + C_AMP["F"]*np.log(10.), stddevs
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT         F
