@@ -638,7 +638,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ~tagNames or []
+    tagnames = [t.lower() for t in ~tagNames] or []
     tagnames.insert(0, 'taxonomy')
 
     # read the cost types and make some check
@@ -748,7 +748,7 @@ class Exposure(object):
         if self.occupancy_periods:
             fields.extend(self.occupancy_periods.split())
         fields.extend(self.tagcol.tagnames)
-        return set(fields)
+        return set(f.lower() for f in fields)
 
     def _read_csv(self, csvnames, dirname):
         """
