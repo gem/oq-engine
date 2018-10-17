@@ -595,7 +595,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
-        oqparam.area_source_discretization)
+        oqparam.area_source_discretization,
+        oqparam.source_id)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
