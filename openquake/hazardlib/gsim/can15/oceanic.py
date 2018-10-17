@@ -22,7 +22,8 @@
 
 import copy
 import numpy as np
-
+from openquake.hazardlib.gsim.can15.utils import \
+    get_equivalent_distances_west
 from openquake.hazardlib.gsim.can15.western import WesternCan15Mid
 from openquake.hazardlib.gsim.can15.western import get_sigma
 
@@ -43,7 +44,11 @@ class OceanicCan15Mid(WesternCan15Mid):
         """ """
         rupl = copy.deepcopy(rup)
         rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
+        # distances
+        distsl = copy.copy(dists)
+        distsl.rjb, distsl.rrup = \
+            get_equivalent_distances_west(rup.mag, dists.repi)
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, distsl, imt,
                                                      stddev_types)
         stddevs = [np.ones(len(dists.repi))*get_sigma(imt)]
         return mean, stddevs
@@ -59,11 +64,15 @@ class OceanicCan15Low(WesternCan15Mid):
         """ """
         rupl = copy.deepcopy(rup)
         rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
+        # distances
+        distsl = copy.copy(dists)
+        distsl.rjb, distsl.rrup = \
+            get_equivalent_distances_west(rup.mag, dists.repi)
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, distsl, imt,
                                                      stddev_types)
         # adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
-        tmp = 0.1+0.0007*dists.rjb
+        tmp = 0.1+0.0007*distsl.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean - delta
@@ -81,11 +90,15 @@ class OceanicCan15Upp(WesternCan15Mid):
         """ """
         rupl = copy.deepcopy(rup)
         rupl.mag -= 0.5
-        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, dists, imt,
+        # distances
+        distsl = copy.copy(dists)
+        distsl.rjb, distsl.rrup = \
+            get_equivalent_distances_west(rup.mag, dists.repi)
+        mean, stddevs = super().get_mean_and_stddevs(sites, rupl, distsl, imt,
                                                      stddev_types)
         # Adjust mean values using the reccomended delta (see Atkinson and
         # Adams, 2013)
-        tmp = 0.1+0.0007*dists.rjb
+        tmp = 0.1+0.0007*distsl.rjb
         tmp = np.vstack((tmp, np.ones_like(tmp)*0.3))
         delta = np.log(10.**(np.amin(tmp, axis=0)))
         mean_adj = mean + delta
