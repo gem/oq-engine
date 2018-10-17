@@ -81,10 +81,9 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
     return rcalc
 
 
-def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
+def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
     with performance.Monitor('total runtime', measuremem=True) as monitor:
         if len(job_inis) == 1:  # run hazard or risk
@@ -141,7 +140,7 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
 
 
 run.arg('job_ini', 'calculation configuration file '
-        '(or files, comma-separated)')
+        '(or files, space-separated)', nargs='+')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
 run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
 run.opt('param', 'override parameter with the syntax NAME=VALUE ...',
