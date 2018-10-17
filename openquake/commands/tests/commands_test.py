@@ -27,6 +27,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
 from openquake import commonlib
+from openquake.commonlib.readinput import read_csv
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -435,13 +436,16 @@ class CheckInputTestCase(unittest.TestCase):
 class PrepareSiteModelTestCase(unittest.TestCase):
     def test(self):
         inputdir = os.path.dirname(case_16.__file__)
-        output = gettemp(suffix='csv')
+        output = gettemp(suffix='.csv')
         grid_spacing = 10
         exposure_csv = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model.func(
-            exposure_csv, [vs30_csv], grid_spacing, output)
+            exposure_csv, [vs30_csv], grid_spacing, 5, output)
+        sm = read_csv(output)
+        self.assertEqual(sm['vs30measured'].sum(), 0)
         self.assertEqual(len(sitecol), 6)  # 6 non-empty grid points
+        self.assertEqual(len(sitecol), len(sm))  # 6 non-empty grid points
 
         # test no grid
         sc = prepare_site_model.func(exposure_csv, [vs30_csv], 0, 10, output)
