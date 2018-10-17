@@ -179,11 +179,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             self._monitor.hdf5 = self.datastore.hdf5
-            self.set_log_format()
-            logging.info('Running %s [--hc=%s]',
-                         self.oqparam.inputs['job_ini'],
-                         self.oqparam.hazard_calculation_id)
-            logging.info('Using engine version %s', engine_version)
             if concurrent_tasks is None:  # use the job.ini parameter
                 ct = self.oqparam.concurrent_tasks
             else:  # used the parameter passed in the command-line
