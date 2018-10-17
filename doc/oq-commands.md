@@ -239,6 +239,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -g 0, --grid-spacing 0
                         grid spacing in km (or 0)
+  -1, --z1pt0           build the z1pt0
+  -2, --z2pt5           build the z2pt5
+  -3, --vs30measured    build the vs30measured
   -s 5, --site-param-distance 5
                         sites over this distance are discarded
   -o sites.csv, --output sites.csv
