@@ -75,7 +75,6 @@ export_dir = %s
 [general]
 calculation_mode = event_based
 [site]
-sites = 0 0
 source_model_file = %s
 site_model_file = %s
 maximum_distance=1
@@ -101,7 +100,6 @@ export_dir = %s
                            'site_model': site_model_input,
                            'source': [source_model_input],
                            'source_model': source_model_input},
-                'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
