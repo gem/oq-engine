@@ -166,7 +166,7 @@ class PointSource(ParametricSeismicSource):
                 self.max_radius = radius
         return self.max_radius
 
-    def iter_ruptures(self, collapse_hcdist=False, collapse_npdist=False):
+    def iter_ruptures(self, hcdist=True, npdist=True):
         """
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
@@ -178,16 +178,16 @@ class PointSource(ParametricSeismicSource):
                                        longitude=self.location.longitude,
                                        depth=hc_depth)
                     occurrence_rate = (mag_occ_rate *
-                                       (1 if collapse_npdist else np_prob) *
-                                       (1 if collapse_hcdist else hc_prob))
+                                       (np_prob if npdist else 1) *
+                                       (hc_prob if hcdist else 1))
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
-                    if collapse_hcdist:
+                    if not hcdist:
                         break
-                if collapse_npdist:
+                if not npdist:
                     break
 
     def count_ruptures(self):
