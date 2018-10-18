@@ -17,7 +17,7 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy, DummyGMPEOne
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
@@ -197,3 +197,8 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         """ Tests that exception is raised """
         with self.assertRaises(AttributeError):
             mgmpe = NRCan15SiteTerm(gmpe_name='FukushimaTanaka1990')
+
+    def test_set_vs30_attribute(self):
+        mgmpe = NRCan15SiteTerm(gmpe_name='Campbell2003SHARE')
+        msg = '{:s} does not have vs30 in the required site parameters'
+        self.assertTrue('vs30' in mgmpe.REQUIRES_SITES_PARAMETERS, msg=msg)
