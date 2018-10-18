@@ -35,11 +35,13 @@ SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', F32), ('lat', F32), ('vs30', F32)])
 
 
+# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5_ngaw2
+# are inside some GSIM implementations, we should avoid duplication
 def calculate_z1pt0(vs30):
     '''
     Reads an array of vs30 values (in m/s) and
     returns the depth to the 1.0 km/s velocity horizon (in m)
-
+    Ref: Abrahamson & Silva, 2008
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
     '''
     c1 = 6.745
