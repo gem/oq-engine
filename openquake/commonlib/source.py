@@ -494,7 +494,7 @@ class CompositeSourceModel(collections.Sequence):
         for srcid, srcs in sorted(dd.items()):
             if len(srcs) > 1:
                 _assert_equal_sources(srcs)
-                dupl.extend(srcs)
+                dupl.append(srcs)
         return dupl
 
     def gen_mutex_groups(self):
