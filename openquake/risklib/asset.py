@@ -760,7 +760,7 @@ class Exposure(object):
         fnames = [os.path.join(dirname, f) for f in csvnames.split()]
         for fname in fnames:
             with open(fname, encoding='utf-8') as f:
-                fields = next(csv.reader(f))
+                fields = [f.lower() for f in next(csv.reader(f))]
                 header = set(fields)
                 if len(header) < len(fields):
                     raise InvalidFile(
@@ -774,6 +774,7 @@ class Exposure(object):
         for fname in fnames:
             with open(fname, encoding='utf-8') as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
+                    dic = {tag.lower(): val for tag, val in dic.items()}
                     asset = Node('asset', lineno=i)
                     with context(fname, asset):
                         asset['id'] = dic['id']
@@ -796,7 +797,7 @@ class Exposure(object):
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
                             if tagname != 'taxonomy':
-                                tags.attrib[tagname] = dic[tagname.lower()]
+                                tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
                             logging.info('Read %d assets', i)
