@@ -41,20 +41,12 @@ def calculate_z1pt0(vs30):
     '''
     Reads an array of vs30 values (in m/s) and
     returns the depth to the 1.0 km/s velocity horizon (in m)
-    Ref: Abrahamson & Silva, 2008
+    Ref: Chiou & Youngs (2014) California model
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
     '''
-    c1 = 6.745
-    c2 = 1.35
-    c3 = 5.394
-    c4 = 4.48
-    z1pt0 = numpy.zeros_like(vs30)
-    z1pt0[vs30 < 180] = numpy.exp(c1)
-    idx = (vs30 >= 180) & (vs30 <= 500)
-    z1pt0[idx] = numpy.exp(c1 - c2 * numpy.log(vs30[idx] / 180.0))
-    idx = vs30 > 500
-    z1pt0[idx] = numpy.exp(c3 - c4 * numpy.log(vs30[idx] / 500.0))
-    return z1pt0
+    c1 = 571 ** 4.
+    c2 = 1360.0 ** 4.
+    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
 
 
 def calculate_z2pt5_ngaw2(vs30):
