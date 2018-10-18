@@ -296,7 +296,6 @@ class TagCollection(object):
     def add_tags(self, dic):
         """
         :param dic: a dictionary tagname -> tagvalue
-        :param fname: the path to the file containing the dictionaries
         :returns: a list of tag indices, one per tagname
         """
         # fill missing tagvalues with "?", raise an error for unknown tagnames
