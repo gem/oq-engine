@@ -796,7 +796,7 @@ class Exposure(object):
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
                             if tagname != 'taxonomy':
-                                tags.attrib[tagname] = dic[tagname]
+                                tags.attrib[tagname] = dic[tagname.lower()]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
                             logging.info('Read %d assets', i)
@@ -845,7 +845,8 @@ class Exposure(object):
                 param['out_of_region'] += 1
                 return
             tagnode = getattr(asset_node, 'tags', None)
-            dic = {} if tagnode is None else tagnode.attrib.copy()
+            dic = {} if tagnode is None else {
+                tag.lower(): val for tag, val in tagnode.attrib.items()}
             with context(param['fname'], tagnode):
                 dic['taxonomy'] = taxonomy
                 idxs = self.tagcol.add_tags(dic)
