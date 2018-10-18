@@ -27,7 +27,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
@@ -562,3 +562,24 @@ def crm_attrs(dstore, what):
     """
     name = dstore['oqparam'].risk_model
     return ArrayWrapper(0, dstore.get_attrs(name))
+
+
+@extract.add('avglosses_by_occupancy')
+def avglosses_by_occupancy(dstore, what):
+    """
+    Statistical average losses by occupancy Res, Com, Ind
+    """
+    aids = dstore['assetcol/array']['occupancy']
+    arr = dstore['avg_losses-stats'].value
+    stats = dstore['avg_losses-stats'].attrs['stats'].split()
+    dt = numpy.dtype([('Stat', vstr),
+                      ('Res', F32), ('Com', F32), ('Ind', F32)])
+    out = numpy.zeros(len(stats), dt)
+    iocc = list(enumerate(dstore['assetcol/tagcol/occupancy']))
+    for s, stat in enumerate(stats):
+        out[s]['Stat'] = stat
+        for i, o in iocc:
+            if i == 0:
+                continue  # ignore occupancy="?"
+            out[s][o] = arr[aids == i, s].sum()
+    return out
