@@ -128,8 +128,11 @@ def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
     """
     Run a calculation bypassing the database layer
     """
-    params = oqvalidation.OqParam.check(
-        dict(p.split('=', 1) for p in param.split(',')))
+    if param:
+        params = oqvalidation.OqParam.check(
+            dict(p.split('=', 1) for p in param.split(',')))
+    else:
+        params = {}
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
