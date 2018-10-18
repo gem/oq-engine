@@ -108,7 +108,6 @@ class ContextMaker(object):
             for gsim, rlzis in gsims.items():
                 for rlzi in rlzis:
                     self.gsim_by_rlzi[rlzi] = gsim
-        self.nohypo = 'hypo_depth' not in self.REQUIRES_SITES_PARAMETERS
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
@@ -211,15 +210,15 @@ class ContextMaker(object):
                 close_sites, far_sites = sites.split(
                     src.location, self.pointsource_distance)
                 if close_sites is None:  # all is far
-                    out.append((list(src.iter_ruptures(True, True)),
+                    out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))
                 elif far_sites is None:  # all is close
-                    out.append((list(src.iter_ruptures(self.nohypo, False)),
+                    out.append((list(src.iter_ruptures(True, True)),
                                 close_sites))
                 else:
-                    out.append((list(src.iter_ruptures(self.nohypo, False)),
-                                close_sites))
                     out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                    out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))
             else:
                 out.append((list(src.iter_ruptures()), sites))
