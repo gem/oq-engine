@@ -279,7 +279,7 @@ class TagCollection(object):
             setattr(self, tagname + '_idx', {'?': 0})
             setattr(self, tagname, ['?'])
 
-    def add(self, tagname, tagvalue):
+    def add(self, tagname, tagvalue, fname):
         """
         :returns: numeric index associated to the tag
         """
@@ -289,12 +289,15 @@ class TagCollection(object):
         except KeyError:
             dic[tagvalue] = idx = len(dic)
             getattr(self, tagname).append(tagvalue)
-            assert idx < TWO16, idx
+            if idx >= TWO16:
+                raise InvalidFile('%s contains more then %d assets' %
+                                  (fname, TWO16))
             return idx
 
-    def add_tags(self, dic):
+    def add_tags(self, dic, fname):
         """
         :param dic: a dictionary tagname -> tagvalue
+        :param fname: the path to the file containing the dictionaries
         :returns: a list of tag indices, one per tagname
         """
         # fill missing tagvalues with "?", raise an error for unknown tagnames
@@ -307,12 +310,12 @@ class TagCollection(object):
             else:
                 if tagvalue in '?*':
                     raise ValueError(
-                        'Invalid tagvalue="%s"' % tagvalue)
-            idxs.append(self.add(tagname, tagvalue))
+                        'Invalid tagvalue="%s" in %s' % (tagvalue, fname))
+            idxs.append(self.add(tagname, tagvalue, fname))
         if dic:
             raise ValueError(
                 'Unknown tagname %s or <tagNames> not '
-                'specified in the exposure' % ', '.join(dic))
+                'specified in the exposure %s' % (', '.join(dic), fname))
         return idxs
 
     def get_tag(self, tagname, tagidx):
@@ -848,7 +851,7 @@ class Exposure(object):
             dic = {} if tagnode is None else tagnode.attrib.copy()
             with context(param['fname'], tagnode):
                 dic['taxonomy'] = taxonomy
-                idxs = self.tagcol.add_tags(dic)
+                idxs = self.tagcol.add_tags(dic, param['fname'])
         try:
             costs = asset_node.costs
         except AttributeError:
