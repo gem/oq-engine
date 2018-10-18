@@ -260,7 +260,7 @@ ignore the discarded sites.
 
 positional arguments:
   exposure_xml          exposure in XML format
-  vs30_csv              USGS files lon,lat,vs30 with no header
+  vs30_csv              csv files with lon,lat,vs30 with no header line
 
 optional arguments:
   -h, --help            show this help message and exit
