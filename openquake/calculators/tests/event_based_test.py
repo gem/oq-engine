@@ -291,11 +291,12 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_15(self):
-        # an example for Japan exhibiting the error
-        # "top and bottom edges have different lengths"
-        out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
-        [fname] = out['ruptures', 'csv']
+        # an example for Japan testing also the XML rupture exporter
+        self.run_calc(case_15.__file__, 'job.ini')
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_16(self):
