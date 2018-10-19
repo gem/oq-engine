@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed the rupture exporter for Canada
+  * Extended the `oq prepare_site_model` to optionally generate the
+    fields z1pt0, z2pt5 and vs30measured
+  * Implemented a reader for site models in CSV format
   * Made the export_dir relative to the input directory
   * Better error message for ShakeMaps with zero stddev
   * Added a source_id-filtering feature in the job.ini
