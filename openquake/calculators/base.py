@@ -217,7 +217,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                readinput.vs30s = None
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
