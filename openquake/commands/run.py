@@ -31,6 +31,9 @@ calc_path = None  # set only when the flag --slowest is given
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
+oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
+    base.calculators)
+
 
 def get_pstats(pstatfile, n):
     """
@@ -81,10 +84,9 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
     return rcalc
 
 
-def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
+def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
     with performance.Monitor('total runtime', measuremem=True) as monitor:
         if len(job_inis) == 1:  # run hazard or risk
@@ -95,6 +97,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
                 hc_id = None
                 rlz_ids = ()
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
+            vars(oqparam).update(params)
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:
@@ -106,7 +109,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
             calc = base.calculators(oqparam)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids, **params)
+                     rlz_ids=rlz_ids)
         else:  # run hazard + risk
             calc = run2(
                 job_inis[0], job_inis[1], concurrent_tasks, pdb,
@@ -120,13 +123,16 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
 
 
 @sap.Script
-def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
+def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation bypassing the database layer
     """
-    params = oqvalidation.OqParam.check(
-        dict(p.split('=', 1) for p in param or ()))
+    if param:
+        params = oqvalidation.OqParam.check(
+            dict(p.split('=', 1) for p in param.split(',')))
+    else:
+        params = {}
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
@@ -141,11 +147,10 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
 
 
 run.arg('job_ini', 'calculation configuration file '
-        '(or files, comma-separated)')
+        '(or files, space-separated)', nargs='+')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
 run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
-run.opt('param', 'override parameter with the syntax NAME=VALUE ...',
-        nargs='+')
+run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
 run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
         type=int)
 run.opt('exports', 'export formats as a comma-separated string',
