@@ -293,9 +293,8 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_15(self):
         # an example for Japan exhibiting the error
         # "top and bottom edges have different lengths"
-        raise unittest.SkipTest('Not fixed yet')
         out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
-        fname = out['ruptures', 'csv']
+        [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
