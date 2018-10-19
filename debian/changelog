@@ -4,6 +4,7 @@
   * Modified mcverry_2006.py to take siteclass as a predictor
   * Updated mcverry_2006 test tables to account for difference in site
     parameter
+  * Added qa_test_data classical case_32
 
   [Michele Simionato]
   * Made the export_dir relative to the input directory
