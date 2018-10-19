@@ -278,6 +278,10 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_)
     stddev = [std[str(imt)] for imt in imts_]
+    for im, std in zip(imts_, stddev):
+        if std.sum() == 0:
+            raise ValueError('Cannot decompose the spatial covariance '
+                             'because stddev==0 for IMT=%s' % im)
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
     M, N = spatial_corr.shape[:2]
