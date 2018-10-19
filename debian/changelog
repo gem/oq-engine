@@ -1,3 +1,10 @@
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Modified mcverry_2006.py to take siteclass as a predictor
+  * Updated mcverry_2006 test tables to account for difference in site
+    parameter
+
   [Michele Simionato]
   * Made the export_dir relative to the input directory
   * Better error message for ShakeMaps with zero stddev
