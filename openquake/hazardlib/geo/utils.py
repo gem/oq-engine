@@ -140,7 +140,7 @@ class _GeographicObjects(object):
         :param mode: 'strict', 'warn' or 'filter'
         :returns: (filtered site collection, filtered assets by site)
         """
-        assert mode in 'strict warn filter', mode
+        assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
         site_dt = numpy.dtype([('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
@@ -155,10 +155,6 @@ class _GeographicObjects(object):
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-            elif mode == 'warn':
-                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
-                             assets, lon, lat)
-                discarded.extend(assets)
             else:
                 discarded.extend(assets)
         sids = sorted(assets_by_sid)
