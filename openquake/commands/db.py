@@ -64,5 +64,6 @@ def db(cmd, args=()):
         else:
             print(res)
 
+
 db.arg('cmd', 'db command')
 db.arg('args', 'db command arguments', nargs='*')

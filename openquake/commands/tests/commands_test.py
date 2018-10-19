@@ -27,6 +27,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
 from openquake import commonlib
+from openquake.commonlib.readinput import read_csv
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -208,7 +209,7 @@ class RunShowExportTestCase(unittest.TestCase):
         # nosetests openquake/commonlib/
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run(job_ini, 0, False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, False, 'info', None, '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -435,14 +436,19 @@ class CheckInputTestCase(unittest.TestCase):
 class PrepareSiteModelTestCase(unittest.TestCase):
     def test(self):
         inputdir = os.path.dirname(case_16.__file__)
-        output = gettemp(suffix='csv')
-        grid_spacing = 10
+        output = gettemp(suffix='.csv')
+        grid_spacing = 50
         exposure_csv = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model.func(
-            exposure_csv, vs30_csv, grid_spacing, output)
-        self.assertEqual(len(sitecol), 6)  # 6 non-empty grid points
+            exposure_csv, [vs30_csv], True, True, True,
+            grid_spacing, 5, output)
+        sm = read_csv(output)
+        self.assertEqual(sm['vs30measured'].sum(), 0)
+        self.assertEqual(len(sitecol), 84)  # 84 non-empty grid points
+        self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model.func(exposure_csv, vs30_csv, 0, 10, output)
-        self.assertEqual(len(sc), 4)  # 4 sites within 10 km from the params
+        sc = prepare_site_model.func(exposure_csv, [vs30_csv],
+                                     True, True, False, 0, 5, output)
+        self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params

@@ -187,6 +187,9 @@ class Campbell2003SHARE(Campbell2003):
     #: Required rupture parameters are magnitude and rake
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

@@ -210,15 +210,15 @@ class ContextMaker(object):
                 close_sites, far_sites = sites.split(
                     src.location, self.pointsource_distance)
                 if close_sites is None:  # all is far
-                    out.append((list(src.iter_ruptures(True, True)),
+                    out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))
                 elif far_sites is None:  # all is close
-                    out.append((list(src.iter_ruptures(False, False)),
+                    out.append((list(src.iter_ruptures(True, True)),
                                 close_sites))
                 else:
-                    out.append((list(src.iter_ruptures(False, False)),
-                                close_sites))
                     out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                    out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))
             else:
                 out.append((list(src.iter_ruptures()), sites))
