@@ -15,13 +15,6 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""
-Associate assets to the vs30 grid coming from the USGS.
-Here is an example of usage:
-
-$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv \
-                        Vs30/usgs_vs30_data/Ecuador.csv 10
-"""
 import logging
 import numpy
 from openquake.baselib import sap, performance, datastore
@@ -68,7 +61,7 @@ def calculate_z2pt5_ngaw2(vs30):
 
 def read_vs30(fnames):
     """
-    :param fnames: a list of USGS files with fields lon,lat,vs30
+    :param fnames: a list of CSV files with fields lon,lat,vs30
     :returns: a vs30 array of dtype vs30dt
     """
     data = []
@@ -83,11 +76,11 @@ def prepare_site_model(exposure_xml, vs30_csv,
                        z1pt0, z2pt5, vs30measured, grid_spacing=0,
                        site_param_distance=5, output='sites.csv'):
     """
-    Prepare a site_model.csv file from an exposure xml file, a vs30 csv file
-    and a grid spacing which can be 0 (meaning no grid). Sites far away from
-    the vs30 records are discarded and you can see them with the command
-    `oq plot_assets`. It is up to you decide if you need to fix your exposure
-    or if it is right to ignore the discarded sites.
+    Prepare a sites.csv file from an exposure xml file, a vs30 csv file
+    and a grid spacing which can be 0 (meaning no grid). For each asset site
+    or grid site the closest vs30 parameter is used. The command can also
+    generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
+    which may be needed by your hazard model, depending on the required GSIMs.
     """
     logging.basicConfig(level=logging.INFO)
     hdf5 = datastore.hdf5new()
@@ -145,12 +138,13 @@ def prepare_site_model(exposure_xml, vs30_csv,
 
 
 prepare_site_model.arg('exposure_xml', 'exposure in XML format')
-prepare_site_model.arg('vs30_csv', 'USGS files lon,lat,vs30 with no header',
+prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
                        nargs='+')
 prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')
 prepare_site_model.flg('z2pt5', 'build the z2pt5', '-2')
 prepare_site_model.flg('vs30measured', 'build the vs30measured', '-3')
-prepare_site_model.opt('grid_spacing', 'grid spacing in km (or 0)', type=float)
+prepare_site_model.opt('grid_spacing', 'grid spacing in km '
+                       '(the default 0 means no grid)', type=float)
 prepare_site_model.opt('site_param_distance',
                        'sites over this distance are discarded', type=float)
 prepare_site_model.opt('output', 'output file')
