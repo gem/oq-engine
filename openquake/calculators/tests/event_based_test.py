@@ -359,6 +359,12 @@ PGA     SA(0.3) SA(0.6)
         [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
+        # run again the GMF calculation, but this time from stored ruptures
+        hid = str(self.calc.datastore.calc_id)
+        self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
+        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-data-from-ruptures.csv', gmf)
+
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
