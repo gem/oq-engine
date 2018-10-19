@@ -284,7 +284,6 @@ class SiteCollection(object):
             arr['vs30measured'][i] = sites[i].vs30measured
             arr['z1pt0'][i] = sites[i].z1pt0
             arr['z2pt5'][i] = sites[i].z2pt5
-            arr['siteclass'][i] = sites[i].siteclass
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
