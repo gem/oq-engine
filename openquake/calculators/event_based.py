@@ -209,6 +209,8 @@ class EventBasedCalculator(base.HazardCalculator):
             return self.datastore.parent['csm_info']
 
     def init(self):
+        if hasattr(self, 'csm'):
+            self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
@@ -283,7 +285,7 @@ class EventBasedCalculator(base.HazardCalculator):
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
-
+        param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         ires = parallel.Starmap.apply(
             build_ruptures,

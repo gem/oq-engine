@@ -166,54 +166,29 @@ class PointSource(ParametricSeismicSource):
                 self.max_radius = radius
         return self.max_radius
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, hcdist=True, npdist=True):
         """
-        See :meth:
-        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
-
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(
-            self.temporal_occurrence_model, self.location)
-
-    def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
-                                   rate_scaling_factor=1):
-        """
-        The common part of :meth:
-        `openquake.hazardlib.source.point.Point.iter_ruptures`
-        shared between point source
-        and :class:`~openquake.hazardlib.source.area.AreaSource`.
-
-        :param temporal_occurrence_model:
-            The same object as given to :meth:
-            `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
-        :param location:
-            A :class:`~openquake.hazardlib.geo.point.Point`
-            object representing the hypocenter
-            location. In case of :class:`PointSource` it is the one provided
-            to constructor, and for area source the location points are taken
-            from polygon discretization.
-        :param rate_scaling_factor:
-            Positive float number to multiply occurrence rates by. It is used
-            by area source to scale the occurrence rates with respect
-            to number of locations. Point sources use no scaling
-            (``rate_scaling_factor = 1``).
-        """
-        assert 0 < rate_scaling_factor, rate_scaling_factor
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                    hypocenter = Point(latitude=location.latitude,
-                                       longitude=location.longitude,
+                    hypocenter = Point(latitude=self.location.latitude,
+                                       longitude=self.location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
-                                       * rate_scaling_factor)
+                    occurrence_rate = (mag_occ_rate *
+                                       (np_prob if npdist else 1) *
+                                       (hc_prob if hcdist else 1))
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
+                    if not hcdist:
+                        break
+                if not npdist:
+                    break
 
     def count_ruptures(self):
         """
