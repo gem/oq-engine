@@ -221,9 +221,6 @@ exposure = None  # set as side effect when the user reads the site mesh
 gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
 # this hack is necessary, otherwise we would have to parse the file twice
 
-vs30s = None  # set as side effect when the user reads the site mesh
-# this hack is necessary, otherwise we would have to parse sites.csv twice
-
 
 def get_csv_header(fname, sep=','):
     """
@@ -235,6 +232,18 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
+def read_csv(fname, sep=','):
+    """
+    :param fname: a CSV file with an header and float fields
+    :param sep: separato (default the comma)
+    :return: a structured array of floats
+    """
+    with open(fname, encoding='utf-8-sig') as f:
+        header = next(f).strip().split(sep)
+        dt = numpy.dtype([(h, float) for h in header])
+        return numpy.loadtxt(f, dt, delimiter=sep)
+
+
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
@@ -243,7 +252,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids, vs30s
+    global pmap, exposure, gmfs, eids
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
@@ -252,16 +261,14 @@ def get_mesh(oqparam):
     elif 'sites' in oqparam.inputs:
         fname = oqparam.inputs['sites']
         header = get_csv_header(fname)
-        if header[0] == 'site_id':  # strip site_id
-            data, vs30s = [], []
+        if 'lon' in header:
+            data = []
             for i, row in enumerate(
                     csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
-                if row['site_id'] != str(i):
+                if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
-                if 'vs30' in row:
-                    vs30s.append(row['vs30'])
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
@@ -310,7 +317,13 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
-    nodes = nrml.read(oqparam.inputs['site_model']).siteModel
+    fname = oqparam.inputs['site_model']
+    if isinstance(fname, str) and fname.endswith('.csv'):
+        sm = read_csv(fname)
+        if 'site_id' not in sm.dtype.names:
+            sm.sort(order=['lon', 'lat'])
+        return sm
+    nodes = nrml.read(fname).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
     missing = req_site_params - set(params[0])
     if missing == set(['backarc']):  # use a default of False
@@ -338,11 +351,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    if 'vs30' in req_site_params and vs30s:
-        sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-        sitecol.array['vs30'] = F64(vs30s)
-    elif oqparam.inputs.get('site_model'):
+    if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
@@ -355,11 +364,20 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
-            # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params, discarded = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            if oqparam.region_grid_spacing:
+                # associate the site parameters to the grid assuming they
+                # have been prepared correctly, i.e. they are on the location
+                # of the assets; discard empty sites silently
+                sitecol, params, discarded = geo.utils.assoc(
+                    sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+                sitecol.make_complete()
+            else:
+                # associate the site parameters to the sites without
+                # discarding any site but warning for far away parameters
+                sc, params, discarded = geo.utils.assoc(
+                    sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
     else:  # use the default site params
@@ -586,7 +604,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
-        oqparam.area_source_discretization)
+        oqparam.area_source_discretization,
+        oqparam.source_id)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
@@ -748,6 +767,14 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         return csm
 
     if 'event_based' in oqparam.calculation_mode:
+        if oqparam.pointsource_distance == 0:
+            # remove splitting/floating ruptures
+            for src in csm.get_sources():
+                if hasattr(src, 'hypocenter_distribution'):
+                    src.hypocenter_distribution.reduce()
+                    src.nodal_plane_distribution.reduce()
+                    src.num_ruptures = src.count_ruptures()
+
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
@@ -900,9 +927,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+            exposure.assets_by_site, haz_sitecol,
+            oqparam.asset_hazard_distance, 'filter')
         if oqparam.region_grid_spacing:  # it is normal to discard sites
             discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
