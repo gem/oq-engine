@@ -196,7 +196,9 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, bytes):
+    if isinstance(value, numpy.bool_):
+        return '1' if value else '0'
+    elif isinstance(value, bytes):
         return value.decode('utf8')
     elif isinstance(value, str):
         return value
