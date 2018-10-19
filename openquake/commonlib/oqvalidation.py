@@ -674,7 +674,7 @@ class OqParam(valid.ParamSet):
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
-    def is_valid_inputs(self):
+    def is_valid_risk_functions(self):
         """
         Invalid calculation_mode="{calculation_mode}" or missing
         fragility_file/vulnerability_file in the .ini file.
@@ -692,6 +692,19 @@ class OqParam(valid.ParamSet):
                 key.endswith('_vulnerability') for key in self.inputs
             ) or 'vulnerability' in parent_datasets
         return True
+
+    def is_valid_sites(self):
+        """
+        You cannot set at the same time both sites and site_model, choose one
+        """
+        if 'site_model' in self.inputs and 'sites' in self.inputs:
+            return False
+        elif 'site_model' in self.inputs and self.sites:
+            return False
+        elif 'sites' in self.inputs and self.sites:
+            return False
+        else:
+            return True
 
     def is_valid_complex_fault_mesh_spacing(self):
         """

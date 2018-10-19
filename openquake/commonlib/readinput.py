@@ -235,6 +235,18 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
+def read_csv(fname, sep=','):
+    """
+    :param fname: a CSV file with an header and float fields
+    :param sep: separato (default the comma)
+    :return: a structured array of floats
+    """
+    with open(fname, encoding='utf-8-sig') as f:
+        header = next(f).strip().split(sep)
+        dt = numpy.dtype([(h, float) for h in header])
+        return numpy.loadtxt(f, dt, delimiter=sep)
+
+
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
@@ -252,11 +264,11 @@ def get_mesh(oqparam):
     elif 'sites' in oqparam.inputs:
         fname = oqparam.inputs['sites']
         header = get_csv_header(fname)
-        if header[0] == 'site_id':  # strip site_id
+        if 'lon' in header:
             data, vs30s = [], []
             for i, row in enumerate(
                     csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
-                if row['site_id'] != str(i):
+                if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
@@ -310,7 +322,15 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
-    nodes = nrml.read(oqparam.inputs['site_model']).siteModel
+    fname = oqparam.inputs['site_model']
+    if isinstance(fname, str) and fname.endswith('.csv'):
+        sm = read_csv(fname)
+        sm.sort(order=['lon', 'lat'])
+        if ('site_id' in sm.dtype.names and
+                (sm['site_id'] != numpy.array(len(sm), U32)).any()):
+                raise InvalidFile('%s: sites not ordered by lon,lat' % fname)
+        return sm
+    nodes = nrml.read(fname).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
     missing = req_site_params - set(params[0])
     if missing == set(['backarc']):  # use a default of False
