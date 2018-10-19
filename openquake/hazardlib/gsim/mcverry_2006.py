@@ -76,9 +76,8 @@ class McVerry2006Asc(GMPE):
         const.StdDev.INTRA_EVENT
     ])
 
-    #: The only site parameter is vs30 used to map to site class to distinguish
-    # between rock, stiff soil and soft soil
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    #: Uses NZS1170.5 site classification. Calls of 'A' or 'B' yield the same outputs.
+    REQUIRES_SITES_PARAMETERS = set(('siteclass', ))
 
     #: Required rupture parameters are magnitude, and rake and hypocentral
     # depth rake is for determining fault style flags. Hypo depth is for
@@ -105,7 +104,7 @@ class McVerry2006Asc(GMPE):
         C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
 
         # Get S term to determine if consider site term is applied
-        S = self._get_site_class(sites.vs30)
+        S = self._get_site_class(sites.siteclass)
 
         # Abrahamson and Silva (1997) hanging wall term. This is not used
         # in the latest version of GMPE but is defined in functional form in
@@ -120,7 +119,7 @@ class McVerry2006Asc(GMPE):
         rvol = self._get_volcanic_path_distance(dists.rrup)
 
         # Get delta_C and delta_D terms for site class
-        delta_C, delta_D = self._get_deltas(sites.vs30)
+        delta_C, delta_D = self._get_deltas(sites.siteclass)
 
         # Compute lnPGA_ABCD primed
         lnPGAp_ABCD = self._compute_mean(C_PGA, S, rup.mag, dists.rrup, rvol,
@@ -145,7 +144,7 @@ class McVerry2006Asc(GMPE):
         # Compute standard deviations
         C_STD = self.COEFFS_STD[imt]
         stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
+            C_STD, rup.mag, stddev_types, sites.siteclass.size
         )
 
         return mean, stddevs
@@ -240,13 +239,13 @@ class McVerry2006Asc(GMPE):
 
         return std
 
-    def _get_site_class(self, vs30):
+    def _get_site_class(self, siteclass):
         """
-        Return site class flag (0 if vs30 => 760, that is rock, or 1 if vs30 <
+        Return site class flag (0 if vs30 >= 760, that is rock, or 1 if vs30 <
         760, that is deep soil)
         """
-        S = np.zeros_like(vs30)
-        S[vs30 <= 760] = 1
+        S = np.zeros_like(siteclass, dtype=np.float)
+        S[(siteclass == b'C') | (siteclass == b'D')] = 1
 
         return S
 
@@ -287,18 +286,18 @@ class McVerry2006Asc(GMPE):
 
         return CN, CR
 
-    def _get_deltas(self, vs30):
+    def _get_deltas(self, siteclass):
         """
         Return delta's for equation 4
         delta_C = 1 for site class C (360<=Vs30<760), 0 otherwise
         delta_D = 1 for site class D (180<Vs30<360), 0 otherwise
         """
 
-        delta_C = np.zeros(len(vs30))
-        delta_C[(vs30 >= 360) & (vs30 < 760)] = 1
+        delta_C = np.zeros_like(siteclass, dtype=np.float)
+        delta_C[siteclass == b'C'] = 1
 
-        delta_D = np.zeros(len(vs30))
-        delta_D[vs30 < 360] = 1
+        delta_D = np.zeros_like(siteclass, dtype=np.float)
+        delta_D[siteclass == b'D'] = 1
 
         return delta_C, delta_D
 
