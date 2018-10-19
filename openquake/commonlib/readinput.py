@@ -221,9 +221,6 @@ exposure = None  # set as side effect when the user reads the site mesh
 gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
 # this hack is necessary, otherwise we would have to parse the file twice
 
-vs30s = None  # set as side effect when the user reads the site mesh
-# this hack is necessary, otherwise we would have to parse sites.csv twice
-
 
 def get_csv_header(fname, sep=','):
     """
@@ -255,7 +252,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids, vs30s
+    global pmap, exposure, gmfs, eids
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
@@ -265,15 +262,13 @@ def get_mesh(oqparam):
         fname = oqparam.inputs['sites']
         header = get_csv_header(fname)
         if 'lon' in header:
-            data, vs30s = [], []
+            data = []
             for i, row in enumerate(
                     csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
                 if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
-                if 'vs30' in row:
-                    vs30s.append(row['vs30'])
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
@@ -325,10 +320,8 @@ def get_site_model(oqparam, req_site_params):
     fname = oqparam.inputs['site_model']
     if isinstance(fname, str) and fname.endswith('.csv'):
         sm = read_csv(fname)
-        sm.sort(order=['lon', 'lat'])
-        if ('site_id' in sm.dtype.names and
-                (sm['site_id'] != numpy.array(len(sm), U32)).any()):
-                raise InvalidFile('%s: sites not ordered by lon,lat' % fname)
+        if 'site_id' not in sm.dtype.names:
+            sm.sort(order=['lon', 'lat'])
         return sm
     nodes = nrml.read(fname).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
@@ -358,11 +351,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    if 'vs30' in req_site_params and vs30s:
-        sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-        sitecol.array['vs30'] = F64(vs30s)
-    elif oqparam.inputs.get('site_model'):
+    if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
