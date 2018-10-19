@@ -56,7 +56,8 @@ class Site(object):
         :class:`Sites <Site>` are pickleable
     """
     def __init__(self, location, vs30=numpy.nan, vs30measured=False,
-                 z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
+                 z1pt0=numpy.nan, z2pt5=numpy.nan, siteclass=numpy.nan,
+                 **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
         if not numpy.isnan(z1pt0) and z1pt0 <= 0:
@@ -68,6 +69,7 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
+        self.siteclass = siteclass
         for param, val in extras.items():
             assert param in site_param_dt, param
             setattr(self, param, val)
@@ -84,7 +86,7 @@ Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
             "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
             "Depth2.5km=%.4f>") % (
             self.location, self.vs30, self.vs30measured, self.z1pt0,
-            self.z2pt5)
+            self.z2pt5, self.siteclass)
 
     def __hash__(self):
         return hash((self.location.x, self.location.y))
@@ -121,6 +123,7 @@ site_param_dt = {
     'vs30measured': numpy.bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
 
     # parameters for geotechnic hazard
@@ -283,6 +286,7 @@ class SiteCollection(object):
             arr['vs30measured'][i] = sites[i].vs30measured
             arr['z1pt0'][i] = sites[i].z1pt0
             arr['z2pt5'][i] = sites[i].z2pt5
+            arr['siteclass'][i] = sites[i].siteclass
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
