@@ -207,7 +207,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
-    [src] = sources
+    src = sources[0]
     res = AccumDict()
     res.calc_times = []
     serial = 1
