@@ -292,6 +292,7 @@ class OqParamTestCase(unittest.TestCase):
                 gsim='AbrahamsonSilva2008',
                 sites='0.1 0.2',
                 maximum_distance='400',
+                reference_vs30_value='760',
                 intensity_measure_types='PGA',
                 inputs=fakeinputs,
             ).validate()
