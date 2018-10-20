@@ -259,7 +259,7 @@ class UCERFSource(BaseSeismicSource):
         """
         Called when updating the SourceGroup
         """
-        return self.min_mag, None
+        return self.min_mag, 10
 
     def _get_tom(self):
         """
