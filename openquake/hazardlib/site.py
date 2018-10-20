@@ -72,7 +72,7 @@ class Site(object):
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> str(Site(loc, 760.0, True, 100.0, 5.0))
+        >>> str(Site(loc, 760.0, 100.0, 5.0))
         '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
 Vs30=760.0000, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
@@ -92,7 +92,7 @@ Vs30=760.0000, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> site = Site(loc, 760.0, True, 100.0, 5.0)
+        >>> site = Site(loc, 760.0, 100.0, 5.0)
         >>> str(site) == repr(site)
         True
         """

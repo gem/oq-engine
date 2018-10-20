@@ -87,12 +87,10 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 location=Point(10, 11)
             ),
         ]
-        sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 16), 2, True, 2, 3),
-                 openquake.hazardlib.site.Site(
-                     Point(10, 10.6, 1), 3, True, 2, 3),
-                 openquake.hazardlib.site.Site(
-                     Point(10, 10.7, -1), 4, True, 2, 3)]
+        sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, 2, 3),
+                 openquake.hazardlib.site.Site(Point(10, 16), 2, 2, 3),
+                 openquake.hazardlib.site.Site(Point(10, 10.6, 1), 3, 2, 3),
+                 openquake.hazardlib.site.Site(Point(10, 10.7, -1), 4, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
@@ -144,9 +142,9 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 # this example originally came from the Hazard Modeler Toolkit
 def example_calc(apply):
     sitecol = SiteCollection([
-        Site(Point(30.0, 30.0), 760., True, 1.0, 1.0),
-        Site(Point(30.25, 30.25), 760., True, 1.0, 1.0),
-        Site(Point(30.4, 30.4), 760., True, 1.0, 1.0)])
+        Site(Point(30.0, 30.0), 760., 1.0, 1.0),
+        Site(Point(30.25, 30.25), 760., 1.0, 1.0),
+        Site(Point(30.4, 30.4), 760., 1.0, 1.0)])
     mfd_1 = TruncatedGRMFD(4.5, 8.0, 0.1, 4.0, 1.0)
     mfd_2 = TruncatedGRMFD(4.5, 7.5, 0.1, 3.5, 1.1)
     sources = [PointSource('001', 'Point1', 'Active Shallow Crust',

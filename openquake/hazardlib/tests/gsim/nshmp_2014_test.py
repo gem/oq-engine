@@ -224,10 +224,10 @@ class GeneralEquivalenceTestCase(unittest.TestCase):
                                     Point(-65.0000, -0.16188),
                                     Point(-65.0000, 0.0000)]
         trace_dip_east = Line(point_order_dipping_east)
-        site_1 = Site(Point(-64.98651, -0.15738), 760.0, True, 48.0, 0.607)
-        site_2 = Site(Point(-64.77466, -0.45686), 760.0, True, 48.0, 0.607)
-        site_3 = Site(Point(-64.92747, -0.38363), 760.0, True, 48.0, 0.607)
-        site_4 = Site(Point(-65.05396, -0.17088), 760.0, True, 48.0, 0.607)
+        site_1 = Site(Point(-64.98651, -0.15738), 760.0, 48.0, 0.607)
+        site_2 = Site(Point(-64.77466, -0.45686), 760.0, 48.0, 0.607)
+        site_3 = Site(Point(-64.92747, -0.38363), 760.0, 48.0, 0.607)
+        site_4 = Site(Point(-65.05396, -0.17088), 760.0, 48.0, 0.607)
         self.sites = SiteCollection([site_1, site_2, site_3, site_4])
         self.imtls = {"PGA": [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
                               0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9,
