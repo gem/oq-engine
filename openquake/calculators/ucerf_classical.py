@@ -54,14 +54,14 @@ class UcerfClassicalCalculator(ClassicalCalculator):
         param = dict(imtls=oq.imtls, truncation_level=oq.truncation_level,
                      filter_distance=oq.filter_distance)
         for sm in self.csm.source_models:  # one branch at the time
-            [srcs] = sm.src_groups
+            [grp] = sm.src_groups
             gsims = self.csm.info.get_gsims(sm.ordinal)
             acc = parallel.Starmap.apply(
-                classical, (srcs, self.src_filter, gsims, param, monitor),
+                classical, (grp, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-            ucerf = srcs[0].orig
+            ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
             srcs = ucerf.get_background_sources(
                 self.src_filter, os.environ.get('OQ_SAMPLE_SOURCES'))
