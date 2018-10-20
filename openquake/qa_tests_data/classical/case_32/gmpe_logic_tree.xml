@@ -9,7 +9,7 @@
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="b1">
- <uncertaintyModel>McVerry2006Asc</uncertaintyModel>
+ <uncertaintyModel>McVerry2006AscSC</uncertaintyModel>
                     <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
