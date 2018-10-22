@@ -1,4 +1,23 @@
   [Michele Simionato]
+  * Turned `vs30measured` into an optional parameter
+
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Added new classes to mcverry_2006.py to take siteclass as a predictor
+  * Updated comments in mcverry_2006.py
+  * Added new mcverry_2006 test tables to account for difference in site
+    parameter
+  * Added qa_test_data classical case_32
+
+  [Michele Simionato]
+  * Fixed the rupture exporter for Canada
+  * Extended the `oq prepare_site_model` to optionally generate the
+    fields z1pt0, z2pt5 and vs30measured
+  * It is now an error to specify both the sites and the site model in the
+    job.ini, to avoid confusion with the precedency
+  * Implemented a reader for site models in CSV format
+  * Made the export_dir relative to the input directory
   * Better error message for ShakeMaps with zero stddev
   * Added a source_id-filtering feature in the job.ini
   * Added a check on non-homogeneous tectonic region types in a source group
