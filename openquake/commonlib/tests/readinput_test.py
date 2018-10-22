@@ -623,13 +623,13 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
-    def test_nrml05(self):
+    def test_nrml04(self):
         oq = readinput.get_oqparam('job.ini', case_1)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
 
-    def test_nrml04(self):
+    def test_nrml05(self):
         oq = readinput.get_oqparam('job.ini', case_2)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # two PointSources
