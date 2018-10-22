@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Turned `vs30measured` into an optional parameter
+
   [Chris Van Houtte]
   * Added `siteclass` as a site parameter, and `reference_site_class` as
     a site parameter than can be specified by the user in the ini file
