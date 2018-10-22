@@ -56,7 +56,7 @@ class SomervilleEtAl2009NonCratonic(GMPE):
     ])
 
     #: no site parameters are defined, the GMPE is calibrated for Vs30 = 865
-    #: m/s (provisionally set to 800 for compatibility with Meta GMPE class)
+    #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
