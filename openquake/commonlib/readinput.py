@@ -122,6 +122,14 @@ def _update(params, items, base_path):
             if value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
+        elif value.endswith('.hdf5'):  # this is for reqv feature
+            fname = os.path.normpath(os.path.join(base_path, value))
+            try:
+                reqv = params['inputs']['reqv']
+            except KeyError:
+                params['inputs']['reqv'] = {key: fname}
+            else:
+                reqv.update({key: fname})
         else:
             params[key] = value
 
@@ -1237,7 +1245,11 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if isinstance(fname, list):
+        if isinstance(fname, dict):
+            for f in fname.values():
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
