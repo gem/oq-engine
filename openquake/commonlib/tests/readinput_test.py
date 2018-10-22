@@ -632,8 +632,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_nrml04(self):
         oq = readinput.get_oqparam('job.ini', case_2)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
+        srcs = csm.get_sources()  # two PointSources
+        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
