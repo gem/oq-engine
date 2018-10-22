@@ -640,6 +640,15 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
         readinput.reduce_source_model(smlt, [], False)
 
+    def test_wrong_trts(self):
+        # invalid TRT in job.ini [reqv]
+        oq = readinput.get_oqparam('job.ini', case_2)
+        fname = oq.inputs['reqv'].pop('active shallow crust')
+        oq.inputs['reqv']['act shallow crust'] = fname
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oq, in_memory=False)
+        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
+
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
     def test_missing_vulnerability_function(self):
