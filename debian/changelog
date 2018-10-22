@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
   * Fixed the ShakeMap downloader to use the USGS GeoJson feed
   * Improved the error message when there are more than 65536 distinct tags
     in the exposure
