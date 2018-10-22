@@ -149,24 +149,24 @@ class StochasticEventSetTestCase(unittest.TestCase):
             for rup in ses:
                 if rup.mag == 5.:
                     n_rups1[i] += 1
-                if rup.mag == 6.:
+                elif rup.mag == 6.:
                     n_rups2[i] += 1
 
         # count how many SESs have 0,1 or 2 occurrences, and then normalize
         # by the total number of SESs generated. This gives the probability
         # of having 0, 1 or 2 occurrences
-        n_occs1 = numpy.array(list(n_rups1.values()))
-        n_occs2 = numpy.array(list(n_rups2.values()))
+        n_occs1 = numpy.fromiter(n_rups1.values(), int)
+        n_occs2 = numpy.fromiter(n_rups2.values(), int)
 
-        p_occs1_0 = float(len(n_occs1[n_occs1 == 0])) / num_sess
-        p_occs1_1 = float(len(n_occs1[n_occs1 == 1])) / num_sess
+        p_occs1_0 = (n_occs1 == 0).sum() / num_sess
+        p_occs1_1 = (n_occs1 == 1).sum() / num_sess
 
-        p_occs2_0 = float(len(n_occs2[n_occs2 == 0])) / num_sess
-        p_occs2_1 = float(len(n_occs2[n_occs2 == 1])) / num_sess
-        p_occs2_2 = float(len(n_occs2[n_occs2 == 2])) / num_sess
+        p_occs2_0 = (n_occs2 == 0).sum() / num_sess
+        p_occs2_1 = (n_occs2 == 1).sum() / num_sess
+        p_occs2_2 = (n_occs2 == 2).sum() / num_sess
 
-        self.assertAlmostEqual(p_occs1_0, 0.7, places=2)
-        self.assertAlmostEqual(p_occs1_1, 0.3, places=2)
-        self.assertAlmostEqual(p_occs2_0, 0.7, places=2)
-        self.assertAlmostEqual(p_occs2_1, 0.2, places=2)
-        self.assertAlmostEqual(p_occs2_2, 0.1, places=2)
+        self.assertAlmostEqual(p_occs1_0, 0.70, places=2)
+        self.assertAlmostEqual(p_occs1_1, 0.30, places=2)
+        self.assertAlmostEqual(p_occs2_0, 0.70, places=2)
+        self.assertAlmostEqual(p_occs2_1, 0.20, places=2)
+        self.assertAlmostEqual(p_occs2_2, 0.10, places=2)
