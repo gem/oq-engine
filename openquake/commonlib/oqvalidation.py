@@ -181,11 +181,10 @@ class OqParam(valid.ParamSet):
         """
         :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
         """
-        dic = {}  # a dict trt -> lookup.hdf5 file
-        for key, fname in self.inputs.items():
-            if key.startswith('reqv_'):
-                dic[key[5:]] = valid.RjbEquivalent(fname)
-        return dic
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
