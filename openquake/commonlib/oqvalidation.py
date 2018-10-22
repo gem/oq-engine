@@ -181,8 +181,10 @@ class OqParam(valid.ParamSet):
         """
         :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
         """
-        if 'reqv' in self.inputs:
-            return valid.RjbEquivalent(self.inputs['reqv'])
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)

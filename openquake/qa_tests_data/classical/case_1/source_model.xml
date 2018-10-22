@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
     name="Classical Hazard QA Test, Case 1 source model"
     >
-        
-        <sourceGroup
-        name="group 1"
-        tectonicRegion="active shallow crust"
-        srcs_weights="1.0"
-        >
             <pointSource
             id="1"
             name="point source"
+            tectonicRegion='active shallow crust'
             >
                 
                 <pointGeometry>
@@ -56,6 +51,5 @@ xmlns:gml="http://www.opengis.net/gml"
                     <hypoDepth depth="4.0000000E+00" probability="1.0000000E+00"/>
                 </hypoDepthDist>
             </pointSource>
-        </sourceGroup>
     </sourceModel>
 </nrml>

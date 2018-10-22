@@ -104,6 +104,9 @@ class ClassicalTestCase(CalculatorTestCase):
  [0.00000000e+00 0.00000000e+00]
  [0.00000000e+00 0.00000000e+00]]>}''')
 
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve.csv', fname)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
         self.assert_curves_ok(
