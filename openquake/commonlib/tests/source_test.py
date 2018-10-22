@@ -622,11 +622,11 @@ class AreaToPointsTestCase(unittest.TestCase):
 
 class SourceGroupTestCase(unittest.TestCase):
     SITES = [
-        site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
-        site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
-        site.Site(geo.Point(-121.0, -37.15), 2, True, 3, 4),
-        site.Site(geo.Point(-121.0, 37.49), 3, True, 3, 4),
-        site.Site(geo.Point(-121.0, -37.5), 4, True, 3, 4),
+        site.Site(geo.Point(-121.0, 37.0), 0.1, 3, 4),
+        site.Site(geo.Point(-121.1, 37.0), 1, 3, 4),
+        site.Site(geo.Point(-121.0, -37.15), 2, 3, 4),
+        site.Site(geo.Point(-121.0, 37.49), 3, 3, 4),
+        site.Site(geo.Point(-121.0, -37.5), 4, 3, 4),
     ]
 
     @classmethod
