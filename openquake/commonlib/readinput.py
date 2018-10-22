@@ -122,6 +122,15 @@ def _update(params, items, base_path):
             if value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
+        elif isinstance(value, str) and value.endswith('.hdf5'):
+            # for the reqv feature
+            fname = os.path.normpath(os.path.join(base_path, value))
+            try:
+                reqv = params['inputs']['reqv']
+            except KeyError:
+                params['inputs']['reqv'] = {key: fname}
+            else:
+                reqv.update({key: fname})
         else:
             params[key] = value
 
@@ -731,7 +740,13 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         if not None, use it to prefilter the sources
     """
     source_model_lt = get_source_model_lt(oqparam)
-    gsim_lt = get_gsim_lt(oqparam, source_model_lt.get_trts() or ['*'])
+    trts = {trt.lower() for trt in source_model_lt.get_trts()}
+    reqv = oqparam.inputs.get('reqv', {})
+    for trt in reqv:  # these are lowercase because they come from the job.ini
+        if trt not in trts:
+            raise ValueError('Unknown TRT=%s in %s [reqv]' %
+                             (trt, oqparam.inputs['job_ini']))
+    gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if oqparam.number_of_logic_tree_samples == 0:
         logging.info('Potential number of logic tree paths = {:,d}'.format(
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
@@ -956,8 +971,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
-            and 'hazard_curves' not in oqparam.inputs):
-        # TODO: think if we should remove this in presence of GMF-correlation
+            and 'hazard_curves' not in oqparam.inputs
+            and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
@@ -1237,7 +1252,11 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if isinstance(fname, list):
+        if isinstance(fname, dict):
+            for f in fname.values():
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff
