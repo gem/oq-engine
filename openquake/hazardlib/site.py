@@ -116,6 +116,7 @@ site_param_dt = {
     'vs30measured': numpy.bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
 
     # parameters for geotechnic hazard
