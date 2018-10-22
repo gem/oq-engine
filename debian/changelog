@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the error message when there are more than 65536 distinct tags
+    in the exposure
   * Turned `vs30measured` into an optional parameter
 
   [Chris Van Houtte]
