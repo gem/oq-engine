@@ -739,7 +739,13 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         if not None, use it to prefilter the sources
     """
     source_model_lt = get_source_model_lt(oqparam)
-    gsim_lt = get_gsim_lt(oqparam, source_model_lt.get_trts() or ['*'])
+    trts = {trt.lower() for trt in source_model_lt.get_trts()}
+    reqv = oqparam.inputs.get('reqv', {})
+    for trt in reqv:  # these are lowercase because they come from the job.ini
+        if trt not in trts:
+            raise ValueError('Unknown TRT=%s in %s [reqv]' %
+                             (trt, oqparam.inputs['job_ini']))
+    gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if oqparam.number_of_logic_tree_samples == 0:
         logging.info('Potential number of logic tree paths = {:,d}'.format(
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
