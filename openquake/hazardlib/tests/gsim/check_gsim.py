@@ -279,6 +279,8 @@ def _parse_csv_line(headers, values, req_site_params):
             # value is sites context object attribute
             if param == 'site_vs30measured' or param == 'site_backarc':
                 value = float(value) != 0
+            elif param == 'site_siteclass':
+                value = numpy.string_(value)
             else:
                 value = float(value)
             # site_lons, site_lats, site_depths -> lon, lat, depth
