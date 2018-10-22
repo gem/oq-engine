@@ -299,6 +299,6 @@ class SitePickleTestCase(unittest.TestCase):
 
     def test_dumps_and_loads(self):
         point = Point(1, 2, 3)
-        site1 = Site(point, 760.0, True, 100.0, 5.0)
+        site1 = Site(point, 760.0, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
         self.assertEqual(site1, site2)
