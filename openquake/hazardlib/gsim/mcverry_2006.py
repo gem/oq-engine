@@ -18,7 +18,9 @@
 
 """
 Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
-:class:`McVerry2006SSlab`, and :class:`McVerry2006Volc`..
+:class:`McVerry2006SSlab`, :class:`McVerry2006Volc`,
+:class:`McVerry2006AscSC`, :class:`McVerry2006SInterSC`,
+:class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
 
@@ -41,16 +43,23 @@ class McVerry2006Asc(GMPE):
     This class implements the GMPE for Active Shallow Crust
     earthquakes (Asc suffix).
 
-    The GMPE distinguishes between rock (vs30 >= 760) and stiff soil
-    (360 <= vs30 < 760) and soft soil (vs < 360) which equates to the
-    New Zealand site class A and B (rock) and C,D and E (soil).
+    The GMPE distinguishes between rock, stiff soil and soft soil
+    which respectively equate to the New Zealand site class combined A/B
+    C, and D. No model is provided for New Zealand site class E
     The rake angle is also taken into account to
     distinguish between faulting mechanisms. A hanging-wall term is noted in
     the functional form of the model in the paper but is not used at present.
     Furthermore, a Rvolc (volcanic path distance) is noted in the functional
     form but this is not implemented in the McVerry2006Asc model, it is
     implemented in a seperate GMPE McVerry2006Volc where Rvol=Rrup as this
-    is how it is implemented in the NZ Seismic Hazard Model (Stirling 2012)
+    is how it is implemented in Stirling et al. 2012.
+
+    This is a legacy class based on the original implementation of McVerry
+    et al. (2006), where the site terms are incorrectly implemented as
+    functions of Vs30. The New Zealand site classification boundaries do not
+    depend on Vs30 and so this class will yield erroneous results for some
+    site locations. Instead, calling `McVerry2006AscSC` and specifying site
+    class values in the .ini file will give the correct results.
     """
 
     #: Supported tectonic region type for base class is 'active shallow crust'
@@ -76,8 +85,8 @@ class McVerry2006Asc(GMPE):
         const.StdDev.INTRA_EVENT
     ])
 
-    #: The only site parameter is vs30 used to map to site class to distinguish
-    # between rock, stiff soil and soft soil
+    #: The legacy implementation of the McVerry model takes vs30 and maps
+    #  to New Zealand's categorical site classification scheme
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude, and rake and hypocentral
@@ -105,8 +114,7 @@ class McVerry2006Asc(GMPE):
         C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
 
         # Get S term to determine if consider site term is applied
-        S = self._get_site_class(sites.vs30)
-
+        S = self._get_site_class(sites)
         # Abrahamson and Silva (1997) hanging wall term. This is not used
         # in the latest version of GMPE but is defined in functional form in
         # the paper so we keep it here as a placeholder
@@ -120,8 +128,7 @@ class McVerry2006Asc(GMPE):
         rvol = self._get_volcanic_path_distance(dists.rrup)
 
         # Get delta_C and delta_D terms for site class
-        delta_C, delta_D = self._get_deltas(sites.vs30)
-
+        delta_C, delta_D = self._get_deltas(sites)
         # Compute lnPGA_ABCD primed
         lnPGAp_ABCD = self._compute_mean(C_PGA, S, rup.mag, dists.rrup, rvol,
                                          rup.hypo_depth, CN, CR, f4HW,
@@ -145,7 +152,7 @@ class McVerry2006Asc(GMPE):
         # Compute standard deviations
         C_STD = self.COEFFS_STD[imt]
         stddevs = self._get_stddevs(
-            C_STD, rup.mag, stddev_types, sites.vs30.size
+            C_STD, rup.mag, stddev_types, sites
         )
 
         return mean, stddevs
@@ -208,12 +215,12 @@ class McVerry2006Asc(GMPE):
 
         return lnSA_CD
 
-    def _get_stddevs(self, C, mag, stddev_types, num_sites):
+    def _get_stddevs(self, C, mag, stddev_types, sites):
         """
         Return standard deviation as defined on page 29 in
         equation 8a,b,c and 9.
         """
-
+        num_sites = sites.vs30.size
         sigma_intra = np.zeros(num_sites)
 
         # interevent stddev
@@ -240,11 +247,12 @@ class McVerry2006Asc(GMPE):
 
         return std
 
-    def _get_site_class(self, vs30):
+    def _get_site_class(self, sites):
         """
-        Return site class flag (0 if vs30 => 760, that is rock, or 1 if vs30 <
+        Return site class flag (0 if vs30 > 760, that is rock, or 1 if vs30 <=
         760, that is deep soil)
         """
+        vs30 = sites.vs30
         S = np.zeros_like(vs30)
         S[vs30 <= 760] = 1
 
@@ -287,13 +295,13 @@ class McVerry2006Asc(GMPE):
 
         return CN, CR
 
-    def _get_deltas(self, vs30):
+    def _get_deltas(self, sites):
         """
         Return delta's for equation 4
         delta_C = 1 for site class C (360<=Vs30<760), 0 otherwise
-        delta_D = 1 for site class D (180<Vs30<360), 0 otherwise
+        delta_D = 1 for site class D (Vs30<=360), 0 otherwise
         """
-
+        vs30 = sites.vs30
         delta_C = np.zeros(len(vs30))
         delta_C[(vs30 >= 360) & (vs30 < 760)] = 1
 
@@ -403,9 +411,7 @@ class McVerry2006SInter(McVerry2006Asc):
 
     The GMPE distinguishes between rock (vs30 >= 760) and deep soil
     (vs30 < 760) which equation to the New Zealand site class A and B (rock)
-    and C,D and E (soil). The rake angle is also taken into account to
-    distinguish between faulting mechanisms. A hanging-wall term is noted in
-    the functional form of the model in the paper but is not used at present.
+    and C,D and E (soil).
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
@@ -457,9 +463,7 @@ class McVerry2006SSlab(McVerry2006Asc):
 
     The GMPE distinguishes between rock (vs30 >= 760) and deep soil
     (vs30 < 760) which equation to the New Zealand site class A and B (rock)
-    and C,D and E (soil). The rake angle is also taken into account to
-    distinguish between faulting mechanisms. A hanging-wall term is noted in
-    the functional form of the model in the paper but is not used at present.
+    and C,D and E (soil).
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
@@ -514,6 +518,203 @@ class McVerry2006Volc(McVerry2006Asc):
     distinguish between faulting mechanisms. A hanging-wall term is noted in
     the functional form of the model in the paper but is not used at present.
 
+    rvolc is equal to rrup
+    """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
+
+    def _get_volcanic_path_distance(self, rrup):
+        """
+        Computes the path length in km through the Taupo Volcanic Zone
+        NOTE: For the NZ Seismic Hazard Model this term is only used for
+        sources with "Normal Volcanic" faulting type and the term is applied
+        to the whole path length (i.e. rvol = rrup)
+        In order to test the NSHM against OQ, the NSHM model approach is
+        implemented here as a seperate GMPE for volcanic travel paths. For
+        the crustal model of McVerry2006Asc rvol is always equal to 0
+        """
+
+        return rrup
+
+
+class McVerry2006AscSC(McVerry2006Asc):
+
+    #: Uses NZS1170.5 site classification. Calls of 'A' or 'B' yield the same outputs.
+    # 'E' is not a valid option
+    REQUIRES_SITES_PARAMETERS = set(('siteclass', ))
+
+    def _get_deltas(self, sites):
+        """
+        Return delta's for equation 4
+        delta_C = 1 for site class C, 0 otherwise
+        delta_D = 1 for site class D, 0 otherwise
+        """
+        siteclass = sites.siteclass
+        delta_C = np.zeros_like(siteclass, dtype=np.float)
+        delta_C[siteclass == b'C'] = 1
+
+        delta_D = np.zeros_like(siteclass, dtype=np.float)
+        delta_D[siteclass == b'D'] = 1
+
+        return delta_C, delta_D
+
+    def _get_site_class(self, sites):
+        """
+        Return site class flag (0 if class A or B, that is rock, or 1 if
+        class C or D).
+        """
+        siteclass = sites.siteclass
+        S = np.zeros_like(siteclass, dtype=np.float)
+        S[(siteclass == b'C') | (siteclass == b'D')] = 1
+
+        return S
+
+    def _get_stddevs(self, C, mag, stddev_types, sites):
+        """
+        Return standard deviation as defined on page 29 in
+        equation 8a,b,c and 9.
+        """
+        num_sites = sites.siteclass.size
+        sigma_intra = np.zeros(num_sites)
+
+        # interevent stddev
+        tau = sigma_intra + C['tau']
+
+        # intraevent std (equations 8a-8c page 29)
+        if mag < 5.0:
+            sigma_intra += C['sigmaM6'] - C['sigSlope']
+        elif 5.0 <= mag < 7.0:
+            sigma_intra += C['sigmaM6'] + C['sigSlope'] * (mag - 6)
+        else:
+            sigma_intra += C['sigmaM6'] + C['sigSlope']
+
+        std = []
+
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                # equation 9 page 29
+                std += [np.sqrt(sigma_intra**2 + tau**2)]
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                std.append(sigma_intra)
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                std.append(tau)
+
+        return std
+
+
+class McVerry2006SInterSC(McVerry2006AscSC):
+    """
+    Extend :class:`McVerry2006AscSC` for Subduction Interface events (SInter)
+
+    Identical to class McVerry2006SInter, except the site term is defined in
+    terms of siteclass instead of Vs30.
+
+    Implements GMPE developed by G. McVerry, J. Zhao, N.A. Abrahamson,
+    P. Somerville published as "New Zealand Acceleration Response Spectrum
+    Attenuation Relations for Crustal and Subduction Zone Earthquakes",
+    Bulletin of the New Zealand Society for Earthquake Engineering, v.39,
+    no. 1, p. 1-58, March 2006.
+
+    URL: http://www.nzsee.org.nz/db/Bulletin/Archive/39(1)0001.pdf
+    Last accessed 10 September 2014.
+    """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
+
+    def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
+                              f4HW):
+        """
+        Compute mean value on site class A/B (equation 2 on page 22)
+        """
+
+        # Define subduction flag (page 23)
+        # SI=1 for subduction interface, 0 otherwise
+        # DS=0 for subduction intraslab, 0 otherwise
+        SI = 1
+        DS = 0
+
+        lnSA_AB = (
+            # line 1 and 2 of equation 2
+            C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
+            (mag - 6) +
+            # line 3
+            C['c13y'] * (10 - mag) ** 3 +
+            # line 4
+            C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
+            # line 5
+            C['c20'] * hypo_depth + C['c24'] * SI +
+            # line 6
+            C['c46'] * rvol * (1 - DS)
+        )
+
+        return lnSA_AB
+
+
+class McVerry2006SSlabSC(McVerry2006AscSC):
+    """
+    Extend :class:`McVerry2006AscSC` for Subduction Intraslab events (SSlab)
+
+    Identical to class McVerry2006SSlab, except the site term is defined in
+    terms of siteclass instead of Vs30.
+
+    Implements GMPE developed by G. McVerry, J. Zhao, N.A. Abrahamson,
+    P. Somerville published as "New Zealand Acceleration Response Spectrum
+    Attenuation Relations for Crustal and Subduction Zone Earthquakes",
+    Bulletin of the New Zealand Society for Earthquake Engineering, v.39,
+    no. 1, p. 1-58, March 2006.
+
+    URL: http://www.nzsee.org.nz/db/Bulletin/Archive/39(1)0001.pdf
+    Last accessed 10 September 2014.
+    """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    def _compute_mean_on_rock(self, C, mag, rrup, rvol, hypo_depth, CN, CR,
+                              f4HW):
+        """
+        Compute mean value on site class A/B (equation 2 on page 22)
+        """
+
+        # Define subduction flag (page 23)
+        # SI=1 for subduction interface, 0 otherwise
+        # DS=1 for subduction intraslab, 0 otherwise
+        SI = 0
+        DS = 1
+
+        lnSA_AB = (
+            # line 1 and 2 of equation 2
+            C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
+            (mag - 6) +
+            # line 3
+            C['c13y'] * (10 - mag) ** 3 +
+            # line 4
+            C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
+            # line 5
+            C['c20'] * hypo_depth + C['c24'] * SI +
+            # line 6
+            C['c46'] * rvol * (1 - DS)
+        )
+
+        return lnSA_AB
+
+
+class McVerry2006VolcSC(McVerry2006AscSC):
+    """
+    Extend :class:`McVerry2006AscSC` for earthquakes with Volcanic paths (Volc)
+
+    Identical to class McVerry2006Volc, except the site term is defined in
+    terms of siteclass instead of Vs30.
+
+    Implements GMPE developed by G. McVerry, J. Zhao, N.A. Abrahamson,
+    P. Somerville published as "New Zealand Acceleration Response Spectrum
+    Attenuation Relations for Crustal and Subduction Zone Earthquakes",
+    Bulletin of the New Zealand Society for Earthquake Engineering, v.39,
+    no. 1, p. 1-58, March 2006.
+
+    URL: http://www.nzsee.org.nz/db/Bulletin/Archive/39(1)0001.pdf
+    Last accessed 10 September 2014.
+
+    This class implements the GMPE for earthquakes with Volcanic paths
     rvolc is equal to rrup
     """
 
