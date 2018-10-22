@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the ShakeMap downloader to use the USGS GeoJson feed
   * Fixed the rupture exporter for Canada
   * Extended the `oq prepare_site_model` to optionally generate the
     fields z1pt0, z2pt5 and vs30measured
