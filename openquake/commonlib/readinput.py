@@ -122,7 +122,8 @@ def _update(params, items, base_path):
             if value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
-        elif value.endswith('.hdf5'):  # this is for reqv feature
+        elif isinstance(value, str) and value.endswith('.hdf5'):
+            # for the reqv feature
             fname = os.path.normpath(os.path.join(base_path, value))
             try:
                 reqv = params['inputs']['reqv']
@@ -969,9 +970,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
-    if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
-            and 'hazard_curves' not in oqparam.inputs):
-        # TODO: think if we should remove this in presence of GMF-correlation
+    if sitecol is not sitecol.complete:
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
