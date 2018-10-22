@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Fixed the ShakeMap downloader to use the USGS GeoJson feed
+  * Extended the `reqv` feature to multiple tectonic region types
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
+  * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
   * Improved the error message when there are more than 65536 distinct tags
     in the exposure
   * Turned `vs30measured` into an optional parameter
