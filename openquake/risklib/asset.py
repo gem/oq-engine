@@ -442,6 +442,7 @@ class AssetCollection(object):
         array = []
         asset_refs = []
         for idx, sid in enumerate(sitecol.sids):
+            print(idx, sid)
             mask = self.array['site_id'] == sid
             arr = self.array[mask]
             arr['site_id'] = idx
