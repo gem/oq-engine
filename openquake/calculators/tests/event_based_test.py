@@ -291,12 +291,12 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_15(self):
-        # an example for Japan exhibiting the error
-        # "top and bottom edges have different lengths"
-        raise unittest.SkipTest('Not fixed yet')
-        out = self.run_calc(case_15.__file__, 'job.ini', exports='csv')
-        fname = out['ruptures', 'csv']
+        # an example for Japan testing also the XML rupture exporter
+        self.run_calc(case_15.__file__, 'job.ini')
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_16(self):
@@ -358,6 +358,12 @@ PGA     SA(0.3) SA(0.6)
         self.run_calc(case_20.__file__, 'job.ini')
         [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
+
+        # run again the GMF calculation, but this time from stored ruptures
+        hid = str(self.calc.datastore.calc_id)
+        self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
+        [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-data-from-ruptures.csv', gmf)
 
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):
