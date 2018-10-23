@@ -51,41 +51,41 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
+        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean, stddevs
 
-    def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+    def _get_mean(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # Zhao et al. 2006 - Vs30 + Rrup
-        mean, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                   stddev_types)
-        cff = self.SITE_COEFFS[imt]
-        mean_zh06 = mean + np.log(cff['mf'])
+        mean_zh06, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                        stddev_types)
+        #
         # Atkinson and Macias (2009) - Rrup
         gmpe = AtkinsonMacias2009()
         mean_am09, stds2 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        mean_am09 += np.log(cff['mf'])
+        #
         # Abrahamson et al. (2015) - Rrup + vs30 + backarc
         gmpe = AbrahamsonEtAl2015SInter()
         mean_ab15, stds3 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
+        #
         # Ghofrani and Atkinson (2014) - Rrup + vs30
         gmpe = GhofraniAtkinson2014()
         mean_ga14, stds4 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        mean_ga14 += np.log(cff['mf'])
         # Computing adjusted mean and stds
-        mean_adj = np.log(np.exp(mean_zh06)*0.1 + np.exp(mean_am09)*0.5 +
-                          np.exp(mean_ab15)*0.2 + np.exp(mean_ga14)*0.2)
-        stds_adj = [np.ones(len(dists.rrup))*get_sigma(imt)]
-        return mean_adj, stds_adj
+        cff = self.SITE_COEFFS[imt]
+        mean_adj = np.log(np.exp(mean_zh06)*0.1*cff['mf'] +
+                          np.exp(mean_am09)*0.5 +
+                          np.exp(mean_ab15)*0.2 +
+                          np.exp(mean_ga14)*0.2*cff['mf'])
+        return mean_adj
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
@@ -107,8 +107,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 class SInterCan15Low(SInterCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
+        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
         mean -= self._get_delta(dists)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         mean = np.squeeze(mean)
@@ -118,8 +117,7 @@ class SInterCan15Low(SInterCan15Mid):
 class SInterCan15Upp(SInterCan15Mid):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        mean, stds = self._get_mean_and_stddevs(sites, rup, dists, imt,
-                                                stddev_types)
+        mean = self._get_mean(sites, rup, dists, imt, stddev_types)
         mean += self._get_delta(dists)
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         mean = np.squeeze(mean)

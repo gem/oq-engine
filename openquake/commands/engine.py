@@ -21,6 +21,7 @@ import getpass
 import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
+from openquake.hazardlib import valid
 from openquake.commonlib import logs
 from openquake.engine import engine as eng
 from openquake.engine.export import core
@@ -120,7 +121,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         logging.basicConfig(level=logging.INFO)
 
     if config_file:
-        config.load(os.path.abspath(os.path.expanduser(config_file)))
+        config.read(os.path.abspath(os.path.expanduser(config_file)),
+                    soft_mem_limit=int, hard_mem_limit=int, port=int,
+                    multi_user=valid.boolean, multi_node=valid.boolean)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
@@ -166,7 +169,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if run:
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-        job_inis = os.path.expanduser(run).split(',')
+        job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) > 2 and hc_id:
             sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
@@ -242,7 +245,7 @@ engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run', '--run', help='Run a job with the specified config file',
-            metavar='CONFIG_FILE')
+            metavar='JOB_INI', nargs='+')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
             help='List hazard calculation information', action='store_true')
 engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',

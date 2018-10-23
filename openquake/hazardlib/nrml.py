@@ -212,7 +212,10 @@ def get_source_model_05(node, fname, converter=default):
                 '%s: you have an incorrect declaration '
                 'xmlns="http://openquake.org/xmlns/nrml/0.5"; it should be '
                 'xmlns="http://openquake.org/xmlns/nrml/0.4"' % fname)
-        groups.append(converter.convert_node(src_group))
+        sg = converter.convert_node(src_group)
+        if len(sg):
+            # a source group can be empty if the source_id filtering is on
+            groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:
         itime = valid.positivefloat(itime)

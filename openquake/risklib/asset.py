@@ -289,7 +289,8 @@ class TagCollection(object):
         except KeyError:
             dic[tagvalue] = idx = len(dic)
             getattr(self, tagname).append(tagvalue)
-            assert idx < TWO16, idx
+            if idx > TWO16:
+                raise InvalidFile('contains more then %d tags' % TWO16)
             return idx
 
     def add_tags(self, dic):
@@ -846,9 +847,8 @@ class Exposure(object):
                 return
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
-            with context(param['fname'], tagnode):
-                dic['taxonomy'] = taxonomy
-                idxs = self.tagcol.add_tags(dic)
+            dic['taxonomy'] = taxonomy
+            idxs = self.tagcol.add_tags(dic)
         try:
             costs = asset_node.costs
         except AttributeError:

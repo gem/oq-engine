@@ -88,7 +88,6 @@ def _assert_equal_sources(nodes):
                 f1 = gettemp(n.to_str())
             assert eq, 'different parameters for source %s, run meld %s %s' % (
                 n['id'], f0, f1)
-    return nodes
 
 
 def get_field(data, field, default):
@@ -491,8 +490,12 @@ class CompositeSourceModel(collections.Sequence):
                 except AttributeError:  # src is a Node object
                     srcid = src['id']
                 dd[srcid].append(src)
-        return [_assert_equal_sources(srcs)
-                for srcid, srcs in sorted(dd.items()) if len(srcs) > 1]
+        dupl = []
+        for srcid, srcs in sorted(dd.items()):
+            if len(srcs) > 1:
+                _assert_equal_sources(srcs)
+                dupl.append(srcs)
+        return dupl
 
     def gen_mutex_groups(self):
         """

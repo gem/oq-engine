@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 
@@ -23,7 +24,6 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.ucerf_base import UcerfFilter
-# FIXME: the counting of effective ruptures has to be revised
 
 
 @base.calculators.add('ucerf_classical')
@@ -63,7 +63,8 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(self.src_filter)
+            srcs = ucerf.get_background_sources(
+                self.src_filter, os.environ.get('OQ_SAMPLE_SOURCES'))
             acc = parallel.Starmap.apply(
                 classical, (srcs, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
