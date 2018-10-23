@@ -851,23 +851,22 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    with monitor('updating source_info', autoflush=True):
-        arr = numpy.zeros((len(sources), 2), F32)
-        for splits, stime in smap:
-            for split in splits:
-                i = split.id
-                arr[i, 0] += stime[i]
-                arr[i, 1] += 1
-                srcs_by_grp[split.src_group_id].append(split)
-        if sample_factor and not srcs_by_grp:
-            sys.stderr.write('Too much sampling, no sources\n')
-            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
-        elif not srcs_by_grp:
-            # raise an exception in the regular case (no sample_factor)
-            raise RuntimeError('All sources were filtered away!')
-        elif monitor.hdf5:
-            source_info[:, 'split_time'] = arr[:, 0]
-            source_info[:, 'num_split'] = arr[:, 1]
+    arr = numpy.zeros((len(sources), 2), F32)
+    for splits, stime in smap:
+        for split in splits:
+            i = split.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[split.src_group_id].append(split)
+    if sample_factor and not srcs_by_grp:
+        sys.stderr.write('Too much sampling, no sources\n')
+        sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
+    elif not srcs_by_grp:
+        # raise an exception in the regular case (no sample_factor)
+        raise RuntimeError('All sources were filtered away!')
+    elif monitor.hdf5:
+        source_info[:, 'split_time'] = arr[:, 0]
+        source_info[:, 'num_split'] = arr[:, 1]
     return csm.new(srcs_by_grp)
 
 
