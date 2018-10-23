@@ -82,7 +82,7 @@ class ContextMaker(object):
         param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.pointsource_distance = param.get('pointsource_distance')
+        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -208,9 +208,9 @@ class ContextMaker(object):
         """
         out = []
         with self.ir_mon:
-            if hasattr(src, 'location'):
-                close_sites, far_sites = sites.split(
-                    src.location, self.pointsource_distance)
+            pdist = self.pointsource_distance.get(src.tectonic_region_type)
+            if hasattr(src, 'location') and pdist:
+                close_sites, far_sites = sites.split(src.location, pdist)
                 if close_sites is None:  # all is far
                     out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))

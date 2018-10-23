@@ -178,6 +178,9 @@ def get_params(job_inis, **kw):
         inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
+    if inputs.get('reqv'):
+        # using pointsource_distance=0 because of the reqv approximation
+        params['pointsource_distance'] = '0'
     return params
 
 
@@ -782,15 +785,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
-    if 'event_based' in oqparam.calculation_mode:
-        if oqparam.pointsource_distance == 0:
-            # remove splitting/floating ruptures
-            for src in csm.get_sources():
-                if hasattr(src, 'hypocenter_distribution'):
-                    src.hypocenter_distribution.reduce()
-                    src.nodal_plane_distribution.reduce()
-                    src.num_ruptures = src.count_ruptures()
+    # remove splitting/floating ruptures
+    for src in csm.get_sources():
+        if (oqparam.pointsource_distance.get(src.tectonic_region_type)
+                == 0 and hasattr(src, 'hypocenter_distribution')):
+            src.hypocenter_distribution.reduce()
+            src.nodal_plane_distribution.reduce()
+            src.num_ruptures = src.count_ruptures()
 
+    if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
@@ -851,23 +854,22 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    with monitor('updating source_info', autoflush=True):
-        arr = numpy.zeros((len(sources), 2), F32)
-        for splits, stime in smap:
-            for split in splits:
-                i = split.id
-                arr[i, 0] += stime[i]
-                arr[i, 1] += 1
-                srcs_by_grp[split.src_group_id].append(split)
-        if sample_factor and not srcs_by_grp:
-            sys.stderr.write('Too much sampling, no sources\n')
-            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
-        elif not srcs_by_grp:
-            # raise an exception in the regular case (no sample_factor)
-            raise RuntimeError('All sources were filtered away!')
-        elif monitor.hdf5:
-            source_info[:, 'split_time'] = arr[:, 0]
-            source_info[:, 'num_split'] = arr[:, 1]
+    arr = numpy.zeros((len(sources), 2), F32)
+    for splits, stime in smap:
+        for split in splits:
+            i = split.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[split.src_group_id].append(split)
+    if sample_factor and not srcs_by_grp:
+        sys.stderr.write('Too much sampling, no sources\n')
+        sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
+    elif not srcs_by_grp:
+        # raise an exception in the regular case (no sample_factor)
+        raise RuntimeError('All sources were filtered away!')
+    elif monitor.hdf5:
+        source_info[:, 'split_time'] = arr[:, 0]
+        source_info[:, 'num_split'] = arr[:, 1]
     return csm.new(srcs_by_grp)
 
 
