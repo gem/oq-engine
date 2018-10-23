@@ -260,6 +260,8 @@ class SiMidorikawa1999Asc(GMPE):
             return mean * np.log(10)
         elif abs(vs30[0]-400.) < 1e-10:
             return mean * np.log(10) + np.log(self.AMP_F)
+        elif abs(vs30[0]-800.) < 1e-10:
+            return mean * np.log(10) - np.log(1.25)
         else:
             raise ValueError('Si and Midorikawa 1999 do not support this Vs30 value')
 
