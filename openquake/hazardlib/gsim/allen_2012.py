@@ -57,8 +57,10 @@ class Allen2012(GMPE):
 
     #: No site parameters are needed, the GMPE is calibrated for average South
     #: East Australia site conditions (assumed consistent to Vs30 = 820 m/s)
-    #: see paragraph 'Executive Summary', page VII
+    #: see paragraph 'Executive Summary', page VII. (provisionally set to 800
+    #: for compatibility with SiteTerm class)
     REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
 
     #: Required rupture parameters are magnitude and hypocentral depth, see
     #: paragraph 'Regression of Model Coefficients', page 32 and tables 7 and
