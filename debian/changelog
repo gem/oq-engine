@@ -1,4 +1,44 @@
   [Michele Simionato]
+  * Extended the `reqv` feature to multiple tectonic region types and
+    removed the spinning/floating for the TRTs using the feature
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
+  * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
+  * Improved the error message when there are more than 65536 distinct tags
+    in the exposure
+  * Turned `vs30measured` into an optional parameter
+
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Added new classes to mcverry_2006.py to take siteclass as a predictor
+  * Updated comments in mcverry_2006.py
+  * Added new mcverry_2006 test tables to account for difference in site
+    parameter
+  * Added qa_test_data classical case_32
+
+  [Michele Simionato]
+  * Fixed the rupture exporter for Canada
+  * Extended the `oq prepare_site_model` to optionally generate the
+    fields z1pt0, z2pt5 and vs30measured
+  * It is now an error to specify both the sites and the site model in the
+    job.ini, to avoid confusion with the precedency
+  * Implemented a reader for site models in CSV format
+  * Made the export_dir relative to the input directory
+  * Better error message for ShakeMaps with zero stddev
+  * Added a source_id-filtering feature in the job.ini
+  * Added a check on non-homogeneous tectonic region types in a source group
+  * Fixed the option `oq engine --config-file` that broke a few releases ago
+  * Replaced `nodal_dist_collapsing_distance` and
+     `hypo_dist_collapsing_distance` with `pointsource_distance` and made
+     use of them in the classical and event based calculators
+
+  [Graeme Weatherill]
+  * Fixes to hmtk completeness tables for consistent rates and addition of
+    more special methods to catalogue
+
+  [Michele Simionato]
+  * Restricted ChiouYoungs2008SWISS01 to StdDev.TOTAL to avoid a bug
+    when computing the GMFs with inter/intra stddevs
   * Raised an error if assets are discarded because too far from the hazard
     sites (before it was just a warning)
   * Added an attribute .srcidx to every event based rupture and stored it
@@ -12,7 +52,7 @@
     in classical_damage calculations
   * Reduced the data transfer in the risk model by only considering the
     taxonomies relevant for the exposure
-  * Extended `oq engine --run` to accept a comma-separated list of files
+  * Extended `oq engine --run` to accept a list of files
   * Optimized the saving of the risk results in event based in the case of
     many sites and changed the command `oq show portfolio_loss` to show
     mean and standard deviation of the portfolio loss for each loss type

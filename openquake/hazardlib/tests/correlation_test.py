@@ -27,10 +27,10 @@ aaae = numpy.testing.assert_array_almost_equal
 
 
 class JB2009CorrelationMatrixTestCase(unittest.TestCase):
-    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -40.1), 1, True, 1, 1),
-                              Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -39.9), 1, True, 1, 1)])
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -40.1), 1, 1, 1),
+                              Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -39.9), 1, 1, 1)])
 
     def test_no_clustering(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
@@ -101,9 +101,9 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
 
 
 class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
-    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -40.1), 1, True, 1, 1),
-                              Site(Point(2, -39.9), 1, True, 1, 1)])
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -40.1), 1, 1, 1),
+                              Site(Point(2, -39.9), 1, 1, 1)])
 
     def test(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
@@ -114,9 +114,9 @@ class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
 
 
 class JB2009ApplyCorrelationTestCase(unittest.TestCase):
-    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -40.1), 1, True, 1, 1),
-                              Site(Point(2, -39.9), 1, True, 1, 1)])
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -40.1), 1, 1, 1),
+                              Site(Point(2, -39.9), 1, 1, 1)])
 
     def test(self):
         numpy.random.seed(13)
@@ -137,10 +137,10 @@ class JB2009ApplyCorrelationTestCase(unittest.TestCase):
 
 
 class HM2018CorrelationMatrixTestCase(unittest.TestCase):
-    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -40.1), 1, True, 1, 1),
-                              Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -39.9), 1, True, 1, 1)])
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -40.1), 1, 1, 1),
+                              Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -39.9), 1, 1, 1)])
 
     def test_correlation_no_uncertainty(self):
         cormo = HM2018CorrelationModel(uncertainty_multiplier=0)
@@ -235,9 +235,9 @@ class HM2018CorrelationMatrixTestCase(unittest.TestCase):
 
 
 class HM2018ApplyCorrelationTestCase(unittest.TestCase):
-    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
-                              Site(Point(2, -40.1), 1, True, 1, 1),
-                              Site(Point(2, -39.95), 1, True, 1, 1)])
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, 1, 1),
+                              Site(Point(2, -40.1), 1, 1, 1),
+                              Site(Point(2, -39.95), 1, 1, 1)])
 
     def test_no_uncertainty(self):
         numpy.random.seed(1)

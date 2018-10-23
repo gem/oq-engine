@@ -24,10 +24,9 @@ Module exports
 """
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS01,
-    COEFFS_FS_ROCK_SWISS06,
-    COEFFS_FS_ROCK_SWISS04)
+    COEFFS_FS_ROCK_SWISS01, COEFFS_FS_ROCK_SWISS06, COEFFS_FS_ROCK_SWISS04)
 from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
@@ -56,6 +55,7 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 

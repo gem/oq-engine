@@ -122,6 +122,15 @@ def _update(params, items, base_path):
             if value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
+        elif isinstance(value, str) and value.endswith('.hdf5'):
+            # for the reqv feature
+            fname = os.path.normpath(os.path.join(base_path, value))
+            try:
+                reqv = params['inputs']['reqv']
+            except KeyError:
+                params['inputs']['reqv'] = {key: fname}
+            else:
+                reqv.update({key: fname})
         else:
             params[key] = value
 
@@ -169,6 +178,9 @@ def get_params(job_inis, **kw):
         inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
+    if inputs.get('reqv'):
+        # using pointsource_distance=0 because of the reqv approximation
+        params['pointsource_distance'] = '0'
     return params
 
 
@@ -221,9 +233,6 @@ exposure = None  # set as side effect when the user reads the site mesh
 gmfs, eids = None, None  # set as a sided effect when reading gmfs.xml
 # this hack is necessary, otherwise we would have to parse the file twice
 
-vs30s = None  # set as side effect when the user reads the site mesh
-# this hack is necessary, otherwise we would have to parse sites.csv twice
-
 
 def get_csv_header(fname, sep=','):
     """
@@ -235,6 +244,18 @@ def get_csv_header(fname, sep=','):
         return next(f).split(sep)
 
 
+def read_csv(fname, sep=','):
+    """
+    :param fname: a CSV file with an header and float fields
+    :param sep: separato (default the comma)
+    :return: a structured array of floats
+    """
+    with open(fname, encoding='utf-8-sig') as f:
+        header = next(f).strip().split(sep)
+        dt = numpy.dtype([(h, float) for h in header])
+        return numpy.loadtxt(f, dt, delimiter=sep)
+
+
 def get_mesh(oqparam):
     """
     Extract the mesh of points to compute from the sites,
@@ -243,7 +264,7 @@ def get_mesh(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    global pmap, exposure, gmfs, eids, vs30s
+    global pmap, exposure, gmfs, eids
     if 'exposure' in oqparam.inputs and exposure is None:
         # read it only once
         exposure = get_exposure(oqparam)
@@ -252,16 +273,14 @@ def get_mesh(oqparam):
     elif 'sites' in oqparam.inputs:
         fname = oqparam.inputs['sites']
         header = get_csv_header(fname)
-        if header[0] == 'site_id':  # strip site_id
-            data, vs30s = [], []
+        if 'lon' in header:
+            data = []
             for i, row in enumerate(
                     csv.DictReader(open(fname, 'U', encoding='utf-8-sig'))):
-                if row['site_id'] != str(i):
+                if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
-                if 'vs30' in row:
-                    vs30s.append(row['vs30'])
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
@@ -310,7 +329,13 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
-    nodes = nrml.read(oqparam.inputs['site_model']).siteModel
+    fname = oqparam.inputs['site_model']
+    if isinstance(fname, str) and fname.endswith('.csv'):
+        sm = read_csv(fname)
+        if 'site_id' not in sm.dtype.names:
+            sm.sort(order=['lon', 'lat'])
+        return sm
+    nodes = nrml.read(fname).siteModel
     params = [valid.site_param(node.attrib) for node in nodes]
     missing = req_site_params - set(params[0])
     if missing == set(['backarc']):  # use a default of False
@@ -338,11 +363,7 @@ def get_site_collection(oqparam):
     """
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
-    if 'vs30' in req_site_params and vs30s:
-        sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-        sitecol.array['vs30'] = F64(vs30s)
-    elif oqparam.inputs.get('site_model'):
+    if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam, req_site_params)
         try:
             # in the future we could have elevation in the site model
@@ -355,11 +376,20 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 sm['lon'], sm['lat'], depth, sm, req_site_params)
         else:
-            # associate the site parameters to the mesh
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            sc, params, discarded = geo.utils.assoc(
-                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+            if oqparam.region_grid_spacing:
+                # associate the site parameters to the grid assuming they
+                # have been prepared correctly, i.e. they are on the location
+                # of the assets; discard empty sites silently
+                sitecol, params, discarded = geo.utils.assoc(
+                    sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+                sitecol.make_complete()
+            else:
+                # associate the site parameters to the sites without
+                # discarding any site but warning for far away parameters
+                sc, params, discarded = geo.utils.assoc(
+                    sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 sitecol._set(name, params[name])
     else:  # use the default site params
@@ -395,7 +425,7 @@ def get_gsim_lt(oqparam, trts=['*']):
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
-                            set([StdDev.TOTAL])):
+                            {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     trts = set(oqparam.minimum_magnitude) - {'default'}
     expected_trts = set(gsim_lt.values)
@@ -586,7 +616,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
-        oqparam.area_source_discretization)
+        oqparam.area_source_discretization,
+        oqparam.source_id)
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
@@ -711,9 +742,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
-    smodels = []
-    gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    trts = source_model_lt.get_trts()
+    trts_lower = {trt.lower() for trt in trts}
+    reqv = oqparam.inputs.get('reqv', {})
+    for trt in reqv:  # these are lowercase because they come from the job.ini
+        if trt not in trts_lower:
+            raise ValueError('Unknown TRT=%s in %s [reqv]' %
+                             (trt, oqparam.inputs['job_ini']))
+    gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if oqparam.number_of_logic_tree_samples == 0:
         logging.info('Potential number of logic tree paths = {:,d}'.format(
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
@@ -721,6 +758,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         logging.info('There is a logic tree on each source')
     if monitor is None:
         monitor = performance.Monitor()
+    smodels = []
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
@@ -747,6 +785,14 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
+    # remove splitting/floating ruptures
+    for src in csm.get_sources():
+        if (oqparam.pointsource_distance.get(src.tectonic_region_type)
+                == 0 and hasattr(src, 'hypocenter_distribution')):
+            src.hypocenter_distribution.reduce()
+            src.nodal_plane_distribution.reduce()
+            src.num_ruptures = src.count_ruptures()
+
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
@@ -763,7 +809,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    if split_all and 'ucerf' not in oqparam.calculation_mode:
+    if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
         csm = parallel_split_filter(
             csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
     return csm
@@ -808,23 +854,22 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
         source_info = monitor.hdf5['source_info']
         source_info.attrs['has_dupl_sources'] = csm.has_dupl_sources
     srcs_by_grp = collections.defaultdict(list)
-    with monitor('updating source_info', autoflush=True):
-        arr = numpy.zeros((len(sources), 2), F32)
-        for splits, stime in smap:
-            for split in splits:
-                i = split.id
-                arr[i, 0] += stime[i]
-                arr[i, 1] += 1
-                srcs_by_grp[split.src_group_id].append(split)
-        if sample_factor and not srcs_by_grp:
-            sys.stderr.write('Too much sampling, no sources\n')
-            sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
-        elif not srcs_by_grp:
-            # raise an exception in the regular case (no sample_factor)
-            raise RuntimeError('All sources were filtered away!')
-        elif monitor.hdf5:
-            source_info[:, 'split_time'] = arr[:, 0]
-            source_info[:, 'num_split'] = arr[:, 1]
+    arr = numpy.zeros((len(sources), 2), F32)
+    for splits, stime in smap:
+        for split in splits:
+            i = split.id
+            arr[i, 0] += stime[i]  # split_time
+            arr[i, 1] += 1         # num_split
+            srcs_by_grp[split.src_group_id].append(split)
+    if sample_factor and not srcs_by_grp:
+        sys.stderr.write('Too much sampling, no sources\n')
+        sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
+    elif not srcs_by_grp:
+        # raise an exception in the regular case (no sample_factor)
+        raise RuntimeError('All sources were filtered away!')
+    elif monitor.hdf5:
+        source_info[:, 'split_time'] = arr[:, 0]
+        source_info[:, 'num_split'] = arr[:, 1]
     return csm.new(srcs_by_grp)
 
 
@@ -900,9 +945,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        mode = 'filter' if oqparam.region_grid_spacing else 'warn'
         sitecol, assets_by, discarded = geo.utils.assoc(
-            exposure.assets_by_site, haz_sitecol, haz_distance, mode)
+            exposure.assets_by_site, haz_sitecol,
+            oqparam.asset_hazard_distance, 'filter')
         if oqparam.region_grid_spacing:  # it is normal to discard sites
             discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
@@ -929,8 +974,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
-            and 'hazard_curves' not in oqparam.inputs):
-        # TODO: think if we should remove this in presence of GMF-correlation
+            and 'hazard_curves' not in oqparam.inputs
+            and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
@@ -1210,7 +1255,11 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if isinstance(fname, list):
+        if isinstance(fname, dict):
+            for f in fname.values():
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff

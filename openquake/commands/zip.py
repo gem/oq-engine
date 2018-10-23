@@ -21,3 +21,4 @@ from openquake.engine.engine import zip
 zip = sap.Script(zip)
 zip.arg('job_ini', 'path to a job.ini file')
 zip.arg('archive_zip', 'path to a non-existing .zip file')
+zip.arg('extra', 'extra optional files', nargs='*')

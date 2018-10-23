@@ -30,13 +30,13 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28, case_29, case_30, case_31)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32)
 
 
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
-        kind = kw.pop('kind', '')  # 'all' or ''
+        kind = kw.pop('kind', '')
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore
         got = (export(('hcurves/' + kind, 'csv'), ds) +
@@ -103,6 +103,13 @@ class ClassicalTestCase(CalculatorTestCase):
  [1.67915423e-05 0.00000000e+00]
  [0.00000000e+00 0.00000000e+00]
  [0.00000000e+00 0.00000000e+00]]>}''')
+
+        # check view inputs
+        lines = view('inputs', self.calc.datastore).splitlines()
+        self.assertEqual(len(lines), 10)
+
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
@@ -474,3 +481,8 @@ hazard_uhs-mean.csv
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
                                'hazard_curve-std-PGA.csv'], case_31.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_32(self):
+        # source specific logic tree
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_32.__file__)

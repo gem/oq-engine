@@ -46,7 +46,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             src.serial = rup_serial[start:start + nr]
             start += nr
         lonlat = 135.68, 35.68
-        site = Site(geo.Point(*lonlat), 800, True, z1pt0=100., z2pt5=1.)
+        site = Site(geo.Point(*lonlat), 800, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb')
         gsims = [SiMidorikawa1999SInter()]
