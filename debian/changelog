@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the rupture sampling where there is a large number of SESs
   * Extended the `reqv` feature to multiple tectonic region types and
     removed the spinning/floating for the TRTs using the feature
   * Reduced the GMPE logic tree upfront for TRTs missing in the source model
