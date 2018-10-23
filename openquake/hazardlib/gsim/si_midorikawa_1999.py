@@ -25,9 +25,10 @@ Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
 """
 import numpy as np
 
+from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGV
+from openquake.hazardlib.imt import PGV, PGA
 from openquake.hazardlib.geo import (
     Mesh, RectangularMesh, SimpleFaultSurface)
 
@@ -121,10 +122,10 @@ def _apply_subduction_trench_correction(mean, x_tr, H, rrup, imt):
         if H > 30:
             corr *= V1
     else:
-        V1 = 10 ** ((-8.1e-5 * x_tr + 2.0e-2) * (H - 30))
         V2 = np.maximum(1., (10 ** (+0.13)) * ((rrup / 300.) ** 3.2))
         corr = V2
         if H > 30:
+            V1 = 10 ** ((-8.1e-5 * x_tr + 2.0e-2) * (H - 30))
             corr *= V1
     return np.log(np.exp(mean) * corr)
 
@@ -164,9 +165,7 @@ class SiMidorikawa1999Asc(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure type is PGV
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGV
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGV, PGA])
 
     #: Supported intensity measure component is greater of
     #: of two horizontal components :
@@ -180,7 +179,8 @@ class SiMidorikawa1999Asc(GMPE):
     ])
 
     #: No sites parameters are required
-    REQUIRES_SITES_PARAMETERS = set()
+    # REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude, and hypocentral depth
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
@@ -203,7 +203,7 @@ class SiMidorikawa1999Asc(GMPE):
         """
         mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0)
         stddevs = self._get_stddevs(stddev_types, dists.rrup)
-        mean = self._apply_amplification_factor(mean)
+        mean = self._apply_amplification_factor(mean, sites.vs30)
         return mean, stddevs
 
     def _get_mean(self, imt, mag, hypo_depth, rrup, d):
@@ -231,6 +231,7 @@ class SiMidorikawa1999Asc(GMPE):
                 np.log10(rrup + 0.0055 * 10 ** (0.5 * mag)) -
                 0.003 * rrup
             )
+            mean = np.log10(10**(mean)/(g*100))
 
         return mean
 
@@ -249,12 +250,18 @@ class SiMidorikawa1999Asc(GMPE):
         std = np.log(10 ** std)
         return [std for stddev_type in stddev_types]
 
-    def _apply_amplification_factor(self, mean):
+    def _apply_amplification_factor(self, mean, vs30):
         """
         Apply amplification factor to scale PGV value from 600 to 400 m/s vs30
         and convert mean from base 10 to base e.
         """
-        return mean * np.log(10) + np.log(self.AMP_F)
+        assert np.all(vs30 == vs30[0])
+        if abs(vs30[0]-600.) < 1e-10:
+            return mean * np.log(10)
+        elif abs(vs30[0]-400.) < 1e-10:
+            return mean * np.log(10) + np.log(self.AMP_F)
+        else:
+            raise ValueError('Si and Midorikawa 1999 do not support this Vs30 value')
 
 
 class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
@@ -278,10 +285,14 @@ class SiMidorikawa1999SInter(SiMidorikawa1999Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup,
-                              d=-0.02)
+        if imt.name == 'PGV':
+            d = -0.02
+        else:
+            d = 0.01
+        # 
+        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
         stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-        mean = self._apply_amplification_factor(mean)
+        mean = self._apply_amplification_factor(mean, sites.vs30)
         return mean, stddevs
 
     def _get_stddevs(self, stddev_types, pgv):
@@ -305,7 +316,7 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -320,7 +331,7 @@ class SiMidorikawa1999SInterNorthEastCorrection(SiMidorikawa1999SInter):
             sites, rup, dists, imt, stddev_types)
         x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup)
+            mean, x_tr, rup.hypo_depth, dists.rrup, imt)
         return mean, stddevs
 
 
@@ -329,7 +340,7 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
     Extend :class:`SiMidorikawa1999SInter` and takes into account
     correction for southwest Japan (i.e. proximity with volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -343,7 +354,7 @@ class SiMidorikawa1999SInterSouthWestCorrection(SiMidorikawa1999SInter):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
+        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth, imt)
         return mean, stddevs
 
 
@@ -368,9 +379,13 @@ class SiMidorikawa1999SSlab(SiMidorikawa1999SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d=0.12)
+        if imt.name == 'PGV':
+            d = 0.12
+        else:
+            d = 0.22
+        mean = self._get_mean(imt, rup.mag, rup.hypo_depth, dists.rrup, d)
         stddevs = self._get_stddevs(stddev_types, 10 ** mean)
-        mean = self._apply_amplification_factor(mean)
+        mean = self._apply_amplification_factor(mean, sites.vs30)
         return mean, stddevs
 
 
@@ -379,7 +394,7 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for northeast Japan (i.e. proximity to subduction trench)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -394,7 +409,7 @@ class SiMidorikawa1999SSlabNorthEastCorrection(SiMidorikawa1999SSlab):
             sites, rup, dists, imt, stddev_types)
         x_tr = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
         mean = _apply_subduction_trench_correction(
-            mean, x_tr, rup.hypo_depth, dists.rrup)
+            mean, x_tr, rup.hypo_depth, dists.rrup, imt)
         return mean, stddevs
 
 
@@ -403,7 +418,7 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
     Extend :class:`SiMidorikawa1999SSlab` and takes into account
     correction for southwest Japan (i.e. proximity to volcanic front)
     """
-    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat'))
+    REQUIRES_SITES_PARAMETERS = set(('lon', 'lat', 'vs30'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -417,5 +432,5 @@ class SiMidorikawa1999SSlabSouthWestCorrection(SiMidorikawa1999SSlab):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         x_vf = _get_min_distance_to_volcanic_front(sites.lon, sites.lat)
-        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth)
+        mean = _apply_volcanic_front_correction(mean, x_vf, rup.hypo_depth, imt)
         return mean, stddevs
