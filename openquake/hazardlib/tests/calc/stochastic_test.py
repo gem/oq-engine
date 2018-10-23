@@ -51,7 +51,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb')
         gsims = [SiMidorikawa1999SInter()]
         dic = sample_ruptures(group, s_filter, gsims, param)
-        self.assertEqual(len(dic['eb_ruptures']), 8)
+        self.assertEqual(len(dic['eb_ruptures']), 5)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test export
@@ -65,4 +65,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sample_ruptures(group)['eb_ruptures']
-        self.assertEqual(len(ruptures), 2)
+        self.assertEqual(len(ruptures), 1)
