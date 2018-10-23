@@ -288,9 +288,13 @@ def view_params(token, dstore):
 def build_links(items):
     out = []
     for key, fname in items:
-        bname = os.path.basename(fname)
-        link = "`%s <%s>`_" % (bname, bname)
-        out.append((key, link))
+        if isinstance(fname, dict):
+            for k, v in fname.items():
+                b = os.path.basename(v)
+                out.append(('reqv:' + k, "`%s <%s>`_" % (b, b)))
+        else:
+            bname = os.path.basename(fname)
+            out.append((key, "`%s <%s>`_" % (bname, bname)))
     return sorted(out)
 
 
