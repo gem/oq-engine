@@ -271,6 +271,9 @@ def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
         if isinstance(fname, list):
             for f in fname:
                 files.add(os.path.normpath(f))
+        elif isinstance(fname, dict):
+            for f in fname.values():
+                files.add(os.path.normpath(f))
         else:
             files.add(os.path.normpath(fname))
     general.zipfiles(files, archive_zip, log=log)
