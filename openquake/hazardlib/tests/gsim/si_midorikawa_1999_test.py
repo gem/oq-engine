@@ -33,6 +33,9 @@ class SiMidorikawa1999AscTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check('SM99/SM99ASC_MEAN.csv', max_discrep_percentage=0.1)
 
+    def test_mean_pga(self):
+        self.check('SM99/SM99ASC_MEAN_PGA.csv', max_discrep_percentage=0.1)
+
     def test_total_stddev(self):
         self.check('SM99/SM99ASC_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
@@ -55,6 +58,11 @@ class SiMidorikawa1999SInterNECorrTestCase(BaseGSIMTestCase):
             'SM99/SM99SInterNECorr_MEAN.csv', max_discrep_percentage=0.1
         )
 
+    def test_mean_pga(self):
+        self.check(
+            'SM99/SM99SInterNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1
+        )
+
     def test_total_stddev(self):
         self.check(
             'SM99/SM99SInterNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1
@@ -67,6 +75,11 @@ class SiMidorikawa1999SInterSWCorrTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check(
             'SM99/SM99SInterSWCorr_MEAN.csv', max_discrep_percentage=0.1
+        )
+
+    def test_mean_pga(self):
+        self.check(
+            'SM99/SM99SInterSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1
         )
 
     def test_total_stddev(self):
@@ -93,6 +106,11 @@ class SiMidorikawa1999SSlabNECorrTestCase(BaseGSIMTestCase):
             'SM99/SM99SSlabNECorr_MEAN.csv', max_discrep_percentage=0.1
         )
 
+    def test_mean_pga(self):
+        self.check(
+            'SM99/SM99SSlabNECorr_MEAN_PGA.csv', max_discrep_percentage=0.1
+        )
+
     def test_total_stddev(self):
         self.check(
             'SM99/SM99SSlabNECorr_STD_TOTAL.csv', max_discrep_percentage=0.1
@@ -105,6 +123,11 @@ class SiMidorikawa1999SSlabSWCorrTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check(
             'SM99/SM99SSlabSWCorr_MEAN.csv', max_discrep_percentage=0.1
+        )
+
+    def test_mean_pga(self):
+        self.check(
+            'SM99/SM99SSlabSWCorr_MEAN_PGA.csv', max_discrep_percentage=0.1
         )
 
     def test_total_stddev(self):
