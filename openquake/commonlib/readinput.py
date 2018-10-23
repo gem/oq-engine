@@ -122,6 +122,15 @@ def _update(params, items, base_path):
             if value:
                 input_type, [fname] = normalize(key, [value], base_path)
                 params['inputs'][input_type] = fname
+        elif isinstance(value, str) and value.endswith('.hdf5'):
+            # for the reqv feature
+            fname = os.path.normpath(os.path.join(base_path, value))
+            try:
+                reqv = params['inputs']['reqv']
+            except KeyError:
+                params['inputs']['reqv'] = {key: fname}
+            else:
+                reqv.update({key: fname})
         else:
             params[key] = value
 
@@ -413,7 +422,7 @@ def get_gsim_lt(oqparam, trts=['*']):
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
             if gmfcorr and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
-                            set([StdDev.TOTAL])):
+                            {StdDev.TOTAL}):
                 raise CorrelationButNoInterIntraStdDevs(gmfcorr, gsim)
     trts = set(oqparam.minimum_magnitude) - {'default'}
     expected_trts = set(gsim_lt.values)
@@ -730,9 +739,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
-    smodels = []
-    gsim_lt = get_gsim_lt(oqparam)
     source_model_lt = get_source_model_lt(oqparam)
+    trts = source_model_lt.get_trts()
+    trts_lower = {trt.lower() for trt in trts}
+    reqv = oqparam.inputs.get('reqv', {})
+    for trt in reqv:  # these are lowercase because they come from the job.ini
+        if trt not in trts_lower:
+            raise ValueError('Unknown TRT=%s in %s [reqv]' %
+                             (trt, oqparam.inputs['job_ini']))
+    gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if oqparam.number_of_logic_tree_samples == 0:
         logging.info('Potential number of logic tree paths = {:,d}'.format(
             source_model_lt.num_paths * gsim_lt.get_num_paths()))
@@ -740,6 +755,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         logging.info('There is a logic tree on each source')
     if monitor is None:
         monitor = performance.Monitor()
+    smodels = []
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, monitor, in_memory=in_memory):
         for src_group in source_model.src_groups:
@@ -790,7 +806,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    if split_all and 'ucerf' not in oqparam.calculation_mode:
+    if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
         csm = parallel_split_filter(
             csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
     return csm
@@ -956,8 +972,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         asset_refs, assets_by_site, exposure.tagcol, exposure.cost_calculator,
         oqparam.time_event, exposure.occupancy_periods)
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
-            and 'hazard_curves' not in oqparam.inputs):
-        # TODO: think if we should remove this in presence of GMF-correlation
+            and 'hazard_curves' not in oqparam.inputs
+            and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
     return sitecol, assetcol, discarded
 
@@ -1237,7 +1253,11 @@ def get_checksum32(oqparam):
     checksum = 0
     for key in sorted(oqparam.inputs):
         fname = oqparam.inputs[key]
-        if isinstance(fname, list):
+        if isinstance(fname, dict):
+            for f in fname.values():
+                data = open(f, 'rb').read()
+                checksum = zlib.adler32(data, checksum) & 0xffffffff
+        elif isinstance(fname, list):
             for f in fname:
                 data = open(f, 'rb').read()
                 checksum = zlib.adler32(data, checksum) & 0xffffffff

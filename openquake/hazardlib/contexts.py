@@ -185,8 +185,10 @@ class ContextMaker(object):
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        if self.reqv and isinstance(rupture.surface, PlanarSurface):
-            reqv = self.reqv.get(dctx.repi, rupture.mag)
+        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
+                    if self.reqv else None)
+        if reqv_obj and isinstance(rupture.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:

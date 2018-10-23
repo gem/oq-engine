@@ -45,6 +45,7 @@ class OqParam(valid.ParamSet):
         vs30='reference_vs30_value',
         z1pt0='reference_depth_to_1pt0km_per_sec',
         z2pt5='reference_depth_to_2pt5km_per_sec',
+        siteclass='reference_siteclass',
         backarc='reference_backarc')
     asset_loss_table = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
@@ -123,6 +124,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('measured', 'inferred'), 'measured')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
+    reference_siteclass = valid.Param(valid.Choice('A', 'B', 'C', 'D'), 'D')
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
@@ -179,8 +181,10 @@ class OqParam(valid.ParamSet):
         """
         :returns: an instance of class:`RjbEquivalent` if reqv_hdf5 is set
         """
-        if 'reqv' in self.inputs:
-            return valid.RjbEquivalent(self.inputs['reqv'])
+        if 'reqv' not in self.inputs:
+            return
+        return {key: valid.RjbEquivalent(value)
+                for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
         super().__init__(**names_vals)
@@ -318,7 +322,7 @@ class OqParam(valid.ParamSet):
                 # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
-                    if param in ('lon', 'lat', 'vs30'):  # no check
+                    if param in ('lon', 'lat'):  # no check
                         continue
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
