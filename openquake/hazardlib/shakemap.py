@@ -74,12 +74,14 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
             return get_shakemap_array(f1, f2)
 
 
-def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
+def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
+                         assoc_dist=None, discard_assets=False):
     """
     :param array_or_id: shakemap array or shakemap ID
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
+    :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, str):  # shakemap ID
@@ -89,19 +91,24 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
     available_imts = set(array['val'].dtype.names)
     missing = set(imts) - available_imts
     if missing:
-        raise ValueError('The IMT %s is required but not in the available set '
-                         '%s, please change the riskmodel' %
-                         (missing.pop(), ', '.join(available_imts)))
+        msg = ('The IMT %s is required but not in the available set %s, '
+               'please change the riskmodel otherwise you will have '
+               'incorrect zero losses for the associated taxonomies' %
+               (missing.pop(), ', '.join(available_imts)))
+        if discard_assets:
+            logging.error(msg)
+        else:
+            raise RuntimeError(msg)
 
     # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in imts]
+    dt = [(imt, F32) for imt in sorted(available_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
     for name in ('lon',  'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
-        for im in imts:
+        for im in available_imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
@@ -253,11 +260,13 @@ def cholesky(spatial_cov, cross_corr):
 def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
             imts=None):
     """
-    :returns: an array of GMFs of shape (R, N, E, M)
+    :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
     """
     std = shakemap['std']
     if imts is None or len(imts) == 0:
         imts = std.dtype.names
+    else:
+        imts = [imt for imt in imts if imt in std.dtype.names]
     val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in imts}
     imts_ = [imt.from_string(name) for name in imts]
@@ -284,4 +293,4 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
+    return imts, gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)

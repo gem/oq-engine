@@ -415,6 +415,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
+                self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
                 dset = self.datastore.create_dset(
                     'gmf_data/indices', hdf5.vuint32,
                     shape=(N, 2), fillvalue=None)
