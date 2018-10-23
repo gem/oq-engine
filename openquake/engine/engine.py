@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, oq=None, log=logging.info):
+def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -236,7 +236,7 @@ def zip(job_ini, archive_zip, oq=None, log=logging.info):
     logging.basicConfig(level=logging.INFO)
     # do not validate to avoid permissions error on the export_dir
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
-    files = set()
+    files = set(os.path.abspath(fname) for fname in extra)
 
     # collect .hdf5 tables for the GSIMs, if any
     if 'gsim_logic_tree' in oq.inputs or oq.gsim:
@@ -270,6 +270,9 @@ def zip(job_ini, archive_zip, oq=None, log=logging.info):
         fname = oq.inputs[key]
         if isinstance(fname, list):
             for f in fname:
+                files.add(os.path.normpath(f))
+        elif isinstance(fname, dict):
+            for f in fname.values():
                 files.add(os.path.normpath(f))
         else:
             files.add(os.path.normpath(fname))
@@ -320,6 +323,10 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     with logs.handle(job_id, log_level, log_file):  # run the job
         calc = base.calculators(oqparam, calc_id=job_id)
         calc.set_log_format()  # set the log format first of all
+        logging.info('Running %s [--hc=%s]',
+                     calc.oqparam.inputs['job_ini'],
+                     calc.oqparam.hazard_calculation_id)
+        logging.info('Using engine version %s', __version__)
         msg = check_obsolete_version(oqparam.calculation_mode)
         if msg:
             logs.LOG.warn(msg)
@@ -334,7 +341,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             else:  # zip the input
                 logs.LOG.info('zipping the input files')
                 bio = io.BytesIO()
-                zip(oqparam.inputs['job_ini'], bio, oqparam, logging.debug)
+                zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
                 data = bio.getvalue()
             calc.datastore['input_zip'] = numpy.array(data)
             calc.datastore.set_attrs('input_zip', nbytes=len(data))

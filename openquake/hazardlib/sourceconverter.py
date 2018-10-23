@@ -476,7 +476,7 @@ class SourceConverter(RuptureConverter):
     """
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
-                 area_source_discretization=None):
+                 area_source_discretization=None, source_id=None):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.rupture_mesh_spacing = rupture_mesh_spacing
@@ -484,6 +484,7 @@ class SourceConverter(RuptureConverter):
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
+        self.source_id = source_id
 
     def convert_mfdist(self, node):
         """
@@ -779,10 +780,17 @@ class SourceConverter(RuptureConverter):
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
         for src_node in node:
+            if self.source_id and self.source_id != src_node['id']:
+                continue  # filter by source_id
             src = self.convert_node(src_node)
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
+                    src_trt = src_node.get('tectonicRegion')
+                    if src_trt and src_trt != trt:
+                        with context(self.fname, src_node):
+                            raise ValueError('Found %s, expected %s' %
+                                             (src_node['tectonicRegion'], trt))
                     src.tectonic_region_type = value
                 elif attr == 'grp_probability':
                     pass  # do not transmit

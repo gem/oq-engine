@@ -38,9 +38,6 @@ class Site(object):
         where the site is located.
     :param vs30:
         Average shear wave velocity in the top 30 m, in m/s.
-    :param vs30measured:
-        Boolean value, ``True`` if ``vs30`` was measured on that location
-        and ``False`` if it was inferred.
     :param z1pt0:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 1.0 km/sec, in meters.
@@ -55,7 +52,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    def __init__(self, location, vs30=numpy.nan, vs30measured=False,
+    def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
@@ -65,7 +62,6 @@ class Site(object):
             raise ValueError('z2pt5 must be positive')
         self.location = location
         self.vs30 = vs30
-        self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         for param, val in extras.items():
@@ -76,15 +72,14 @@ class Site(object):
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> str(Site(loc, 760.0, True, 100.0, 5.0))
+        >>> str(Site(loc, 760.0, 100.0, 5.0))
         '<Location=<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>, \
-Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
+Vs30=760.0000, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         return (
-            "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
+            "<Location=%s, Vs30=%.4f, Depth1.0km=%.4f, "
             "Depth2.5km=%.4f>") % (
-            self.location, self.vs30, self.vs30measured, self.z1pt0,
-            self.z2pt5)
+            self.location, self.vs30, self.z1pt0, self.z2pt5)
 
     def __hash__(self):
         return hash((self.location.x, self.location.y))
@@ -97,7 +92,7 @@ Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         """
         >>> import openquake.hazardlib
         >>> loc = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> site = Site(loc, 760.0, True, 100.0, 5.0)
+        >>> site = Site(loc, 760.0, 100.0, 5.0)
         >>> str(site) == repr(site)
         True
         """
@@ -121,6 +116,7 @@ site_param_dt = {
     'vs30measured': numpy.bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
+    'siteclass': (numpy.string_, 1),
     'backarc': numpy.bool,
 
     # parameters for geotechnic hazard
@@ -139,7 +135,7 @@ site_param_dt = {
 
 
 class SiteCollection(object):
-    __doc__ = """\
+    """\
     A collection of :class:`sites <Site>`.
 
     Instances of this class are intended to represent a large collection
@@ -226,6 +222,7 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
+            self._set('siteclass', sitemodel.reference_siteclass)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
@@ -268,10 +265,10 @@ class SiteCollection(object):
         """
         Build a complete SiteCollection from a list of Site objects
         """
-        dtlist = ([(p, site_param_dt[p])
-                   for p in ('sids', 'lon', 'lat', 'depth')] +
-                  [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                   if p in site_param_dt])
+        extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
+                 if p in site_param_dt]
+        dtlist = [(p, site_param_dt[p])
+                  for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
         for i in range(len(arr)):
@@ -279,10 +276,8 @@ class SiteCollection(object):
             arr['lon'][i] = sites[i].location.longitude
             arr['lat'][i] = sites[i].location.latitude
             arr['depth'][i] = sites[i].location.depth
-            arr['vs30'][i] = sites[i].vs30
-            arr['vs30measured'][i] = sites[i].vs30measured
-            arr['z1pt0'][i] = sites[i].z1pt0
-            arr['z2pt5'][i] = sites[i].z2pt5
+            for p, dt in extra:
+                arr[p][i] = getattr(sites[i], p)
 
         # protect arrays from being accidentally changed. it is useful
         # because we pass these arrays directly to a GMPE through
@@ -327,6 +322,15 @@ class SiteCollection(object):
             sc.array = self.array[numpy.array(seq, int)]
             tiles.append(sc)
         return tiles
+
+    def split(self, location, distance):
+        """
+        :returns: (close_sites, far_sites)
+        """
+        if distance is None:  # all close
+            return self, None
+        close = location.distance_to_mesh(self) < distance
+        return self.filter(close), self.filter(~close)
 
     def __iter__(self):
         """

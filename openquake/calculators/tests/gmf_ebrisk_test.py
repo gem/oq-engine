@@ -62,14 +62,15 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore['losses_by_event']
-        self.assertEqual(len(alt), 8)
+        self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        aae(totloss, [7717694.], decimal=0)
+        val = 60.15764
+        aae(totloss / 1E6, [val], decimal=4)
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses, [7717694.], decimal=0)
+        aae(avglosses / 1E6, [val], decimal=4)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_ebr_2(self):
