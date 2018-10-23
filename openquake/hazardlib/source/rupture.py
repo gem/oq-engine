@@ -135,7 +135,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -146,7 +146,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
         :returns:
-            int, Number of rupture occurrences
+            numpy array of size n with number of rupture occurrences
         """
         raise NotImplementedError
 
@@ -287,7 +287,7 @@ class ParametricProbabilisticRupture(BaseRupture):
     def sample_number_of_occurrences(self, n=1):
         """
         Draw a random sample from the distribution and return a number
-        of events to occur.
+        of events to occur as an array of integers of size n.
 
         Uses :meth:
         `openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
