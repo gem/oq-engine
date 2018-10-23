@@ -721,8 +721,8 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
-                oq.region_grid_spacing)
+                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance,
+                oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
             assetcol = assetcol.reduce_also(sitecol)
