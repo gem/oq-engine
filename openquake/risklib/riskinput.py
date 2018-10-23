@@ -249,7 +249,7 @@ class CompositeRiskModel(collections.Mapping):
             riskinput.gmdata = hazard_getter.gmdata
 
     def _gen_outputs(self, hazard_getter, hazard, dic):
-        imti = {imt: i for i, imt in enumerate(hazard_getter.imtls)}
+        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         with self.monitor('computing risk'):
             for taxonomy in sorted(dic):
                 riskmodel = self[taxonomy]
