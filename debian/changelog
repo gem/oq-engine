@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Extended the `reqv` feature to multiple tectonic region types
+  * Extended the `reqv` feature to multiple tectonic region types and
+    removed the spinning/floating for the TRTs using the feature
   * Reduced the GMPE logic tree upfront for TRTs missing in the source model
   * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
   * Improved the error message when there are more than 65536 distinct tags
