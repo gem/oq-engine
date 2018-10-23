@@ -147,7 +147,7 @@ class OqParam(valid.ParamSet):
     sm_lt_path = valid.Param(valid.logic_tree_path, None)
     source_id = valid.Param(valid.source_id, None)
     specific_assets = valid.Param(valid.namelist, [])
-    pointsource_distance = valid.Param(valid.positivefloat, None)
+    pointsource_distance = valid.Param(valid.maximum_distance, {})
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
