@@ -623,22 +623,31 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
-    def test_nrml05(self):
+    def test_nrml04(self):
         oq = readinput.get_oqparam('job.ini', case_1)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
 
-    def test_nrml04(self):
+    def test_nrml05(self):
         oq = readinput.get_oqparam('job.ini', case_2)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
+        srcs = csm.get_sources()  # two PointSources
+        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
         readinput.reduce_source_model(smlt, [], False)
+
+    def test_wrong_trts(self):
+        # invalid TRT in job.ini [reqv]
+        oq = readinput.get_oqparam('job.ini', case_2)
+        fname = oq.inputs['reqv'].pop('active shallow crust')
+        oq.inputs['reqv']['act shallow crust'] = fname
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oq, in_memory=False)
+        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
