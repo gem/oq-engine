@@ -59,6 +59,10 @@ class PmapGetter(object):
     def weights(self):
         return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
+    @property
+    def imts(self):
+        return list(self.imtls)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -210,16 +214,19 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, imtls):
+    def __init__(self, dstore, sids, num_rlzs):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.imtls = imtls
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
+        try:
+            self.imts = self.dstore['gmf_data/imts'].value.split()
+        except KeyError:  # engine < 3.3
+            self.imts = list(self.dstore['oqparam'].imtls)
         self.eids = self.dstore['events']['eid']
         self.eids.sort()
         self.data = collections.OrderedDict()
@@ -233,7 +240,7 @@ class GmfDataGetter(collections.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 1, F32))
 
     def get_hazard(self, gsim=None):
         """
@@ -296,6 +303,10 @@ class GmfGetter(object):
     @property
     def imtls(self):
         return self.oqparam.imtls
+
+    @property
+    def imts(self):
+        return list(self.oqparam.imtls)
 
     def init(self):
         """
