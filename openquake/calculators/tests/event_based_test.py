@@ -18,7 +18,6 @@
 import os
 import re
 import math
-import unittest
 from nose.plugins.attrib import attr
 
 import numpy.testing
