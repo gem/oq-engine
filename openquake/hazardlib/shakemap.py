@@ -89,19 +89,21 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
     available_imts = set(array['val'].dtype.names)
     missing = set(imts) - available_imts
     if missing:
-        raise ValueError('The IMT %s is required but not in the available set '
-                         '%s, please change the riskmodel' %
-                         (missing.pop(), ', '.join(available_imts)))
+        logging.error(
+            'The IMT %s is required but not in the available set %s, '
+            'please change the riskmodel otherwise you will have '
+            'incorrect zero losses for the associated taxonomies' %
+            (missing.pop(), ', '.join(available_imts)))
 
     # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in imts]
+    dt = [(imt, F32) for imt in available_imts]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
     for name in ('lon',  'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
-        for im in imts:
+        for im in available_imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
