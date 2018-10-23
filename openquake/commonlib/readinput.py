@@ -178,6 +178,9 @@ def get_params(job_inis, **kw):
         inputs['source'] = logictree.collect_info(smlt).smpaths
     elif 'source_model' in inputs:
         inputs['source'] = [inputs['source_model']]
+    if inputs.get('reqv'):
+        # using pointsource_distance=0 because of the reqv approximation
+        params['pointsource_distance'] = '0'
     return params
 
 
@@ -782,15 +785,15 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
-    if 'event_based' in oqparam.calculation_mode:
-        if oqparam.pointsource_distance == 0:
-            # remove splitting/floating ruptures
-            for src in csm.get_sources():
-                if hasattr(src, 'hypocenter_distribution'):
-                    src.hypocenter_distribution.reduce()
-                    src.nodal_plane_distribution.reduce()
-                    src.num_ruptures = src.count_ruptures()
+    # remove splitting/floating ruptures
+    for src in csm.get_sources():
+        if (oqparam.pointsource_distance.get(src.tectonic_region_type)
+                == 0 and hasattr(src, 'hypocenter_distribution')):
+            src.hypocenter_distribution.reduce()
+            src.nodal_plane_distribution.reduce()
+            src.num_ruptures = src.count_ruptures()
 
+    if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
