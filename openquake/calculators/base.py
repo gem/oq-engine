@@ -729,9 +729,10 @@ class RiskCalculator(HazardCalculator):
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
-            gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
-                           oq.truncation_level, E, oq.random_seed)
-            save_gmf_data(self.datastore, sitecol, gmfs)
+            imts, gmfs = to_gmfs(
+                shakemap, oq.cross_correlation, oq.site_effects,
+                oq.truncation_level, E, oq.random_seed, oq.imtls)
+            save_gmf_data(self.datastore, sitecol, gmfs, imts)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
@@ -775,8 +776,7 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, [sid], self.R,
-                                       self.oqparam.imtls)
+                getter = GmfDataGetter(dstore, [sid], self.R)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 getter.init()
@@ -872,14 +872,16 @@ def save_gmfs(calculator):
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
+                      oq.imtls, eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param gmfs: an array of shape (R, N, E, M)
+    :param imts: a list of IMT strings
     :param eids: E event IDs or the empty tuple
     """
     offset = 0
@@ -892,6 +894,7 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
         n = len(rows)
         lst.append((offset, offset + n))
         offset += n
+    dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
@@ -910,7 +913,9 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = writers.read_composite_array(fname).array
-    n_imts = len(array.dtype.names[3:])  # rlzi, sid, eid, gmv_PGA, ...
+    # has header rlzi, sid, eid, gmv_PGA, ...
+    imts = [name[4:] for name in array.dtype.names[3:]]
+    n_imts = len(imts)
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
     # store the events
@@ -930,6 +935,7 @@ def import_gmfs(dstore, fname, sids):
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    dstore['gmf_data/imts'] = ' '.join(imts)
 
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
