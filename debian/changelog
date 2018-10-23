@@ -1,4 +1,21 @@
   [Michele Simionato]
+  * Extended the `reqv` feature to multiple tectonic region types
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
+  * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
+  * Improved the error message when there are more than 65536 distinct tags
+    in the exposure
+  * Turned `vs30measured` into an optional parameter
+
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Added new classes to mcverry_2006.py to take siteclass as a predictor
+  * Updated comments in mcverry_2006.py
+  * Added new mcverry_2006 test tables to account for difference in site
+    parameter
+  * Added qa_test_data classical case_32
+
+  [Michele Simionato]
   * Fixed the rupture exporter for Canada
   * Extended the `oq prepare_site_model` to optionally generate the
     fields z1pt0, z2pt5 and vs30measured
