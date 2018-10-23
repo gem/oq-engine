@@ -304,6 +304,10 @@ class GmfGetter(object):
     def imtls(self):
         return self.oqparam.imtls
 
+    @property
+    def imts(self):
+        return list(self.oqparam.imtls)
+
     def init(self):
         """
         Initialize the computers. Should be called on the workers
