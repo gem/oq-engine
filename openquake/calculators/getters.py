@@ -223,7 +223,10 @@ class GmfDataGetter(collections.Mapping):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        self.imts = self.dstore['gmf_data/imts'].value.split()
+        try:
+            self.imts = self.dstore['gmf_data/imts'].value.split()
+        except KeyError:  # engine < 3.3
+            self.imts = list(self.dstore['oqparam'].imtls)
         self.eids = self.dstore['events']['eid']
         self.eids.sort()
         self.data = collections.OrderedDict()
