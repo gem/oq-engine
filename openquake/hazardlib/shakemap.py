@@ -16,10 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
-from urllib.error import HTTPError
 import io
-import re
 import math
+import json
 import zipfile
 import logging
 import numpy
@@ -30,11 +29,7 @@ from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
-URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
-GRID_RX = URL_RX + 'grid\.xml(\.zip)?'
-UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
-
+SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 
@@ -47,25 +42,14 @@ class MissingLink(Exception):
     """Could not find link in web page"""
 
 
-def _download(url):
-    try:
-        with urlopen(url) as f:
-            return f.read().decode('utf-8')
-    except HTTPError as exc:  # not found
-        raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
-
-
 def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
-    if url.endswith('.zip'):
-        with urlopen(url) as f:
-            data = io.BytesIO(f.read())
-        with zipfile.ZipFile(data) as z:
-            return z.open(fname)
-    else:  # not a zip
-        return urlopen(url)
+    with urlopen(url) as f:
+        data = io.BytesIO(f.read())
+    with zipfile.ZipFile(data) as z:
+        return z.open(fname)
 
 
 def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
@@ -75,16 +59,18 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     """
     url = shakemap_url.format(shakemap_id)
     logging.info('Downloading %s', url)
-    grid = re.search(GRID_RX, _download(url))
-    uncertainty = re.search(UNCERTAINTY_RX, _download(url))
+    contents = json.loads(urlopen(url).read())[
+        'properties']['products']['shakemap'][-1]['contents']
+    grid = contents.get('download/grid.xml')
     if grid is None:
-        raise MissingLink('Could not find grid.xml.zip link in %s' % url)
+        raise MissingLink('Could not find grid.xml link in %s' % url)
+    uncertainty = contents.get('download/uncertainty.xml.zip')
     if uncertainty is None:
-        with urlopen(US_GOV + grid.group()) as f:
+        with urlopen(grid['url']) as f:
             return get_shakemap_array(f)
     else:
-        with urlextract(US_GOV + grid.group(), 'grid.xml') as f1, \
-             urlextract(US_GOV + uncertainty.group(), 'uncertainty.xml') as f2:
+        with urlopen(grid['url']) as f1, urlextract(
+                uncertainty['url'], 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
 
 
@@ -278,6 +264,10 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_)
     stddev = [std[str(imt)] for imt in imts_]
+    for im, std in zip(imts_, stddev):
+        if std.sum() == 0:
+            raise ValueError('Cannot decompose the spatial covariance '
+                             'because stddev==0 for IMT=%s' % im)
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
     M, N = spatial_corr.shape[:2]

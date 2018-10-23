@@ -96,10 +96,12 @@ class GmfComputer(object):
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        # `rupture` can be a high level rupture object containing a low
-        # level hazardlib rupture object as a .rupture attribute
-        if hasattr(rupture, 'rupture'):
-            rupture = rupture.rupture
+        # `rupture` can be an EBRupture instance
+        if hasattr(rupture, 'srcidx'):
+            self.srcidx = rupture.srcidx  # the source the rupture comes from
+            rupture = rupture.rupture  # the underlying rupture
+        else:
+            self.srcidx = '?'
         try:
             self.sctx, self.dctx = rupture.sctx, rupture.dctx
         except AttributeError:
@@ -128,7 +130,12 @@ class GmfComputer(object):
                 gs = gsim[str(imt)]  # MultiGMPE
             else:
                 gs = gsim  # regular GMPE
-            result[imti] = self._compute(None, gs, num_events, imt)
+            try:
+                result[imti] = self._compute(None, gs, num_events, imt)
+            except Exception as exc:
+                raise exc.__class__(
+                    '%s for %s, %s, srcidx=%s' % (exc, gs, imt, self.srcidx)
+                ).with_traceback(exc.__traceback__)
         return result
 
     def _compute(self, seed, gsim, num_events, imt):

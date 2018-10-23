@@ -209,6 +209,8 @@ class EventBasedCalculator(base.HazardCalculator):
             return self.datastore.parent['csm_info']
 
     def init(self):
+        if hasattr(self, 'csm'):
+            self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
@@ -244,22 +246,21 @@ class EventBasedCalculator(base.HazardCalculator):
     def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        with self.monitor('saving ruptures', autoflush=True):
-            for srcs in ires:
-                for src in srcs:
-                    # save the events always; save the ruptures
-                    # if oq.save_ruptures is true
-                    self.save_ruptures(src.eb_ruptures)
-                    gmf_size += max_gmf_size(
-                        {src.src_group_id: src.eb_ruptures},
-                        self.rlzs_by_gsim_grp,
-                        self.samples_by_grp,
-                        len(self.oqparam.imtls))
-                    calc_times += src.calc_times
-                    del src.calc_times
-                    yield from src.eb_ruptures
-                    del src.eb_ruptures
-            self.rupser.close()
+        for srcs in ires:
+            for src in srcs:
+                # save the events always; save the ruptures
+                # if oq.save_ruptures is true
+                self.save_ruptures(src.eb_ruptures)
+                gmf_size += max_gmf_size(
+                    {src.src_group_id: src.eb_ruptures},
+                    self.rlzs_by_gsim_grp,
+                    self.samples_by_grp,
+                    len(self.oqparam.imtls))
+                calc_times += src.calc_times
+                del src.calc_times
+                yield from src.eb_ruptures
+                del src.eb_ruptures
+        self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
             msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
@@ -284,7 +285,7 @@ class EventBasedCalculator(base.HazardCalculator):
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
-
+        param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         ires = parallel.Starmap.apply(
             build_ruptures,

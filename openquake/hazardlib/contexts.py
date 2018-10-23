@@ -82,10 +82,7 @@ class ContextMaker(object):
         param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.hypo_dist_collapsing_distance = param.get(
-            'hypo_dist_collapsing_distance')
-        self.nodal_dist_collapsing_distance = param.get(
-            'nodal_dist_collapsing_distance')
+        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -188,8 +185,10 @@ class ContextMaker(object):
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        if self.reqv and isinstance(rupture.surface, PlanarSurface):
-            reqv = self.reqv.get(dctx.repi, rupture.mag)
+        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
+                    if self.reqv else None)
+        if reqv_obj and isinstance(rupture.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -201,52 +200,65 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
+    def get_ruptures_sites(self, src, sites):
+        """
+        :param src: a hazardlib source
+        :param sites: the sites affected by it
+        :yields: pairs (ruptures, sites)
+        """
+        out = []
+        with self.ir_mon:
+            pdist = self.pointsource_distance.get(src.tectonic_region_type)
+            if hasattr(src, 'location') and pdist:
+                close_sites, far_sites = sites.split(src.location, pdist)
+                if close_sites is None:  # all is far
+                    out.append((list(src.iter_ruptures(False, False)),
+                                far_sites))
+                elif far_sites is None:  # all is close
+                    out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                else:
+                    out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                    out.append((list(src.iter_ruptures(False, False)),
+                                far_sites))
+            else:
+                out.append((list(src.iter_ruptures()), sites))
+        return out
+
+    def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
-        :param sites: a filtered SiteCollection
+        :param s_sites: a filtered SiteCollection of sites around the source
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
         pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sites.sids,
+            len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        with self.ir_mon:
-            if hasattr(src, 'location'):
-                dist = src.location.distance_to_mesh(sites).min()
-                if (self.hypo_dist_collapsing_distance is not None and
-                        dist > self.hypo_dist_collapsing_distance):
-                    # disable floating
-                    src.hypocenter_distribution.reduce()
-                if (self.nodal_dist_collapsing_distance is not None and
-                        dist > self.nodal_dist_collapsing_distance):
-                    # disable spinning
-                    src.nodal_plane_distribution.reduce()
-            rups = list(src.iter_ruptures())
-        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
-        # discards far away ruptures: len(rups) < src.num_ruptures can happen
-        if len(rups) > src.num_ruptures:
-            raise ValueError('Expected at max %d ruptures, got %d' % (
-                src.num_ruptures, len(rups)))
-        weight = 1. / len(rups)
-        for rup in rups:
-            rup.weight = weight
-            try:
-                with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
-            eff_ruptures += 1
-            with self.poe_mon:
-                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                for sid, pne in zip(sctx.sids, pnes):
-                    if rup_indep:
-                        pmap[sid].array *= pne
-                    else:
-                        pmap[sid].array += pne * rup.weight
+        for rups, sites in self.get_ruptures_sites(src, s_sites):
+            if len(rups) > src.num_ruptures:
+                raise ValueError('Expected at max %d ruptures, got %d' % (
+                    src.num_ruptures, len(rups)))
+            weight = 1. / len(rups)
+            for rup in rups:
+                rup.weight = weight
+                try:
+                    with self.ctx_mon:
+                        sctx, dctx = self.make_contexts(sites, rup)
+                except FarAwayRupture:
+                    continue
+                eff_ruptures += 1
+                with self.poe_mon:
+                    pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                    for sid, pne in zip(sctx.sids, pnes):
+                        if rup_indep:
+                            pmap[sid].array *= pne
+                        else:
+                            pmap[sid].array += pne * rup.weight
         pmap = ~pmap
         pmap.eff_ruptures = eff_ruptures
         return pmap

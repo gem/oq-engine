@@ -21,6 +21,7 @@ import math
 from datetime import datetime
 import numpy
 import h5py
+from openquake.baselib.general import random_filter
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -259,7 +260,7 @@ class UCERFSource(BaseSeismicSource):
         """
         Called when updating the SourceGroup
         """
-        return self.min_mag, None
+        return self.min_mag, 10
 
     def _get_tom(self):
         """
@@ -383,14 +384,19 @@ class UCERFSource(BaseSeismicSource):
         return '<%s %s[%d:%d]>' % (self.__class__.__name__, self.source_id,
                                    self.start, self.stop)
 
-    def get_background_sources(self, src_filter):
+    def get_background_sources(self, src_filter, sample_factor=None):
         """
         Turn the background model of a given branch into a set of point sources
 
         :param src_filter:
             SourceFilter instance
+        :param sample_factor:
+            Used to reduce the sources if OQ_SAMPLE_SOURCES is set
         """
         background_sids = self.get_background_sids(src_filter)
+        if sample_factor:
+            background_sids = random_filter(
+                background_sids, float(sample_factor), seed=42)
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates

@@ -296,6 +296,12 @@ stddev         838           555
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_4b(self):
+        # case with site collection extracted from site_model.xml
+        self.run_calc(case_4a.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['events']), 5)
+
     @attr('qa', 'hazard', 'event_based_risk')
     def test_case_6c(self):
         # case with asset_correlation=1

@@ -113,9 +113,10 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to (%.1f %.1f) from site #%d '
-                             '(%.1f %.1f) %d km', obj['lon'], obj['lat'],
-                             sid, lon, lat, int(distance))
+                logging.warn(
+                    'The closest vs30 site (%.1f %.1f) is distant more than %d'
+                    ' km from site #%d (%.1f %.1f)', obj['lon'], obj['lat'],
+                    int(distance), sid, lon, lat)
             elif mode == 'filter':
                 discarded.append(obj)
             elif mode == 'strict':
@@ -139,7 +140,7 @@ class _GeographicObjects(object):
         :param mode: 'strict', 'warn' or 'filter'
         :returns: (filtered site collection, filtered assets by site)
         """
-        assert mode in 'strict warn filter', mode
+        assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
         site_dt = numpy.dtype([('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
@@ -154,10 +155,6 @@ class _GeographicObjects(object):
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-            elif mode == 'warn':
-                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
-                             assets, lon, lat)
-                discarded.extend(assets)
             else:
                 discarded.extend(assets)
         sids = sorted(assets_by_sid)
