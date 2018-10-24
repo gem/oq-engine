@@ -279,7 +279,7 @@ class EbrCalculator(base.RiskCalculator):
         """
         with self.monitor('saving losses', measuremem=True):
             self.save_losses(res)
-        return 1
+        return {}
 
     def post_execute(self, result):
         """

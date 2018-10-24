@@ -798,11 +798,20 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        smap = Starmap(self.core_task.__func__)
-        mon = self.monitor()
-        for ri in self.riskinputs:
-            smap.submit([ri], self.riskmodel, self.param, mon)
-        return smap.reduce(self.combine)
+        acc = {}
+        func = self.core_task.__func__
+        rts = self.oqparam.risk_tile_size
+        blocks = list(general.block_splitter(self.riskinputs, rts))
+        n = len(blocks)
+        for i, block in enumerate(blocks, 1):
+            if n == 1:
+                mon = self.monitor(func.__name__)
+            else:
+                mon = self.monitor('%s:%d/%d' % (func.__name__, i, n))
+            smap = Starmap(func, [([ri], self.riskmodel, self.param, mon)
+                                  for ri in block], mon)
+            acc = smap.reduce(self.combine, acc)
+        return acc
 
     def combine(self, acc, res):
         return acc + res
