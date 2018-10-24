@@ -379,7 +379,7 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        op = '<' if self.oqparam.pointsource_distance is not None else '='
+        op = '=' if self.oqparam.pointsource_distance == {} else '<'
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor %s %s', op, f)
