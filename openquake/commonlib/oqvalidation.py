@@ -135,6 +135,7 @@ class OqParam(valid.ParamSet):
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
+    risk_tile_size = valid.Param(valid.positiveint, 2000)
     save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
