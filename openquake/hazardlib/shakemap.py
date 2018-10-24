@@ -49,7 +49,18 @@ def urlextract(url, fname):
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
-        return z.open(fname)
+        try:
+            return z.open(fname)
+        except KeyError:
+            # for instance the ShakeMap ci3031111 has inside a file
+            # data/verified_atlas2.0/reviewed/19920628115739/output/
+            # uncertainty.xml
+            # instead of just uncertainty.xml
+            zinfo = z.filelist[0]
+            if zinfo.filename.endswith(fname):
+                return z.open(zinfo)
+            else:
+                raise
 
 
 def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
