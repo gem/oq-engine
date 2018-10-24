@@ -786,10 +786,12 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         return csm
 
     # remove splitting/floating ruptures
-    for src in csm.get_sources():
+    for i, src in enumerate(csm.get_sources()):
         if (oqparam.pointsource_distance.get(src.tectonic_region_type)
                 == 0 and hasattr(src, 'hypocenter_distribution')):
-            logging.warn('Removing nodal planes and hypocenter distributions')
+            if i == 0:
+                logging.warn(
+                    'Removing nodal planes and hypocenter distributions')
             src.hypocenter_distribution.reduce()
             src.nodal_plane_distribution.reduce()
             src.num_ruptures = src.count_ruptures()
