@@ -35,8 +35,8 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
-def get_job_id(job_id):
-    job = logs.dbcmd('get_job', job_id)
+def get_job_id(job_id, username=None):
+    job = logs.dbcmd('get_job', job_id, username)
     if not job:
         sys.exit('Job %s not found' % job_id)
     return job.id
@@ -163,7 +163,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
 
     # hazard or hazard+risk
     if hazard_calculation_id:
-        hc_id = get_job_id(hazard_calculation_id)
+        hc_id = get_job_id(hazard_calculation_id, getpass.getuser())
     else:
         hc_id = None
     if run:
