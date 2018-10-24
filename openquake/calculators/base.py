@@ -379,7 +379,7 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        op = '<' if self.oqparam.pointsource_distance is not None else '='
+        op = '=' if self.oqparam.pointsource_distance == {} else '<'
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor %s %s', op, f)
@@ -766,8 +766,6 @@ class RiskCalculator(HazardCalculator):
         return riskinputs
 
     def _gen_riskinputs(self, kind, eps, num_events):
-        rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
-        rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         dstore = self.can_read_parent() or self.datastore
         for sid, assets in enumerate(assets_by_site):
@@ -785,18 +783,12 @@ class RiskCalculator(HazardCalculator):
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            for block in general.block_splitter(
-                    assets, self.oqparam.assets_per_site_limit):
+            for block in general.block_splitter(assets, 1000):
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = {ass.ordinal: eps[ass.ordinal]
                                for ass in block
                                if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
-                rinfo.append((sid, len(block)))
-                if len(block) >= TWO16:
-                    logging.error('There are %d assets on site #%d!',
-                                  len(block), sid)
-        self.datastore['riskinput_info'] = numpy.array(rinfo, rinfo_dt)
 
     def execute(self):
         """
@@ -806,23 +798,13 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        acc = general.AccumDict()
-        func = self.core_task.__func__
-        rts = self.oqparam.risk_tile_size
-        blocks = list(general.block_splitter(self.riskinputs, rts))
-        n = len(blocks)
-        for i, block in enumerate(blocks, 1):
-            if n == 1:
-                mon = self.monitor(func.__name__)
-            else:
-                mon = self.monitor('%s:%d/%d' % (func.__name__, i, n))
-            smap = Starmap(func, [([ri], self.riskmodel, self.param, mon)
-                                  for ri in block], mon)
-            acc = smap.reduce(self.combine, acc)
-        return acc
-
-    def combine(self, acc, res):
-        return acc + res
+        res = Starmap.apply(
+            self.core_task.__func__,
+            (self.riskinputs, self.riskmodel, self.param, self.monitor()),
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            weight=get_weight
+        ).reduce()
+        return res
 
 
 def get_gmv_data(sids, gmfs):
