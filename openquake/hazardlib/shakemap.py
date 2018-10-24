@@ -177,6 +177,7 @@ def cross_correlation_matrix(imts, corr='cross'):
     """
     :param imts: M intensity measure types
     :param corr: 'no correlation', 'full correlation' or 'cross'
+    :returns: an array of shape (M, M)
     """
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
@@ -242,7 +243,11 @@ def amplify_ground_shaking(T, vs30, gmvs):
 
 def cholesky(spatial_cov, cross_corr):
     """
-    Decompose the spatial covariance and cross correlation matrices
+    Decompose the spatial covariance and cross correlation matrices.
+
+    :param spatial_cov: array of shape (M, N, N)
+    :param cross_corr: array of shape (M, M)
+    :returns: a triangular matrix of shape (M * N, M * N)
     """
     M, N = spatial_cov.shape[:2]
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
@@ -257,11 +262,12 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
-            imts=None):
+def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
+            num_gmfs, seed, imts=None):
     """
     :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
     """
+    N = len(shakemap)  # number of sites
     std = shakemap['std']
     if imts is None or len(imts) == 0:
         imts = std.dtype.names
@@ -270,20 +276,24 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in imts}
     imts_ = [imt.from_string(name) for name in imts]
-    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts_)
-    stddev = [std[str(imt)] for imt in imts_]
-    for im, std in zip(imts_, stddev):
-        if std.sum() == 0:
-            raise ValueError('Cannot decompose the spatial covariance '
-                             'because stddev==0 for IMT=%s' % im)
-    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+    M = len(imts_)
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
-    M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
                       for imt in imts_ for j in range(N)])
-    # mu has shape (M * N, E)
-    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    if spatialcorr:
+        dmatrix = geo.geodetic.distance_matrix(
+            shakemap['lon'], shakemap['lat'])
+        spatial_corr = spatial_correlation_array(dmatrix, imts_)
+        stddev = [std[str(imt)] for imt in imts_]
+        for im, std in zip(imts_, stddev):
+            if std.sum() == 0:
+                raise ValueError('Cannot decompose the spatial covariance '
+                                 'because stddev==0 for IMT=%s' % im)
+        spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+        # mu has shape (M * N, E)
+        L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    else:
+        L = numpy.zeros((M * N, M * N))
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
