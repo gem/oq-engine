@@ -798,13 +798,11 @@ class RiskCalculator(HazardCalculator):
         """
         if not hasattr(self, 'riskinputs'):  # in the reportwriter
             return
-        res = Starmap.apply(
-            self.core_task.__func__,
-            (self.riskinputs, self.riskmodel, self.param, self.monitor()),
-            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
-            weight=get_weight
-        ).reduce(self.combine)
-        return res
+        smap = Starmap(self.core_task.__func__)
+        mon = self.monitor()
+        for ri in self.riskinputs:
+            smap.submit([ri], self.riskmodel, self.param, mon)
+        return smap.reduce(self.combine)
 
     def combine(self, acc, res):
         return acc + res
