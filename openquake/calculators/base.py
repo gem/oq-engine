@@ -793,6 +793,9 @@ class RiskCalculator(HazardCalculator):
                                if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
                 rinfo.append((sid, len(block)))
+                if len(block) >= TWO16:
+                    logging.error('There are %d assets on site #%d!',
+                                  len(block), sid)
         self.datastore['riskinput_info'] = numpy.array(rinfo, rinfo_dt)
 
     def execute(self):
