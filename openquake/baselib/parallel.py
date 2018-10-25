@@ -548,7 +548,7 @@ class Starmap(object):
         elif distribute == 'no' and hasattr(cls, 'pool'):
             cls.shutdown()
         elif distribute == 'dask':
-            cls.dask_client = Client()
+            cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
