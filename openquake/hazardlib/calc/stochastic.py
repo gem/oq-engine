@@ -167,8 +167,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
 
         # creating EBRuptures
         events = []
-        for idx, num_occ in enumerate(n_occ):
-            sam_idx, ses_idx = divmod(idx, num_ses)
+        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
             for _ in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
                 # set a bit later, in set_eids
