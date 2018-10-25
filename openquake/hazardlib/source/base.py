@@ -113,7 +113,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         # generating ruptures for the given source
         n = num_ses * getattr(self, 'samples', 1)
         mutex_weight = getattr(self, 'mutex_weight', 1)
-        num_occ_by_rup = AccumDict(accum=AccumDict())
         for rup_no, rup in enumerate(self.iter_ruptures()):
             rup.serial = self.serial[rup_no]
             numpy.random.seed(rup.serial)
@@ -122,11 +121,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 ok = numpy.random.random(n) < mutex_weight
             else:
                 ok = numpy.ones(n, bool)
+            acc = AccumDict()
             for idx in range(n):
                 n_occ = num_occ[idx]
                 if n_occ and ok[idx]:
-                    num_occ_by_rup[rup] += {idx: n_occ}
-        return num_occ_by_rup
+                    acc += {idx: n_occ}
+            yield rup, acc
 
     def __iter__(self):
         """
