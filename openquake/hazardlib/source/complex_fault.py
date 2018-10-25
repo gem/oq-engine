@@ -33,10 +33,14 @@ MINWEIGHT = 100
 
 
 class RuptureCollection(ParametricSeismicSource):
+    """
+    A parametric source obtained from the splitting of a ComplexFaultSource
+    """
     MODIFICATIONS = set()
 
-    def __init__(self, source_id, tectonic_region_type, mfd, ruptures):
+    def __init__(self, source_id, name, tectonic_region_type, mfd, ruptures):
         self.source_id = source_id
+        self.name = name  # used in disagg
         self.tectonic_region_type = tectonic_region_type
         self.mfd = mfd
         self.ruptures = ruptures
@@ -50,8 +54,8 @@ class RuptureCollection(ParametricSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all points, enlarged by the maximum distance
-        and the maximum rupture projection radius (upper limit).
+        Bounding box containing all the hypocenters, enlarged by the
+        maximum distance
         """
         lons = [rup.hypocenter.x for rup in self.ruptures]
         lats = [rup.hypocenter.y for rup in self.ruptures]
@@ -67,7 +71,7 @@ def split(src, chunksize=MINWEIGHT):
     """
     for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize)):
         source_id = '%s:%d' % (src.source_id, i)
-        yield RuptureCollection(source_id, src.tectonic_region_type,
+        yield RuptureCollection(source_id, src.name, src.tectonic_region_type,
                                 src.mfd, block)
 
 
