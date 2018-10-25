@@ -156,22 +156,20 @@ def _build_eb_ruptures(src, num_ses, num_occ_by_rup, cmaker, s_sites, rup_mon):
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
-    for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
+    for rup in num_occ_by_rup:
         if cmaker.maximum_distance:
             with rup_mon:
                 try:
                     rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
                     indices = rup.sctx.sids
                 except FarAwayRupture:
-                    # ignore ruptures which are far away
-                    del num_occ_by_rup[rup]  # save memory
                     continue
         else:
             indices = ()
 
         # creating EBRuptures
         events = []
-        for idx, num_occ in sorted(num_occ_by_rup[rup].items()):
+        for idx, num_occ in num_occ_by_rup[rup].items():
             sam_idx, ses_idx = divmod(idx, num_ses)
             for _ in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
