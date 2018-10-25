@@ -19,6 +19,8 @@ seismic sources.
 """
 import abc
 import math
+import numpy
+from openquake.baselib.general import AccumDict
 from openquake.baselib.slots import with_slots
 
 
@@ -100,6 +102,32 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
+
+    def sample_ruptures(self, num_ses):
+        """
+        :param num_ses: number of stochastic event sets
+        :returns: a nested dictionary rupture -> {idx: num_occ}
+        """
+        # the dictionary `num_occ_by_rup` contains a dictionary
+        # ses_id -> num_occurrences for each occurring rupture
+        # generating ruptures for the given source
+        n = num_ses * getattr(self, 'samples', 1)
+        mutex_weight = getattr(self, 'mutex_weight', 1)
+        num_occ_by_rup = AccumDict(accum=AccumDict())
+        for rup_no, rup in enumerate(self.iter_ruptures()):
+            rup.serial = self.serial[rup_no]
+            numpy.random.seed(rup.serial)
+            num_occ = rup.sample_number_of_occurrences(n)
+            if mutex_weight < 1:
+                ok = numpy.random.random(n) < mutex_weight
+            else:
+                ok = numpy.ones(n, bool)
+            for idx in range(n):
+                n_occ = num_occ[idx]
+                if n_occ and ok[idx]:
+                    num_occ_by_rup[rup] += {idx: n_occ}
+            rup.rup_no = rup_no + 1  # it is used for ordering purposes
+        return num_occ_by_rup
 
     def __iter__(self):
         """
