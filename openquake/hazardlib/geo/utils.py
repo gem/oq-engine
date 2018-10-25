@@ -261,11 +261,21 @@ def get_longitudinal_extent(lon1, lon2):
 
 def get_bounding_box(obj, maxdist):
     """
-    Return the dilated bounding box of a geometric object
+    Return the dilated bounding box of a geometric object.
+
+    :param obj:
+        an object with method .get_bounding_box, or with an attribute .polygon
+        or a list of locations
+    :param maxdist: maximum distance in km
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)
-    bbox = obj.polygon.get_bbox()
+    elif hasattr(obj, 'polygon'):
+        bbox = obj.polygon.get_bbox()
+    else:  # assume locations
+        lons = [loc.longitude for loc in obj]
+        lats = [loc.latitude for loc in obj]
+        bbox = min(lons), min(lats), max(lons), max(lats)
     a1 = maxdist * KM_TO_DEGREES
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
