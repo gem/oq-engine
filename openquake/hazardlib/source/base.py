@@ -105,12 +105,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     def sample_ruptures(self, num_ses):
         """
         :param num_ses: number of stochastic event sets
-        :yields: pairs (rupture, occurrency per ses per sample)
+        :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
         """
         # the dictionary `num_occ_by_rup` contains a dictionary
         # ses_id -> num_occurrences for each occurring rupture
         # generating ruptures for the given source
-        n = num_ses * getattr(self, 'samples', 1)
+        num_samples = getattr(self, 'samples', 1)
+        n = num_ses * num_samples
         mutex_weight = getattr(self, 'mutex_weight', 1)
         for rup_no, rup in enumerate(self.iter_ruptures()):
             rup.serial = seed = self.serial[rup_no]
@@ -122,7 +123,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 ok = numpy.ones(n, bool)
             occ_ok = num_occ * ok
             if occ_ok.sum():
-                yield rup, num_occ * ok
+                yield rup, (num_occ * ok).reshape(num_samples, num_ses)
 
     def __iter__(self):
         """
