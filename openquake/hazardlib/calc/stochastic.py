@@ -154,7 +154,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
-    for rup, n_occ in src.sample_ruptures(num_ses):
+    for rup, n_occ in src.sample_ruptures(num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
