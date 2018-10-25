@@ -37,6 +37,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
     MODIFICATIONS = set()
+    RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
     def __init__(self, source_id, name, tectonic_region_type, mfd, ruptures):
         self.source_id = source_id
