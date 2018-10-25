@@ -32,7 +32,7 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 MINWEIGHT = 100
 
 
-class RuptureCollection(ParametricSeismicSource):
+class RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
@@ -71,8 +71,8 @@ def split(src, chunksize=MINWEIGHT):
     """
     for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize)):
         source_id = '%s:%d' % (src.source_id, i)
-        yield RuptureCollection(source_id, src.name, src.tectonic_region_type,
-                                src.mfd, block)
+        yield RuptureCollectionSource(
+            source_id, src.name, src.tectonic_region_type, src.mfd, block)
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
