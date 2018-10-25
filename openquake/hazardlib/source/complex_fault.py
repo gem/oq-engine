@@ -20,29 +20,55 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
+from openquake.baselib.slots import with_slots
+from openquake.baselib.general import block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 MINWEIGHT = 100
+
+
+class RuptureCollection(ParametricSeismicSource):
+    MODIFICATIONS = set()
+
+    def __init__(self, source_id, tectonic_region_type, mfd, ruptures):
+        self.source_id = source_id
+        self.tectonic_region_type = tectonic_region_type
+        self.mfd = mfd
+        self.ruptures = ruptures
+        self.num_ruptures = len(ruptures)
+
+    def count_ruptures(self):
+        return self.num_ruptures
+
+    def iter_ruptures(self):
+        return iter(self.ruptures)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all points, enlarged by the maximum distance
+        and the maximum rupture projection radius (upper limit).
+        """
+        lons = [rup.hypocenter.x for rup in self.ruptures]
+        lats = [rup.hypocenter.y for rup in self.ruptures]
+        bbox = min(lons), min(lats), max(lons), max(lats)
+        a1 = maxdist * KM_TO_DEGREES
+        a2 = angular_distance(maxdist, bbox[1], bbox[3])
+        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
 def split(src, chunksize=MINWEIGHT):
     """
     Split a complex fault source in chunks of at most MAXWEIGHT ruptures
     """
-    start = 0
-    while start < src.num_ruptures:
-        stop = min(start + chunksize, src.num_ruptures)
-        s = copy.copy(src)
-        s.start = start
-        s.stop = stop
-        s.num_ruptures = stop - start
-        start = stop
-        yield s
+    for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize)):
+        source_id = '%s:%d' % (src.source_id, i)
+        yield RuptureCollection(source_id, src.tectonic_region_type,
+                                src.mfd, block)
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -162,7 +188,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
     code = b'C'
-    start = stop = None  # these will be set by the engine to extract
     # a slice of the rupture_slices, thus splitting the source
 
     _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
@@ -207,7 +232,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-            for rupture_slice in rupture_slices[self.start:self.stop]:
+            for rupture_slice in rupture_slices:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
@@ -241,7 +266,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
-            self._nr.append(len(rupture_slices[self.start:self.stop]))
+            self._nr.append(len(rupture_slices))
         return sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
