@@ -58,10 +58,11 @@
     mean and standard deviation of the portfolio loss for each loss type
 
   [Marco Pagani]
-  * Added a first [preliminary] version of the GMM for the Canada model
+  * Added a first and preliminary version of the GMM for the Canada model
     represented in an analytical form.
   * Added a modified version of Atkinson and Macias to be used for the
     calculation of hazard in NSHMP2014.
+  * Added support for PGA to the Si and Midorikawa (1999).
 
   [Michele Simionato]
   * Made it possible to run the risk over an hazard calculation of another user
