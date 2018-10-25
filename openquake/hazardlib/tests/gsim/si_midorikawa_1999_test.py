@@ -36,6 +36,9 @@ class SiMidorikawa1999AscTestCase(BaseGSIMTestCase):
     def test_mean_pga(self):
         self.check('SM99/SM99ASC_MEAN_PGA.csv', max_discrep_percentage=0.1)
 
+    def test_mean_pga_vs800(self):
+        self.check('SM99/SM99ASC_MEAN_PGA_vs800.csv', max_discrep_percentage=0.1)
+
     def test_total_stddev(self):
         self.check('SM99/SM99ASC_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
