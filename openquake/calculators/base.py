@@ -767,6 +767,8 @@ class RiskCalculator(HazardCalculator):
         return riskinputs
 
     def _gen_riskinputs(self, kind, eps, num_events):
+        rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
+        rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         dstore = self.can_read_parent() or self.datastore
         for sid, assets in enumerate(assets_by_site):
@@ -784,12 +786,18 @@ class RiskCalculator(HazardCalculator):
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            for block in general.block_splitter(assets, 1000):
+            for block in general.block_splitter(
+                    assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = {ass.ordinal: eps[ass.ordinal]
                                for ass in block
                                if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
+            rinfo.append((sid, len(block)))
+            if len(block) >= TWO16:
+                logging.error('There are %d assets on site #%d!',
+                              len(block), sid)
+        self.datastore['riskinput_info'] = numpy.array(rinfo, rinfo_dt)
 
     def execute(self):
         """
