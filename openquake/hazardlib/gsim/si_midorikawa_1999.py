@@ -254,6 +254,11 @@ class SiMidorikawa1999Asc(GMPE):
         """
         Apply amplification factor to scale PGV value from 600 to 400 m/s vs30
         and convert mean from base 10 to base e.
+
+        The scaling factor from 600 m/s to 400 m/s was defined by NIED.
+
+        The scaling factor from 600 m/s to 800m/s is valid just for the elastic
+        case as no adjustment for kappa was considered.
         """
         assert np.all(vs30 == vs30[0])
         if abs(vs30[0]-600.) < 1e-10:
