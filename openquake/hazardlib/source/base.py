@@ -126,7 +126,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 n_occ = num_occ[idx]
                 if n_occ and ok[idx]:
                     num_occ_by_rup[rup] += {idx: n_occ}
-            rup.rup_no = rup_no + 1  # it is used for ordering purposes
         return num_occ_by_rup
 
     def __iter__(self):
