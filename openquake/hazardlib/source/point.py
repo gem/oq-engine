@@ -23,7 +23,7 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import get_bounding_box
 
 
 def _get_rupture_dimensions(src, mag, nodal_plane):
@@ -311,15 +311,9 @@ class PointSource(ParametricSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all points, enlarged by the maximum distance
-        and the maximum rupture projection radius (upper limit).
+        Bounding box of the point, enlarged by the maximum distance
         """
-        lon = self.location.longitude
-        lat = self.location.latitude
-        maxradius = self._get_max_rupture_projection_radius()
-        a1 = (maxdist + maxradius) * KM_TO_DEGREES
-        a2 = angular_distance(maxdist + maxradius, lat)
-        return lon - a2, lat - a1, lon + a2, lat + a1
+        return get_bounding_box([self.location], maxdist)
 
     def geom(self):
         """

@@ -27,7 +27,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import get_bounding_box
 
 MINWEIGHT = 100
 
@@ -57,12 +57,8 @@ class RuptureCollectionSource(ParametricSeismicSource):
         Bounding box containing all the hypocenters, enlarged by the
         maximum distance
         """
-        lons = [rup.hypocenter.x for rup in self.ruptures]
-        lats = [rup.hypocenter.y for rup in self.ruptures]
-        bbox = min(lons), min(lats), max(lons), max(lats)
-        a1 = maxdist * KM_TO_DEGREES
-        a2 = angular_distance(maxdist, bbox[1], bbox[3])
-        return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        locations = [rup.hypocenter for rup in self.ruptures]
+        return get_bounding_box(locations, maxdist)
 
 
 def split(src, chunksize=MINWEIGHT):
