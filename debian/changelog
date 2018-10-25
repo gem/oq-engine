@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
+    with an incorrect structure (for instance for ci3031111)
   * Disabled the spatial correlation in risk-from-ShakeMap by default
   * Optimized the rupture sampling where there is a large number of SESs
   * Extended the `reqv` feature to multiple tectonic region types and
