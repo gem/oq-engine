@@ -102,28 +102,31 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, num_ses):
+    def sample_ruptures(self, num_ses, ir_monitor):
         """
         :param num_ses: number of stochastic event sets
+        :param ir_monitor: a monitor object for .iter_ruptures()
         :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
         """
         # the dictionary `num_occ_by_rup` contains a dictionary
         # ses_id -> num_occurrences for each occurring rupture
         # generating ruptures for the given source
-        num_samples = getattr(self, 'samples', 1)
-        n = num_ses * num_samples
+        shape = (getattr(self, 'samples', 1), num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
-        for rup_no, rup in enumerate(self.iter_ruptures()):
+        with ir_monitor:
+            ruptures = list(self.iter_ruptures())
+        for rup_no, rup in enumerate(ruptures):
             rup.serial = seed = self.serial[rup_no]
             numpy.random.seed(seed)
-            num_occ = rup.sample_number_of_occurrences(n)
-            if mutex_weight < 1:
-                ok = numpy.random.random(n) < mutex_weight
-            else:
-                ok = numpy.ones(n, bool)
-            occ_ok = num_occ * ok
-            if occ_ok.sum():
-                yield rup, (num_occ * ok).reshape(num_samples, num_ses)
+            num_occ = rup.sample_number_of_occurrences(shape)
+            if num_occ.any():
+                if mutex_weight < 1:
+                    ok = numpy.random.random(shape) < mutex_weight
+                else:
+                    ok = numpy.ones(shape, bool)
+                occ_ok = num_occ * ok
+                if occ_ok.any():
+                    yield rup, num_occ * ok
 
     def __iter__(self):
         """
