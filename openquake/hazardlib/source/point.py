@@ -313,7 +313,8 @@ class PointSource(ParametricSeismicSource):
         """
         Bounding box of the point, enlarged by the maximum distance
         """
-        return get_bounding_box([self.location], maxdist)
+        radius = self._get_max_rupture_projection_radius()
+        return get_bounding_box([self.location], maxdist + radius)
 
     def geom(self):
         """
