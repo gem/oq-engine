@@ -20,7 +20,6 @@ seismic sources.
 import abc
 import math
 import numpy
-from openquake.baselib.general import AccumDict
 from openquake.baselib.slots import with_slots
 
 
