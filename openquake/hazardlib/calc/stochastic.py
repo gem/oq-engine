@@ -140,7 +140,7 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = list(_build_eb_ruptures(src, num_ses, cmaker, sites, monitor))
+        ebrs = list(_build_eb_ruptures(src, num_ses, cmaker, sites))
         eb_ruptures.extend(ebrs)
         eids = set_eids(ebrs)
         dt = time.time() - t0
@@ -149,14 +149,14 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def _build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_mon):
+def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
     # Filter the ruptures stored in the dictionary num_occ_by_rup and
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     for rup, n_occ in src.sample_ruptures(num_ses):
         if cmaker.maximum_distance:
-            with rup_mon:
+            with cmaker.ctx_mon:
                 try:
                     rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
                     indices = rup.sctx.sids
