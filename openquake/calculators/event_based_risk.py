@@ -20,8 +20,6 @@ import operator
 import numpy
 
 from openquake.baselib.python3compat import zip, encode
-from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import riskinput
 from openquake.calculators import base
@@ -273,28 +271,14 @@ class EbrCalculator(base.RiskCalculator):
                     loss_maps[lt] = array[:, :, :, lti]
                 self.datastore[key][aids, :] = loss_maps
 
-    def execute(self):
+    def combine(self, dummy, res):
         """
-        Parallelize on the riskinputs and returns a dictionary of results.
-        Require a `.core_task` to be defined with signature
-        (riskinputs, riskmodel, rlzs_assoc, monitor).
+        :param dummy: unused parameter
+        :param res: a result dictionary
         """
-        if not hasattr(self, 'riskinputs'):  # in the reportwriter
-            return
-        func = self.core_task.__func__
-        rts = self.oqparam.risk_tile_size
-        blocks = list(block_splitter(self.riskinputs, rts))
-        n = len(blocks)
-        for i, block in enumerate(blocks, 1):
-            if n == 1:
-                mon = self.monitor(func.__name__)
-            else:
-                mon = self.monitor('%s:%d/%d' % (func.__name__, i, n))
-            for res in Starmap(func, [([ri], self.riskmodel, self.param, mon)
-                                      for ri in block], mon):
-                with self.monitor('saving losses', measuremem=True):
-                    self.save_losses(res)
-        return {}
+        with self.monitor('saving losses', measuremem=True):
+            self.save_losses(res)
+        return 1
 
     def post_execute(self, result):
         """
