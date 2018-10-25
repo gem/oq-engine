@@ -476,7 +476,8 @@ class SourceConverter(RuptureConverter):
     """
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
-                 area_source_discretization=None, source_id=None):
+                 area_source_discretization=None, spinning_floating=True,
+                 source_id=None):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.rupture_mesh_spacing = rupture_mesh_spacing
@@ -484,6 +485,7 @@ class SourceConverter(RuptureConverter):
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
         self.tom = PoissonTOM(investigation_time)
+        self.spinning_floating = spinning_floating
         self.source_id = source_id
 
     def convert_mfdist(self, node):
@@ -548,7 +550,7 @@ class SourceConverter(RuptureConverter):
                 prob, strike, dip, rake = (
                     np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
-            if os.environ.get('OQ_SPINNING') == 'no':
+            if not self.spinning_floating:
                 npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
@@ -563,7 +565,7 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             hcdist = [(hd['probability'], hd['depth'])
                       for hd in node.hypoDepthDist]
-            if os.environ.get('OQ_FLOATING') == 'no':
+            if not self.spinning_floating:  # consider the first hypocenter
                 hcdist = [(1, hcdist[0][1])]
             return pmf.PMF(hcdist)
 
