@@ -136,13 +136,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
     for src, sites in src_filter(sources):
-        mutex_weight = getattr(src, 'mutex_weight', 1)
-        samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        with cmaker.ir_mon:
-            ruptures = list(src.iter_ruptures())
-        num_occ_by_rup = _sample_ruptures(
-            src.serial, mutex_weight, num_ses, samples, ruptures)
+        num_occ_by_rup = src.sample_ruptures(num_ses)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -154,28 +149,6 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
-
-
-def _sample_ruptures(serial, mutex_weight, num_ses, num_samples, ruptures):
-    # the dictionary `num_occ_by_rup` contains a dictionary
-    # ses_id -> num_occurrences for each occurring rupture
-    # generating ruptures for the given source
-    n = num_ses * num_samples
-    num_occ_by_rup = collections.defaultdict(AccumDict)
-    for rup_no, rup in enumerate(ruptures):
-        rup.serial = serial[rup_no]
-        numpy.random.seed(rup.serial)
-        num_occ = rup.sample_number_of_occurrences(n)
-        if mutex_weight < 1:
-            ok = numpy.random.random(n) < mutex_weight
-        else:
-            ok = numpy.ones(n, bool)
-        for idx in range(n):
-            n_occ = num_occ[idx]
-            if n_occ and ok[idx]:
-                num_occ_by_rup[rup] += {idx: n_occ}
-        rup.rup_no = rup_no + 1
-    return num_occ_by_rup
 
 
 def _build_eb_ruptures(src, num_ses, num_occ_by_rup, cmaker, s_sites, rup_mon):
