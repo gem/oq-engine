@@ -154,8 +154,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_mon):
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
-    num_occ_by_rup = src.sample_ruptures(num_ses)
-    for rup in num_occ_by_rup:
+    for rup, dic in src.sample_ruptures(num_ses):
         if cmaker.maximum_distance:
             with rup_mon:
                 try:
@@ -168,7 +167,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_mon):
 
         # creating EBRuptures
         events = []
-        for idx, num_occ in num_occ_by_rup[rup].items():
+        for idx, num_occ in dic.items():
             sam_idx, ses_idx = divmod(idx, num_ses)
             for _ in range(num_occ):
                 # NB: the 0 below is a placeholder; the right eid will be
