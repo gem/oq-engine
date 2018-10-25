@@ -812,8 +812,11 @@ class RiskCalculator(HazardCalculator):
             (self.riskinputs, self.riskmodel, self.param, self.monitor()),
             concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight
-        ).reduce()
+        ).reduce(self.combine)
         return res
+
+    def combine(self, acc, res):
+        return acc + res
 
 
 def get_gmv_data(sids, gmfs):
