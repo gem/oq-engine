@@ -111,22 +111,22 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         # the dictionary `num_occ_by_rup` contains a dictionary
         # ses_id -> num_occurrences for each occurring rupture
         # generating ruptures for the given source
-        num_samples = getattr(self, 'samples', 1)
-        n = num_ses * num_samples
+        shape = (getattr(self, 'samples', 1), num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
         for rup_no, rup in enumerate(ruptures):
             rup.serial = seed = self.serial[rup_no]
             numpy.random.seed(seed)
-            num_occ = rup.sample_number_of_occurrences(n)
-            if mutex_weight < 1:
-                ok = numpy.random.random(n) < mutex_weight
-            else:
-                ok = numpy.ones(n, bool)
-            occ_ok = num_occ * ok
-            if occ_ok.sum():
-                yield rup, (num_occ * ok).reshape(num_samples, num_ses)
+            num_occ = rup.sample_number_of_occurrences(shape)
+            if num_occ.any():
+                if mutex_weight < 1:
+                    ok = numpy.random.random(shape) < mutex_weight
+                else:
+                    ok = numpy.ones(shape, bool)
+                occ_ok = num_occ * ok
+                if occ_ok.any():
+                    yield rup, num_occ * ok
 
     def __iter__(self):
         """
