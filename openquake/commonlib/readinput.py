@@ -611,16 +611,17 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         tuples
     """
     make_sm = SourceModelFactory()
+    spinning_off = oqparam.pointsource_distance == {'default': 0.0}
+    if spinning_off:
+        logging.info('Removing nodal plane and hypocenter distributions')
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization,
-        oqparam.pointsource_distance != 0,
+        not spinning_off,
         oqparam.source_id)
-    if oqparam.pointsource_distance == 0:
-        logging.warn('Removing nodal plane and hypocenter distributions')
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
