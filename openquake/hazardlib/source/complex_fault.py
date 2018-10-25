@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.complex_fault`
 defines :class:`ComplexFaultSource`.
 """
 import copy
+import operator
 import numpy
 
 from openquake.baselib.slots import with_slots
@@ -66,10 +67,13 @@ def split(src, chunksize=MINWEIGHT):
     """
     Split a complex fault source in chunks of at most MAXWEIGHT ruptures
     """
-    for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize)):
+    for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize,
+                                             kind=operator.attrgetter('mag'))):
+        rup = block[0]
         source_id = '%s:%d' % (src.source_id, i)
+        amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
         yield RuptureCollectionSource(
-            source_id, src.name, src.tectonic_region_type, src.mfd, block)
+            source_id, src.name, src.tectonic_region_type, amfd, block)
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -243,9 +247,11 @@ class ComplexFaultSource(ParametricSeismicSource):
                 except ValueError as e:
                     raise ValueError("Invalid source with id=%s. %s" % (
                         self.source_id, str(e)))
-                yield ParametricProbabilisticRupture(
+                rup = ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, occurrence_rate, self.temporal_occurrence_model)
+                rup.mag_occ_rate = mag_occ_rate
+                yield rup
 
     def count_ruptures(self):
         """
