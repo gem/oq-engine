@@ -119,8 +119,7 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        rups = src.sample_ruptures(num_ses, cmaker.ir_mon)
-        ebrs = build_eb_ruptures(src, rups, num_ses, cmaker, sites)
+        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
@@ -129,13 +128,20 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def build_eb_ruptures(src, rup_n_occ, num_ses, cmaker, s_sites, sam_ses=None):
-    # Filter the ruptures stored in the dictionary num_occ_by_rup and
-    # yield pairs (rupture, <list of associated EBRuptures>).
+def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
+    """
+    :param src: a source object
+    :param num_ses: number of stochastic event sets
+    :param cmaker: a ContextMaker instance
+    :param s_sites: a (filtered) site collection
+    :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
+    :param sam_ses: a (sample index, ses index) pair [optional]
+    :returns: a list of EBRuptures
+    """
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
-    for rup, n_occ in rup_n_occ:
+    for rup, n_occ in rup_n_occ or src.sample_ruptures(num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
