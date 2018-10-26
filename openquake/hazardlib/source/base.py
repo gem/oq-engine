@@ -108,9 +108,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param ir_monitor: a monitor object for .iter_ruptures()
         :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
         """
-        # the dictionary `num_occ_by_rup` contains a dictionary
-        # ses_id -> num_occurrences for each occurring rupture
-        # generating ruptures for the given source
         shape = (getattr(self, 'samples', 1), num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
