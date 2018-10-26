@@ -22,8 +22,6 @@
 """
 import sys
 import time
-import operator
-import collections
 import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
@@ -90,25 +88,6 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
-def set_eids(ebruptures):
-    """
-    Set event IDs on the given list of ebruptures.
-
-    :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the event IDs
-    """
-    if not ebruptures:
-        return numpy.zeros(0)
-    all_eids = []
-    for ebr in ebruptures:
-        assert ebr.multiplicity < TWO32, ebr.multiplicity
-        eids = U64(TWO32 * ebr.serial) + numpy.arange(
-            ebr.multiplicity, dtype=U64)
-        ebr.events['eid'] = eids
-        all_eids.extend(eids)
-    return numpy.array(all_eids)
-
-
 def sample_ruptures(sources, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
@@ -140,21 +119,29 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = list(_build_eb_ruptures(src, num_ses, cmaker, sites))
+        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
+        n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
-        eids = set_eids(ebrs)
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
+        calc_times[src.id] += numpy.array([n_evs, src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
 
-def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
-    # Filter the ruptures stored in the dictionary num_occ_by_rup and
-    # yield pairs (rupture, <list of associated EBRuptures>).
+def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
+    """
+    :param src: a source object
+    :param num_ses: number of stochastic event sets
+    :param cmaker: a ContextMaker instance
+    :param s_sites: a (filtered) site collection
+    :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
+    :param sam_ses: a (sample index, ses index) pair [optional]
+    :returns: a list of EBRuptures
+    """
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
-    for rup, n_occ in src.sample_ruptures(num_ses, cmaker.ir_mon):
+    ebrs = []
+    for rup, n_occ in rup_n_occ or src.sample_ruptures(num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
@@ -167,11 +154,22 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
 
         # creating EBRuptures
         events = []
-        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-            for _ in range(num_occ):
-                # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in set_eids
+        if sam_ses:  # this happens in UCERF, when n_occ is a scalar
+            sam_idx, ses_idx = sam_ses
+            for _ in range(n_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
-        if events:
-            yield EBRupture(
-                rup, src.id, indices, numpy.array(events, event_dt))
+        else:  # regular case, n_occ is a matrix (num_samples, num_ses)
+            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+                for _ in range(num_occ):
+                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+        E = len(events)
+        # setting event IDs based on the rupture serial
+        if E:
+            assert E < TWO32, len(events)
+            evs = numpy.array(events, event_dt)
+            ebr = EBRupture(rup, src.id, indices, evs)
+            eids = U64(TWO32 * ebr.serial) + numpy.arange(E, dtype=U64)
+            ebr.events['eid'] = eids
+            ebrs.append(ebr)
+
+    return ebrs
