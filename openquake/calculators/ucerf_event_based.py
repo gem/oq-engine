@@ -112,7 +112,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
     with h5py.File(ucerf.source_file, 'r') as hdf5:
         occurrences = ucerf.tom.sample_number_of_occurrences(
             ucerf.rate, seed)
-        indices = numpy.where(occurrences)[0]
+        indices, = numpy.where(occurrences)
         logging.debug(
             'Considering "%s", %d ruptures', ucerf.source_id, len(indices))
 
@@ -218,9 +218,10 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
-    for sample in range(src.samples):
+    num_ses = len(param['ses_seeds'])
+    for sam_idx in range(src.samples):
         for ses_idx, ses_seed in param['ses_seeds']:
-            seed = sample * TWO16 + ses_seed
+            seed = sam_idx * TWO16 + ses_seed
             with sampl_mon:
                 rups, n_occs = generate_event_set(
                     src, background_sids, src_filter, seed)
@@ -228,20 +229,11 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                     rup.serial = serial
                     serial += 1
             with filt_mon:
-                for rup, n_occ in zip(rups, n_occs):
-                    try:
-                        rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
-                        indices = rup.sctx.sids
-                    except FarAwayRupture:
-                        continue
-                    events = []
-                    for _ in range(n_occ):
-                        events.append((0, src.src_group_id, ses_idx, sample))
-                    if events:
-                        evs = numpy.array(events, stochastic.event_dt)
-                        ebruptures.append(EBRupture(rup, src.id, indices, evs))
-                        serial += 1
-    res.num_events = stochastic.set_eids(ebruptures)
+                ebrs = stochastic.build_eb_ruptures(
+                    src, zip(rups, n_occs),  num_ses, cmaker, sitecol,
+                    (sam_idx, ses_idx))
+                ebruptures.extend(ebrs)
+    res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}
