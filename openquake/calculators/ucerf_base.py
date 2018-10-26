@@ -377,6 +377,7 @@ class UCERFSource(BaseSeismicSource):
             new.orig = self.orig
             new.start = start
             new.stop = min(start + RUPTURES_PER_BLOCK, stop)
+            new.samples = self.orig.samples
             start += RUPTURES_PER_BLOCK
             yield new
 
