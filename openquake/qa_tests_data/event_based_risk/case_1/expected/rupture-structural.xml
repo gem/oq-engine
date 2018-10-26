@@ -4,54 +4,34 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <singlePlaneRupture
-    id="13"
-    multiplicity="5"
+    id="56"
+    multiplicity="1"
     >
         <stochasticEventSets>
             <SES
-            id="3"
+            id="1"
             >
-                55834574848
-            </SES>
-            <SES
-            id="4"
-            >
-                55834574849
-            </SES>
-            <SES
-            id="12"
-            >
-                55834574850
-            </SES>
-            <SES
-            id="18"
-            >
-                55834574851
-            </SES>
-            <SES
-            id="20"
-            >
-                55834574852
+                240518168576
             </SES>
         </stochasticEventSets>
         <magnitude>
-            5.2500000e+00
+            5.8499999e+00
         </magnitude>
         <strike>
-            4.4985973e+01
+            4.4973133e+01
         </strike>
         <dip>
-            3.0000896e+01
+            3.0003034e+01
         </dip>
         <rake>
             9.0000000e+01
         </rake>
         <hypocenter depth="8.0000000E+00" lat="2.7901501E+01" lon="8.5747704E+01"/>
         <planarSurface>
-            <topLeft depth="7.2283959" lat="27.8952751" lon="85.7214279"/>
-            <topRight depth="7.2283959" lat="27.9247189" lon="85.7547379"/>
-            <bottomLeft depth="8.7716036" lat="27.8782806" lon="85.7406616"/>
-            <bottomRight depth="8.7716036" lat="27.9077187" lon="85.7739716"/>
+            <topLeft depth="6.4815712" lat="27.8892479" lon="85.6960068"/>
+            <topRight depth="6.4815712" lat="27.9471912" lon="85.7615585"/>
+            <bottomLeft depth="9.5184288" lat="27.8558064" lon="85.7338486"/>
+            <bottomRight depth="9.5184288" lat="27.9137344" lon="85.7994080"/>
         </planarSurface>
     </singlePlaneRupture>
 </nrml>
