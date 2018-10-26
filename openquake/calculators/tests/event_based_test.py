@@ -246,7 +246,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         years = sorted(self.calc.datastore['events']['year'])
-        self.assertEqual(years, [15, 29, 39, 43])
+        self.assertEqual(years, [8, 15, 29, 39, 43])
         self.assertEqualFiles('expected/rup_data.csv', fname)
 
         # check split_time
@@ -258,7 +258,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 29)
+        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 28)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_10(self):
@@ -312,7 +312,7 @@ class EventBasedTestCase(CalculatorTestCase):
 ======= ======= =======
 PGA     SA(0.3) SA(0.6)
 ======= ======= =======
-0.00460 0.00214 0.00175
+0.00438 0.00158 0.00128
 ======= ======= =======''')
 
     @attr('qa', 'hazard', 'event_based')
