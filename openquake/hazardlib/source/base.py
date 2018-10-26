@@ -19,6 +19,7 @@ seismic sources.
 """
 import abc
 import math
+import numpy
 from openquake.baselib.slots import with_slots
 
 
@@ -100,6 +101,27 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
+
+    def sample_ruptures(self, num_ses, ir_monitor):
+        """
+        :param num_ses: number of stochastic event sets
+        :param ir_monitor: a monitor object for .iter_ruptures()
+        :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
+        """
+        shape = (getattr(self, 'samples', 1), num_ses)
+        mutex_weight = getattr(self, 'mutex_weight', 1)
+        with ir_monitor:
+            ruptures = list(self.iter_ruptures())
+        for rup, serial in zip(ruptures, self.serial):
+            rup.serial = serial  # used as seed
+            numpy.random.seed(serial)
+            num_occ = rup.sample_number_of_occurrences(shape)
+            if num_occ.any():
+                if mutex_weight < 1:
+                    # consider only the occurrencies below the mutex_weight
+                    num_occ *= (numpy.random.random(shape) < mutex_weight)
+                if num_occ.any():
+                    yield rup, num_occ
 
     def __iter__(self):
         """
