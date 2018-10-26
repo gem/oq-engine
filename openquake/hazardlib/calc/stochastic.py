@@ -22,8 +22,6 @@
 """
 import sys
 import time
-import operator
-import collections
 import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
@@ -90,25 +88,6 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
-def set_eids(ebruptures):
-    """
-    Set event IDs on the given list of ebruptures.
-
-    :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the event IDs
-    """
-    if not ebruptures:
-        return numpy.zeros(0)
-    all_eids = []
-    for ebr in ebruptures:
-        assert ebr.multiplicity < TWO32, ebr.multiplicity
-        eids = U64(TWO32 * ebr.serial) + numpy.arange(
-            ebr.multiplicity, dtype=U64)
-        ebr.events['eid'] = eids
-        all_eids.extend(eids)
-    return numpy.array(all_eids)
-
-
 def sample_ruptures(sources, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
@@ -136,74 +115,61 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
     for src, sites in src_filter(sources):
-        mutex_weight = getattr(src, 'mutex_weight', 1)
-        samples = getattr(src, 'samples', 1)
         t0 = time.time()
-        with cmaker.ir_mon:
-            ruptures = list(src.iter_ruptures())
-        num_occ_by_rup = _sample_ruptures(
-            src.serial, mutex_weight, num_ses, samples, ruptures)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = list(_build_eb_ruptures(src, num_ses, num_occ_by_rup, cmaker,
-                                       sites, monitor))
+        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
+        n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
-        eids = set_eids(ebrs)
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
+        calc_times[src.id] += numpy.array([n_evs, src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
 
-def _sample_ruptures(serial, mutex_weight, num_ses, num_samples, ruptures):
-    # the dictionary `num_occ_by_rup` contains a dictionary
-    # ses_id -> num_occurrences for each occurring rupture
-    # generating ruptures for the given source
-    n = num_ses * num_samples
-    num_occ_by_rup = collections.defaultdict(AccumDict)
-    for rup_no, rup in enumerate(ruptures):
-        rup.serial = serial[rup_no]
-        numpy.random.seed(rup.serial)
-        num_occ = rup.sample_number_of_occurrences(n)
-        if mutex_weight < 1:
-            ok = numpy.random.random(n) < mutex_weight
-        else:
-            ok = numpy.ones(n, bool)
-        for idx in range(n):
-            n_occ = num_occ[idx]
-            if n_occ and ok[idx]:
-                num_occ_by_rup[rup] += {idx: n_occ}
-        rup.rup_no = rup_no + 1
-    return num_occ_by_rup
-
-
-def _build_eb_ruptures(src, num_ses, num_occ_by_rup, cmaker, s_sites, rup_mon):
-    # Filter the ruptures stored in the dictionary num_occ_by_rup and
-    # yield pairs (rupture, <list of associated EBRuptures>).
+def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
+    """
+    :param src: a source object
+    :param num_ses: number of stochastic event sets
+    :param cmaker: a ContextMaker instance
+    :param s_sites: a (filtered) site collection
+    :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
+    :param sam_ses: a (sample index, ses index) pair [optional]
+    :returns: a list of EBRuptures
+    """
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
-    for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
+    ebrs = []
+    for rup, n_occ in rup_n_occ or src.sample_ruptures(num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
-            with rup_mon:
+            with cmaker.ctx_mon:
                 try:
                     rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
                     indices = rup.sctx.sids
                 except FarAwayRupture:
-                    # ignore ruptures which are far away
-                    del num_occ_by_rup[rup]  # save memory
                     continue
         else:
             indices = ()
 
         # creating EBRuptures
         events = []
-        for idx, num_occ in sorted(num_occ_by_rup[rup].items()):
-            sam_idx, ses_idx = divmod(idx, num_ses)
-            for _ in range(num_occ):
-                # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in set_eids
+        if sam_ses:  # this happens in UCERF, when n_occ is a scalar
+            sam_idx, ses_idx = sam_ses
+            for _ in range(n_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
-        if events:
-            yield EBRupture(rup, src.id, indices,
-                            numpy.array(events, event_dt))
+        else:  # regular case, n_occ is a matrix (num_samples, num_ses)
+            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+                for _ in range(num_occ):
+                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+        E = len(events)
+        # setting event IDs based on the rupture serial
+        if E:
+            assert E < TWO32, len(events)
+            evs = numpy.array(events, event_dt)
+            ebr = EBRupture(rup, src.id, indices, evs)
+            eids = U64(TWO32 * ebr.serial) + numpy.arange(E, dtype=U64)
+            ebr.events['eid'] = eids
+            ebrs.append(ebr)
+
+    return ebrs
