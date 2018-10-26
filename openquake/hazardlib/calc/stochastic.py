@@ -138,7 +138,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = _build_eb_ruptures(src, num_ses, cmaker, sites)
+        rups = src.sample_ruptures(num_ses, cmaker.ir_mon)
+        ebrs = build_eb_ruptures(src, rups, num_ses, cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
@@ -147,13 +148,13 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
+def build_eb_ruptures(src, rup_n_occ, num_ses, cmaker, s_sites, sam_ses=None):
     # Filter the ruptures stored in the dictionary num_occ_by_rup and
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
-    for rup, n_occ in src.sample_ruptures(num_ses, cmaker.ir_mon):
+    for rup, n_occ in rup_n_occ:
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
@@ -166,11 +167,14 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
 
         # creating EBRuptures
         events = []
-        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-            for _ in range(num_occ):
-                # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in set_eids
+        if sam_ses:  # this happens in UCERF, when n_occ is a scalar
+            sam_idx, ses_idx = sam_ses
+            for _ in range(n_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+        else:  # regular case, n_occ is a matrix (num_samples, num_ses)
+            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+                for _ in range(num_occ):
+                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         if events:
             evs = numpy.array(events, event_dt)
             ebrs.append(EBRupture(rup, src.id, indices, evs))
