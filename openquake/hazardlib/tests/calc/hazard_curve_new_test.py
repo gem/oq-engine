@@ -197,7 +197,7 @@ class NankaiTestCase(unittest.TestCase):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
-        site = Site(Point(135.68, 35.68), 800, z1pt0=100., z2pt5=1.)
+        site = Site(Point(135.68, 35.68), 400, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         imtls = DictArray({'PGV': [20, 40, 80]})
         gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
