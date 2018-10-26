@@ -100,8 +100,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ============== ============= ==========
 portfolio_loss nonstructural structural
 ============== ============= ==========
-mean           4,585         15,603    
-stddev         838           555       
+mean           2,603         14,058    
+stddev         396           285       
 ============== ============= ==========''')
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -134,7 +134,7 @@ stddev         838           555
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 20)
+        self.assertEqual(len(self.calc.datastore['events']), 17)
         # TODO: improve this test
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -157,7 +157,7 @@ stddev         838           555
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1989)
+        self.assertEqual(nbytes, 2142)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -300,7 +300,7 @@ stddev         838           555
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 5)
+        self.assertEqual(len(self.calc.datastore['events']), 6)
 
     @attr('qa', 'hazard', 'event_based_risk')
     def test_case_6c(self):
