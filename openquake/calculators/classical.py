@@ -293,7 +293,8 @@ class PreCalculator(ClassicalCalculator):
     def execute(self):
         eff_ruptures = AccumDict(accum=0)
         for src in self.csm.get_sources():
-            eff_ruptures[src.src_group_id] += src.num_ruptures
+            for grp_id in src.src_group_ids:
+                eff_ruptures[grp_id] += src.num_ruptures
         self.store_csm_info(eff_ruptures)
         return {}
 
