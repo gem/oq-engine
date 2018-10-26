@@ -149,7 +149,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
             case_7.__file__, 'job.ini', mean_hazard_curves='false',
-            poes='0.1')
+            calculation_mode='preclassical',  poes='0.1')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):

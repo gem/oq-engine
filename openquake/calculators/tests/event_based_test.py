@@ -186,6 +186,10 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
+        # exercise preclassical
+        self.run_calc(case_4.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_5(self):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
