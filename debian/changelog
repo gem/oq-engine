@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the splitting of complex fault sources
   * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
     with an incorrect structure (for instance for ci3031111)
   * Disabled the spatial correlation in risk-from-ShakeMap by default
