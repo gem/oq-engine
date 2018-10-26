@@ -18,62 +18,17 @@ Module :mod:`openquake.hazardlib.source.complex_fault`
 defines :class:`ComplexFaultSource`.
 """
 import copy
-import operator
 import numpy
 
 from openquake.baselib.slots import with_slots
-from openquake.baselib.general import block_splitter
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import get_bounding_box
 
 MINWEIGHT = 100
-
-
-class RuptureCollectionSource(ParametricSeismicSource):
-    """
-    A parametric source obtained from the splitting of a ComplexFaultSource
-    """
-    MODIFICATIONS = set()
-    RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
-
-    def __init__(self, source_id, name, tectonic_region_type, mfd, ruptures):
-        self.source_id = source_id
-        self.name = name  # used in disagg
-        self.tectonic_region_type = tectonic_region_type
-        self.mfd = mfd
-        self.ruptures = ruptures
-        self.num_ruptures = len(ruptures)
-
-    def count_ruptures(self):
-        return self.num_ruptures
-
-    def iter_ruptures(self):
-        return iter(self.ruptures)
-
-    def get_bounding_box(self, maxdist):
-        """
-        Bounding box containing all the hypocenters, enlarged by the
-        maximum distance
-        """
-        locations = [rup.hypocenter for rup in self.ruptures]
-        return get_bounding_box(locations, maxdist)
-
-
-def split(src, chunksize=MINWEIGHT):
-    """
-    Split a complex fault source in chunks of at most MAXWEIGHT ruptures
-    """
-    for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize,
-                                             kind=operator.attrgetter('mag'))):
-        rup = block[0]
-        source_id = '%s:%d' % (src.source_id, i)
-        amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
-        yield RuptureCollectionSource(
-            source_id, src.name, src.tectonic_region_type, amfd, block)
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
