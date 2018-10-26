@@ -22,8 +22,6 @@
 """
 import sys
 import time
-import operator
-import collections
 import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
