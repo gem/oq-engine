@@ -57,7 +57,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
 
 def split(src, chunksize=MINWEIGHT):
     """
-    Split a complex fault source in chunks of at most MAXWEIGHT ruptures
+    Split a complex fault source in chunks
     """
     for i, block in enumerate(block_splitter(src.iter_ruptures(), chunksize,
                                              kind=operator.attrgetter('mag'))):
