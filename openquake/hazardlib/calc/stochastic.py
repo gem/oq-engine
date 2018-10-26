@@ -88,25 +88,6 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
-def set_eids(ebruptures):
-    """
-    Set event IDs on the given list of ebruptures.
-
-    :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the event IDs
-    """
-    if not ebruptures:
-        return numpy.zeros(0)
-    n_eids = 0
-    for ebr in ebruptures:
-        assert ebr.multiplicity < TWO32, ebr.multiplicity
-        eids = U64(TWO32 * ebr.serial) + numpy.arange(
-            ebr.multiplicity, dtype=U64)
-        ebr.events['eid'] = eids
-        n_eids += len(eids)
-    return n_eids
-
-
 def sample_ruptures(sources, src_filter=source_site_noop_filter,
                     gsims=(), param=(), monitor=Monitor()):
     """
@@ -175,8 +156,14 @@ def build_eb_ruptures(src, rup_n_occ, num_ses, cmaker, s_sites, sam_ses=None):
             for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
                 for _ in range(num_occ):
                     events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
-        if events:
+        E = len(events)
+        # setting event IDs based on the rupture serial
+        if E:
+            assert E < TWO32, len(events)
             evs = numpy.array(events, event_dt)
-            ebrs.append(EBRupture(rup, src.id, indices, evs))
-    set_eids(ebrs)
+            ebr = EBRupture(rup, src.id, indices, evs)
+            eids = U64(TWO32 * ebr.serial) + numpy.arange(E, dtype=U64)
+            ebr.events['eid'] = eids
+            ebrs.append(ebr)
+
     return ebrs
