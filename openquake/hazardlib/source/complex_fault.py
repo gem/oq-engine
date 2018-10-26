@@ -20,29 +20,15 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
+from openquake.baselib.slots import with_slots
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 
 MINWEIGHT = 100
-
-
-def split(src, chunksize=MINWEIGHT):
-    """
-    Split a complex fault source in chunks of at most MAXWEIGHT ruptures
-    """
-    start = 0
-    while start < src.num_ruptures:
-        stop = min(start + chunksize, src.num_ruptures)
-        s = copy.copy(src)
-        s.start = start
-        s.stop = stop
-        s.num_ruptures = stop - start
-        start = stop
-        yield s
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -162,7 +148,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
     code = b'C'
-    start = stop = None  # these will be set by the engine to extract
     # a slice of the rupture_slices, thus splitting the source
 
     _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
@@ -207,7 +192,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-            for rupture_slice in rupture_slices[self.start:self.stop]:
+            for rupture_slice in rupture_slices:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
@@ -217,9 +202,11 @@ class ComplexFaultSource(ParametricSeismicSource):
                 except ValueError as e:
                     raise ValueError("Invalid source with id=%s. %s" % (
                         self.source_id, str(e)))
-                yield ParametricProbabilisticRupture(
+                rup = ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, occurrence_rate, self.temporal_occurrence_model)
+                rup.mag_occ_rate = mag_occ_rate
+                yield rup
 
     def count_ruptures(self):
         """
@@ -241,7 +228,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length)
-            self._nr.append(len(rupture_slices[self.start:self.stop]))
+            self._nr.append(len(rupture_slices))
         return sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
