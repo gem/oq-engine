@@ -218,15 +218,17 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
-    for sample in range(param['samples']):
+    for sample in range(src.samples):
         for ses_idx, ses_seed in param['ses_seeds']:
             seed = sample * TWO16 + ses_seed
             with sampl_mon:
                 rups, n_occs = generate_event_set(
                     src, background_sids, src_filter, seed)
+                for rup in rups:
+                    rup.serial = serial
+                    serial += 1
             with filt_mon:
                 for rup, n_occ in zip(rups, n_occs):
-                    rup.serial = serial
                     try:
                         rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
                         indices = rup.sctx.sids
@@ -250,7 +252,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], param['samples'])
+            param['oqparam'], param['min_iml'], src.samples)
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -293,7 +295,6 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 param = param.copy()
-                param['samples'] = sm.samples
                 param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
