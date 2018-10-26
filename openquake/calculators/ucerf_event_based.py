@@ -239,7 +239,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                         evs = numpy.array(events, stochastic.event_dt)
                         ebruptures.append(EBRupture(rup, src.id, indices, evs))
                         serial += 1
-    res.num_events = len(stochastic.set_eids(ebruptures))
+    res.num_events = stochastic.set_eids(ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}

@@ -97,14 +97,14 @@ def set_eids(ebruptures):
     """
     if not ebruptures:
         return numpy.zeros(0)
-    all_eids = []
+    n_eids = 0
     for ebr in ebruptures:
         assert ebr.multiplicity < TWO32, ebr.multiplicity
         eids = U64(TWO32 * ebr.serial) + numpy.arange(
             ebr.multiplicity, dtype=U64)
         ebr.events['eid'] = eids
-        all_eids.extend(eids)
-    return numpy.array(all_eids)
+        n_eids += len(eids)
+    return n_eids
 
 
 def sample_ruptures(sources, src_filter=source_site_noop_filter,
@@ -138,11 +138,11 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = list(_build_eb_ruptures(src, num_ses, cmaker, sites))
+        ebrs = _build_eb_ruptures(src, num_ses, cmaker, sites)
+        n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
-        eids = set_eids(ebrs)
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([len(eids), src.nsites, dt])
+        calc_times[src.id] += numpy.array([n_evs, src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
@@ -152,6 +152,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
     # yield pairs (rupture, <list of associated EBRuptures>).
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
+    ebrs = []
     for rup, n_occ in src.sample_ruptures(num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
@@ -171,5 +172,7 @@ def _build_eb_ruptures(src, num_ses, cmaker, s_sites):
                 # set a bit later, in set_eids
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         if events:
-            yield EBRupture(
-                rup, src.id, indices, numpy.array(events, event_dt))
+            evs = numpy.array(events, event_dt)
+            ebrs.append(EBRupture(rup, src.id, indices, evs))
+    set_eids(ebrs)
+    return ebrs
