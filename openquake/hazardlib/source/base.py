@@ -121,12 +121,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             num_occ = rup.sample_number_of_occurrences(shape)
             if num_occ.any():
                 if mutex_weight < 1:
-                    ok = numpy.random.random(shape) < mutex_weight
-                else:
-                    ok = numpy.ones(shape, bool)
-                occ_ok = num_occ * ok
-                if occ_ok.any():
-                    yield rup, num_occ * ok
+                    # consider only the occurrencies below the mutex_weight
+                    num_occ *= (numpy.random.random(shape) < mutex_weight)
+                if num_occ.any():
+                    yield rup, num_occ
 
     def __iter__(self):
         """
