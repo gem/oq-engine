@@ -567,13 +567,11 @@ class CompositeSourceModel(collections.Sequence):
         This should be called only in event based calculators
         """
         sources = self.get_sources()
-        n = sum(src.num_ruptures for src in sources)
-        rup_serial = numpy.arange(ses_seed, ses_seed + n, dtype=numpy.uint32)
-        start = 0
+        serial = ses_seed
         for src in sources:
             nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
+            src.serial = serial
+            serial += nr
 
     def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
         """
