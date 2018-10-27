@@ -182,7 +182,8 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
                         n_occ.sum(axis=1))  # n_occ by sample
         start = 0
         for sam_idx, evs in group_array(ebr.events, 'sample').items():
-            eids = U64(TWO32 * ebr.serial + TWO16 * sam_idx) + numpy.arange(
+            rlzi = rlz_slice.start + sam_idx
+            eids = U64(TWO32 * ebr.serial + TWO16 * rlzi) + numpy.arange(
                 len(evs), dtype=U64)
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
