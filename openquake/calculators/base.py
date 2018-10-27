@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import math
 import logging
 import operator
 import itertools
@@ -331,6 +332,22 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     precalc = None
+
+    def block_splitter(self, sources, weight=get_weight):
+        """
+        :params sources: a list of sources
+        :param weight: a weight function (default .weight)
+        :returns: an iterator over blocks of sources
+        """
+        ct = self.oqparam.concurrent_tasks or 1
+        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        if maxweight == minweight:
+            logging.info('Using minweight=%d', minweight)
+        else:
+            logging.info('Using maxweight=%d', maxweight)
+        return general.block_splitter(sources, maxweight, weight,
+                                      operator.attrgetter('src_group_id'))
 
     def get_filter(self):
         """
