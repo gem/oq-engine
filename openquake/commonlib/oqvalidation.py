@@ -289,8 +289,8 @@ class OqParam(valid.ParamSet):
             raise InvalidFile('%s: You cannot have both sites_csv and '
                               'gmfs_file' % job_ini)
 
-        # checks for ucerf
-        if 'ucerf' in self.calculation_mode:
+        # checks for event_based
+        if 'event_based' in self.calculation_mode:
             if self.ses_per_logic_tree_path >= TWO16:
                 raise ValueError('ses_per_logic_tree_path too big: %d' %
                                  self.ses_per_logic_tree_path)
