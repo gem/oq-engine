@@ -299,9 +299,9 @@ class EventBasedCalculator(base.HazardCalculator):
             sources = sum([sg.sources for sg in sm.src_groups], [])
             if not sources:
                 continue
-            param['rlz_offset'] += len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
             for block in self.block_splitter(sources):
                 smap.submit(block, self.src_filter, param, monitor)
+            param['rlz_offset'] += len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
