@@ -349,7 +349,6 @@ class HazardCalculator(BaseCalculator):
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            logging.info('Preprocessing the sources with rtree')
             src_filter = RtreeFilter(self.sitecol.complete,
                                      oq.maximum_distance, self.hdf5cache)
         else:

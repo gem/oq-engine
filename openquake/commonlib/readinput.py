@@ -839,7 +839,8 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
     """
     mon = monitor('split_filter')
     sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    logging.info('Splitting/filtering sources')
+    logging.info('Splitting/filtering sources with %s',
+                 srcfilter.__class__.__name__)
     sources = csm.get_sources()
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
