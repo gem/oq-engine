@@ -55,7 +55,8 @@ class ScenarioCalculator(base.HazardCalculator):
         E = oq.number_of_ground_motion_fields
         events = numpy.zeros(E, readinput.stored_event_dt)
         events['eid'] = numpy.arange(E)
-        ebr = EBRupture(self.rup, 0, self.sitecol.sids, events)
+        ebr = EBRupture(self.rup, 0, self.sitecol.sids, events,
+                        numpy.array([E], numpy.uint16))
         self.datastore['events'] = ebr.events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
