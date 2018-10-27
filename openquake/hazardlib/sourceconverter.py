@@ -451,7 +451,6 @@ class RuptureConverter(object):
         :returns: a dictionary grp_id -> EBRuptures
         """
         coll = {}
-        zero = numpy.zeros(1, numpy.uint16)
         for grpnode in node:
             grp_id = int(grpnode['id'])
             coll[grp_id] = ebrs = []
@@ -465,8 +464,9 @@ class RuptureConverter(object):
                         ses = sesnode['id']
                         for eid in sesnode.text.split():
                             events.append((eid, ses, 0))
+                n_occ = numpy.array([len(events)], numpy.uint16)
                 ebr = source.rupture.EBRupture(
-                    rup, 0, (), numpy.array(events, event_dt), zero)
+                    rup, 0, (), numpy.array(events, event_dt), n_occ)
                 ebrs.append(ebr)
         return coll
 
