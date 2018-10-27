@@ -346,7 +346,8 @@ class HazardCalculator(BaseCalculator):
             logging.info('Using minweight=%d', minweight)
         else:
             logging.info('Using maxweight=%d', maxweight)
-        return general.block_splitter(sources, maxweight, weight)
+        return general.block_splitter(sources, maxweight, weight,
+                                      operator.attrgetter('src_group_id'))
 
     def get_filter(self):
         """
