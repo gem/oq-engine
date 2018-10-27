@@ -251,8 +251,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
-                    self.rlzs_by_gsim_grp,
-                    samples, len(self.oqparam.imtls))
+                    self.rlzs_by_gsim_grp, samples, len(self.oqparam.imtls))
                 calc_times += src.calc_times
                 del src.calc_times
                 yield from src.eb_ruptures
@@ -278,6 +277,10 @@ class EventBasedCalculator(base.HazardCalculator):
         num_rlzs = {grp_id: sum(
             len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
                     for grp_id in self.rlzs_by_gsim_grp}
+
+        def weight(ebr):
+            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
+                              len(ebr.sids))
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
@@ -296,15 +299,10 @@ class EventBasedCalculator(base.HazardCalculator):
             else:
                 mon = monitor
             ires = parallel.Starmap.apply(
-                build_ruptures,
-                (sources, self.src_filter, param, mon),
+                build_ruptures, (sources, self.src_filter, param, mon),
                 concurrent_tasks=self.oqparam.concurrent_tasks,
                 weight=operator.attrgetter('num_ruptures'),
                 key=operator.attrgetter('src_group_id'))
-
-            def weight(ebr):
-                return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
-                                  len(ebr.sids))
             for ruptures in block_splitter(
                     self._store_ruptures(ires, sm.samples), BLOCKSIZE,
                     weight, operator.attrgetter('grp_id')):
