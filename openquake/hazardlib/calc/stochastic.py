@@ -107,7 +107,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
     if not param:
-        param = dict(ses_per_logic_tree_path=1, filter_distance=1000)
+        param = dict(ses_per_logic_tree_path=1, filter_distance=1000,
+                     rlz_slice=slice(0, 1))
     eb_ruptures = []
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -120,7 +121,8 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
+        ebrs = build_eb_ruptures(src, param['rlz_slice'], num_ses,
+                                 cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
@@ -129,9 +131,11 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
-def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
+def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
+                      rup_n_occ=(), sam_ses=()):
     """
     :param src: a source object
+    :param num_rlzs: number of realizations of the source model
     :param num_ses: number of stochastic event sets
     :param cmaker: a ContextMaker instance
     :param s_sites: a (filtered) site collection
@@ -142,7 +146,10 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
-    for rup, n_occ in rup_n_occ or src.sample_ruptures(num_ses, cmaker.ir_mon):
+    num_rlzs = getattr(src, 'samples', 1)
+    # TODO: in the future num_rlzs = rlz_slice.stop - rlz_slice.start
+    for rup, n_occ in rup_n_occ or src.sample_ruptures(
+            num_rlzs, num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
