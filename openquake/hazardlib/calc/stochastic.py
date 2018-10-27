@@ -23,12 +23,13 @@
 import sys
 import time
 import numpy
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, group_array
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 
+TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
 U64 = numpy.uint64
@@ -159,17 +160,26 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
             for _ in range(n_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         else:  # regular case, n_occ is a matrix (num_samples, num_ses)
-            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-                for _ in range(num_occ):
-                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
-        E = len(events)
-        # setting event IDs based on the rupture serial
-        if E:
-            assert E < TWO32, len(events)
-            evs = numpy.array(events, event_dt)
-            ebr = EBRupture(rup, src.id, indices, evs)
-            eids = U64(TWO32 * ebr.serial) + numpy.arange(E, dtype=U64)
-            ebr.events['eid'] = eids
-            ebrs.append(ebr)
-
+            for sam_idx, num_occ in enumerate(n_occ):
+                for ses_idx in range(num_ses):
+                    for _ in range(num_occ[ses_idx]):
+                        events.append(
+                            (0, src.src_group_id, ses_idx + 1, sam_idx))
+        ebrs.extend(set_eids(events, src.id, indices, rup))
     return ebrs
+
+
+def set_eids(events, src_id, indices, rup):
+    # setting event IDs based on the rupture serial and the sample index
+    E = len(events)
+    if E == 0:
+        return []
+    assert E < TWO16, len(events)
+    ebr = EBRupture(rup, src_id, indices, numpy.array(events, event_dt))
+    start = 0
+    for sam_idx, evs in group_array(ebr.events, 'sample').items():
+        eids = U64(TWO32 * ebr.serial + TWO16 * sam_idx) + numpy.arange(
+            len(evs), dtype=U64)
+        ebr.events[start:start + len(eids)]['eid'] = eids
+        start += len(eids)
+    return [ebr]
