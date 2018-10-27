@@ -292,22 +292,18 @@ class EventBasedCalculator(base.HazardCalculator):
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        smap = parallel.Starmap(build_ruptures)
-        param['rlz_offset'] = 0
-        for sm in self.csm.source_models:
-            logging.info('Sending %s', sm)
-            sources = sum([sg.sources for sg in sm.src_groups], [])
-            if not sources:
-                continue
-            for block in self.block_splitter(sources):
-                smap.submit(block, self.src_filter, param, monitor)
-            param['rlz_offset'] += len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-        for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
+        ires = parallel.Starmap.apply(
+            build_ruptures,
+            (self.csm.get_sources(), self.src_filter, param, monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks,
+            weight=operator.attrgetter('num_ruptures'),
+            key=operator.attrgetter('src_group_id'))
+        for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
-            par['samples'] = sm.samples
+            par['samples'] = self.samples_by_grp[ebr.grp_id]
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
