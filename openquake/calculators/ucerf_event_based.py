@@ -230,7 +230,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                     serial += 1
             with filt_mon:
                 ebrs = stochastic.build_eb_ruptures(
-                    src, num_ses, cmaker, sitecol,
+                    src, slice(0, 1), num_ses, cmaker, sitecol,
                     zip(rups, n_occs), (sam_idx, ses_idx))
                 ebruptures.extend(ebrs)
     res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
