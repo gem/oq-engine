@@ -293,15 +293,17 @@ class EventBasedCalculator(base.HazardCalculator):
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures)
-        param['rlz_offset'] = 0
+        start = 0
         for sm in self.csm.source_models:
+            nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+            param['rlz_slice'] = slice(start, start + nr)
+            start += nr
             logging.info('Sending %s', sm)
             sources = sum([sg.sources for sg in sm.src_groups], [])
             if not sources:
                 continue
             for block in self.block_splitter(sources):
                 smap.submit(block, self.src_filter, param, monitor)
-            param['rlz_offset'] += len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
