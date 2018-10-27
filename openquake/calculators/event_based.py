@@ -241,7 +241,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def _store_ruptures(self, ires, samples):
+    def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for srcs in ires:
@@ -273,7 +273,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        self.R = self.csm.info.get_num_rlzs()
+        rlzs_assoc = self.csm_info.get_rlzs_assoc()
+        self.R = len(rlzs_assoc.realizations)
         num_rlzs = {grp_id: sum(
             len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
                     for grp_id in self.rlzs_by_gsim_grp}
@@ -287,30 +288,23 @@ class EventBasedCalculator(base.HazardCalculator):
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        num_models = len(self.csm.source_models)
-        for i, sm in enumerate(self.csm.source_models, 1):
+        smap = parallel.Starmap(build_ruptures)
+        param['rlz_offset'] = 0
+        for sm in self.csm.source_models:
             logging.info('Sending %s', sm)
             sources = sum([sg.sources for sg in sm.src_groups], [])
             if not sources:
                 continue
-            if num_models > 1:
-                mon = monitor('%s %d/%d' %
-                              (build_ruptures.__name__, i, num_models))
-            else:
-                mon = monitor
-            ires = parallel.Starmap.apply(
-                build_ruptures, (sources, self.src_filter, param, mon),
-                concurrent_tasks=self.oqparam.concurrent_tasks,
-                weight=operator.attrgetter('num_ruptures'),
-                key=operator.attrgetter('src_group_id'))
-            for ruptures in block_splitter(
-                    self._store_ruptures(ires, sm.samples), BLOCKSIZE,
-                    weight, operator.attrgetter('grp_id')):
-                ebr = ruptures[0]
-                rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
-                par = par.copy()
-                par['samples'] = sm.samples
-                yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
+            param['rlz_offset'] += len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+            for block in self.block_splitter(sources):
+                smap.submit(block, self.src_filter, param, monitor)
+        for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
+                                       weight, operator.attrgetter('grp_id')):
+            ebr = ruptures[0]
+            rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
+            par = par.copy()
+            par['samples'] = sm.samples
+            yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
         if self.oqparam.ground_motion_fields:
