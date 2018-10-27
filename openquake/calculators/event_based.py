@@ -302,7 +302,8 @@ class EventBasedCalculator(base.HazardCalculator):
             sources = sum([sg.sources for sg in sm.src_groups], [])
             if not sources:
                 continue
-            for block in self.block_splitter(sources):
+            for block in self.block_splitter(
+                    sources, operator.attrgetter('num_ruptures')):
                 smap.submit(block, self.src_filter, param, monitor)
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
