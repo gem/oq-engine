@@ -171,7 +171,8 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=(), sam_ses=()):
         if E == 0:
             continue
         assert E < TWO16, len(events)
-        ebr = EBRupture(rup, src.id, indices, numpy.array(events, event_dt))
+        ebr = EBRupture(rup, src.id, indices, numpy.array(events, event_dt),
+                        n_occ.sum(axis=1))  # n_occ by sample
         start = 0
         for sam_idx, evs in group_array(ebr.events, 'sample').items():
             eids = U64(TWO32 * ebr.serial + TWO16 * sam_idx) + numpy.arange(

@@ -358,7 +358,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
         ('eidx1', U32), ('eidx2', U32), ('gidx1', U32), ('gidx2', U32),
         ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
+        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16), ('n_occ', hdf5.vuint16)])
 
     pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
 
@@ -384,11 +384,12 @@ class RuptureSerializer(object):
             tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
                    rup.code, ebrupture.eidx1, ebrupture.eidx2,
                    offset, offset + n, getattr(ebrupture, 'pmfx', -1),
-                   rup.mag, rup.rake, rate, hypo, sy, sz)
+                   rup.mag, rup.rake, rate, hypo, sy, sz, ebrupture.n_occ)
             offset += n
             lst.append(tup)
+            occ_nbytes = 2 * len(ebrupture.n_occ)
             geoms.append(numpy.array([tuple(p) for p in points], point3d))
-            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
+            nbytes += cls.rupture_dt.itemsize + mesh.nbytes + occ_nbytes
         geom = numpy.concatenate(geoms)
         return numpy.array(lst, cls.rupture_dt), geom, nbytes
 
@@ -408,12 +409,14 @@ class RuptureSerializer(object):
         """
         pmfbytes = 0
         self.nruptures += len(ebruptures)
+        n_occs = []
         for ebr in ebruptures:
             mul = ebr.multiplicity
             ebr.eidx1 = eidx
             ebr.eidx2 = eidx + mul
             eidx += mul
             rup = ebr.rupture
+            n_occs.append(ebr.n_occ)
             if hasattr(rup, 'pmf'):
                 pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
                 dset = self.datastore.extend('pmfs', pmfs)
@@ -427,7 +430,6 @@ class RuptureSerializer(object):
         dset = self.datastore.extend(
             'ruptures', array, nbytes=previous + nbytes)
         self.datastore.extend('rupgeoms', geom)
-
         # save nbytes occupied by the PMFs
         if pmfbytes:
             if 'nbytes' in dset.attrs:
