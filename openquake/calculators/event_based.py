@@ -277,27 +277,35 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        self.R = self.csm.info.get_num_rlzs()
+        rlzs_assoc = self.csm_info.get_rlzs_assoc()
+        self.R = len(rlzs_assoc.realizations)
         num_rlzs = {grp_id: sum(
             len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
                     for grp_id in self.rlzs_by_gsim_grp}
+
+        def weight(ebr):
+            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
+                              len(ebr.sids))
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        ires = parallel.Starmap.apply(
-            build_ruptures,
-            (self.csm.get_sources(), self.src_filter, param, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'))
-
-        def weight(ebr):
-            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
-                              len(ebr.sids))
-        for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
+        smap = parallel.Starmap(build_ruptures)
+        start = 0
+        for sm in self.csm.source_models:
+            nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+            param['rlz_slice'] = slice(start, start + nr)
+            start += nr
+            logging.info('Sending %s', sm)
+            sources = sum([sg.sources for sg in sm.src_groups], [])
+            if not sources:
+                continue
+            for block in self.block_splitter(
+                    sources, operator.attrgetter('num_ruptures')):
+                smap.submit(block, self.src_filter, param, monitor)
+        for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
