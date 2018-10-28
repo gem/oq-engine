@@ -246,11 +246,13 @@ class EventBasedCalculator(base.HazardCalculator):
     def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        mon = self.monitor('saving ruptures', measuremem=False)
         for srcs in ires:
             for src in srcs:
                 # save the events always; save the ruptures
                 # if oq.save_ruptures is true
-                self.save_ruptures(src.eb_ruptures)
+                with mon:
+                    self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     self.rlzs_by_gsim_grp,
