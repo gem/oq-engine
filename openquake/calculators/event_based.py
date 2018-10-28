@@ -292,7 +292,7 @@ class EventBasedCalculator(base.HazardCalculator):
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        smap = parallel.Starmap(build_ruptures)
+        smap = parallel.Starmap(build_ruptures, monitor=monitor)
         start = 0
         for sm in self.csm.source_models:
             nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
