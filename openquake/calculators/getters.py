@@ -343,16 +343,16 @@ class GmfGetter(object):
         # sample number from 0 to the number of samples of the given src model
         for gs in self.rlzs_by_gsim:  # OrderedDict
             rlzs = self.rlzs_by_gsim[gs]
+            nr = len(rlzs)
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                if self.samples > 1:
-                    # events of the current slice of realizations
-                    all_eids = [get_array(rup.events, sample=s)['eid']
-                                for s in range(sample, sample + len(rlzs))]
+                if self.samples == 1:  # full enumeration
+                    num_events = int(rup.n_occ) * len(rlzs)
                 else:
-                    all_eids = [rup.events['eid']] * len(rlzs)
-                num_events = sum(len(eids) for eids in all_eids)
+                    num_events = int(rup.n_occ[sample:sample + nr].sum())
+                if num_events == 0:
+                    continue
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
@@ -363,10 +363,14 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    e = len(all_eids[r])
+                    if self.samples > 1:
+                        eids = get_array(rup.events, sample=sample + r)['eid']
+                    else:
+                        eids = rup.events['eid']
+                    e = len(eids)
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
-                    for ei, eid in enumerate(all_eids[r]):
+                    for ei, eid in enumerate(eids):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
                         if not tot.sum():
@@ -377,7 +381,7 @@ class GmfGetter(object):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
                     n += e
-            sample += len(rlzs)
+            sample += nr
 
     def get_hazard(self, data=None):
         """
