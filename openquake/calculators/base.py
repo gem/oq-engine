@@ -356,8 +356,7 @@ class HazardCalculator(BaseCalculator):
         if 'ucerf' in oq.calculation_mode:
             # do not preprocess
             return
-        elif (oq.prefilter_sources == 'rtree' and 'event_based' not in
-                oq.calculation_mode):
+        elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
