@@ -22,7 +22,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    AccumDict, groupby, group_array, get_array, block_splitter, debug)
+    AccumDict, groupby, group_array, get_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -373,7 +373,6 @@ class GmfGetter(object):
                             gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
-                                debug(str((rlzi, sid, eid, gmv)))
                                 yield rlzi, sid, eid, gmv
                     n += e
             sample += nr

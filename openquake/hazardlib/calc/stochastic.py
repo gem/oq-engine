@@ -176,7 +176,7 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
         events = []
         if sam_ses:  # this happens in UCERF, when n_occ is a 1x1 matrix
             sam_idx, ses_idx = sam_ses
-            for _ in range(n_occ):
+            for _ in range(n_occ[sam_ses]):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         else:  # regular case, n_occ is a matrix (num_samples, num_ses)
             for sam_idx, num_occ in enumerate(n_occ):
