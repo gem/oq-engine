@@ -131,6 +131,15 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
+def fix_shape(occur, num_rlzs):
+    nr, num_ses = occur.shape
+    assert nr == 1, nr
+    n_occ = numpy.zeros((num_rlzs, num_ses), U16)
+    for nr in range(num_rlzs):
+        n_occ[nr, :] = occur[0]
+    return n_occ
+
+
 def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
                       rup_n_occ=(), sam_ses=()):
     """
@@ -160,11 +169,14 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
         else:
             indices = ()
 
+        if not hasattr(src, 'samples'):  # full enumeration
+            n_occ = fix_shape(n_occ, rlz_slice.stop - rlz_slice.start)
+
         # creating EBRuptures
         events = []
         if sam_ses:  # this happens in UCERF, when n_occ is a 1x1 matrix
             sam_idx, ses_idx = sam_ses
-            for _ in range(n_occ[0, 0]):
+            for _ in range(n_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         else:  # regular case, n_occ is a matrix (num_samples, num_ses)
             for sam_idx, num_occ in enumerate(n_occ):
