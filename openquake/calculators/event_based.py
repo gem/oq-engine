@@ -263,7 +263,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-            msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
+            msg = 'less than ' if self.min_iml.sum() else ''
             logging.info('Estimating %s%s of GMFs', msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
@@ -305,6 +305,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for block in self.block_splitter(
                     sources, operator.attrgetter('num_ruptures')):
                 smap.submit(block, self.src_filter, param, monitor)
+        if self.oqparam.ground_motion_fields:
+            logging.info('Sending GMFs')
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
@@ -314,8 +316,6 @@ class EventBasedCalculator(base.HazardCalculator):
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
-        if self.oqparam.ground_motion_fields:
-            logging.info('Building GMFs')
 
     def agg_dicts(self, acc, result):
         """
@@ -396,8 +396,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
+        self.min_iml = self.get_min_iml(oq)
         param = dict(
-            oqparam=oq, min_iml=self.get_min_iml(oq),
+            oqparam=oq, min_iml=self.min_iml,
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
