@@ -635,8 +635,8 @@ class Starmap(object):
         percent = int(float(done) / self.total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(self.sent.sum()), self.total)
+            self.progress('Sent %s of data in %d %s task(s)',
+                          humansize(self.sent.sum()), self.total, self.name)
         elif percent > self.prev_percent:
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent
