@@ -22,7 +22,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    AccumDict, groupby, group_array, get_array, block_splitter)
+    AccumDict, groupby, group_array, get_array, block_splitter, debug)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -347,10 +347,7 @@ class GmfGetter(object):
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                if self.samples == 1:  # full enumeration
-                    num_events = int(rup.n_occ) * len(rlzs)
-                else:
-                    num_events = int(rup.n_occ[sample:sample + nr].sum())
+                num_events = int(rup.n_occ[sample:sample + nr].sum())
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
@@ -363,10 +360,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    if self.samples > 1:
-                        eids = get_array(rup.events, sample=sample + r)['eid']
-                    else:
-                        eids = rup.events['eid']
+                    eids = get_array(rup.events, sample=sample + r)['eid']
                     e = len(eids)
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
@@ -379,6 +373,7 @@ class GmfGetter(object):
                             gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
+                                debug(str((rlzi, sid, eid, gmv)))
                                 yield rlzi, sid, eid, gmv
                     n += e
             sample += nr
