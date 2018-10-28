@@ -25,8 +25,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.risklib import riskinput
 from openquake.commonlib import util
 from openquake.calculators import base, event_based, getters
@@ -132,7 +131,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         ruptures.extend(background_ruptures)
         rupture_occ.extend(background_n_occ)
-    return ruptures, rupture_occ
+    return ruptures, numpy.array(rupture_occ, numpy.uint16).reshape(-1, 1, 1)
 
 
 def sample_background_model(
