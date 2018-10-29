@@ -52,6 +52,8 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
+        gmv_uc = view('global_gmfs', self.calc.datastore)
+
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
@@ -63,6 +65,10 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        # check ucerf_hazard and event_based produces the same GMFs
+        gmv_eb = view('global_gmfs', self.calc.datastore)
+        self.assertEqual(gmv_uc, gmv_eb)
 
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
