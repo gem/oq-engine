@@ -140,8 +140,7 @@ def fix_shape(occur, num_rlzs):
     return n_occ
 
 
-def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
-                      rup_n_occ=(), sam_ses=()):
+def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
     """
     :param src: a source object
     :param num_rlzs: number of realizations of the source model
@@ -149,7 +148,6 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
     :param cmaker: a ContextMaker instance
     :param s_sites: a (filtered) site collection
     :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
-    :param sam_ses: a (sample index, ses index) pair [optional]
     :returns: a list of EBRuptures
     """
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
@@ -157,8 +155,9 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
     ebrs = []
     samples = getattr(src, 'samples', 1)
     nr = rlz_slice.stop - rlz_slice.start
-    for rup, n_occ in rup_n_occ or src.sample_ruptures(
-            samples, num_ses, cmaker.ir_mon):
+    if rup_n_occ == ():
+        rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
+    for rup, n_occ in rup_n_occ:
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
@@ -169,24 +168,14 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
         else:
             indices = ()
 
+        if not hasattr(src, 'samples'):  # full enumeration
+            n_occ = fix_shape(n_occ, nr)
+
         # creating EBRuptures
         events = []
-        if sam_ses:  # this happens in UCERF, when n_occ is a 1x1 matrix
-            sam_idx, ses_idx = sam_ses
-            for _ in range(n_occ[0, 0]):
-                if nr > 1:  # full enumeration, multiply the events
-                    for r in range(nr):
-                        events.append((0, src.src_group_id, ses_idx + 1, r))
-                else:  # sampling
-                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
-        else:  # regular case, n_occ is a matrix (num_samples, num_ses)
-            if not hasattr(src, 'samples'):  # full enumeration
-                n_occ = fix_shape(n_occ, nr)
-            for sam_idx, num_occ in enumerate(n_occ):
-                for ses_idx in range(num_ses):
-                    for _ in range(num_occ[ses_idx]):
-                        events.append(
-                            (0, src.src_group_id, ses_idx + 1, sam_idx))
+        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+            for _ in range(num_occ):
+                events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
 
         # setting event IDs based on the rupture serial and the sample index
         E = len(events)
