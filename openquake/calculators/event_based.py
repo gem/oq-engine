@@ -307,14 +307,14 @@ class EventBasedCalculator(base.HazardCalculator):
             for block in self.block_splitter(
                     sources, operator.attrgetter('num_ruptures')):
                 smap.submit(block, self.src_filter, param, monitor)
-        if self.oqparam.ground_motion_fields:
-            logging.info('Sending GMFs')
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
+            if self.oqparam.ground_motion_fields:
+                logging.info('Sending %d ruptures', len(ruptures))
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
