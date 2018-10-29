@@ -213,26 +213,25 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
-    ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     num_ses = len(param['ses_seeds'])
     num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-    for sam_idx in range(src.samples):
-        for ses_idx, ses_seed in param['ses_seeds']:
-            seed = sam_idx * TWO16 + ses_seed
-            with sampl_mon:
-                rups, n_occs = generate_event_set(
+    n_occ = AccumDict(accum=numpy.zeros((src.samples, num_ses), numpy.uint16))
+    with sampl_mon:
+        for sam_idx in range(src.samples):
+            for ses_idx, ses_seed in param['ses_seeds']:
+                seed = sam_idx * TWO16 + ses_seed
+                rups, occs = generate_event_set(
                     src, background_sids, src_filter, seed)
-                for rup in rups:
+                for rup, occ in zip(rups, occs):
+                    n_occ[rup][sam_idx, ses_idx] = occ
                     rup.serial = serial
                     serial += 1
-            with filt_mon:
-                ebrs = stochastic.build_eb_ruptures(
-                    src, slice(0, num_rlzs), num_ses, cmaker, sitecol,
-                    zip(rups, n_occs), (sam_idx, ses_idx))
-                ebruptures.extend(ebrs)
+    with filt_mon:
+        ebruptures = stochastic.build_eb_ruptures(
+            src, slice(0, num_rlzs), num_ses, cmaker, sitecol, n_occ.items())
     res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
@@ -285,9 +284,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
-            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
+            for ses_idx in range(oq.ses_per_logic_tree_path):
                 param = param.copy()
-                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx + 1)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
