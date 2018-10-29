@@ -155,10 +155,10 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
-    num_rlzs = getattr(src, 'samples', 1)
-    # TODO: in the future num_rlzs = rlz_slice.stop - rlz_slice.start
+    samples = getattr(src, 'samples', 1)
+    nr = rlz_slice.stop - rlz_slice.start
     for rup, n_occ in rup_n_occ or src.sample_ruptures(
-            num_rlzs, num_ses, cmaker.ir_mon):
+            samples, num_ses, cmaker.ir_mon):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
@@ -169,16 +169,19 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites,
         else:
             indices = ()
 
-        if not hasattr(src, 'samples'):  # full enumeration
-            n_occ = fix_shape(n_occ, rlz_slice.stop - rlz_slice.start)
-
         # creating EBRuptures
         events = []
         if sam_ses:  # this happens in UCERF, when n_occ is a 1x1 matrix
             sam_idx, ses_idx = sam_ses
-            for _ in range(n_occ[sam_ses]):
-                events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+            for _ in range(n_occ[0, 0]):
+                if nr > 1:  # full enumeration, multiply the events
+                    for r in range(nr):
+                        events.append((0, src.src_group_id, ses_idx + 1, r))
+                else:  # sampling
+                    events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
         else:  # regular case, n_occ is a matrix (num_samples, num_ses)
+            if not hasattr(src, 'samples'):  # full enumeration
+                n_occ = fix_shape(n_occ, nr)
             for sam_idx, num_occ in enumerate(n_occ):
                 for ses_idx in range(num_ses):
                     for _ in range(num_occ[ses_idx]):
