@@ -302,9 +302,9 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
                                  'because stddev==0 for IMT=%s' % im)
         spatial_cov = spatial_covariance_array(stddev, spatial_corr)
         # mu has shape (M * N, E)
-        L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     else:
-        L = numpy.zeros((M * N, M * N))
+        spatial_cov = numpy.array([numpy.eye(N) for _ in imts_])
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
