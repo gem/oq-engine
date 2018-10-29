@@ -64,11 +64,6 @@ class UcerfTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        # check the GMFs
-        gmdata = self.calc.datastore['gmdata'].value
-        got = gettemp(rst_table(gmdata, fmt='%.6f'))
-        self.assertEqualFiles('expected/gmdata_eb.csv', got)
-
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
                    if 'mean' in f]
