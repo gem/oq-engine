@@ -162,8 +162,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id:
+    if hazard_calculation_id == -1:
+        # get the latest calculation of the current user
         hc_id = get_job_id(hazard_calculation_id, getpass.getuser())
+    elif hazard_calculation_id:
+        # make it possible to use calculations made by another user
+        hc_id = get_job_id(hazard_calculation_id)
     else:
         hc_id = None
     if run:
