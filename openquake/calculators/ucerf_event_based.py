@@ -358,8 +358,8 @@ class UCERFRiskCalculator(EbrCalculator):
             if sm.samples > 1:
                 logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
-            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
+            for ses_idx in range(oq.ses_per_logic_tree_path):
+                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
                              samples=sm.samples, assetcol=self.assetcol,
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,
