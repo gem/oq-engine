@@ -391,7 +391,10 @@ def get_site_collection(oqparam):
                 sc, params, discarded = geo.utils.assoc(
                     sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
-                sitecol._set(name, params[name])
+                if name == 'backarc' and name not in params.dtype.names:
+                    sitecol._set(name, 0)  # the default
+                else:
+                    sitecol._set(name, params[name])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
