@@ -218,9 +218,10 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     num_ses = len(param['ses_seeds'])
     num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-    n_occ = AccumDict(accum=numpy.zeros((src.samples, num_ses), numpy.uint16))
+    samples = getattr(src, 'samples', 1)
+    n_occ = AccumDict(accum=numpy.zeros((samples, num_ses), numpy.uint16))
     with sampl_mon:
-        for sam_idx in range(src.samples):
+        for sam_idx in range(samples):
             for ses_idx, ses_seed in param['ses_seeds']:
                 seed = sam_idx * TWO16 + ses_seed
                 rups, occs = generate_event_set(
@@ -243,7 +244,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], src.samples)
+            param['oqparam'], param['min_iml'], samples)
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -355,8 +356,6 @@ class UCERFRiskCalculator(EbrCalculator):
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
         for sm in self.csm.source_models:
-            if sm.samples > 1:
-                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(oq.ses_per_logic_tree_path):
                 param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
