@@ -137,7 +137,7 @@ def fix_shape(occur, num_rlzs):
     assert nr == 1, nr
     n_occ = numpy.zeros((num_rlzs, num_ses), U16)
     for nr in range(num_rlzs):
-        n_occ[nr, :] = occur[0]
+        n_occ[nr, :] = occur[0, :]
     return n_occ
 
 
@@ -172,20 +172,26 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
         if not hasattr(src, 'samples'):  # full enumeration
             n_occ = fix_shape(n_occ, nr)
 
-        # creating EBRuptures
-        events = []
-        counter = collections.Counter()
-        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-            counter[sam_idx] += num_occ
-            for _ in range(num_occ):
-                events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+        # creating events
+        with cmaker.evs_mon:
+            E = n_occ.sum()
+            if E == 0:
+                continue
+            assert E < TWO16, E
+            events = numpy.zeros(E, event_dt)
+            events['grp_id'] = src.src_group_id
+            counter = collections.Counter()
+            i = 0
+            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+                if num_occ:
+                    counter[sam_idx] += num_occ
+                    for _ in range(num_occ):
+                        events[i]['ses'] = ses_idx + 1
+                        events[i]['sample'] = sam_idx
+                        i += 1
 
-        # setting event IDs based on the rupture serial and the sample index
-        E = len(events)
-        if E == 0:
-            continue
-        assert E < TWO16, len(events)
-        ebr = EBRupture(rup, src.id, indices, numpy.array(events, event_dt))
+        # setting event IDs based on the rupture serial and the sample
+        ebr = EBRupture(rup, src.id, indices, events)
         start = 0
         for sam_idx, counts in counter.items():
             rlzi = rlz_slice.start + sam_idx
