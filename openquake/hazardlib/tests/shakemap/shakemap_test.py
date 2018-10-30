@@ -95,10 +95,10 @@ class ShakemapTestCase(unittest.TestCase):
             shakemap, False, 'corr', site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
         # shape (R, N, E, M)
-        aae(gmfs[..., 0].sum(axis=1), [[0.4276304, 0.4276304]])  # PGA
+        aae(gmfs[..., 0].sum(axis=1), [[0.3894605, 0.9455077]])  # PGA
 
         _, gmfs = to_gmfs(
             shakemap, False, 'cross', site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=1), [[0.4729979, 0.4729979]])  # PGA
-        aae(gmfs[..., 2].sum(axis=1), [[0.3805843, 0.3805843]])  # SA(1.0)
+        aae(gmfs[..., 0].sum(axis=1), [[0.4278496, 0.9296374]])  # PGA
+        aae(gmfs[..., 2].sum(axis=1), [[0.4793801, 0.7392519]])  # SA(1.0)
