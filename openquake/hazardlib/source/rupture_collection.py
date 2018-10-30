@@ -29,6 +29,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
+    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
     MODIFICATIONS = set()
     RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
