@@ -122,6 +122,13 @@ def check_precalc_consistency(calc_mode, precalc_mode):
             (calc_mode, ok_mode, precalc_mode))
 
 
+MAXSITES = 1000
+CORRELATION_MATRIX_TOO_LARGE = '''\
+You have a correlation matrix which is too large: %%d sites > %d.
+To avoid that, set a proper `region_grid_spacing` so that your exposure
+takes less sites.''' % MAXSITES
+
+
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -598,6 +605,9 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
+                nsites = len(self.sitecol)
+                if nsites > MAXSITES:  # hard-coded, heuristic
+                    raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
