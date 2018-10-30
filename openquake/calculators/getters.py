@@ -347,7 +347,9 @@ class GmfGetter(object):
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                num_events = int(rup.n_occ[sample:sample + nr].sum())
+                all_eids = [get_array(rup.events, sample=sample + r)['eid']
+                            for r, rlzi in enumerate(rlzs)]
+                num_events = sum(len(eids) for eids in all_eids)
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
@@ -360,7 +362,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    eids = get_array(rup.events, sample=sample + r)['eid']
+                    eids = all_eids[r]
                     e = len(eids)
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
