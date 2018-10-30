@@ -25,7 +25,7 @@ http://cdn.ftp.openquake.org/wheelhouse/linux/py/certifi-2018.1.18-py2.py3-none-
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/urllib3-1.22-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/chardet-3.0.4-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/idna-2.6-py2.py3-none-any.whl
-http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.18.4-py2.py3-none-any.whl
+http://cdn.ftp.openquake.org/wheelhouse/linux/py/requests-2.20.0-py2.py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py/pyshp-1.2.3-py3-none-any.whl
 http://cdn.ftp.openquake.org/wheelhouse/linux/py36/PyYAML-3.12-cp36-cp36m-manylinux1_x86_64.whl
 
