@@ -22,8 +22,9 @@
 """
 import sys
 import time
+import collections
 import numpy
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import EBRupture
@@ -173,7 +174,9 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
 
         # creating EBRuptures
         events = []
+        counter = collections.Counter()
         for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
+            counter[sam_idx] += num_occ
             for _ in range(num_occ):
                 events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
 
@@ -184,10 +187,10 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
         assert E < TWO16, len(events)
         ebr = EBRupture(rup, src.id, indices, numpy.array(events, event_dt))
         start = 0
-        for sam_idx, evs in group_array(ebr.events, 'sample').items():
+        for sam_idx, counts in counter.items():
             rlzi = rlz_slice.start + sam_idx
             eids = U64(TWO32 * ebr.serial + TWO16 * rlzi) + numpy.arange(
-                len(evs), dtype=U64)
+                counts, dtype=U64)
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)
