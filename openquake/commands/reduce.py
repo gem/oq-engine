@@ -19,7 +19,7 @@
 import csv
 import shutil
 import numpy
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import valid, nrml
 from openquake.baselib.python3compat import encode
 from openquake.baselib import sap, general
 from openquake.commonlib import logictree
@@ -43,13 +43,16 @@ def save_bak(fname, node, num_nodes, total):
 
 def reduce_source_model(fname, reduction_factor):
     node = nrml.read(fname)
-    if node['xmlns'] != 'http://openquake.org/xmlns/nrml/0.5':
-        raise InvalidFile('%s: not NRML0.5' % fname)
-    total = sum(len(sg) for sg in node[0])
-    num_nodes = 0
-    for sg in node[0]:
-        sg.nodes = general.random_filter(sg, reduction_factor)
-        num_nodes += len(sg)
+    if node['xmlns'] == 'http://openquake.org/xmlns/nrml/0.5':
+        total = sum(len(sg) for sg in node[0])
+        num_nodes = 0
+        for sg in node[0]:
+            sg.nodes = general.random_filter(sg, reduction_factor)
+            num_nodes += len(sg)
+    else:  # nrml/0.4
+        total = len(node[0].nodes)
+        node[0].nodes = general.random_filter(node[0], reduction_factor)
+        num_nodes = len(node[0].nodes)
     save_bak(fname, node, num_nodes, total)
 
 
