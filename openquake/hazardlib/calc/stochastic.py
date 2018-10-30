@@ -182,13 +182,15 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
             events['grp_id'] = src.src_group_id
             counter = collections.Counter()
             i = 0
-            for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-                if num_occ:
-                    counter[sam_idx] += num_occ
-                    for _ in range(num_occ):
-                        events[i]['ses'] = ses_idx + 1
-                        events[i]['sample'] = sam_idx
-                        i += 1
+            for sam_idx, occ in enumerate(n_occ):
+                n = occ.sum()
+                if n:
+                    counter[sam_idx] += n
+                    for ses_idx, n_occ in enumerate(occ):
+                        for _ in range(n_occ):
+                            events[i]['sample'] = sam_idx
+                            events[i]['ses'] = ses_idx + 1
+                            i += 1
 
         # setting event IDs based on the rupture serial and the sample
         ebr = EBRupture(rup, src.id, indices, events)
