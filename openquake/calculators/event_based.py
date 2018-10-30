@@ -313,8 +313,6 @@ class EventBasedCalculator(base.HazardCalculator):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
-            if self.oqparam.ground_motion_fields:
-                logging.info('Sending %d ruptures', len(ruptures))
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
