@@ -22,6 +22,7 @@ import numpy
 from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.baselib.python3compat import encode
 from openquake.baselib import sap, general
+from openquake.commonlib import logictree
 
 
 def _save_csv(fname, lines, header):
@@ -30,6 +31,26 @@ def _save_csv(fname, lines, header):
             f.write(encode(header))
         for line in lines:
             f.write(encode(line))
+
+
+def save_bak(fname, node, num_nodes, total):
+    shutil.copy(fname, fname + '.bak')
+    print('Copied the original file in %s.bak' % fname)
+    with open(fname, 'wb') as f:
+        nrml.write(node, f, xmlns=node['xmlns'])
+    print('Extracted %d nodes out of %d' % (num_nodes, total))
+
+
+def reduce_source_model(fname, reduction_factor):
+    node = nrml.read(fname)
+    if node['xmlns'] != 'http://openquake.org/xmlns/nrml/0.5':
+        raise InvalidFile('%s: not NRML0.5' % fname)
+    total = sum(len(sg) for sg in node[0])
+    num_nodes = 0
+    for sg in node[0]:
+        sg.nodes = general.random_filter(sg, reduction_factor)
+        num_nodes += len(sg)
+    save_bak(fname, node, num_nodes, total)
 
 
 @sap.Script
@@ -76,20 +97,15 @@ def reduce(fname, reduction_factor):
         model.nodes = general.random_filter(model, reduction_factor)
         num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
-        if node['xmlns'] != 'http://openquake.org/xmlns/nrml/0.5':
-            raise InvalidFile('%s: not NRML0.5' % fname)
-        total = sum(len(sg) for sg in model)
-        num_nodes = 0
-        for sg in model:
-            sg.nodes = general.random_filter(sg, reduction_factor)
-            num_nodes += len(sg)
+        reduce_source_model(fname, reduction_factor)
+        return
+    elif model.tag.endswith('logicTree'):
+        for smpath in logictree.collect_info(fname).smpaths:
+            reduce_source_model(smpath, reduction_factor)
+        return
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
-    shutil.copy(fname, fname + '.bak')
-    print('Copied the original file in %s.bak' % fname)
-    with open(fname, 'wb') as f:
-        nrml.write([model], f, xmlns=node['xmlns'])
-    print('Extracted %d nodes out of %d' % (num_nodes, total))
+    save_bak(fname, node, num_nodes, total)
 
 
 reduce.arg('fname', 'path to the model file')
