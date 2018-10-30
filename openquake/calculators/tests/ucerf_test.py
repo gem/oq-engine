@@ -133,18 +133,30 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk(self):
+        self.run_calc(ucerf.__file__, 'job_ebr.ini')
+
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+        # check the mean losses_by_period
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
+
+    @attr('qa', 'risk', 'ucerf')
+    @manage_shared_dir_error
+    def test_event_based_risk_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
         # check the right number of events was stored
         self.assertEqual(len(self.calc.datastore['events']), 79)
 
-        fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss2.txt', fname)
 
         # check the mean losses_by_period
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
+        self.assertEqualFiles('expected/losses_by_period2-mean.csv', fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)
