@@ -83,6 +83,11 @@ class NathEtAl2012Lower(GMPE):
     #: following equation (11) on p. 484.
     REQUIRES_DISTANCES = set(('rrup',))
 
+    #: no site parameters are defined, the GMPE is calibrated for rock sites
+    #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
+    REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
         """

@@ -454,7 +454,9 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool':
+            if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
+                # it normally works on macOS, but not in notebooks calling
+                # notebooks, which is the case relevant for Marco Pagani
                 mem_gb = (memory_rss(os.getpid()) + sum(
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:

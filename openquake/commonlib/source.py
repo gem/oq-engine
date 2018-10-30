@@ -379,6 +379,9 @@ class CompositeSourceModel(collections.Sequence):
             [sm.get_skeleton() for sm in self.source_models])
         try:
             dupl_sources = self.check_dupl_sources()
+        except AttributeError:
+            # THIS IS REALLY STRANGE
+            logging.error('', exc_info=True)
         except AssertionError:
             # different sources with the same ID
             self.has_dupl_sources = 0
