@@ -133,6 +133,7 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk(self):
+        # the fast calculator ucerf_risk
         self.run_calc(ucerf.__file__, 'job_ebr.ini')
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -145,6 +146,7 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk_sampling(self):
+        # the fast calculator ucerf_risk
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
