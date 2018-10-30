@@ -570,7 +570,7 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            ebr = EBRupture(rupture, rec['srcidx'], (), evs, rec['n_occ'])
+            ebr = EBRupture(rupture, rec['srcidx'], (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
