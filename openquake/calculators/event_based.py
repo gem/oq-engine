@@ -45,7 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 10000  # decided by MS
+BLOCKSIZE = 2000  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
