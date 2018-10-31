@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import math
 import logging
 import operator
 import numpy
@@ -25,7 +24,6 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
-from openquake.hazardlib import source
 from openquake.commonlib import calc
 from openquake.calculators import getters
 from openquake.calculators import base
