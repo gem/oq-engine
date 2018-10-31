@@ -24,7 +24,6 @@ import abc
 import numpy
 import math
 import itertools
-import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -586,16 +585,6 @@ class EBRupture(object):
         How many times the underlying rupture occurs.
         """
         return len(self.events)
-
-    def get_eids_by_rlzi(self):
-        """
-        :returns: a defaultdict rlzi -> eids
-        """
-        eids_by_rlz = collections.defaultdict(list)
-        for eid in self.events['eid']:
-            rlzi = (eid % TWO32) // TWO16
-            eids_by_rlz[rlzi].append(eid)
-        return eids_by_rlz
 
     def export(self, mesh):
         """
