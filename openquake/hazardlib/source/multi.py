@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
-from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.geo import utils, NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.valid import SCALEREL
@@ -106,14 +106,19 @@ class MultiPointSource(ParametricSeismicSource):
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
 
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box containing all the point sources, enlarged by the
+        maximum distance.
+        """
+        return utils.get_bounding_box([ps.location for ps in self], maxdist)
+
     @property
     def polygon(self):
         """
-        The polygon containing all points expanded by the
-        max rupture projection radius
+        The polygon containing all points
         """
-        maxradius = PointSource._get_max_rupture_projection_radius(self)
-        return self.mesh.get_convex_hull().dilate(maxradius)
+        return self.mesh.get_convex_hull()
 
     def __toh5__(self):
         npd = [(prob, np.strike, np.dip, np.rake)
