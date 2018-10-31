@@ -45,7 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 30000  # decided by MS
+BLOCKSIZE = 10000  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -281,13 +281,9 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.R = len(rlzs_assoc.realizations)
-        num_rlzs = {grp_id: sum(
-            len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-                    for grp_id in self.rlzs_by_gsim_grp}
 
         def weight(ebr):
-            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
-                              len(ebr.sids))
+            return numpy.sqrt(ebr.multiplicity)
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
