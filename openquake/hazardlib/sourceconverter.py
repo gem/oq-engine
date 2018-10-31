@@ -19,7 +19,6 @@ import operator
 import collections
 import pickle
 import time
-import os
 import logging
 import numpy
 
@@ -34,6 +33,8 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
+source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
+                         ('pik', hdf5.vuint8)])
 
 
 class SourceGroup(collections.Sequence):
@@ -179,14 +180,15 @@ class SourceGroup(collections.Sequence):
         lst = []
         for i, src in enumerate(self.sources):
             buf = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
-            lst.append(numpy.frombuffer(buf, numpy.uint8))
+            lst.append((src.id, src.num_ruptures,
+                        numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
             trt=self.trt,
             name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
-        return lst, attrs
+        return numpy.array(lst, source_dt), attrs
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
