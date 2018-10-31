@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
+def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -236,7 +236,11 @@ def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
     logging.basicConfig(level=logging.INFO)
     # do not validate to avoid permissions error on the export_dir
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
-    files = set(os.path.abspath(fname) for fname in extra)
+    files = set()
+    if risk_ini:
+        risk_ini = os.path.normpath(os.path.abspath(risk_ini))
+        oq.inputs.update(readinput.get_params([risk_ini])['inputs'])
+        files.add(os.path.normpath(os.path.abspath(job_ini)))
 
     # collect .hdf5 tables for the GSIMs, if any
     if 'gsim_logic_tree' in oq.inputs or oq.gsim:
