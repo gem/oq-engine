@@ -176,16 +176,17 @@ class SourceGroup(collections.Sequence):
         return len(self.sources)
 
     def __toh5__(self):
-        array = numpy.zeros(len(self), hdf5.vuint8)
+        lst = []
         for i, src in enumerate(self.sources):
-            array[i] = memoryview(pickle.dumps(src, pickle.HIGHEST_PROTOCOL))
+            buf = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
+            lst.append(numpy.frombuffer(buf, numpy.uint8))
         attrs = dict(
             trt=self.trt,
-            name=self.name,
+            name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
             grp_probability=self.grp_probability or '')
-        return array, attrs
+        return lst, attrs
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
