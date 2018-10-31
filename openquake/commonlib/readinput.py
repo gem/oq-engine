@@ -570,30 +570,33 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def store_sm(smodel, h5, hdf5path):
+def store_sm(smodel, hdf5path, monitor):
     """
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    :param hdf5path: path to an hdf5 file (cache_XXX.hdf5)
+    :param monitor: a Monitor instance with an .hdf5 attribute
     """
-    sources = h5['source_info']
-    source_geom = h5['source_geom']
-    gid = 0
-    for sg in smodel:
-        with hdf5.File(hdf5path, 'r+') as hdf5cache:
-            hdf5cache['grp-%02d' % sg.id] = sg
-        srcs = []
-        geoms = []
-        for src in sg:
-            srcgeom = src.geom()
-            n = len(srcgeom)
-            geom = numpy.zeros(n, point3d)
-            geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                         src.num_ruptures, 0, 0, 0, 0, 0))
-            geoms.append(geom)
-            gid += n
-        hdf5.extend(source_geom, numpy.concatenate(geoms))
-        hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+    h5 = monitor.hdf5
+    with monitor('store source model'):
+        sources = h5['source_info']
+        source_geom = h5['source_geom']
+        gid = 0
+        for sg in smodel:
+            with hdf5.File(hdf5path, 'r+') as hdf5cache:
+                hdf5cache['grp-%02d' % sg.id] = sg
+            srcs = []
+            geoms = []
+            for src in sg:
+                srcgeom = src.geom()
+                n = len(srcgeom)
+                geom = numpy.zeros(n, point3d)
+                geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+                srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                             src.num_ruptures, 0, 0, 0, 0, 0))
+                geoms.append(geom)
+                gid += n
+            hdf5.extend(source_geom, numpy.concatenate(geoms))
+            hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -670,7 +673,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                     sg.id = grp_id
                     grp_id += 1
                 if monitor.hdf5:
-                    store_sm(newsm, monitor.hdf5, hdf5path)
+                    store_sm(newsm, hdf5path, monitor)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
