@@ -283,7 +283,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.R = len(rlzs_assoc.realizations)
 
         def weight(ebr):
-            return numpy.sqrt(ebr.multiplicity)
+            return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
