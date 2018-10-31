@@ -347,10 +347,9 @@ class GmfGetter(object):
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                if self.samples == 1:  # full enumeration
-                    num_events = int(rup.n_occ) * len(rlzs)
-                else:
-                    num_events = int(rup.n_occ[sample:sample + nr].sum())
+                all_eids = [get_array(rup.events, sample=sample + r)['eid']
+                            for r, rlzi in enumerate(rlzs)]
+                num_events = sum(len(eids) for eids in all_eids)
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
@@ -363,10 +362,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    if self.samples > 1:
-                        eids = get_array(rup.events, sample=sample + r)['eid']
-                    else:
-                        eids = rup.events['eid']
+                    eids = all_eids[r]
                     e = len(eids)
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
@@ -574,7 +570,7 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            ebr = EBRupture(rupture, rec['srcidx'], (), evs, rec['n_occ'])
+            ebr = EBRupture(rupture, rec['srcidx'], (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
