@@ -317,7 +317,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         self.setting_events()
         if self.oqparam.ground_motion_fields:
-            logging.info('Storing GMFs')
+            logging.info('Processing the GMFs')
 
     def agg_dicts(self, acc, result):
         """
