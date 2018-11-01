@@ -316,6 +316,8 @@ class EventBasedCalculator(base.HazardCalculator):
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
+        if self.oqparam.ground_motion_fields:
+            logging.info('Storing GMFs')
 
     def agg_dicts(self, acc, result):
         """
