@@ -33,24 +33,18 @@ Typically one wants to apply a callable to a list of arguments in
 parallel rather then sequentially, and then combine together the
 results. This is known as a `MapReduce` problem. As a simple example,
 we will consider the problem of counting the letters in a text. Here is
-how you can solve the problem sequentially:
+how you can solve the problem in parallel by using
+:class:`openquake.baselib.parallel.Starmap`:
 
->>> from itertools import starmap  # map a function with multiple arguments
 >>> from functools import reduce  # reduce an iterable with a binary operator
 >>> from operator import add  # addition function
 >>> from openquake.baselib.performance import Monitor
 >>> mon = Monitor('count')
->>> arglist = [('hello', mon), ('world', mon)]  # list of arguments
->>> results = starmap(count, arglist)  # iterator over the results
+>>> arglist = [('hello',), ('world',)]  # list of arguments
+>>> results = Starmap(count, arglist, mon)  # iterator over the results
 >>> res = reduce(add, results, collections.Counter())  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
-
-Here is how you can solve the problem in parallel by using
-:class:`openquake.baselib.parallel.Starmap`:
-
->>> res2 = Starmap(count, arglist).reduce()
->>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
 `itertools.starmap`. First of all, `Starmap` has a `reduce` method, so
@@ -65,7 +59,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
+>>> res = Starmap(count, arglist).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
