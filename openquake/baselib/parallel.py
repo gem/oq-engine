@@ -655,7 +655,9 @@ class Starmap(object):
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
         mon = args[-1]
-        assert isinstance(mon, Monitor), mon
+        if not isinstance(mon, Monitor):
+            mon = self.monitor
+            args += (mon,)
         # add incremental task number and task weight
         mon.task_no = len(self.tasks) + 1
         dist = 'no' if self.num_tasks == 1 else self.distribute
