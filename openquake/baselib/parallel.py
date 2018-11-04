@@ -347,7 +347,7 @@ dummy_mon = Monitor()
 dummy_mon.backurl = None
 
 
-def safely_call(func, args, monitor=dummy_mon):
+def safely_call(func, args, mon=dummy_mon):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -359,21 +359,19 @@ def safely_call(func, args, monitor=dummy_mon):
     :param args: the arguments
     """
     isgenfunc = inspect.isgeneratorfunction(func)
-    monitor.operation = 'total ' + func.__name__
+    mon.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
-    if monitor is dummy_mon:  # in the DbServer
+    if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
-        return Result.new(func, args, monitor)
+        return Result.new(func, args, mon)
 
-    mon = args[-1]
     mon.operation = 'total ' + func.__name__
     mon.measuremem = True
-    if mon is not monitor:
-        mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
+    args += (mon,)
+    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
             zsocket.send(Result(None, mon, msg=msg))
@@ -618,7 +616,7 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
-        self.sent = numpy.zeros(len(self.argnames))
+        self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         h5 = self.monitor.hdf5
@@ -654,12 +652,10 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        mon = args[-1]
-        if not isinstance(mon, Monitor):
-            mon = self.monitor
-            args += (mon,)
+        if isinstance(args[-1], Monitor):  # discard it
+            args = args[:-1]
         # add incremental task number and task weight
-        mon.task_no = len(self.tasks) + 1
+        self.monitor.task_no = len(self.tasks) + 1
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
