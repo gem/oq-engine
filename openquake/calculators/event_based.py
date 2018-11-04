@@ -302,7 +302,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             for block in self.block_splitter(
                     sources, operator.attrgetter('num_ruptures')):
-                smap.submit(block, self.src_filter, param, monitor)
+                smap.submit(block, self.src_filter, param)
         for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
                                        weight, operator.attrgetter('grp_id')):
             ebr = ruptures[0]

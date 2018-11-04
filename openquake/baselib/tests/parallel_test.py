@@ -75,18 +75,17 @@ class StarmapTestCase(unittest.TestCase):
         res = {}
         for key, data in all_data:
             res[key] = parallel.Starmap(
-                get_length, [(data, self.monitor)]).submit_all()
+                get_length, [(data,)]).submit_all()
         for key, val in res.items():
             res[key] = val.reduce()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
 
     def test_gfunc(self):
-        mon = self.monitor
-        res = list(parallel.Starmap(gfunc, [('xy', mon), ('z', mon)],
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)],
                                     distribute='no'))
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
 
-        res = list(parallel.Starmap(gfunc, [('xy', mon), ('z', mon)]))
+        res = list(parallel.Starmap(gfunc, [('xy',), ('z',)]))
         self.assertEqual(sorted(res), ['xxx', 'yyy', 'zzz'])
 
     @classmethod
