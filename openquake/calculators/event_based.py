@@ -215,7 +215,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
 
-    def from_ruptures(self, param, monitor):
+    def from_ruptures(self, param):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -230,7 +230,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 ruptures = RuptureGetter(parent, slc, grp_id)
                 par = param.copy()
                 par['samples'] = self.samples_by_grp[grp_id]
-                yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
+                yield ruptures, self.sitecol, rlzs_by_gsim, par
 
     def zerodict(self):
         """
@@ -275,7 +275,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
 
-    def from_sources(self, par, monitor):
+    def from_sources(self, par):
         """
         Prefilter the composite source model and store the source_info
         """
@@ -294,7 +294,7 @@ class EventBasedCalculator(base.HazardCalculator):
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        smap = parallel.Starmap(build_ruptures, monitor=monitor)
+        smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         start = 0
         for sm in self.csm.source_models:
             nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
@@ -313,7 +313,7 @@ class EventBasedCalculator(base.HazardCalculator):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
-            yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
+            yield ruptures, self.src_filter, rlzs_by_gsim, par
 
         self.setting_events()
         if self.oqparam.ground_motion_fields:
@@ -409,9 +409,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:  # from ruptures
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            iterargs = self.from_ruptures(param, self.monitor())
+            iterargs = self.from_ruptures(param)
         else:  # from sources
-            iterargs = self.from_sources(param, self.monitor())
+            iterargs = self.from_sources(param)
             if oq.ground_motion_fields is False:
                 for args in iterargs:  # store the ruptures/events
                     pass
