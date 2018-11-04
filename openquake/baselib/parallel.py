@@ -583,8 +583,8 @@ class Starmap(object):
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
-        args = args[1:]
         mon = args[-1]
+        args = args[1:-1]
         if maxweight:  # block_splitter is lazy
             task_args = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
@@ -652,8 +652,7 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        if isinstance(args[-1], Monitor):  # discard it
-            args = args[:-1]
+        assert not isinstance(args[-1], Monitor)  # sanity check
         # add incremental task number and task weight
         self.monitor.task_no = len(self.tasks) + 1
         dist = 'no' if self.num_tasks == 1 else self.distribute

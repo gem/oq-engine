@@ -184,14 +184,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         :yields: pgetter, hstats, monitor
         """
-        monitor = self.monitor('build_hazard_stats')
         hstats = self.oqparam.hazard_stats()
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
-            yield pgetter, hstats, monitor
+            yield pgetter, hstats
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
