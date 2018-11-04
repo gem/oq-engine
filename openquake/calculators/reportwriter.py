@@ -132,6 +132,7 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
+    calc.set_log_format()
     calc.save_params()  # needed to save oqparam
 
     # some taken is care so that the real calculation is not run:
