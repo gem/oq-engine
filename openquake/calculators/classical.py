@@ -124,7 +124,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats(parent)  # post-processing
             return {}
         with self.monitor('managing sources', autoflush=True):
-            allargs = self.gen_args(self.monitor('classical'))
+            allargs = self.gen_args()
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
                 # there is a trick here: if the arguments are known
@@ -143,12 +143,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_csm_info(acc.eff_ruptures)
         return acc
 
-    def gen_args(self, monitor):
+    def gen_args(self):
         """
         Used in the case of large source model logic trees.
-
-        :param monitor: a :class:`openquake.baselib.performance.Monitor`
-        :yields: (sources, sites, gsims, monitor) tuples
+        :yields: (sources, sites, gsims) triples
         """
         oq = self.oqparam
         opt = self.oqparam.optimize_same_id_sources
@@ -170,14 +168,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 par['rup_interdep'] = sg.rup_interdep
                 par['grp_probability'] = sg.grp_probability
                 gsims = self.csm.info.gsim_lt.get_gsims(sg.trt)
-                yield sg.sources, self.src_filter, gsims, par, monitor
+                yield sg.sources, self.src_filter, gsims, par
                 num_tasks += 1
                 num_sources += len(sg.sources)
         # NB: csm.get_sources_by_trt discards the mutex sources
         for trt, sources in self.csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
             for block in self.block_splitter(sources):
-                yield block, self.src_filter, gsims, param, monitor
+                yield block, self.src_filter, gsims, param
                 num_tasks += 1
                 num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
