@@ -45,7 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 RUPTURES_PER_BLOCK = 1000  # decided by MS
-BLOCKSIZE = 2000  # decided by MS
+BLOCKSIZE = 30000  # decided by MS
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -282,8 +282,12 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.R = len(rlzs_assoc.realizations)
 
-        def weight(ebr):
+        def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
+            return src.num_ruptures * factor
+
+        def weight_rup(ebr):
             return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
+
         param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
@@ -300,11 +304,11 @@ class EventBasedCalculator(base.HazardCalculator):
             sources = sum([sg.sources for sg in sm.src_groups], [])
             if not sources:
                 continue
-            for block in self.block_splitter(
-                    sources, operator.attrgetter('num_ruptures')):
+            for block in self.block_splitter(sources, weight_src):
                 smap.submit(block, self.src_filter, param)
-        for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
-                                       weight, operator.attrgetter('grp_id')):
+        for ruptures in block_splitter(
+                self._store_ruptures(smap), BLOCKSIZE,
+                weight_rup, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
@@ -312,6 +316,8 @@ class EventBasedCalculator(base.HazardCalculator):
             yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
 
         self.setting_events()
+        if self.oqparam.ground_motion_fields:
+            logging.info('Processing the GMFs')
 
     def agg_dicts(self, acc, result):
         """
