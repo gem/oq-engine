@@ -44,7 +44,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 1000  # decided by MS
 BLOCKSIZE = 30000  # decided by MS
 
 
@@ -283,7 +282,7 @@ class EventBasedCalculator(base.HazardCalculator):
         def weight_rup(ebr):
             return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
 
-        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
+        param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
