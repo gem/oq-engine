@@ -314,10 +314,11 @@ class ZipTestCase(unittest.TestCase):
     Test for the command oq zip
     """
     def test_zip(self):
+        # this is a case with .hdf5 files
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd.func(ini, xzip)
+        zip_cmd.func(ini, xzip, None)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['Wcrust_high_rhypo.hdf5',
                           'Wcrust_low_rhypo.hdf5',
@@ -334,7 +335,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd.func(ini, xzip)
+        zip_cmd.func(ini, xzip, None)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
                           'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
