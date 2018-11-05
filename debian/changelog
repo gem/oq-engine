@@ -1,4 +1,36 @@
   [Michele Simionato]
+  * Changed the building convention for the event IDs and made them unique
+    in the event loss table, even in the case of full enumeration
+  * Optimized the splitting of complex fault sources
+  * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
+    with an incorrect structure (for instance for ci3031111)
+  * Disabled the spatial correlation in risk-from-ShakeMap by default
+  * Optimized the rupture sampling where there is a large number of SESs
+  * Extended the `reqv` feature to multiple tectonic region types and
+    removed the spinning/floating for the TRTs using the feature
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
+  * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
+  * Improved the error message when there are more than 65536 distinct tags
+    in the exposure
+  * Turned `vs30measured` into an optional parameter
+
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Added new classes to mcverry_2006.py to take siteclass as a predictor
+  * Updated comments in mcverry_2006.py
+  * Added new mcverry_2006 test tables to account for difference in site
+    parameter
+  * Added qa_test_data classical case_32
+
+  [Michele Simionato]
+  * Fixed the rupture exporter for Canada
+  * Extended the `oq prepare_site_model` to optionally generate the
+    fields z1pt0, z2pt5 and vs30measured
+  * It is now an error to specify both the sites and the site model in the
+    job.ini, to avoid confusion with the precedency
+  * Implemented a reader for site models in CSV format
+  * Made the export_dir relative to the input directory
   * Better error message for ShakeMaps with zero stddev
   * Added a source_id-filtering feature in the job.ini
   * Added a check on non-homogeneous tectonic region types in a source group
@@ -33,10 +65,11 @@
     mean and standard deviation of the portfolio loss for each loss type
 
   [Marco Pagani]
-  * Added a first [preliminary] version of the GMM for the Canada model
+  * Added a first and preliminary version of the GMM for the Canada model
     represented in an analytical form.
   * Added a modified version of Atkinson and Macias to be used for the
     calculation of hazard in NSHMP2014.
+  * Added support for PGA to the Si and Midorikawa (1999).
 
   [Michele Simionato]
   * Made it possible to run the risk over an hazard calculation of another user
