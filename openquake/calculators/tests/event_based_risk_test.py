@@ -235,6 +235,11 @@ stddev         838           555
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
 
+        # check losses_by_tag
+        fnames = export(('losses_by_tag/occupancy', 'csv'),
+                        self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
         event_based.RUPTURES_PER_BLOCK = 20
