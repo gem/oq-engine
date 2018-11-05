@@ -18,29 +18,35 @@
 import sys
 import os.path
 from openquake.baselib import sap, datastore
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 
 
 @sap.Script
-def checksum(job_file_or_job_id):
+def checksum(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already
-    done) or from the job.ini/job.zip file (if not done yet).
+    done) or from the job.ini/job.zip file (if not done yet). If `thing`
+    is a source model logic tree file, get the checksum of the model by
+    ignoring the job.ini, the gmpe logic tree file and possibly other files.
     """
     try:
-        job_id = int(job_file_or_job_id)
+        job_id = int(thing)
         job_file = None
     except ValueError:
         job_id = None
-        job_file = job_file_or_job_id
+        job_file = thing
         if not os.path.exists(job_file):
             sys.exit('%s does not correspond to an existing file' % job_file)
     if job_id:
         dstore = datastore.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
+    elif job_file.endswith('.xml'):  # assume it is a smlt file
+        inputs = {p: p for p in logictree.collect_info(job_file).smpaths}
+        checksum = readinput.get_checksum32(inputs)
     else:
         oq = readinput.get_oqparam(job_file)
-        checksum = readinput.get_checksum32(oq)
+        checksum = readinput.get_checksum32(oq.inputs)
     print(checksum)
 
-checksum.arg('job_file_or_job_id', 'job.ini, job.zip or job ID')
+
+checksum.arg('thing', 'job.ini, job.zip, job ID, smlt file')

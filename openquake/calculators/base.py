@@ -170,7 +170,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
         self.datastore.flush()
 
     def set_log_format(self):
@@ -349,6 +349,12 @@ class HazardCalculator(BaseCalculator):
         ct = self.oqparam.concurrent_tasks or 1
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        if not hasattr(self, 'logged'):
+            if maxweight == minweight:
+                logging.info('Using minweight=%d', minweight)
+            else:
+                logging.info('Using maxweight=%d', maxweight)
+            self.logged = True
         return general.block_splitter(sources, maxweight, weight,
                                       operator.attrgetter('src_group_id'))
 

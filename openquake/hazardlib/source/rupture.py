@@ -35,6 +35,8 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+TWO16 = numpy.uint64(2 ** 16)
+TWO32 = numpy.uint64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
 classes = {}  # initialized in .init()
 
@@ -541,14 +543,13 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, sids, events, n_occ):
+    def __init__(self, rupture, srcidx, sids, events):
         self.rupture = rupture
         self.srcidx = srcidx
         self.sids = sids
         self.events = events
         self.eidx1 = 0
         self.eidx2 = len(events)
-        self.n_occ = n_occ  # array of size src.samples
 
     @property
     def serial(self):
