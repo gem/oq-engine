@@ -302,11 +302,10 @@ class EbrCalculator(base.RiskCalculator):
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            # saving zeros is a lot faster than adding an `if loss.sum()`
+            # TODO: remove get_rlzi(e) and make this faster
             agglosses = numpy.fromiter(
-                ((e, get_rlzi(e), loss)
-                 for e, losses in zip(self.eids, self.agglosses)
-                 for loss in losses if loss.sum()), elt_dt)
+                ((e, get_rlzi(e), losses)
+                 for e, losses in zip(self.eids, self.agglosses)), elt_dt)
             self.datastore['losses_by_event'] = agglosses
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
