@@ -80,8 +80,16 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         A = len(ri.aids)
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
-        agg = numpy.zeros((E, R, L * I), F32)
-        avg = numpy.zeros((A, R, L * I), F32)
+        try:
+            agg = numpy.zeros((E, R, L * I), F32)
+        except MemoryError:
+            raise MemoryError(
+                'Building array agg of shape (%d, %d, %d)' % (E, R, L*I))
+        try:
+            avg = numpy.zeros((A, R, L * I), F32)
+        except MemoryError:
+            raise MemoryError(
+                'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
         result = dict(aids=ri.aids, avglosses=avg)
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
