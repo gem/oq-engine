@@ -67,6 +67,10 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
     #: Required distance measure is rrup (closest distance to rupture)
     REQUIRES_DISTANCES = set(('rrup', ))
 
+    # Shear-wave velocity for reference soil conditions in [m s-1])
+    REQUIRES_SITES_PARAMETERS = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
