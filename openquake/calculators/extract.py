@@ -27,7 +27,7 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
@@ -562,3 +562,25 @@ def crm_attrs(dstore, what):
     """
     name = dstore['oqparam'].risk_model
     return ArrayWrapper(0, dstore.get_attrs(name))
+
+
+@extract.add('losses_by_tag')
+def losses_by_tag(dstore, what):
+    """
+    Statistical average losses. For instance call
+
+    $ oq extract losses_by_tag/occupancy
+    """
+    aids = dstore['assetcol/array'][what]
+    arr = dstore['avg_losses-stats'].value
+    stats = dstore['avg_losses-stats'].attrs['stats'].split()
+    tagvalues = dstore['assetcol/tagcol/' + what][1:]  # except tagvalue="?"
+    dt = numpy.dtype([('Stat', vstr)] + [(val, F32) for val in tagvalues])
+    out = numpy.zeros(len(stats), dt)
+    for s, stat in enumerate(stats):
+        out[s]['Stat'] = stat
+        for i, o in enumerate(tagvalues, 1):
+            counts = arr[aids == i, s].sum()
+            if counts:
+                out[s][o] = counts
+    return out
