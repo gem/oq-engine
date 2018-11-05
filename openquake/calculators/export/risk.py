@@ -479,3 +479,22 @@ def get_loss_ratios(lrgetter, monitor):
     with lrgetter.dstore:
         loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
     return list(zip(lrgetter.aids, loss_ratios))
+
+
+@export.add(('losses_by_tag', 'csv'))
+def export_losses_by_tag_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    tag = ekey[0].split('/')[1]
+    arr = extract(dstore, 'losses_by_tag/' + tag)
+    fnames = []
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for row in arr:
+        tup = (ekey[0].replace('/', '-'), row[0], ekey[1])
+        path = '%s-%s.%s' % tup
+        fname = dstore.export_path(path)
+        writer.save([list(row)[1:]], fname, header=row.dtype.names[1:])
+        fnames.append(fname)
+    return fnames
