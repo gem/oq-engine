@@ -100,16 +100,11 @@ def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
         sample = 0
-        samples = samples_by_grp[grp_id]
         for gsim, rlzs in rlzs_by_gsim[grp_id].items():
             for ebr in ebruptures:
-                if samples > 1:
-                    len_eids = [len(get_array(ebr.events, sample=s)['eid'])
-                                for s in range(sample, sample + len(rlzs))]
-                else:  # full enumeration
-                    len_eids = [len(ebr.events['eid'])] * len(rlzs)
                 for r, rlzi in enumerate(rlzs):
-                    n += len(ebr.rupture.sctx.sids) * len_eids[r]
+                    n += len(ebr.rupture.sctx.sids) * len(
+                        get_array(ebr.events, sample=sample + r))
             sample += len(rlzs)
     return n * nbytes
 
