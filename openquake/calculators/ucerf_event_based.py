@@ -272,7 +272,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def from_sources(self, param, monitor):
+    def from_sources(self, param):
         """
         Generate a task for each branch
         """
@@ -288,8 +288,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             for ses_idx in range(oq.ses_per_logic_tree_path):
                 param = param.copy()
                 param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx + 1)]
-                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
-                                param, monitor))
+                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id], param))
         return allargs
 
 
@@ -369,7 +368,7 @@ class UCERFRiskCalculator(EbrCalculator):
                     min_iml=min_iml,
                     oqparam=oq,
                     insured_losses=oq.insured_losses)
-                yield ssm, src_filter, param, self.riskmodel, monitor
+                yield ssm, src_filter, param, self.riskmodel
 
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy
