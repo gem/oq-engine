@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Changed the building convention for the event IDs and stored the number
-    of occurrences of each rupture
+  * Changed the building convention for the event IDs and made them unique
+    in the event loss table, even in the case of full enumeration
   * Optimized the splitting of complex fault sources
   * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
     with an incorrect structure (for instance for ci3031111)
