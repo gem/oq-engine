@@ -77,3 +77,9 @@ multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Sha
             f[mps.source_id] = mps
         with hdf5.File(tmp, 'r') as f:
             f[mps.source_id]
+
+        # test the bounding box
+        bbox = mps.get_bounding_box(maxdist=100)
+        numpy.testing.assert_almost_equal(
+            (-0.8994569916564479, -0.39932, 1.8994569916564479, 1.89932),
+            bbox)
