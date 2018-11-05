@@ -16,10 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.request import urlopen
-from urllib.error import HTTPError
 import io
-import re
 import math
+import json
 import zipfile
 import logging
 import numpy
@@ -30,11 +29,7 @@ from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/earthquakes/eventpage/{}#shakemap'
-URL_RX = '/archive/product/shakemap/[^>]*?/(\d+)/download/'
-GRID_RX = URL_RX + 'grid\.xml(\.zip)?'
-UNCERTAINTY_RX = URL_RX + "uncertainty\.xml(\.zip)?"
-
+SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 
@@ -47,25 +42,25 @@ class MissingLink(Exception):
     """Could not find link in web page"""
 
 
-def _download(url):
-    try:
-        with urlopen(url) as f:
-            return f.read().decode('utf-8')
-    except HTTPError as exc:  # not found
-        raise DownloadFailed('%s: %s' % (exc.msg, url)) from None
-
-
 def urlextract(url, fname):
     """
     Download and unzip an archive and extract the underlying fname
     """
-    if url.endswith('.zip'):
-        with urlopen(url) as f:
-            data = io.BytesIO(f.read())
-        with zipfile.ZipFile(data) as z:
+    with urlopen(url) as f:
+        data = io.BytesIO(f.read())
+    with zipfile.ZipFile(data) as z:
+        try:
             return z.open(fname)
-    else:  # not a zip
-        return urlopen(url)
+        except KeyError:
+            # for instance the ShakeMap ci3031111 has inside a file
+            # data/verified_atlas2.0/reviewed/19920628115739/output/
+            # uncertainty.xml
+            # instead of just uncertainty.xml
+            zinfo = z.filelist[0]
+            if zinfo.filename.endswith(fname):
+                return z.open(zinfo)
+            else:
+                raise
 
 
 def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
@@ -75,25 +70,29 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
     """
     url = shakemap_url.format(shakemap_id)
     logging.info('Downloading %s', url)
-    grid = re.search(GRID_RX, _download(url))
-    uncertainty = re.search(UNCERTAINTY_RX, _download(url))
+    contents = json.loads(urlopen(url).read())[
+        'properties']['products']['shakemap'][-1]['contents']
+    grid = contents.get('download/grid.xml')
     if grid is None:
-        raise MissingLink('Could not find grid.xml.zip link in %s' % url)
+        raise MissingLink('Could not find grid.xml link in %s' % url)
+    uncertainty = contents.get('download/uncertainty.xml.zip')
     if uncertainty is None:
-        with urlopen(US_GOV + grid.group()) as f:
+        with urlopen(grid['url']) as f:
             return get_shakemap_array(f)
     else:
-        with urlextract(US_GOV + grid.group(), 'grid.xml') as f1, \
-             urlextract(US_GOV + uncertainty.group(), 'uncertainty.xml') as f2:
+        with urlopen(grid['url']) as f1, urlextract(
+                uncertainty['url'], 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
 
 
-def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
+def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
+                         assoc_dist=None, discard_assets=False):
     """
     :param array_or_id: shakemap array or shakemap ID
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
+    :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, str):  # shakemap ID
@@ -103,19 +102,24 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None, assoc_dist=None):
     available_imts = set(array['val'].dtype.names)
     missing = set(imts) - available_imts
     if missing:
-        raise ValueError('The IMT %s is required but not in the available set '
-                         '%s, please change the riskmodel' %
-                         (missing.pop(), ', '.join(available_imts)))
+        msg = ('The IMT %s is required but not in the available set %s, '
+               'please change the riskmodel otherwise you will have '
+               'incorrect zero losses for the associated taxonomies' %
+               (missing.pop(), ', '.join(available_imts)))
+        if discard_assets:
+            logging.error(msg)
+        else:
+            raise RuntimeError(msg)
 
     # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in imts]
+    dt = [(imt, F32) for imt in sorted(available_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
     for name in ('lon',  'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
-        for im in imts:
+        for im in available_imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
@@ -184,6 +188,7 @@ def cross_correlation_matrix(imts, corr='cross'):
     """
     :param imts: M intensity measure types
     :param corr: 'no correlation', 'full correlation' or 'cross'
+    :returns: an array of shape (M, M)
     """
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
@@ -249,7 +254,11 @@ def amplify_ground_shaking(T, vs30, gmvs):
 
 def cholesky(spatial_cov, cross_corr):
     """
-    Decompose the spatial covariance and cross correlation matrices
+    Decompose the spatial covariance and cross correlation matrices.
+
+    :param spatial_cov: array of shape (M, N, N)
+    :param cross_corr: array of shape (M, M)
+    :returns: a triangular matrix of shape (M * N, M * N)
     """
     M, N = spatial_cov.shape[:2]
     L = numpy.array([numpy.linalg.cholesky(spatial_cov[i]) for i in range(M)])
@@ -264,30 +273,37 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
-            imts=None):
+def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
+            num_gmfs, seed, imts=None):
     """
-    :returns: an array of GMFs of shape (R, N, E, M)
+    :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
     """
+    N = len(shakemap)  # number of sites
     std = shakemap['std']
     if imts is None or len(imts) == 0:
         imts = std.dtype.names
+    else:
+        imts = [imt for imt in imts if imt in std.dtype.names]
     val = {imt: numpy.log(shakemap['val'][imt]) - std[imt] ** 2 / 2.
            for imt in imts}
     imts_ = [imt.from_string(name) for name in imts]
-    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts_)
-    stddev = [std[str(imt)] for imt in imts_]
-    for im, std in zip(imts_, stddev):
-        if std.sum() == 0:
-            raise ValueError('Cannot decompose the spatial covariance '
-                             'because stddev==0 for IMT=%s' % im)
-    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+    M = len(imts_)
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
-    M, N = spatial_corr.shape[:2]
     mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
                       for imt in imts_ for j in range(N)])
-    # mu has shape (M * N, E)
+    if spatialcorr:
+        dmatrix = geo.geodetic.distance_matrix(
+            shakemap['lon'], shakemap['lat'])
+        spatial_corr = spatial_correlation_array(dmatrix, imts_)
+        stddev = [std[str(imt)] for imt in imts_]
+        for im, std in zip(imts_, stddev):
+            if std.sum() == 0:
+                raise ValueError('Cannot decompose the spatial covariance '
+                                 'because stddev==0 for IMT=%s' % im)
+        spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+        # mu has shape (M * N, E)
+    else:
+        spatial_cov = numpy.array([numpy.eye(N) for _ in imts_])
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
@@ -298,4 +314,4 @@ def to_gmfs(shakemap, crosscorr, site_effects, trunclevel, num_gmfs, seed,
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
-    return gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
+    return imts, gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)

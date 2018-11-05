@@ -107,6 +107,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
             calc = base.calculators(oqparam)
+            calc.set_log_format()  # set the log format first of all
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids)
