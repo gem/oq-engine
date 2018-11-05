@@ -19,7 +19,6 @@ import operator
 import collections
 import pickle
 import time
-import os
 import logging
 import numpy
 
