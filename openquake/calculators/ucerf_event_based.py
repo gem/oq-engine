@@ -216,7 +216,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
-    num_ses = len(param['ses_seeds'])
+    num_ses = param['ses_per_logic_tree_path']
     num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=numpy.zeros((samples, num_ses), numpy.uint16))
@@ -358,15 +358,17 @@ class UCERFRiskCalculator(EbrCalculator):
         for sm in self.csm.source_models:
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(oq.ses_per_logic_tree_path):
-                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
-                             samples=sm.samples, assetcol=self.assetcol,
-                             save_ruptures=False,
-                             ses_ratio=oq.ses_ratio,
-                             avg_losses=oq.avg_losses,
-                             elt_dt=elt_dt,
-                             min_iml=min_iml,
-                             oqparam=oq,
-                             insured_losses=oq.insured_losses)
+                param = dict(
+                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                    ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
+                    samples=sm.samples, assetcol=self.assetcol,
+                    save_ruptures=False,
+                    ses_ratio=oq.ses_ratio,
+                    avg_losses=oq.avg_losses,
+                    elt_dt=elt_dt,
+                    min_iml=min_iml,
+                    oqparam=oq,
+                    insured_losses=oq.insured_losses)
                 yield ssm, src_filter, param, self.riskmodel, monitor
 
     def execute(self):
