@@ -19,6 +19,7 @@ import os
 import sys
 import abc
 import pdb
+import math
 import logging
 import operator
 import itertools
@@ -121,6 +122,13 @@ def check_precalc_consistency(calc_mode, precalc_mode):
             (calc_mode, ok_mode, precalc_mode))
 
 
+MAXSITES = 1000
+CORRELATION_MATRIX_TOO_LARGE = '''\
+You have a correlation matrix which is too large: %%d sites > %d.
+To avoid that, set a proper `region_grid_spacing` so that your exposure
+takes less sites.''' % MAXSITES
+
+
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -162,7 +170,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
         self.datastore.flush()
 
     def set_log_format(self):
@@ -217,7 +225,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
-                readinput.vs30s = None
                 self._monitor.flush()
 
                 if close:  # in the engine we close later
@@ -333,6 +340,24 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
+    def block_splitter(self, sources, weight=get_weight):
+        """
+        :params sources: a list of sources
+        :param weight: a weight function (default .weight)
+        :returns: an iterator over blocks of sources
+        """
+        ct = self.oqparam.concurrent_tasks or 1
+        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        if not hasattr(self, 'logged'):
+            if maxweight == minweight:
+                logging.info('Using minweight=%d', minweight)
+            else:
+                logging.info('Using maxweight=%d', maxweight)
+            self.logged = True
+        return general.block_splitter(sources, maxweight, weight,
+                                      operator.attrgetter('src_group_id'))
+
     def get_filter(self):
         """
         :returns: a SourceFilter/RtreeFilter or None
@@ -344,13 +369,11 @@ class HazardCalculator(BaseCalculator):
         if 'ucerf' in oq.calculation_mode:
             # do not preprocess
             return
-        elif (oq.prefilter_sources == 'rtree' and 'event_based' not in
-                oq.calculation_mode):
+        elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            logging.info('Preprocessing the sources with rtree')
             src_filter = RtreeFilter(self.sitecol.complete,
                                      oq.maximum_distance, self.hdf5cache)
         else:
@@ -380,7 +403,7 @@ class HazardCalculator(BaseCalculator):
         """Overridden in event based"""
 
     def check_floating_spinning(self):
-        op = '<' if self.oqparam.pointsource_distance is not None else '='
+        op = '=' if self.oqparam.pointsource_distance == {} else '<'
         f, s = self.csm.get_floating_spinning_factors()
         if f != 1:
             logging.info('Rupture floating factor %s %s', op, f)
@@ -588,6 +611,9 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
+                nsites = len(self.sitecol)
+                if nsites > MAXSITES:  # hard-coded, heuristic
+                    raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -664,11 +690,12 @@ class HazardCalculator(BaseCalculator):
         """
         if calc_times:
             source_info = self.datastore['source_info']
+            arr = numpy.zeros((len(source_info), 3), F32)
             ids, vals = zip(*sorted(calc_times.items()))
-            vals = numpy.array(vals)  # shape (n, 3)
-            source_info[ids, 'weight'] += vals[:, 0]
-            source_info[ids, 'num_sites'] += vals[:, 1]
-            source_info[ids, 'calc_time'] += vals[:, 2]
+            arr[numpy.array(ids)] = vals
+            source_info['weight'] += arr[:, 0]
+            source_info['num_sites'] += arr[:, 1]
+            source_info['calc_time'] += arr[:, 2]
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -722,17 +749,19 @@ class RiskCalculator(HazardCalculator):
             smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
                 oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance or
-                oq.region_grid_spacing)
+                smap, oq.imtls, haz_sitecol, oq.asset_hazard_distance,
+                oq.discard_assets)
             if len(discarded):
                 self.datastore['discarded'] = discarded
             assetcol = assetcol.reduce_also(sitecol)
 
         logging.info('Building GMFs')
         with self.monitor('building/saving GMFs'):
-            gmfs = to_gmfs(shakemap, oq.cross_correlation, oq.site_effects,
-                           oq.truncation_level, E, oq.random_seed, oq.imtls)
-            save_gmf_data(self.datastore, sitecol, gmfs)
+            imts, gmfs = to_gmfs(
+                shakemap, oq.spatial_correlation, oq.cross_correlation,
+                oq.site_effects, oq.truncation_level, E, oq.random_seed,
+                oq.imtls)
+            save_gmf_data(self.datastore, sitecol, gmfs, imts)
             events = numpy.zeros(E, readinput.stored_event_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
@@ -766,6 +795,8 @@ class RiskCalculator(HazardCalculator):
         return riskinputs
 
     def _gen_riskinputs(self, kind, eps, num_events):
+        rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
+        rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         dstore = self.can_read_parent() or self.datastore
         for sid, assets in enumerate(assets_by_site):
@@ -776,20 +807,25 @@ class RiskCalculator(HazardCalculator):
                 getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, [sid], self.R,
-                                       self.oqparam.imtls)
+                getter = GmfDataGetter(dstore, [sid], self.R)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 getter.init()
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
-            for block in general.block_splitter(assets, 1000):
+            for block in general.block_splitter(
+                    assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = {ass.ordinal: eps[ass.ordinal]
                                for ass in block
                                if eps is not None and len(eps)}
                 yield riskinput.RiskInput(getter, [block], reduced_eps)
+            rinfo.append((sid, len(block)))
+            if len(block) >= TWO16:
+                logging.error('There are %d assets on site #%d!',
+                              len(block), sid)
+        self.datastore['riskinput_info'] = numpy.array(rinfo, rinfo_dt)
 
     def execute(self):
         """
@@ -873,14 +909,16 @@ def save_gmfs(calculator):
     if oq.inputs['gmfs'].endswith('.xml'):
         haz_sitecol = readinput.get_site_collection(oq)
         R, N, E, I = gmfs.shape
-        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids], eids)
+        save_gmf_data(dstore, haz_sitecol, gmfs[:, haz_sitecol.sids],
+                      oq.imtls, eids)
 
 
-def save_gmf_data(dstore, sitecol, gmfs, eids=()):
+def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     """
     :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param gmfs: an array of shape (R, N, E, M)
+    :param imts: a list of IMT strings
     :param eids: E event IDs or the empty tuple
     """
     offset = 0
@@ -893,6 +931,7 @@ def save_gmf_data(dstore, sitecol, gmfs, eids=()):
         n = len(rows)
         lst.append((offset, offset + n))
         offset += n
+    dstore['gmf_data/imts'] = ' '.join(imts)
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
@@ -911,7 +950,9 @@ def import_gmfs(dstore, fname, sids):
     :returns: event_ids, num_rlzs
     """
     array = writers.read_composite_array(fname).array
-    n_imts = len(array.dtype.names[3:])  # rlzi, sid, eid, gmv_PGA, ...
+    # has header rlzi, sid, eid, gmv_PGA, ...
+    imts = [name[4:] for name in array.dtype.names[3:]]
+    n_imts = len(imts)
     gmf_data_dt = numpy.dtype(
         [('rlzi', U16), ('sid', U32), ('eid', U64), ('gmv', (F32, (n_imts,)))])
     # store the events
@@ -931,6 +972,7 @@ def import_gmfs(dstore, fname, sids):
             offset += n
             dstore.extend('gmf_data/data', dic[sid])
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
+    dstore['gmf_data/imts'] = ' '.join(imts)
 
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong

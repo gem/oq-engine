@@ -8,7 +8,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 
 - Ubuntu 18.04 LTS (Bionic)
 - RedHat Enterprise Linux 7 / CentOS 7 / Scientific Linux 7
-- Fedora 27/28
+- Fedora 27/28/29
 
 This guide may work also on other Linux releases/distributions.
 
@@ -17,6 +17,7 @@ This guide may work also on other Linux releases/distributions.
 - macOS 10.11 (El Capitan)
 - macOS 10.12 (Sierra)
 - macOS 10.13 (High Sierra)
+- macOS 10.14 (Mojave)
 
 ## Prerequisites
 
@@ -48,7 +49,7 @@ scl enable rh-python36 bash
 ### Fedora
 
 ```bash
-sudo dnf install python35
+sudo dnf install python36
 ```
 
 ### macOS

@@ -25,8 +25,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.risklib import riskinput
 from openquake.commonlib import util
 from openquake.calculators import base, event_based, getters
@@ -112,7 +111,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
     with h5py.File(ucerf.source_file, 'r') as hdf5:
         occurrences = ucerf.tom.sample_number_of_occurrences(
             ucerf.rate, seed)
-        indices = numpy.where(occurrences)[0]
+        indices, = numpy.where(occurrences)
         logging.debug(
             'Considering "%s", %d ruptures', ucerf.source_id, len(indices))
 
@@ -132,7 +131,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         ruptures.extend(background_ruptures)
         rupture_occ.extend(background_n_occ)
-    return ruptures, rupture_occ
+    return ruptures, numpy.array(rupture_occ, numpy.uint16).reshape(-1, 1, 1)
 
 
 def sample_background_model(
@@ -214,32 +213,27 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
-    ebruptures = []
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
-    for sample in range(param['samples']):
-        for ses_idx, ses_seed in param['ses_seeds']:
-            seed = sample * TWO16 + ses_seed
-            with sampl_mon:
-                rups, n_occs = generate_event_set(
+    num_ses = len(param['ses_seeds'])
+    num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+    samples = getattr(src, 'samples', 1)
+    n_occ = AccumDict(accum=numpy.zeros((samples, num_ses), numpy.uint16))
+    with sampl_mon:
+        for sam_idx in range(samples):
+            for ses_idx, ses_seed in param['ses_seeds']:
+                seed = sam_idx * TWO16 + ses_seed
+                rups, occs = generate_event_set(
                     src, background_sids, src_filter, seed)
-            with filt_mon:
-                for rup, n_occ in zip(rups, n_occs):
+                for rup, occ in zip(rups, occs):
+                    n_occ[rup][sam_idx, ses_idx] = occ
                     rup.serial = serial
-                    try:
-                        rup.sctx, rup.dctx = cmaker.make_contexts(sitecol, rup)
-                        indices = rup.sctx.sids
-                    except FarAwayRupture:
-                        continue
-                    events = []
-                    for _ in range(n_occ):
-                        events.append((0, src.src_group_id, ses_idx, sample))
-                    if events:
-                        evs = numpy.array(events, stochastic.event_dt)
-                        ebruptures.append(EBRupture(rup, src.id, indices, evs))
-                        serial += 1
-    res.num_events = len(stochastic.set_eids(ebruptures))
+                    serial += 1
+    with filt_mon:
+        ebruptures = stochastic.build_eb_ruptures(
+            src, slice(0, num_rlzs), num_ses, cmaker, sitecol, n_occ.items())
+    res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}
@@ -250,7 +244,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], param['samples'])
+            param['oqparam'], param['min_iml'], samples)
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -291,10 +285,9 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
-            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
+            for ses_idx in range(oq.ses_per_logic_tree_path):
                 param = param.copy()
-                param['samples'] = sm.samples
-                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx)]
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx + 1)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
                                 param, monitor))
         return allargs
@@ -363,11 +356,9 @@ class UCERFRiskCalculator(EbrCalculator):
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
         for sm in self.csm.source_models:
-            if sm.samples > 1:
-                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
-            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx)],
+            for ses_idx in range(oq.ses_per_logic_tree_path):
+                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
                              samples=sm.samples, assetcol=self.assetcol,
                              save_ruptures=False,
                              ses_ratio=oq.ses_ratio,

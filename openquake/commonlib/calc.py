@@ -427,7 +427,6 @@ class RuptureSerializer(object):
         dset = self.datastore.extend(
             'ruptures', array, nbytes=previous + nbytes)
         self.datastore.extend('rupgeoms', geom)
-
         # save nbytes occupied by the PMFs
         if pmfbytes:
             if 'nbytes' in dset.attrs:

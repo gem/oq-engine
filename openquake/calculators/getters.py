@@ -59,6 +59,10 @@ class PmapGetter(object):
     def weights(self):
         return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
+    @property
+    def imts(self):
+        return list(self.imtls)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -210,16 +214,19 @@ class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, imtls):
+    def __init__(self, dstore, sids, num_rlzs):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.imtls = imtls
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
+        try:
+            self.imts = self.dstore['gmf_data/imts'].value.split()
+        except KeyError:  # engine < 3.3
+            self.imts = list(self.dstore['oqparam'].imtls)
         self.eids = self.dstore['events']['eid']
         self.eids.sort()
         self.data = collections.OrderedDict()
@@ -233,7 +240,7 @@ class GmfDataGetter(collections.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 1, F32))
 
     def get_hazard(self, gsim=None):
         """
@@ -297,6 +304,10 @@ class GmfGetter(object):
     def imtls(self):
         return self.oqparam.imtls
 
+    @property
+    def imts(self):
+        return list(self.oqparam.imtls)
+
     def init(self):
         """
         Initialize the computers. Should be called on the workers
@@ -332,16 +343,15 @@ class GmfGetter(object):
         # sample number from 0 to the number of samples of the given src model
         for gs in self.rlzs_by_gsim:  # OrderedDict
             rlzs = self.rlzs_by_gsim[gs]
+            nr = len(rlzs)
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                if self.samples > 1:
-                    # events of the current slice of realizations
-                    all_eids = [get_array(rup.events, sample=s)['eid']
-                                for s in range(sample, sample + len(rlzs))]
-                else:
-                    all_eids = [rup.events['eid']] * len(rlzs)
+                all_eids = [get_array(rup.events, sample=sample + r)['eid']
+                            for r, rlzi in enumerate(rlzs)]
                 num_events = sum(len(eids) for eids in all_eids)
+                if num_events == 0:
+                    continue
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
@@ -352,10 +362,11 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    e = len(all_eids[r])
+                    eids = all_eids[r]
+                    e = len(eids)
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
-                    for ei, eid in enumerate(all_eids[r]):
+                    for ei, eid in enumerate(eids):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
                         if not tot.sum():
@@ -366,7 +377,7 @@ class GmfGetter(object):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
                     n += e
-            sample += len(rlzs)
+            sample += nr
 
     def get_hazard(self, data=None):
         """

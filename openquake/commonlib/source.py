@@ -379,6 +379,9 @@ class CompositeSourceModel(collections.Sequence):
             [sm.get_skeleton() for sm in self.source_models])
         try:
             dupl_sources = self.check_dupl_sources()
+        except AttributeError:
+            # THIS IS REALLY STRANGE
+            logging.error('', exc_info=True)
         except AssertionError:
             # different sources with the same ID
             self.has_dupl_sources = 0
@@ -567,13 +570,11 @@ class CompositeSourceModel(collections.Sequence):
         This should be called only in event based calculators
         """
         sources = self.get_sources()
-        n = sum(src.num_ruptures for src in sources)
-        rup_serial = numpy.arange(ses_seed, ses_seed + n, dtype=numpy.uint32)
-        start = 0
+        serial = ses_seed
         for src in sources:
             nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
+            src.serial = serial
+            serial += nr
 
     def get_maxweight(self, weight, concurrent_tasks, minweight=MINWEIGHT):
         """

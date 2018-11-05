@@ -34,6 +34,7 @@ class SiteModelParam(object):
         self.reference_vs30_type = 'measured'
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
+        self.reference_siteclass = b'C'
 
 
 class SiteTestCase(unittest.TestCase):
@@ -298,6 +299,6 @@ class SitePickleTestCase(unittest.TestCase):
 
     def test_dumps_and_loads(self):
         point = Point(1, 2, 3)
-        site1 = Site(point, 760.0, True, 100.0, 5.0)
+        site1 = Site(point, 760.0, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
         self.assertEqual(site1, site2)

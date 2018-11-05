@@ -52,6 +52,8 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
+        gmv_uc = view('global_gmfs', self.calc.datastore)
+
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
@@ -64,10 +66,9 @@ class UcerfTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
-        # check the GMFs
-        gmdata = self.calc.datastore['gmdata'].value
-        got = gettemp(rst_table(gmdata, fmt='%.6f'))
-        self.assertEqualFiles('expected/gmdata_eb.csv', got)
+        # check ucerf_hazard and event_based produces the same GMFs
+        gmv_eb = view('global_gmfs', self.calc.datastore)
+        self.assertEqual(gmv_uc, gmv_eb)
 
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
@@ -132,18 +133,33 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk(self):
+        # the fast calculator ucerf_risk
+        self.run_calc(ucerf.__file__, 'job_ebr.ini')
+
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
+
+        # check the mean losses_by_period
+        [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
+
+    @attr('qa', 'risk', 'ucerf')
+    @manage_shared_dir_error
+    def test_event_based_risk_sampling(self):
+        # the fast calculator ucerf_risk
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
         # check the right number of events was stored
         self.assertEqual(len(self.calc.datastore['events']), 79)
 
-        fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_losses.txt', fname)
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles(
+            'expected/portfolio_loss2.txt', fname, delta=1E-5)
 
         # check the mean losses_by_period
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
+        self.assertEqualFiles('expected/losses_by_period2-mean.csv', fname)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)

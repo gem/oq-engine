@@ -44,7 +44,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 1000  # decided by MS
 BLOCKSIZE = 30000  # decided by MS
 
 
@@ -100,16 +99,11 @@ def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
         sample = 0
-        samples = samples_by_grp[grp_id]
         for gsim, rlzs in rlzs_by_gsim[grp_id].items():
             for ebr in ebruptures:
-                if samples > 1:
-                    len_eids = [len(get_array(ebr.events, sample=s)['eid'])
-                                for s in range(sample, sample + len(rlzs))]
-                else:  # full enumeration
-                    len_eids = [len(ebr.events['eid'])] * len(rlzs)
                 for r, rlzi in enumerate(rlzs):
-                    n += len(ebr.rupture.sctx.sids) * len_eids[r]
+                    n += len(ebr.rupture.sctx.sids) * len(
+                        get_array(ebr.events, sample=sample + r))
             sample += len(rlzs)
     return n * nbytes
 
@@ -246,11 +240,13 @@ class EventBasedCalculator(base.HazardCalculator):
     def _store_ruptures(self, ires):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
+        mon = self.monitor('saving ruptures', measuremem=False)
         for srcs in ires:
             for src in srcs:
                 # save the events always; save the ruptures
                 # if oq.save_ruptures is true
-                self.save_ruptures(src.eb_ruptures)
+                with mon:
+                    self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     self.rlzs_by_gsim_grp,
@@ -263,7 +259,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
-            msg = 'less than ' if self.get_min_iml(self.oqparam).sum() else ''
+            msg = 'less than ' if self.min_iml.sum() else ''
             logging.info('Estimating %s%s of GMFs', msg, humansize(gmf_size))
 
         with self.monitor('store source_info', autoflush=True):
@@ -277,28 +273,36 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        self.R = self.csm.info.get_num_rlzs()
-        num_rlzs = {grp_id: sum(
-            len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-                    for grp_id in self.rlzs_by_gsim_grp}
-        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
+        rlzs_assoc = self.csm_info.get_rlzs_assoc()
+        self.R = len(rlzs_assoc.realizations)
+
+        def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
+            return src.num_ruptures * factor
+
+        def weight_rup(ebr):
+            return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
+
+        param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
         param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        ires = parallel.Starmap.apply(
-            build_ruptures,
-            (self.csm.get_sources(), self.src_filter, param, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('num_ruptures'),
-            key=operator.attrgetter('src_group_id'))
-
-        def weight(ebr):
-            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
-                              len(ebr.sids))
-        for ruptures in block_splitter(self._store_ruptures(ires), BLOCKSIZE,
-                                       weight, operator.attrgetter('grp_id')):
+        smap = parallel.Starmap(build_ruptures, monitor=monitor)
+        start = 0
+        for sm in self.csm.source_models:
+            nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+            param['rlz_slice'] = slice(start, start + nr)
+            start += nr
+            logging.info('Sending %s', sm)
+            sources = sum([sg.sources for sg in sm.src_groups], [])
+            if not sources:
+                continue
+            for block in self.block_splitter(sources, weight_src):
+                smap.submit(block, self.src_filter, param, monitor)
+        for ruptures in block_splitter(
+                self._store_ruptures(smap), BLOCKSIZE,
+                weight_rup, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
@@ -307,7 +311,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         self.setting_events()
         if self.oqparam.ground_motion_fields:
-            logging.info('Building GMFs')
+            logging.info('Processing the GMFs')
 
     def agg_dicts(self, acc, result):
         """
@@ -388,8 +392,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
+        self.min_iml = self.get_min_iml(oq)
         param = dict(
-            oqparam=oq, min_iml=self.get_min_iml(oq),
+            oqparam=oq, min_iml=self.min_iml,
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
@@ -415,6 +420,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Saving gmf_data/indices')
             with self.monitor('saving gmf_data/indices', measuremem=True,
                               autoflush=True):
+                self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
                 dset = self.datastore.create_dset(
                     'gmf_data/indices', hdf5.vuint32,
                     shape=(N, 2), fillvalue=None)
