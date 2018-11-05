@@ -33,24 +33,18 @@ Typically one wants to apply a callable to a list of arguments in
 parallel rather then sequentially, and then combine together the
 results. This is known as a `MapReduce` problem. As a simple example,
 we will consider the problem of counting the letters in a text. Here is
-how you can solve the problem sequentially:
+how you can solve the problem in parallel by using
+:class:`openquake.baselib.parallel.Starmap`:
 
->>> from itertools import starmap  # map a function with multiple arguments
 >>> from functools import reduce  # reduce an iterable with a binary operator
 >>> from operator import add  # addition function
 >>> from openquake.baselib.performance import Monitor
 >>> mon = Monitor('count')
->>> arglist = [('hello', mon), ('world', mon)]  # list of arguments
->>> results = starmap(count, arglist)  # iterator over the results
+>>> arglist = [('hello',), ('world',)]  # list of arguments
+>>> results = Starmap(count, arglist, mon)  # iterator over the results
 >>> res = reduce(add, results, collections.Counter())  # aggregated counts
 >>> sorted(res.items())  # counts per letter
 [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
-
-Here is how you can solve the problem in parallel by using
-:class:`openquake.baselib.parallel.Starmap`:
-
->>> res2 = Starmap(count, arglist).reduce()
->>> assert res2 == res  # the same as before
 
 As you see there are some notational advantages with respect to use
 `itertools.starmap`. First of all, `Starmap` has a `reduce` method, so
@@ -65,7 +59,7 @@ method has sensible defaults:
 You can of course override the defaults, so if you really want to
 return a `Counter` you can do
 
->>> res3 = Starmap(count, arglist).reduce(acc=collections.Counter())
+>>> res = Starmap(count, arglist).reduce(acc=collections.Counter())
 
 In the engine we use nearly always callables that return dictionaries
 and we aggregate nearly always with the addition operator, so such
@@ -214,8 +208,6 @@ class Pickled(object):
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
-        self.username = ('[%s]' % obj.username if hasattr(obj, 'username')
-                         else '')
         try:
             self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         except TypeError as exc:  # can't pickle, show the obj in the message
@@ -223,8 +215,8 @@ class Pickled(object):
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s%s #%s %s>' % (
-            self.clsname, self.username, self.calc_id, humansize(len(self)))
+        return '<Pickled %s #%s %s>' % (
+            self.clsname, self.calc_id, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
@@ -347,7 +339,7 @@ dummy_mon = Monitor()
 dummy_mon.backurl = None
 
 
-def safely_call(func, args, monitor=dummy_mon):
+def safely_call(func, args, mon=dummy_mon):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -359,21 +351,19 @@ def safely_call(func, args, monitor=dummy_mon):
     :param args: the arguments
     """
     isgenfunc = inspect.isgeneratorfunction(func)
-    monitor.operation = 'total ' + func.__name__
+    mon.operation = 'total ' + func.__name__
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
-    if monitor is dummy_mon:  # in the DbServer
+    if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
-        return Result.new(func, args, monitor)
+        return Result.new(func, args, mon)
 
-    mon = args[-1]
     mon.operation = 'total ' + func.__name__
     mon.measuremem = True
-    if mon is not monitor:
-        mon.children.append(monitor)  # monitor is a child of mon
     mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
-    with Socket(monitor.backurl, zmq.PUSH, 'connect') as zsocket:
+    args += (mon,)
+    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
             zsocket.send(Result(None, mon, msg=msg))
@@ -585,8 +575,8 @@ class Starmap(object):
         :returns: an :class:`IterResult` object
         """
         arg0 = args[0]  # this is assumed to be a sequence
-        args = args[1:]
         mon = args[-1]
+        args = args[1:-1]
         if maxweight:  # block_splitter is lazy
             task_args = ((blk,) + args for blk in block_splitter(
                 arg0, maxweight, weight, key))
@@ -618,7 +608,7 @@ class Starmap(object):
             self.argnames = inspect.getargspec(task_func.__call__).args[1:]
         self.receiver = 'tcp://%s:%s' % (
             config.dbserver.listen, config.dbserver.receiver_ports)
-        self.sent = numpy.zeros(len(self.argnames))
+        self.sent = numpy.zeros(len(self.argnames) - 1)
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         h5 = self.monitor.hdf5
@@ -654,10 +644,9 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             self.monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-        mon = args[-1]
-        assert isinstance(mon, Monitor), mon
+        assert not isinstance(args[-1], Monitor)  # sanity check
         # add incremental task number and task weight
-        mon.task_no = len(self.tasks) + 1
+        self.monitor.task_no = len(self.tasks) + 1
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist != 'no':
             args = pickle_sequence(args)
