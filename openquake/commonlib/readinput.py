@@ -648,7 +648,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
                 src.id = idx
-                src.samples = sm.samples
+                if oqparam.number_of_logic_tree_samples:
+                    src.samples = sm.samples
                 sg.sources = [src]
                 src_groups.append(sg)
                 idx += 1
@@ -1247,15 +1248,15 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def get_checksum32(oqparam):
+def get_checksum32(inputs):
     """
     Build an unsigned 32 bit integer from the input files of the calculation
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for key in sorted(oqparam.inputs):
-        fname = oqparam.inputs[key]
+    for key in sorted(inputs):
+        fname = inputs[key]
         if isinstance(fname, dict):
             for f in fname.values():
                 data = open(f, 'rb').read()

@@ -22,8 +22,9 @@
 """
 import sys
 import time
+import collections
 import numpy
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import EBRupture
@@ -131,6 +132,15 @@ def sample_ruptures(sources, src_filter=source_site_noop_filter,
     return dic
 
 
+def fix_shape(occur, num_rlzs):
+    nr, num_ses = occur.shape
+    assert nr == 1, nr
+    n_occ = numpy.zeros((num_rlzs, num_ses), U16)
+    for nr in range(num_rlzs):
+        n_occ[nr, :] = occur[0, :]
+    return n_occ
+
+
 def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
     """
     :param src: a source object
@@ -145,7 +155,7 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
     samples = getattr(src, 'samples', 1)
-    # TODO: in the future num_rlzs = rlz_slice.stop - rlz_slice.start
+    nr = rlz_slice.stop - rlz_slice.start
     if rup_n_occ == ():
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
@@ -159,24 +169,33 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
         else:
             indices = ()
 
-        # creating EBRuptures
-        events = []
-        for (sam_idx, ses_idx), num_occ in numpy.ndenumerate(n_occ):
-            for _ in range(num_occ):
-                events.append((0, src.src_group_id, ses_idx + 1, sam_idx))
+        if not hasattr(src, 'samples'):  # full enumeration
+            n_occ = fix_shape(n_occ, nr)
 
-        # setting event IDs based on the rupture serial and the sample index
-        E = len(events)
-        if E == 0:
-            continue
-        assert E < TWO16, len(events)
-        ebr = EBRupture(rup, src.id, indices, numpy.array(events, event_dt),
-                        n_occ.sum(axis=1))  # n_occ by sample
+        # creating events
+        with cmaker.evs_mon:
+            occ = n_occ.sum(axis=1)  # occurrences by sam_idx
+            E = occ.sum()
+            if E == 0:
+                continue
+            assert E < TWO16, E
+            events = numpy.zeros(E, event_dt)
+            events['grp_id'] = src.src_group_id
+            i = 0
+            for sam_idx in range(nr):  # numpy.ndenumerate would be slower
+                for ses_idx, num_occ in enumerate(n_occ[sam_idx]):
+                    for _ in range(num_occ):
+                        events[i]['sample'] = sam_idx
+                        events[i]['ses'] = ses_idx + 1
+                        i += 1
+
+        # setting event IDs based on the rupture serial and the sample
+        ebr = EBRupture(rup, src.id, indices, events)
         start = 0
-        for sam_idx, evs in group_array(ebr.events, 'sample').items():
+        for sam_idx, n in enumerate(occ):
             rlzi = rlz_slice.start + sam_idx
             eids = U64(TWO32 * ebr.serial + TWO16 * rlzi) + numpy.arange(
-                len(evs), dtype=U64)
+                n, dtype=U64)
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)

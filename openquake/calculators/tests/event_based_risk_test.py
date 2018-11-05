@@ -100,7 +100,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ============== ============= ==========
 portfolio_loss nonstructural structural
 ============== ============= ==========
-mean           4,585         15,603    
+mean           4,585         15,602    
 stddev         838           555       
 ============== ============= ==========''')
 
@@ -157,7 +157,7 @@ stddev         838           555
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 2119)
+        self.assertEqual(nbytes, 1989)
 
         # test postprocessing
         self.calc.datastore.close()
