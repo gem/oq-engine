@@ -31,7 +31,13 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
 getweight = operator.attrgetter('weight')
+
+
+def get_rlzi(eid):
+    return (eid % TWO32) // TWO16
 
 
 def build_loss_tables(dstore):
@@ -81,7 +87,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
         try:
-            agg = numpy.zeros((E, R, L * I), F32)
+            agg = numpy.zeros((E, L * I), F32)
         except MemoryError:
             raise MemoryError(
                 'Building array agg of shape (%d, %d, %d)' % (E, R, L*I))
@@ -130,7 +136,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         li = l + L * i
                         # this is the critical loop: it is important to keep it
                         # vectorized in terms of the event indices
-                        agg[indices, r, li] += losses[:, i]
+                        agg[indices, li] += losses[:, i]
 
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
@@ -201,7 +207,7 @@ class EbrCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
+        self.agglosses = numpy.zeros((self.E, self.L * self.I), F32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
@@ -298,9 +304,9 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('saving event loss table', measuremem=True):
             # saving zeros is a lot faster than adding an `if loss.sum()`
             agglosses = numpy.fromiter(
-                ((e, r, loss)
+                ((e, get_rlzi(e), loss)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses) if loss.sum()), elt_dt)
+                 for loss in losses if loss.sum()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
