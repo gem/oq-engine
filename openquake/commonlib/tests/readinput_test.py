@@ -75,7 +75,6 @@ export_dir = %s
 [general]
 calculation_mode = event_based
 [site]
-sites = 0 0
 source_model_file = %s
 site_model_file = %s
 maximum_distance=1
@@ -101,7 +100,6 @@ export_dir = %s
                            'site_model': site_model_input,
                            'source': [source_model_input],
                            'source_model': source_model_input},
-                'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
@@ -241,10 +239,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         with mock.patch('logging.warn') as warn:
             readinput.get_site_collection(oqparam)
         # check that the warning was raised
-        self.assertEqual(
-            warn.call_args[0],
-            ('Association to (%.1f %.1f) from site #%d (%.1f %.1f) %d km',
-             0.0, 0.0, 1, 2.0, 0.0, 222))
+        self.assertEqual(len(warn.call_args), 2)
 
 
 class ExposureTestCase(unittest.TestCase):
@@ -628,22 +623,31 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 class GetCompositeSourceModelTestCase(unittest.TestCase):
     # test the case in_memory=False, used when running `oq info job.ini`
 
-    def test_nrml05(self):
+    def test_nrml04(self):
         oq = readinput.get_oqparam('job.ini', case_1)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
 
-    def test_nrml04(self):
+    def test_nrml05(self):
         oq = readinput.get_oqparam('job.ini', case_2)
         csm = readinput.get_composite_source_model(oq, in_memory=False)
-        srcs = csm.get_sources()  # a single PointSource
-        self.assertEqual(len(srcs), 1)
+        srcs = csm.get_sources()  # two PointSources
+        self.assertEqual(len(srcs), 2)
 
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_2.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
         readinput.reduce_source_model(smlt, [], False)
+
+    def test_wrong_trts(self):
+        # invalid TRT in job.ini [reqv]
+        oq = readinput.get_oqparam('job.ini', case_2)
+        fname = oq.inputs['reqv'].pop('active shallow crust')
+        oq.inputs['reqv']['act shallow crust'] = fname
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_composite_source_model(oq, in_memory=False)
+        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):

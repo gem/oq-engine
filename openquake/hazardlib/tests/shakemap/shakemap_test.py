@@ -17,8 +17,8 @@ CDIR = os.path.dirname(__file__)
 
 
 def mean_gmf(shakemap):
-    gmfs = to_gmfs(
-        shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+    _, gmfs = to_gmfs(
+        shakemap, True, 'cross', site_effects=True, trunclevel=3,
         num_gmfs=10, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
@@ -78,14 +78,27 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['vs30'] = numpy.array([301.17] * 9)
         shakemap['val'] = val
         shakemap['std'] = std
-        gmfs = to_gmfs(
-            shakemap, crosscorr='corr', site_effects=False, trunclevel=3,
+        _, gmfs = to_gmfs(
+            shakemap, True, 'corr', site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
         # shape (R, N, E, M)
         aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
 
-        gmfs = to_gmfs(
-            shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+        _, gmfs = to_gmfs(
+            shakemap, True, 'cross', site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=1), [[0.4101717, 0.6240185]])  # PGA
         aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)
+
+        # disable spatial correlation
+        _, gmfs = to_gmfs(
+            shakemap, False, 'corr', site_effects=False, trunclevel=3,
+            num_gmfs=2, seed=42)
+        # shape (R, N, E, M)
+        aae(gmfs[..., 0].sum(axis=1), [[0.3894605, 0.9455077]])  # PGA
+
+        _, gmfs = to_gmfs(
+            shakemap, False, 'cross', site_effects=True, trunclevel=3,
+            num_gmfs=2, seed=42)
+        aae(gmfs[..., 0].sum(axis=1), [[0.4278496, 0.9296374]])  # PGA
+        aae(gmfs[..., 2].sum(axis=1), [[0.4793801, 0.7392519]])  # SA(1.0)

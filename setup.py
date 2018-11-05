@@ -68,7 +68,7 @@ install_requires = [
     'decorator >=4.3',
     'django >=1.10, <2.1',
     'matplotlib >=1.5, <2.3',
-    'requests >=2.9, <2.19',
+    'requests >=2.20, <2.21',
     'pyshp ==1.2.3',
     'PyYAML',
 ]

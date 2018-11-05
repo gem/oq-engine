@@ -454,7 +454,9 @@ class IterResult(object):
                 self.received.append(len(result.pik))
             else:  # this should never happen
                 raise ValueError(result)
-            if OQ_DISTRIBUTE == 'processpool':
+            if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
+                # it normally works on macOS, but not in notebooks calling
+                # notebooks, which is the case relevant for Marco Pagani
                 mem_gb = (memory_rss(os.getpid()) + sum(
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
@@ -548,7 +550,7 @@ class Starmap(object):
         elif distribute == 'no' and hasattr(cls, 'pool'):
             cls.shutdown()
         elif distribute == 'dask':
-            cls.dask_client = Client()
+            cls.dask_client = Client(config.distribution.dask_scheduler)
 
     @classmethod
     def shutdown(cls):
@@ -635,8 +637,8 @@ class Starmap(object):
         percent = int(float(done) / self.total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(self.sent.sum()), self.total)
+            self.progress('Sent %s of data in %d %s task(s)',
+                          humansize(self.sent.sum()), self.total, self.name)
         elif percent > self.prev_percent:
             self.progress('%s %3d%%', self.name, percent)
             self.prev_percent = percent

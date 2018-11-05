@@ -250,22 +250,25 @@ algorithm.
 ```bash
 $ oq help prepare_site_model
 usage: oq prepare_site_model [-h] [-g 0] [-s 5] [-o sites.csv]
-                             exposure_xml vs30_csv
+                             exposure_xml vs30_csv [vs30_csv ...]
 
-Prepare a site_model.csv file from an exposure, a vs30 csv file and a grid
-spacing which can be 0 (meaning no grid). Sites far away from the vs30
-records are discarded and you can see them with the command `oq plot_assets`.
-It is up to you decide if you need to fix your exposure or if it is right
-to ignore the discarded sites.
+Prepare a sites.csv file from an exposure xml file, a vs30 csv file and a
+grid spacing which can be 0 (meaning no grid). For each asset site or grid
+site the closest vs30 parameter is used. The command can also generate
+(on demand) the additional fields z1pt0, z2pt5 and vs30measured which may
+be needed by your hazard model, depending on the required GSIMs.
 
 positional arguments:
   exposure_xml          exposure in XML format
-  vs30_csv              USGS file lon,lat,vs30 with no header
+  vs30_csv              files with lon,lat,vs30 and no header
 
 optional arguments:
   -h, --help            show this help message and exit
+  -1, --z1pt0           build the z1pt0
+  -2, --z2pt5           build the z2pt5
+  -3, --vs30measured    build the vs30measured
   -g 0, --grid-spacing 0
-                        grid spacing in km (or 0)
+                        grid spacing in km (the default 0 means no grid)
   -s 5, --site-param-distance 5
                         sites over this distance are discarded
   -o sites.csv, --output sites.csv
@@ -275,25 +278,23 @@ optional arguments:
 The command work in two modes: with non-gridded exposures (the
 default) and with gridded exposures. In the first case the assets are
 aggregated in unique locations and for each location the vs30 coming
-from the closest vs30 record is taken. If the closest vs30 record is
-over the `site_param_distance` - which by default is 5 km - the site
-is discarded.  In the second case, i.e. when a `grid_spacing`
-parameter is passed, a grid containing of all the exposure is built
-and the points with assets are associated to the vs30 records. The
-`site_param_distance` parameter is ignored, and the grid spacing
-multiplied by the square root of 2 is used instead.
+from the closest vs30 record is taken. In the second case, when a
+`grid_spacing` parameter is passed, a grid containing all of the
+exposure is built and the points with assets are associated to the
+vs30 records. In both cases if the closest vs30 record is
+over the `site_param_distance` - which by default is 5 km - a warning
+is printed. 
 
-In large risk calculation one wants to *use the gridded mode always* because:
+In large risk calculations one wants to *use the gridded mode always* because:
 
 1) the results are the nearly the same than without the grid and
-2) the calculation is a lot faster and uses a lot less memory with a grid.
+2) the calculation is a lot faster and uses a lot less memory.
 
 Basically by using a grid you can turn an impossible calculation into a possible
-one. You should always use a grid unless there are very few sites.
-
-The command is able to manage multiple files at once, just use commas with
-no spaces to separate the files. Here is an example of usage:
+one.
+The command is able to manage multiple Vs30 files at once. Here is an example
+of usage:
 
 ```bash
-$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv,Vs30/Bolivia.csv --grid-spacing=10
+$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv Vs30/Bolivia.csv --grid-spacing=10
 ```

@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib import source
@@ -156,15 +156,8 @@ class ClassicalCalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level, imtls=oq.imtls,
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance)
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         num_tasks = 0
         num_sources = 0
-        maxweight = self.csm.get_maxweight(
-            weight, oq.concurrent_tasks, minweight)
-        if maxweight == minweight:
-            logging.info('Using minweight=%d', minweight)
-        else:
-            logging.info('Using maxweight=%d', maxweight)
 
         if self.csm.has_dupl_sources and not opt:
             logging.warn('Found %d duplicated sources',
@@ -183,7 +176,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: csm.get_sources_by_trt discards the mutex sources
         for trt, sources in self.csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in block_splitter(sources, maxweight, weight):
+            for block in self.block_splitter(sources):
                 yield block, self.src_filter, gsims, param, monitor
                 num_tasks += 1
                 num_sources += len(block)
@@ -293,7 +286,8 @@ class PreCalculator(ClassicalCalculator):
     def execute(self):
         eff_ruptures = AccumDict(accum=0)
         for src in self.csm.get_sources():
-            eff_ruptures[src.src_group_id] += src.num_ruptures
+            for grp_id in src.src_group_ids:
+                eff_ruptures[grp_id] += src.num_ruptures
         self.store_csm_info(eff_ruptures)
         return {}
 

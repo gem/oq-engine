@@ -55,6 +55,8 @@ MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
 
+TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
+
 
 class LtSourceModel(object):
     """
@@ -480,6 +482,12 @@ class FakeSmlt(object):
         """
         return lambda source: None
 
+    def get_trts(self):
+        """
+        :returns: the set of TRTs inside the source model file
+        """
+        return set(TRT_REGEX.findall(open(self.filename).read()))
+
     def __iter__(self):
         name = os.path.basename(self.filename)
         smlt_path = ('b1',)
@@ -619,6 +627,19 @@ class SourceModelLogicTree(object):
                     for src_node in sg:
                         source_ids.add(src_node['id'])
         return source_ids
+
+    def get_trts(self):
+        """
+        :returns:
+            the complete set of tectonic regions found in all the source models
+        """
+        fnames = self.info.smpaths
+        trts = set()
+        logging.info('Reading TRTs from %d model file(s)', len(fnames))
+        for fname in fnames:
+            if not fname.endswith('.hdf5'):
+                trts.update(TRT_REGEX.findall(open(fname).read()))
+        return trts
 
     def parse_tree(self, tree_node, validate):
         """

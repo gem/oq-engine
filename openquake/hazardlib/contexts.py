@@ -82,7 +82,7 @@ class ContextMaker(object):
         param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
-        self.pointsource_distance = param.get('pointsource_distance')
+        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -111,6 +111,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.evs_mon = monitor('building events', measuremem=False)
 
     def filter(self, sites, rupture):
         """
@@ -185,8 +186,10 @@ class ContextMaker(object):
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
-        if self.reqv and isinstance(rupture.surface, PlanarSurface):
-            reqv = self.reqv.get(dctx.repi, rupture.mag)
+        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
+                    if self.reqv else None)
+        if reqv_obj and isinstance(rupture.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rupture.mag)
             if 'rjb' in self.REQUIRES_DISTANCES:
                 dctx.rjb = reqv
             if 'rrup' in self.REQUIRES_DISTANCES:
@@ -206,9 +209,9 @@ class ContextMaker(object):
         """
         out = []
         with self.ir_mon:
-            if hasattr(src, 'location'):
-                close_sites, far_sites = sites.split(
-                    src.location, self.pointsource_distance)
+            pdist = self.pointsource_distance.get(src.tectonic_region_type)
+            if hasattr(src, 'location') and pdist:
+                close_sites, far_sites = sites.split(src.location, pdist)
                 if close_sites is None:  # all is far
                     out.append((list(src.iter_ruptures(False, False)),
                                 far_sites))
