@@ -271,7 +271,6 @@ producing too small PoEs.'''
         # build all_args
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
-        mon = self.monitor('disaggregation')
         R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
@@ -292,8 +291,8 @@ producing too small PoEs.'''
                     {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
-                        (src_filter, block, cmaker, iml4, trti, self.bin_edges,
-                         oq, mon))
+                        (src_filter, block, cmaker, iml4, trti,
+                         self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
