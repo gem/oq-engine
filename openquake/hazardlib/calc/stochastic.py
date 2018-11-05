@@ -22,7 +22,6 @@
 """
 import sys
 import time
-import collections
 import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
@@ -34,10 +33,9 @@ TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
 U64 = numpy.uint64
-U32 = numpy.uint32
 U16 = numpy.uint16
-event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
-                        ('sample', U32)])
+event_dt = numpy.dtype(
+    [('eid', U64), ('grp_id', U16), ('ses', U16), ('sample', U16)])
 
 
 def source_site_noop_filter(srcs):

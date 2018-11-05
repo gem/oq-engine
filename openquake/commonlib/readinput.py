@@ -59,7 +59,7 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
-    ('ses', U32), ('sample', U32)])
+    ('ses', U16), ('sample', U16)])
 
 
 class DuplicatedPoint(Exception):
