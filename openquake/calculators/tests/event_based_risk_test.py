@@ -101,7 +101,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 portfolio_loss nonstructural structural
 ============== ============= ==========
 mean           4,585         15,602    
-stddev         838           555       
+stddev         838           556       
 ============== ============= ==========''')
 
     @attr('qa', 'risk', 'event_based_risk')
