@@ -119,13 +119,13 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
                           src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
+    rlzs = numpy.concatenate(list(param['rlzs_by_gsim'].values()))
     for src, sites in src_filter(sources):
         t0 = time.time()
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = build_eb_ruptures(src, param['rlz_slice'], num_ses,
-                                 cmaker, sites)
+        ebrs = build_eb_ruptures(src, rlzs, num_ses, cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
@@ -143,10 +143,10 @@ def fix_shape(occur, num_rlzs):
     return n_occ
 
 
-def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
+def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
     """
     :param src: a source object
-    :param num_rlzs: number of realizations of the source model
+    :param rlzs: realizations of the source model as numpy.uint16 numbers
     :param num_ses: number of stochastic event sets
     :param cmaker: a ContextMaker instance
     :param s_sites: a (filtered) site collection
@@ -157,7 +157,7 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
     samples = getattr(src, 'samples', 1)
-    nr = rlz_slice.stop - rlz_slice.start
+    nr = len(rlzs)
     if rup_n_occ == ():
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
@@ -195,9 +195,8 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
         ebr = EBRupture(rup, src.id, indices, events)
         start = 0
         for sam_idx, n in enumerate(occ):
-            rlzi = rlz_slice.start + sam_idx
-            eids = U64(TWO32 * ebr.serial + TWO16 * rlzi) + numpy.arange(
-                n, dtype=U64)
+            eids = (U64(TWO32 * ebr.serial + TWO16 * rlzs[sam_idx]) +
+                    numpy.arange(n, dtype=U64))
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)
