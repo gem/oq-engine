@@ -49,9 +49,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
         site = Site(geo.Point(*lonlat), 800, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
-                     rlz_slice=slice(0, 1))
-        gsims = [SiMidorikawa1999SInter()]
-        dic = sample_ruptures(group, s_filter, gsims, param)
+                     rlz_slice=slice(0, 1),
+                     rlzs_by_gsim={SiMidorikawa1999SInter(): [0]})
+        dic = sample_ruptures(group, param, s_filter)
         self.assertEqual(len(dic['eb_ruptures']), 5)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
@@ -65,5 +65,5 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(len(ruptures), 19)
 
         # test no filtering 2
-        ruptures = sample_ruptures(group)['eb_ruptures']
-        self.assertEqual(len(ruptures), 1)
+        ruptures = sample_ruptures(group, param)['eb_ruptures']
+        self.assertEqual(len(ruptures), 5)

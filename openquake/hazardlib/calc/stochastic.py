@@ -96,40 +96,36 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
-def sample_ruptures(sources, src_filter=source_site_noop_filter,
-                    gsims=(), param=(), monitor=Monitor()):
+def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
+                    monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
+    :param param:
+        a dictionary of additional parameters including rlzs_by_gsim,
+        ses_per_logic_tree_path and filter_distance
     :param src_filter:
         a source site filter
-    :param gsims:
-        a list of GSIMs for the current tectonic region model (can be empty)
-    :param param:
-        a dictionary of additional parameters (by default
-        ses_per_logic_tree_path=1 and filter_distance=1000)
     :param monitor:
         monitor instance
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
-    if not param:
-        param = dict(ses_per_logic_tree_path=1, filter_distance=1000,
-                     rlz_slice=slice(0, 1))
     eb_ruptures = []
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    cmaker = ContextMaker(gsims, src_filter.integration_distance,
+    cmaker = ContextMaker(param['rlzs_by_gsim'],
+                          src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
+    rlzs = numpy.concatenate(list(param['rlzs_by_gsim'].values()))
     for src, sites in src_filter(sources):
         t0 = time.time()
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        ebrs = build_eb_ruptures(src, param['rlz_slice'], num_ses,
-                                 cmaker, sites)
+        ebrs = build_eb_ruptures(src, rlzs, num_ses, cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
@@ -147,10 +143,10 @@ def fix_shape(occur, num_rlzs):
     return n_occ
 
 
-def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
+def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
     """
     :param src: a source object
-    :param num_rlzs: number of realizations of the source model
+    :param rlzs: realizations of the source model as numpy.uint16 numbers
     :param num_ses: number of stochastic event sets
     :param cmaker: a ContextMaker instance
     :param s_sites: a (filtered) site collection
@@ -161,7 +157,7 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
     samples = getattr(src, 'samples', 1)
-    nr = rlz_slice.stop - rlz_slice.start
+    nr = len(rlzs)
     if rup_n_occ == ():
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
@@ -199,9 +195,8 @@ def build_eb_ruptures(src, rlz_slice, num_ses, cmaker, s_sites, rup_n_occ=()):
         ebr = EBRupture(rup, src.id, indices, events)
         start = 0
         for sam_idx, n in enumerate(occ):
-            rlzi = rlz_slice.start + sam_idx
-            eids = U64(TWO32 * ebr.serial + TWO16 * rlzi) + numpy.arange(
-                n, dtype=U64)
+            eids = (U64(TWO32 * ebr.serial + TWO16 * rlzs[sam_idx]) +
+                    numpy.arange(n, dtype=U64))
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)
