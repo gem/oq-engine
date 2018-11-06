@@ -347,8 +347,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 bio = io.BytesIO()
                 zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
                 data = bio.getvalue()
-            calc.datastore['input_zip'] = numpy.array(data)
-            calc.datastore.set_attrs('input_zip', nbytes=len(data))
+            calc.datastore['input/zip'] = numpy.array(data)
+            calc.datastore.set_attrs('input/zip', nbytes=len(data))
 
             logs.dbcmd('update_job', job_id, {'status': 'executing',
                                               'pid': _PID})
