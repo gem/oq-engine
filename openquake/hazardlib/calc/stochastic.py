@@ -96,31 +96,27 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
-def sample_ruptures(sources, src_filter=source_site_noop_filter,
-                    gsims=(), param=(), monitor=Monitor()):
+def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
+                    monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
+    :param param:
+        a dictionary of additional parameters including rlzs_by_gsim,
+        ses_per_logic_tree_path and filter_distance
     :param src_filter:
         a source site filter
-    :param gsims:
-        a list of GSIMs for the current tectonic region model (can be empty)
-    :param param:
-        a dictionary of additional parameters (by default
-        ses_per_logic_tree_path=1 and filter_distance=1000)
     :param monitor:
         monitor instance
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
-    if not param:
-        param = dict(ses_per_logic_tree_path=1, filter_distance=1000,
-                     rlz_slice=slice(0, 1))
     eb_ruptures = []
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    cmaker = ContextMaker(gsims, src_filter.integration_distance,
+    cmaker = ContextMaker(param['rlzs_by_gsim'],
+                          src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
     for src, sites in src_filter(sources):
