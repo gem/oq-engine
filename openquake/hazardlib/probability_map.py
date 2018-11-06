@@ -78,7 +78,7 @@ class ProbabilityCurve(object):
     def __invert__(self):
         return self.__class__(1. - self.array)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.array.any())
 
     def __repr__(self):
