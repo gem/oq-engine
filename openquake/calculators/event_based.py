@@ -56,8 +56,7 @@ def build_ruptures(srcs, srcfilter, param, monitor):
     n = 0
     mon = monitor('making contexts', measuremem=False)
     for src in srcs:
-        gsims = param['gsims_by_trt'][src.tectonic_region_type]
-        dic = sample_ruptures([src], srcfilter, gsims, param, mon)
+        dic = sample_ruptures([src], param, srcfilter, mon)
         vars(src).update(dic)
         acc.append(src)
         n += len(dic['eb_ruptures'])
@@ -285,7 +284,6 @@ class EventBasedCalculator(base.HazardCalculator):
         param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
-        param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
@@ -295,11 +293,12 @@ class EventBasedCalculator(base.HazardCalculator):
             param['rlz_slice'] = slice(start, start + nr)
             start += nr
             logging.info('Sending %s', sm)
-            sources = sum([sg.sources for sg in sm.src_groups], [])
-            if not sources:
-                continue
-            for block in self.block_splitter(sources, weight_src):
-                smap.submit(block, self.src_filter, param)
+            for sg in sm.src_groups:
+                if not sg.sources:
+                    continue
+                param['rlzs_by_gsim'] = self.rlzs_by_gsim_grp[sg.id]
+                for block in self.block_splitter(sg.sources, weight_src):
+                    smap.submit(block, self.src_filter, param)
         for ruptures in block_splitter(
                 self._store_ruptures(smap), BLOCKSIZE,
                 weight_rup, operator.attrgetter('grp_id')):
