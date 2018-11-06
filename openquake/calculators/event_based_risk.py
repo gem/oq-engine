@@ -337,6 +337,8 @@ class EbrCalculator(base.RiskCalculator):
                 dstore['losses_by_rlzi'] = lbr
                 ridx = [rlt[:, lti].argmax() for lti in range(self.L)]
                 dstore.set_attrs('rup_loss_table', ridx=ridx)
+        if self.R > 1:
+            return  # aggregate loss curves are temporarily disabled
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
