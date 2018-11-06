@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Forbidden event based calculations with more than `max_potential_paths`
+    in the case of full enumeration
   * Saved a large amount of memory in event_based_risk calculations
   * Added a command `oq export losses_by_tag/<tagname> <calc_id>`
   * Extended `oq zip` to zip the risk files together with the hazard files
