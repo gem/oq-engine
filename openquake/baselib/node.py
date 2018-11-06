@@ -533,16 +533,13 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
         generator is empty.
         """
         return bool(self.nodes)
-
-    if sys.version > '3':
-        __bool__ = __nonzero__
 
     def __deepcopy__(self, memo):
         new = object.__new__(self.__class__)
