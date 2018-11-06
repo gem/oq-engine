@@ -218,22 +218,19 @@ class RlzsAssoc(object):
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
-    def __len__(self):
-        array = self.by_grp()  # TODO: remove this
-        return sum(len(array[grp]) for grp in array)
-
     def __repr__(self):
         pairs = []
         dic = self.by_grp()
+        size = sum(len(dic[grp]) for grp in dic)
         for grp in sorted(dic):
             grp_id = int(grp[4:])
             gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in dic[grp]:
+            for gsim_idx, rlzis in enumerate(dic[grp]):
                 if len(rlzis) > 10:  # short representation
                     rlzis = ['%d realizations' % len(rlzis)]
                 pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
-            self.__class__.__name__, len(self), len(self.realizations),
+            self.__class__.__name__, size, len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
 
 
