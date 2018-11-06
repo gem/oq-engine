@@ -40,9 +40,9 @@ event_dt = numpy.dtype(
 
 def get_rlzi(eid):
     """
-       :param eid: a 64 bit event ID
-       :returns: the realization index associated to the event ID
-       """
+    :param eid: a 64 bit event ID
+    :returns: the realization index associated to the event ID
+    """
     return (eid % TWO32) // TWO16
 
 
