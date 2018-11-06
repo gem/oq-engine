@@ -123,8 +123,8 @@ class RlzsAssoc(object):
                 except ValueError:  # there is more than 1 TRT
                     gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
-        return collections.OrderedDict(
-            (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
+        return {gsim: numpy.array(acc[gsim], dtype=U16)
+                for gsim in sorted(acc)}
 
     def by_grp(self):
         """

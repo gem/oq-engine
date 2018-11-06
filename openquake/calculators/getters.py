@@ -364,6 +364,11 @@ class GmfGetter(object):
                 for r, rlzi in enumerate(rlzs):
                     eids = all_eids[r]
                     e = len(eids)
+                    if not e:
+                        continue
+                    #[rlz] = set(calc.stochastic.get_rlzi(eids))
+                    #if rlz != rlzi:
+                    #    import pdb; pdb.set_trace()
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
