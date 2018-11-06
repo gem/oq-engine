@@ -236,7 +236,8 @@ class GmfDataGetter(collections.Mapping):
                 self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
         # dictionary eid -> index
         if self.eids is not None:
-            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+            self.eid2idx = dict(
+                zip(self.eids, numpy.arange(len(self.eids), dtype=U32)))
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -366,9 +367,6 @@ class GmfGetter(object):
                     e = len(eids)
                     if not e:
                         continue
-                    #[rlz] = set(calc.stochastic.get_rlzi(eids))
-                    #if rlz != rlzi:
-                    #    import pdb; pdb.set_trace()
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
