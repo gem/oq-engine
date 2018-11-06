@@ -305,7 +305,8 @@ class EbrCalculator(base.RiskCalculator):
             # TODO: remove get_rlzi(e) and make this faster
             agglosses = numpy.fromiter(
                 ((e, get_rlzi(e), losses)
-                 for e, losses in zip(self.eids, self.agglosses)), elt_dt)
+                 for e, losses in zip(self.eids, self.agglosses)
+                 if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
