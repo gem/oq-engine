@@ -313,7 +313,7 @@ hazard_uhs-mean.csv
         # reduction of the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
         self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.by_grp()['grp-00'][0], [0, [0, 1]])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
