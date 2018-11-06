@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Saved a large amount of memory in event_based_risk calculations
   * Added a command `oq export losses_by_tag/<tagname> <calc_id>`
   * Extended `oq zip` to zip the risk files together with the hazard files
   * Changed the building convention for the event IDs and made them unique
