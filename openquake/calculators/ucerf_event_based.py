@@ -217,7 +217,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     num_ses = param['ses_per_logic_tree_path']
-    num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=numpy.zeros((samples, num_ses), numpy.uint16))
     with sampl_mon:
@@ -231,8 +230,9 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                     rup.serial = serial
                     serial += 1
     with filt_mon:
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         ebruptures = stochastic.build_eb_ruptures(
-            src, slice(0, num_rlzs), num_ses, cmaker, sitecol, n_occ.items())
+            src, rlzs, num_ses, cmaker, sitecol, n_occ.items())
     res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
