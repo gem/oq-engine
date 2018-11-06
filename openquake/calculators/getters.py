@@ -132,7 +132,7 @@ class PmapGetter(object):
         grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
         array = self.rlzs_assoc.by_grp()
         for grp in grps:
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in enumerate(array[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self.pmap_by_grp[grp].extract(gsim_idx)

@@ -128,7 +128,7 @@ class RlzsAssoc(object):
 
     def by_grp(self):
         """
-        :returns: a dictionary grp -> [(gsim_idx, rlzis), ...]
+        :returns: a dictionary grp -> rlzis
         """
         dic = {}  # grp -> [(gsim_idx, rlzis), ...]
         for sm in self.csm_info.source_models:
@@ -138,9 +138,8 @@ class RlzsAssoc(object):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
-                dic['grp-%02d' % sg.id] = [
-                    (gsim_idx, rlzs_by_gsim[gsim])
-                    for gsim_idx, gsim in enumerate(rlzs_by_gsim)]
+                dic['grp-%02d' % sg.id] = numpy.array(
+                    list(rlzs_by_gsim.values()))
         return dic
 
     def _init(self):
@@ -185,7 +184,7 @@ class RlzsAssoc(object):
                  for _ in self.realizations]
         array = self.by_grp()
         for grp in pmap_by_grp:
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in enumerate(array[grp]):
                 pmap = pmap_by_grp[grp].extract(gsim_idx)
                 for rlzi in rlzis:
                     pmaps[rlzi] |= pmap
