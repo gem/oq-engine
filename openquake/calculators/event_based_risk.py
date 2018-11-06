@@ -31,6 +31,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
+TWO32 = 2 ** 32
 getweight = operator.attrgetter('weight')
 
 
@@ -41,15 +42,13 @@ def build_loss_tables(dstore):
     oq = dstore['oqparam']
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    events = dstore['events']
     serials = dstore['ruptures']['serial']
-    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'].value:  # call .value for speed
-        rupid = rup_by_eid[rec['eid']]
-        tbl[idx_by_ser[rupid]] += rec['loss']
+        idx = idx_by_ser[rec['eid'] // TWO32]
+        tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
 
