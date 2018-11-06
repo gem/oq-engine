@@ -364,6 +364,8 @@ class GmfGetter(object):
                 for r, rlzi in enumerate(rlzs):
                     eids = all_eids[r]
                     e = len(eids)
+                    if not e:
+                        continue
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
