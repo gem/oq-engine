@@ -198,8 +198,8 @@ class Monitor(object):
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
-        msg = '%s%s%s [%s]' % (self.__class__.__name__, calc_id,
-                               self.operation, self.username)
+        msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
+                              self.operation, self.username)
         if self.measuremem:
             return '<%s, duration=%ss, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))
