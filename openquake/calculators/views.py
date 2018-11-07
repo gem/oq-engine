@@ -729,7 +729,7 @@ def view_dupl_sources(token, dstore):
             calc_time = records['calc_time'].sum()
             tot_time += calc_time + records['split_time'].sum()
             tbl.append((source_id, calc_time, len(records)))
-    if tbl and info.attrs['has_dupl_sources']:
+    if tbl and info.attrs.get('has_dupl_sources'):
         tot = info['calc_time'].sum() + info['split_time'].sum()
         percent = tot_time / tot * 100
         m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (
