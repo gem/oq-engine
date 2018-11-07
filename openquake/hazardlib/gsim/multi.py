@@ -69,6 +69,7 @@ class MultiGMPE(GMPE, collections.Mapping):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
+        super().__init__()
         self.gsim_by_imt = gsim_by_imt
         for name in uppernames:
             setattr(self, name, getattr(self, name).copy())
