@@ -34,6 +34,7 @@ from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
 
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -567,7 +568,7 @@ def crm_attrs(dstore, what):
 @extract.add('losses_by_tag')
 def losses_by_tag(dstore, tag):
     """
-    Statistical average losses. For instance call
+    Statistical average losses by tag. For instance call
 
     $ oq extract losses_by_tag/occupancy
     """
@@ -576,7 +577,6 @@ def losses_by_tag(dstore, tag):
     arr = dstore['avg_losses-stats'].value
     stats = dstore['avg_losses-stats'].attrs['stats'].split()
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
-    print(tagvalues)
     for s, stat in enumerate(stats):
         out = numpy.zeros(len(tagvalues), dt)
         for li, (lt, lt_dt) in enumerate(dt[1:]):
@@ -585,4 +585,33 @@ def losses_by_tag(dstore, tag):
                 counts = arr[aids == i + 1, s, li].sum()
                 if counts:
                     out[i][lt] = counts
+        yield stat, out
+
+
+@extract.add('curves_by_tag')
+def curves_by_tag(dstore, tag):
+    """
+    Statistical loss curves by tag. For instance call
+
+    $ oq extract curves_by_tag/occupancy
+    """
+    dt = [(tag, vstr), ('years', U32)] + dstore['oqparam'].loss_dt_list()
+    aids = dstore['assetcol/array'][tag]
+    arr = dstore['curves-stats'].value
+    A, S, P = arr.shape
+    stats = dstore['curves-stats'].attrs['stats']
+    periods = dstore['curves-stats'].attrs['return_periods']
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
+    for s, stat in enumerate(stats):
+        out = numpy.zeros(len(tagvalues) * P, dt)
+        for li, (lt, lt_dt) in enumerate(dt[2:]):
+            n = 0
+            for i, tagvalue in enumerate(tagvalues):
+                for p, period in enumerate(periods):
+                    out[n][tag] = tagvalue
+                    out[n]['years'] = period
+                    counts = arr[aids == i + 1, s, p][lt].sum()
+                    if counts:
+                        out[n][lt] = counts
+                    n += 1
         yield stat, out
