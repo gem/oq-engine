@@ -100,6 +100,7 @@ htranslator = HeaderTranslator(
     '(event_set):uint32',
     '(eid):uint32',
     '(year):uint32',
+    '(occupancy):object',
     '(return_period):uint32',
     '(site_id):uint32',
     '(taxonomy):\|S100',
