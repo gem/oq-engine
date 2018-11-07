@@ -491,7 +491,7 @@ def export_losses_by_tag_csv(ekey, dstore):
     arr = extract(dstore, 'losses_by_tag/' + tag)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for row in arr:
+    for row in arr:  # there is one row and one file for each statistics
         tup = (ekey[0].replace('/', '-'), row[0], ekey[1])
         path = '%s-%s.%s' % tup
         fname = dstore.export_path(path)
