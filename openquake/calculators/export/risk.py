@@ -488,13 +488,13 @@ def export_losses_by_tag_csv(ekey, dstore):
     :param dstore: datastore object
     """
     tag = ekey[0].split('/')[1]
-    arr = extract(dstore, 'losses_by_tag/' + tag)
+    data = extract(dstore, 'losses_by_tag/' + tag)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for row in arr:  # there is one row and one file for each statistics
-        tup = (ekey[0].replace('/', '-'), row[0], ekey[1])
+    for stat, arr in data:
+        tup = (ekey[0].replace('/', '-'), stat, ekey[1])
         path = '%s-%s.%s' % tup
         fname = dstore.export_path(path)
-        writer.save([list(row)[1:]], fname, header=row.dtype.names[1:])
+        writer.save(arr, fname)
         fnames.append(fname)
     return fnames
