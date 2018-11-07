@@ -595,7 +595,8 @@ def curves_by_tag(dstore, tag):
 
     $ oq extract curves_by_tag/occupancy
     """
-    dt = [(tag, vstr), ('years', U32)] + dstore['oqparam'].loss_dt_list()
+    dt = ([(tag, vstr), ('return_period', U32)] +
+          dstore['oqparam'].loss_dt_list())
     aids = dstore['assetcol/array'][tag]
     arr = dstore['curves-stats'].value
     A, S, P = arr.shape
@@ -609,7 +610,7 @@ def curves_by_tag(dstore, tag):
             for i, tagvalue in enumerate(tagvalues):
                 for p, period in enumerate(periods):
                     out[n][tag] = tagvalue
-                    out[n]['years'] = period
+                    out[n]['return_period'] = period
                     counts = arr[aids == i + 1, s, p][lt].sum()
                     if counts:
                         out[n][lt] = counts

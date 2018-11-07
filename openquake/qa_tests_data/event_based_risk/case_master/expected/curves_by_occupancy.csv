@@ -1,4 +1,4 @@
-occupancy,years:uint32,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
+occupancy,return_period,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
 Res,2,3.07171E+02,3.37975E+03,5.35526E+03,6.14341E-03,7.90976E+02,4.14750E+00,4.14750E+00,4.14750E+00,0.00000E+00,2.43250E+00
 Res,5,3.17682E+02,3.48415E+03,5.54231E+03,6.35365E-03,8.44709E+02,4.20000E+00,4.20000E+00,4.20000E+00,0.00000E+00,2.79125E+00
 Res,10,3.26257E+02,3.56316E+03,5.67075E+03,6.52514E-03,8.67409E+02,4.20000E+00,4.20000E+00,4.20000E+00,0.00000E+00,2.80875E+00
