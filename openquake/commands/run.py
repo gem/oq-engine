@@ -23,7 +23,7 @@ import pstats
 
 from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --slowest is given
@@ -70,11 +70,11 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
+def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, exports, params):
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz))
+    hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
               exports=exports, **params)
     hc_id = hcalc.datastore.calc_id
@@ -88,6 +88,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     assert len(job_inis) in (1, 2), job_inis
+    calc_id = logs.set_log_format()
     with performance.Monitor('total runtime', measuremem=True) as monitor:
         if len(job_inis) == 1:  # run hazard or risk
             if hc:
@@ -96,6 +97,7 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
             else:
                 hc_id = None
                 rlz_ids = ()
+            # set the log format first of all
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
             vars(oqparam).update(params)
             if hc_id and hc_id < 0:  # interpret negative calculation ids
@@ -106,14 +108,13 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
                     raise SystemExit(
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
-            calc = base.calculators(oqparam)
-            calc.set_log_format()  # set the log format first of all
+            calc = base.calculators(oqparam, calc_id)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
                      rlz_ids=rlz_ids)
         else:  # run hazard + risk
             calc = run2(
-                job_inis[0], job_inis[1], concurrent_tasks, pdb,
+                job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
                 exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)

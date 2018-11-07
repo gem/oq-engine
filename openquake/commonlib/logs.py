@@ -23,7 +23,7 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq, config, parallel
+from openquake.baselib import zeromq, config, parallel, datastore
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -153,3 +153,11 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
+
+
+def set_log_format():
+    """Set the format of the root logger"""
+    calc_id, _ = datastore.extract_calc_id_datadir()
+    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
+    for handler in logging.root.handlers:
+        handler.setFormatter(logging.Formatter(fmt))
