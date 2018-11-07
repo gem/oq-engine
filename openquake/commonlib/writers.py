@@ -103,7 +103,7 @@ htranslator = HeaderTranslator(
     '(occupancy):object',
     '(return_period):uint32',
     '(site_id):uint32',
-    '(taxonomy):\|S100',
+    '(taxonomy):object',
     '(tag):\|S100',
     '(multiplicity):uint16',
     '(numsites):uint32',
