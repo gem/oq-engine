@@ -155,8 +155,9 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.removeHandler(handler)
 
 
-def set_log_format():
+def init(level=logging.INFO):
     """Set the format of the root logger"""
+    logging.basicConfig(level=level)
     calc_id, _ = datastore.extract_calc_id_datadir()
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
