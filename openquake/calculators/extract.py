@@ -600,7 +600,7 @@ def curves_by_tag(dstore, tag):
     aids = dstore['assetcol/array'][tag]
     arr = dstore['curves-stats'].value
     A, S, P = arr.shape
-    stats = dstore['curves-stats'].attrs['stats']
+    stats = dstore['curves-stats'].attrs['stats'].split()
     periods = dstore['curves-stats'].attrs['return_periods']
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
