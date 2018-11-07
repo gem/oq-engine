@@ -565,6 +565,14 @@ def crm_attrs(dstore, what):
     return ArrayWrapper(0, dstore.get_attrs(name))
 
 
+def _get(dstore, name):
+    try:
+        dset = dstore[name + '-stats']
+        return dset, dset.attrs['stats'].split()
+    except KeyError:  # single realization
+        return dstore[name + '-rlzs'], ['mean']
+
+
 @extract.add('losses_by_tag')
 def losses_by_tag(dstore, tag):
     """
@@ -574,8 +582,8 @@ def losses_by_tag(dstore, tag):
     """
     dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
     aids = dstore['assetcol/array'][tag]
-    arr = dstore['avg_losses-stats'].value
-    stats = dstore['avg_losses-stats'].attrs['stats'].split()
+    dset, stats = _get(dstore, 'avg_losses')
+    arr = dset.value
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
         out = numpy.zeros(len(tagvalues), dt)
@@ -598,10 +606,10 @@ def curves_by_tag(dstore, tag):
     dt = ([(tag, vstr), ('return_period', U32)] +
           dstore['oqparam'].loss_dt_list())
     aids = dstore['assetcol/array'][tag]
-    arr = dstore['curves-stats'].value
-    A, S, P = arr.shape
-    stats = dstore['curves-stats'].attrs['stats'].split()
-    periods = dstore['curves-stats'].attrs['return_periods']
+    dset, stats = _get(dstore, 'curves')
+    periods = dset.attrs['return_periods']
+    arr = dset.value
+    P = arr.shape[-1]  # shape (A, S, P)
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
         out = numpy.zeros(len(tagvalues) * P, dt)

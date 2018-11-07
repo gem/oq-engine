@@ -143,6 +143,16 @@ stddev         838           556
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
+        # test losses_by_tag with a single realization
+        [fname] = export(
+            ('losses_by_tag/taxonomy', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_tag.csv', fname)
+
+        # test curves_by_tag with a single realization
+        [fname] = export(
+            ('curves_by_tag/taxonomy', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/curves_by_tag.csv', fname)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
