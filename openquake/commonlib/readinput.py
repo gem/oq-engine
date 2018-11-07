@@ -974,6 +974,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
         discarded = []
+        logging.info('Read %d sites from the exposure', len(sitecol))
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
