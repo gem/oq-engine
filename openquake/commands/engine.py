@@ -42,11 +42,13 @@ def get_job_id(job_id, username=None):
     return job.id
 
 
-def run_job(cfg_file, log_level='info', log_file=None, exports='',
+def run_job(calc_id, cfg_file, log_level='info', log_file=None, exports='',
             hazard_calculation_id=None,  username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
 
+    :param calc_id:
+        Calculation ID
     :param str cfg_file:
         Path to calculation config (INI-style) files.
     :param str log_level:
@@ -72,11 +74,12 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
     return job_id
 
 
-def run_tile(job_ini, sites_slice):
+def run_tile(calc_id, job_ini, sites_slice):
     """
     Used in tiling calculations
     """
-    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
+    return run_job(calc_id, job_ini,
+                   sites_slice=(sites_slice.start, sites_slice.stop))
 
 
 def del_calculation(job_id, confirmed=False):
@@ -114,8 +117,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     Run a calculation using the traditional command line API
     """
     if run:
-        # the logging will be configured in engine.py
-        pass
+        # configure the engine logs
+        calc_id = logs.init(level=logging.INFO)
     else:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
@@ -178,7 +181,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
-            job_id = run_job(job_ini, log_level, log_file,
+            job_id = run_job(calc_id, job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
             if i == 0:  # use the first calculation as base for the others
                 hc_id = job_id

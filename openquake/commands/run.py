@@ -86,9 +86,9 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, exports, params):
 
 def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
-    logging.basicConfig(level=getattr(logging, loglevel.upper()))
     assert len(job_inis) in (1, 2), job_inis
-    calc_id = logs.set_log_format()
+    # set the logs first of all
+    calc_id = logs.init(getattr(logging, loglevel.upper()))
     with performance.Monitor('total runtime', measuremem=True) as monitor:
         if len(job_inis) == 1:  # run hazard or risk
             if hc:
@@ -97,7 +97,6 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
             else:
                 hc_id = None
                 rlz_ids = ()
-            # set the log format first of all
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
             vars(oqparam).update(params)
             if hc_id and hc_id < 0:  # interpret negative calculation ids

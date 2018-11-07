@@ -127,7 +127,7 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    calc_id = logs.set_log_format()
+    calc_id = logs.init()
     oq = readinput.get_oqparam(job_ini)
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
