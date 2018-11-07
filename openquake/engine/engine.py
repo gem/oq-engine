@@ -233,7 +233,6 @@ def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
             sys.exit('%s does not end with .zip' % archive_zip)
         if os.path.exists(archive_zip):
             sys.exit('%s exists already' % archive_zip)
-    logging.basicConfig(level=logging.INFO)
     # do not validate to avoid permissions error on the export_dir
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
     files = set()
