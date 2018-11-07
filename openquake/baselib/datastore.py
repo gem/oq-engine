@@ -82,7 +82,7 @@ def hdf5new(datadir=None):
     return new
 
 
-def extract_calc_id_datadir(hdf5path, datadir=None):
+def extract_calc_id_datadir(hdf5path=None, datadir=None):
     """
     Extract the calculation ID from the given hdf5path or integer:
 

@@ -326,7 +326,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     setproctitle('oq-job-%d' % job_id)
     with logs.handle(job_id, log_level, log_file):  # run the job
         calc = base.calculators(oqparam, calc_id=job_id)
-        calc.set_log_format()  # set the log format first of all
         logging.info('Running %s [--hc=%s]',
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
