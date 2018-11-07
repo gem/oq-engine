@@ -24,7 +24,7 @@ from openquake.baselib.python3compat import decode
 import os
 import sys
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logs
 from openquake.calculators import views
 
 
@@ -127,12 +127,12 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
+    calc_id = logs.set_log_format()
     oq = readinput.get_oqparam(job_ini)
     oq.ground_motion_fields = False
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
-    calc = base.calculators(oq)
-    calc.set_log_format()
+    calc = base.calculators(oq, calc_id)
     calc.save_params()  # needed to save oqparam
 
     # some taken is care so that the real calculation is not run:
