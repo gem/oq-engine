@@ -565,22 +565,24 @@ def crm_attrs(dstore, what):
 
 
 @extract.add('losses_by_tag')
-def losses_by_tag(dstore, what):
+def losses_by_tag(dstore, tag):
     """
     Statistical average losses. For instance call
 
     $ oq extract losses_by_tag/occupancy
     """
-    aids = dstore['assetcol/array'][what]
+    dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
+    aids = dstore['assetcol/array'][tag]
     arr = dstore['avg_losses-stats'].value
     stats = dstore['avg_losses-stats'].attrs['stats'].split()
-    tagvalues = dstore['assetcol/tagcol/' + what][1:]  # except tagvalue="?"
-    dt = numpy.dtype([('Stat', vstr)] + [(val, F32) for val in tagvalues])
-    out = numpy.zeros(len(stats), dt)
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
+    print(tagvalues)
     for s, stat in enumerate(stats):
-        out[s]['Stat'] = stat
-        for i, o in enumerate(tagvalues, 1):
-            counts = arr[aids == i, s].sum()
-            if counts:
-                out[s][o] = counts
-    return out
+        out = numpy.zeros(len(tagvalues), dt)
+        for li, (lt, lt_dt) in enumerate(dt[1:]):
+            for i, tagvalue in enumerate(tagvalues):
+                out[i][tag] = tagvalue
+                counts = arr[aids == i + 1, s, li].sum()
+                if counts:
+                    out[i][lt] = counts
+        yield stat, out
