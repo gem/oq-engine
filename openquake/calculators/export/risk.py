@@ -481,14 +481,14 @@ def get_loss_ratios(lrgetter, monitor):
     return list(zip(lrgetter.aids, loss_ratios))
 
 
-@export.add(('losses_by_tag', 'csv'))
-def export_losses_by_tag_csv(ekey, dstore):
+@export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
+def export_by_tag_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    tag = ekey[0].split('/')[1]
-    data = extract(dstore, 'losses_by_tag/' + tag)
+    token, tag = ekey[0].split('/')
+    data = extract(dstore, token + '/' + tag)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for stat, arr in data:
