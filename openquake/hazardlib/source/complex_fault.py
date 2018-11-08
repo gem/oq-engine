@@ -178,6 +178,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.
         """
+        min_mag = getattr(self, 'min_mag', 0)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
@@ -185,6 +186,8 @@ class ComplexFaultSource(ParametricSeismicSource):
             whole_fault_mesh.get_cell_dimensions())
 
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            if mag_occ_rate == 0 or mag < min_mag:
+                continue
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake)
             rupture_length = numpy.sqrt(
@@ -213,6 +216,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
+        min_mag = getattr(self, 'min_mag', 0)
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         whole_fault_mesh = whole_fault_surface.mesh
@@ -220,7 +224,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             whole_fault_mesh.get_cell_dimensions())
         self._nr = []
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            if mag_occ_rate == 0:
+            if mag_occ_rate == 0 or mag < min_mag:
                 continue
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake)
