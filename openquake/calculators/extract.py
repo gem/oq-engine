@@ -34,6 +34,7 @@ from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
 
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -564,23 +565,62 @@ def crm_attrs(dstore, what):
     return ArrayWrapper(0, dstore.get_attrs(name))
 
 
+def _get(dstore, name):
+    try:
+        dset = dstore[name + '-stats']
+        return dset, dset.attrs['stats'].split()
+    except KeyError:  # single realization
+        return dstore[name + '-rlzs'], ['mean']
+
+
 @extract.add('losses_by_tag')
-def losses_by_tag(dstore, what):
+def losses_by_tag(dstore, tag):
     """
-    Statistical average losses. For instance call
+    Statistical average losses by tag. For instance call
 
     $ oq extract losses_by_tag/occupancy
     """
-    aids = dstore['assetcol/array'][what]
-    arr = dstore['avg_losses-stats'].value
-    stats = dstore['avg_losses-stats'].attrs['stats'].split()
-    tagvalues = dstore['assetcol/tagcol/' + what][1:]  # except tagvalue="?"
-    dt = numpy.dtype([('Stat', vstr)] + [(val, F32) for val in tagvalues])
-    out = numpy.zeros(len(stats), dt)
+    dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
+    aids = dstore['assetcol/array'][tag]
+    dset, stats = _get(dstore, 'avg_losses')
+    arr = dset.value
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
-        out[s]['Stat'] = stat
-        for i, o in enumerate(tagvalues, 1):
-            counts = arr[aids == i, s].sum()
-            if counts:
-                out[s][o] = counts
-    return out
+        out = numpy.zeros(len(tagvalues), dt)
+        for li, (lt, lt_dt) in enumerate(dt[1:]):
+            for i, tagvalue in enumerate(tagvalues):
+                out[i][tag] = tagvalue
+                counts = arr[aids == i + 1, s, li].sum()
+                if counts:
+                    out[i][lt] = counts
+        yield stat, out
+
+
+@extract.add('curves_by_tag')
+def curves_by_tag(dstore, tag):
+    """
+    Statistical loss curves by tag. For instance call
+
+    $ oq extract curves_by_tag/occupancy
+    """
+    dt = ([(tag, vstr), ('return_period', U32)] +
+          dstore['oqparam'].loss_dt_list())
+    aids = dstore['assetcol/array'][tag]
+    dset, stats = _get(dstore, 'curves')
+    periods = dset.attrs['return_periods']
+    arr = dset.value
+    P = arr.shape[-1]  # shape (A, S, P)
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
+    for s, stat in enumerate(stats):
+        out = numpy.zeros(len(tagvalues) * P, dt)
+        for li, (lt, lt_dt) in enumerate(dt[2:]):
+            n = 0
+            for i, tagvalue in enumerate(tagvalues):
+                for p, period in enumerate(periods):
+                    out[n][tag] = tagvalue
+                    out[n]['return_period'] = period
+                    counts = arr[aids == i + 1, s, p][lt].sum()
+                    if counts:
+                        out[n][lt] = counts
+                    n += 1
+        yield stat, out
