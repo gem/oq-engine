@@ -839,7 +839,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
+    if split_all and not oqparam.calculation_mode.startswith('ucerf'):
         csm = parallel_split_filter(csm, srcfilter, monitor('prefilter'))
     return csm
 
