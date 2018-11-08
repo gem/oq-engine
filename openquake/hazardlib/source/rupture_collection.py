@@ -69,4 +69,4 @@ def split(src, chunksize=MINWEIGHT):
             source_id, src.name, src.tectonic_region_type, amfd, block)
         for slot in src._slots_:
             setattr(rcs, slot, getattr(src, slot))
-        return rcs
+        yield rcs
