@@ -186,7 +186,7 @@ class EngineServerTestCase(unittest.TestCase):
         data = b''.join(ln for ln in resp.streaming_content)
         got = numpy.load(io.BytesIO(data))  # load npz file
         self.assertEqual(list(got['stats']), [b'mean'])
-        self.assertEqual(list(got['return_periods']), [2, 5, 10, 20, 50])
+        self.assertEqual(list(got['return_periods']), [5, 10, 20, 50])
         self.assertEqual(list(got['units']), [b'EUR'])
 
         # there is some logic in `core.export_from_db` that it is only
