@@ -854,6 +854,8 @@ def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
     splits, stime = split_sources(srcs)
     if splits and sample_factor:
         # debugging tip to reduce the size of a calculation
+        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
+        # will run a computation 100 times smaller
         splits = random_filter(splits, sample_factor, seed)
         # NB: for performance, sample before splitting
     if splits and srcfilter:
