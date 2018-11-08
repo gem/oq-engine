@@ -33,7 +33,7 @@ def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     dstore = engine.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = datastore.read(parent_id)
+        dstore.parent = engine.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
