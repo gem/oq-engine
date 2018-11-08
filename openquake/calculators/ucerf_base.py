@@ -395,7 +395,8 @@ class UCERFSource(BaseSeismicSource):
         """
         background_sids = self.get_background_sids(src_filter)
         if sample_factor:  # hack for use in the mosaic
-            background_sids = random_filter(background_sids, .001, seed=42)
+            background_sids = random_filter(
+                background_sids, sample_factor, seed=42)
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
