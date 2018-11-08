@@ -840,23 +840,20 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
 
     # splitting assumes that the serials have been initialized already
     if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
-        csm = parallel_split_filter(
-            csm, srcfilter, oqparam.random_seed, monitor('prefilter'))
+        csm = parallel_split_filter(csm, srcfilter, monitor('prefilter'))
     return csm
 
 
-def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
+def split_filter(srcs, srcfilter, seed, monitor):
     """
     Split the given source and filter the subsources by distance and by
     magnitude. Perform sampling  if a nontrivial sample_factor is passed.
     Yields a pair (split_sources, split_time) if split_sources is non-empty.
     """
     splits, stime = split_sources(srcs)
-    if splits and sample_factor:
+    if splits and seed:
         # debugging tip to reduce the size of a calculation
-        # OQ_SAMPLE_SOURCES=.01 oq engine --run job.ini
-        # will run a computation 100 times smaller
-        splits = random_filter(splits, sample_factor, seed)
+        splits = random_filtered_sources(splits, srcfilter, seed)
         # NB: for performance, sample before splitting
     if splits and srcfilter:
         splits = list(srcfilter.filter(splits))
@@ -864,21 +861,20 @@ def split_filter(srcs, srcfilter, seed, sample_factor, monitor):
         yield splits, stime
 
 
-def parallel_split_filter(csm, srcfilter, seed, monitor):
+def parallel_split_filter(csm, srcfilter, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
     mon = monitor('split_filter')
-    sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
+    seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Splitting/filtering sources with %s',
                  srcfilter.__class__.__name__)
     sources = csm.get_sources()
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
-        split_filter,
-        (sources, srcfilter, seed, sample_factor, mon),
+        split_filter, (sources, srcfilter, seed, mon),
         maxweight=RUPTURES_PER_BLOCK, distribute=dist,
         progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
@@ -892,7 +888,7 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
             arr[i, 0] += stime[i]  # split_time
             arr[i, 1] += 1         # num_split
             srcs_by_grp[split.src_group_id].append(split)
-    if sample_factor and not srcs_by_grp:
+    if seed and not srcs_by_grp:
         sys.stderr.write('Too much sampling, no sources\n')
         sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
     elif not srcs_by_grp:
