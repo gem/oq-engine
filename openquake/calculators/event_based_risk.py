@@ -344,4 +344,4 @@ class EbrCalculator(base.RiskCalculator):
             self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(
                 'agg_curves-stats', return_periods=b.return_periods,
-                stats=[encode(name) for (name, func) in stats], units=units)
+                stats=' '.join(name for (name, func) in stats), units=units)
