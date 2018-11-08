@@ -36,6 +36,7 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators.getters import GmfDataGetter, PmapGetter
 
@@ -367,8 +368,7 @@ class HazardCalculator(BaseCalculator):
         self.src_filter = SourceFilter(
             self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            # do not preprocess
-            return
+            return UcerfFilter(self.sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
