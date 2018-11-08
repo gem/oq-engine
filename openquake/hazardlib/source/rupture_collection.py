@@ -67,6 +67,4 @@ def split(src, chunksize=MINWEIGHT):
         amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
         rcs = RuptureCollectionSource(
             source_id, src.name, src.tectonic_region_type, amfd, block)
-        for slot in src._slots_:
-            setattr(rcs, slot, getattr(src, slot))
         yield rcs
