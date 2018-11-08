@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Added commands `oq export losses_by_tag` and `oq export curves_by_tag`
+  * Added `oq export losses_by_tag` and `oq export curves_by_tag`
+  * Extended `oq export` to work in a multi-user situation
   * Forbidden event based calculations with more than `max_potential_paths`
     in the case of full enumeration
   * Saved a large amount of memory in event_based_risk calculations
