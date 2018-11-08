@@ -38,7 +38,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'seed', 'id', 'min_mag']
+               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
