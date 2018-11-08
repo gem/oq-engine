@@ -429,3 +429,19 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
+
+# define engine.read(calc_id)
+if config.dbserver.multi_user:
+    def read(calc_id):
+        """
+        :param calc_id: a calculation ID
+        :returns: the associated DataStore instance
+        """
+        job = logs.dbcmd('get_job', calc_id)
+        if job:
+            return datastore.read(job.ds_calc_dir + '.hdf5')
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
+else:  # get the datastore of the current user
+    read = datastore.read
