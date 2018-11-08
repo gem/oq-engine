@@ -869,7 +869,7 @@ def parallel_split_filter(csm, srcfilter, seed, monitor):
     :returns: a new :class:`openquake.commonlib.source.CompositeSourceModel`
     """
     mon = monitor('split_filter')
-    sample_factor = 0  # disabled, turn it on manually when debugging
+    sample_factor = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
     logging.info('Splitting/filtering sources with %s',
                  srcfilter.__class__.__name__)
     sources = csm.get_sources()
