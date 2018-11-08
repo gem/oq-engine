@@ -273,9 +273,12 @@ def get_bounding_box(obj, maxdist):
     elif hasattr(obj, 'polygon'):
         bbox = obj.polygon.get_bbox()
     else:  # assume locations
-        lons = [loc.longitude for loc in obj]
-        lats = [loc.latitude for loc in obj]
-        bbox = min(lons), min(lats), max(lons), max(lats)
+        lons = numpy.array([loc.longitude for loc in obj])
+        lats = numpy.array([loc.latitude for loc in obj])
+        min_lon, max_lon = lons.min(), lons.max()
+        if cross_idl(min_lon, max_lon):
+            lons %= 360
+        bbox = lons.min(), lats.min(), lons.max(), lats.max()
     a1 = maxdist * KM_TO_DEGREES
     a2 = angular_distance(maxdist, bbox[1], bbox[3])
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
