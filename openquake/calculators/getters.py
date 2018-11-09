@@ -219,7 +219,9 @@ class GmfDataGetter(collections.Mapping):
         self.sids = sids
         self.num_rlzs = num_rlzs
 
-    def init(self):
+    def init(self, eid2idx=None):
+        if eid2idx is not None:
+            self.eid2idx = eid2idx
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
@@ -227,17 +229,11 @@ class GmfDataGetter(collections.Mapping):
             self.imts = self.dstore['gmf_data/imts'].value.split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.eids = self.dstore['events']['eid']
-        self.eids.sort()
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
                 self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-        # dictionary eid -> index
-        if self.eids is not None:
-            self.eid2idx = dict(
-                zip(self.eids, numpy.arange(len(self.eids), dtype=U32)))
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
