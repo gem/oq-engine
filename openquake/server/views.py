@@ -486,12 +486,15 @@ def run_calc(request):
 
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
-    engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
-        username='%(username)s')
+    logs.init(%(job_id)s)
+    with logs.handle(%(job_id)s):
+        engine.run_calc(
+            %(job_id)s, oqparam, '', %(hazard_job_id)s,
+           username='%(username)s')
     os.remove(__file__)
 '''
 
