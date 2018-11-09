@@ -29,7 +29,10 @@ class RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
-    _slots_ = ParametricSeismicSource._slots_ + ['rake']
+    # the mosaic test for Canada is sensitive to such _slots_
+    _slots_ = ['source_id', 'name', 'tectonic_region_type', 'num_ruptures',
+               'min_mag', 'mfd']
+
     MODIFICATIONS = set()
     RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
