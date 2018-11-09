@@ -174,13 +174,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
         self.datastore.flush()
 
-    def set_log_format(self):
-        """Set the format of the root logger"""
-        fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
-            self.datastore.calc_id)
-        for handler in logging.root.handlers:
-            handler.setFormatter(logging.Formatter(fmt))
-
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
         Run the calculation and return the exported outputs.

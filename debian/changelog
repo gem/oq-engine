@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Now warnings for invalid parameters are logged in the database too
   * Fixed `oq export avg_losses-stats` for the case of one realization
   * Added `oq export losses_by_tag` and `oq export curves_by_tag`
   * Extended `oq export` to work in a multi-user situation
