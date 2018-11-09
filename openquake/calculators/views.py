@@ -292,6 +292,8 @@ def build_links(items):
             for k, v in fname.items():
                 b = os.path.basename(v)
                 out.append(('reqv:' + k, "`%s <%s>`_" % (b, b)))
+        elif isinstance(fname, list):
+            out.append((key, ' '.join(os.path.basename(f) for f in fname)))
         else:
             bname = os.path.basename(fname)
             out.append((key, "`%s <%s>`_" % (bname, bname)))
