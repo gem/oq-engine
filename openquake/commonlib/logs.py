@@ -19,6 +19,7 @@
 Set up some system-wide loggers
 """
 
+import sys
 import os.path
 import logging
 from datetime import datetime
@@ -148,12 +149,24 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.removeHandler(handler)
 
 
+def get_last_calc_id(username=None):
+    """
+    :param username: if given, restrict to it
+    :returns: the last calculation in the database or the datastore
+    """
+    if config.dbserver.multi_user:
+        job = dbcmd('get_job', -1, username)  # can be None
+        return getattr(job, 'id', 0)
+    else:  # single user
+        return datastore.get_last_calc_id()
+
+
 def init(calc_id=None, level=logging.INFO):
     """Set the format of the root logger"""
     if not logging.root.handlers:  # first time
         logging.basicConfig(level=level)
     if calc_id is None:
-        calc_id, _ = datastore.extract_calc_id_datadir()
+        calc_id = get_last_calc_id() + 1
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
         handler.setFormatter(logging.Formatter(fmt))
