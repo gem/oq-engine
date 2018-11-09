@@ -177,7 +177,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         if len(job_inis) == 1 and not hc_id:
             # special case for single file event_based_risk
             txt = open(job_inis[0]).read()
-            if re.search('calculation_mode\s*=\s*event_based_risk', txt):
+            if re.search(r'calculation_mode\s*=\s*event_based_risk', txt):
                 hc_id = run_job(job_inis[0], log_level, log_file,
                                 exports, calculation_mode='event_based')
                 job_id = run_job(job_inis[0], log_level, log_file,
