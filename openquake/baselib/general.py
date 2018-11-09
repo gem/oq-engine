@@ -35,6 +35,7 @@ import importlib
 import itertools
 import subprocess
 import collections
+from collections.abc import Mapping, Container
 
 import numpy
 from decorator import decorator
@@ -1064,3 +1065,26 @@ def warn(msg, *args):
         sys.stderr.write('WARNING: ' + msg)
     else:
         sys.stderr.write('WARNING: ' + msg % args)
+
+
+def getsizeof(o, ids=None):
+    '''
+    Find the memory footprint of a Python object recursively, see
+    https://code.tutsplus.com/tutorials/understand-how-much-memory-your-python-objects-use--cms-25609
+    :param o: the object
+    :returns: the size in bytes
+    '''
+    ids = ids or set()
+    if id(o) in ids:
+        return 0
+
+    nbytes = sys.getsizeof(o)
+    ids.add(id(o))
+
+    if isinstance(o, Mapping):
+        return nbytes + sum(getsizeof(k, ids) + getsizeof(v, ids)
+                            for k, v in o.items())
+    elif isinstance(o, Container):
+        return nbytes + sum(getsizeof(x, ids) for x in o)
+
+    return nbytes
