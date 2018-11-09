@@ -116,7 +116,7 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key == 'hazard_curves_csv':
+        if key in ('hazard_curves_csv', 'site_model_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
@@ -330,28 +330,32 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
     """
-    fname = oqparam.inputs['site_model']
-    if isinstance(fname, str) and fname.endswith('.csv'):
-        sm = read_csv(fname)
-        if 'site_id' not in sm.dtype.names:
-            sm.sort(order=['lon', 'lat'])
-        return sm
-    nodes = nrml.read(fname).siteModel
-    params = [valid.site_param(node.attrib) for node in nodes]
-    missing = req_site_params - set(params[0])
-    if missing == set(['backarc']):  # use a default of False
-        for param in params:
-            param['backarc'] = False
-    elif missing:
-        raise InvalidFile('%s: missing parameter %s' %
-                          (oqparam.inputs['site_model'], ', '.join(missing)))
-    # NB: the sorted in sorted(params[0]) is essential, otherwise there is
-    # an heisenbug in scenario/test_case_4
-    site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
-                                 for p in sorted(params[0])])
-    tuples = [tuple(param[name] for name in site_model_dt.names)
-              for param in params]
-    return numpy.array(tuples, site_model_dt)
+    arrays = []
+    for fname in oqparam.inputs['site_model']:
+        if isinstance(fname, str) and fname.endswith('.csv'):
+            sm = read_csv(fname)
+            if 'site_id' not in sm.dtype.names:
+                sm.sort(order=['lon', 'lat'])
+            arrays.append(sm)
+            continue
+        nodes = nrml.read(fname).siteModel
+        params = [valid.site_param(node.attrib) for node in nodes]
+        missing = req_site_params - set(params[0])
+        if missing == set(['backarc']):  # use a default of False
+            for param in params:
+                param['backarc'] = False
+        elif missing:
+            raise InvalidFile('%s: missing parameter %s' %
+                              (oqparam.inputs['site_model'],
+                               ', '.join(missing)))
+        # NB: the sorted in sorted(params[0]) is essential, otherwise there is
+        # an heisenbug in scenario/test_case_4
+        site_model_dt = numpy.dtype([(p, site.site_param_dt[p])
+                                     for p in sorted(params[0])])
+        sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
+                          for param in params], site_model_dt)
+        arrays.append(sm)
+    return numpy.concatenate(arrays)
 
 
 def get_site_collection(oqparam):
