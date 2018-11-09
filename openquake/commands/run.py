@@ -88,33 +88,34 @@ def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
-    calc_id = logs.init(getattr(logging, loglevel.upper()))
-    with performance.Monitor('total runtime', measuremem=True) as monitor:
-        if len(job_inis) == 1:  # run hazard or risk
-            if hc:
-                hc_id = hc[0]
-                rlz_ids = hc[1:]
-            else:
-                hc_id = None
-                rlz_ids = ()
-            oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
-            vars(oqparam).update(params)
-            if hc_id and hc_id < 0:  # interpret negative calculation ids
-                calc_ids = datastore.get_calc_ids()
-                try:
-                    hc_id = calc_ids[hc_id]
-                except IndexError:
-                    raise SystemExit(
-                        'There are %d old calculations, cannot '
-                        'retrieve the %s' % (len(calc_ids), hc_id))
-            calc = base.calculators(oqparam, calc_id)
-            calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                     exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids)
-        else:  # run hazard + risk
-            calc = run2(
-                job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
-                exports, params)
+    calc_id = logs.init(level=getattr(logging, loglevel.upper()))
+    with logs.handle(calc_id, loglevel):
+        with performance.Monitor('total runtime', measuremem=True) as monitor:
+            if len(job_inis) == 1:  # run hazard or risk
+                if hc:
+                    hc_id = hc[0]
+                    rlz_ids = hc[1:]
+                else:
+                    hc_id = None
+                    rlz_ids = ()
+                oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
+                vars(oqparam).update(params)
+                if hc_id and hc_id < 0:  # interpret negative calculation ids
+                    calc_ids = datastore.get_calc_ids()
+                    try:
+                        hc_id = calc_ids[hc_id]
+                    except IndexError:
+                        raise SystemExit(
+                            'There are %d old calculations, cannot '
+                            'retrieve the %s' % (len(calc_ids), hc_id))
+                calc = base.calculators(oqparam, calc_id)
+                calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
+                         exports=exports, hazard_calculation_id=hc_id,
+                         rlz_ids=rlz_ids)
+            else:  # run hazard + risk
+                calc = run2(
+                    job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
+                    exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
