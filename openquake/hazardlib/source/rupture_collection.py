@@ -29,7 +29,7 @@ class RuptureCollectionSource(ParametricSeismicSource):
     """
     A parametric source obtained from the splitting of a ComplexFaultSource
     """
-    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
+    _slots_ = ParametricSeismicSource._slots_ + ['rake']
     MODIFICATIONS = set()
     RUPTURE_WEIGHT = 4.0  # the same as ComplexFaultSources
 
@@ -65,5 +65,6 @@ def split(src, chunksize=MINWEIGHT):
         rup = block[0]
         source_id = '%s:%d' % (src.source_id, i)
         amfd = mfd.ArbitraryMFD([rup.mag], [rup.mag_occ_rate])
-        yield RuptureCollectionSource(
+        rcs = RuptureCollectionSource(
             source_id, src.name, src.tectonic_region_type, amfd, block)
+        yield rcs
