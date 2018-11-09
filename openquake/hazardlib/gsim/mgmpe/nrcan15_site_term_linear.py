@@ -31,6 +31,14 @@ class NRCan15SiteTermLinear(NRCan15SiteTerm):
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion.
 
+    This site term issimilar in structure to the
+    :class:`openquake.hazardlib.gsim.mgmpe.NRCan15SiteTerm` in the OQengine
+    but uses a different scaling of the motion for values of Vs30 greater
+    than 760 m/s.
+
+    This implementation follows what suggested in
+    http://www.daveboore.com/pubs_online/ab06_gmpes_programs_and_tables.pdf.
+
     :param gmpe_name:
         The name of a GMPE class
     """
@@ -38,11 +46,10 @@ class NRCan15SiteTermLinear(NRCan15SiteTerm):
     def BA08_AB06(self, vs30, imt, pgar):
         """
         Computes amplification factor using an approach similar to the one used
-        for the 2015 Canada Buiding code. Michal Kolaj's help is acknoledge
-
+        for the 2015 Canada Buiding code. Michal Kolaj's help is acknoledged.
 
         :param vs30:
-            Can be either a scalar or a :class:`~numpy.ndarray` instance
+            an be either a scalar or a :class:`~numpy.ndarray` instance
         :param imt:
             The intensity measure type
         :param pgar:
