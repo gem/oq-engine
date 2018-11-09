@@ -83,24 +83,26 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
-        sites = Dummy.get_site_collection(1, vs30=2000)
-        rup = Dummy.get_rupture(mag=6.0)
+        sites = Dummy.get_site_collection(2, vs30=[760, 2010])
+        rup = Dummy.get_rupture(mag=7.0)
         dists = DistancesContext()
-        dists.rrup = np.array([10.])
-        imt = SA(5.0)
-        imt = PGA()
+        dists.rrup = np.array([15., 15.])
         stdt = [const.StdDev.TOTAL]
-        # Computes results
-        mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
-        # Compute the expected results
         gmpe = AtkinsonBoore2006()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites, rup,
-                                                                 dists, imt,
-                                                                 stdt)
-        # Test that for reference soil conditions the modified GMPE gives the
-        # same results of the original gmpe
-        np.testing.assert_almost_equal(mean, mean_expected)
-        np.testing.assert_almost_equal(stds, stds_expected)
+
+        for imt in [PGA(), SA(1.0), SA(5.0)]:
+            #
+            # Computes results
+            mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt,
+                                                    stdt)
+            # Compute the expected results
+            mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites,
+                                                    rup, dists, imt, stdt)
+            # Test that for reference soil conditions the modified GMPE gives
+            # the same results of the original gmpe
+            np.testing.assert_allclose(np.exp(mean), np.exp(mean_expected),
+                                 rtol=1.0e-1)
+            np.testing.assert_allclose(stds, stds_expected)
 
     def test_gm_calculationBA08(self):
         """ Test mean and std calculation - BA08 - Vs30 constant"""

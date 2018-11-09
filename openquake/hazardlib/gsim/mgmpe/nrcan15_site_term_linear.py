@@ -37,9 +37,9 @@ class NRCan15SiteTermLinear(NRCan15SiteTerm):
 
     def BA08_AB06(self, vs30, imt, pgar):
         """
-        Computes amplification factor similarly to what is done in the 2015
-        version of the Canada building code. An initial version of this code
-        was kindly provided by Michal Kolaj - Geological Survey of Canada
+        Computes amplification factor using an approach similar to the one used
+        for the 2015 Canada Buiding code. Michal Kolaj's help is acknoledge
+
 
         :param vs30:
             Can be either a scalar or a :class:`~numpy.ndarray` instance
