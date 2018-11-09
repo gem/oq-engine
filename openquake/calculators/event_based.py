@@ -450,8 +450,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
             if self.oqparam.save_ruptures:
-                logging.info('Setting %d event years on %d ruptures',
-                             num_events, self.rupser.nruptures)
+                logging.info('Setting {:,d} event years on {:,d} ruptures'.
+                             format(num_events, self.rupser.nruptures))
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 set_random_years(self.datastore, 'events',
