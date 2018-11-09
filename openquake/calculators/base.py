@@ -38,7 +38,7 @@ from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
-from openquake.calculators.getters import GmfDataGetter, PmapGetter
+from openquake.calculators import getters
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -792,18 +792,21 @@ class RiskCalculator(HazardCalculator):
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         dstore = self.can_read_parent() or self.datastore
+        self.param['event_getter'] = event_getter = getters.EventGetter(
+            dstore, self.oqparam.calculation_mode)
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
+                getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, [sid], self.R)
+                getter = getters.GmfDataGetter(dstore, [sid], self.R)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 getter.init()
+                event_getter.init()
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore

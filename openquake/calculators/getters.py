@@ -210,6 +210,29 @@ class PmapGetter(object):
                 dic, [stats.mean_curve, stats.std_curve])
 
 
+class EventGetter(object):
+    """
+    A class to retrieve event IDs from the datastore
+    """
+    def __init__(self, dstore, calc_mode):
+        self.dstore = dstore
+        self.eid2idx = {}
+        self.fake = calc_mode not in 'scenario_risk event_based_risk'
+
+    def init(self):
+        if len(self.eid2idx) or self.fake:  # do nothing
+            return self.eid2idx
+        self.dstore.open('r')  # if closed
+        eids = self.dstore['events']['eid']
+        eids.sort()
+        self.eid2idx = dict(
+            zip(eids, numpy.arange(len(eids), dtype=U32)))
+        return self.eid2idx
+
+    def to_idxs(self, eids):
+        return numpy.array([self.eid2idx[eid] for eid in eids])
+
+
 class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
