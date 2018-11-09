@@ -42,7 +42,7 @@ def get_job_id(job_id, username=None):
     return job.id
 
 
-def run_job(calc_id, cfg_file, log_level='info', log_file=None, exports='',
+def run_job(cfg_file, log_level='info', log_file=None, exports='',
             hazard_calculation_id=None,  username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
@@ -63,24 +63,24 @@ def run_job(calc_id, cfg_file, log_level='info', log_file=None, exports='',
         Name of the user running the job
     """
     # if the master dies, automatically kill the workers
-    with logs.handle(calc_id, log_level, log_file):
+    job_id = logs.init(level=getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
         job_ini = os.path.abspath(cfg_file)
         job_id, oqparam = eng.job_from_file(
             job_ini, username, hazard_calculation_id)
         kw['username'] = username
-        eng.run_calc(job_id, oqparam, log_level, log_file, exports,
+        eng.run_calc(job_id, oqparam, exports,
                      hazard_calculation_id=hazard_calculation_id, **kw)
         for line in logs.dbcmd('list_outputs', job_id, False):
             safeprint(line)
     return job_id
 
 
-def run_tile(calc_id, job_ini, sites_slice):
+def run_tile(job_ini, sites_slice):
     """
     Used in tiling calculations
     """
-    return run_job(calc_id, job_ini,
-                   sites_slice=(sites_slice.start, sites_slice.stop))
+    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
 
 
 def del_calculation(job_id, confirmed=False):
@@ -117,10 +117,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    if run:
-        # configure the engine logs
-        calc_id = logs.init(level=logging.INFO)
-    else:
+    if not run:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
 
@@ -182,7 +179,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
-            job_id = run_job(calc_id, job_ini, log_level, log_file,
+            job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
             if i == 0:  # use the first calculation as base for the others
                 hc_id = job_id
