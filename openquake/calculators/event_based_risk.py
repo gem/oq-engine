@@ -69,13 +69,18 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    dstore = riskinputs[0].hazard_getter.dstore
+    dstore.open('r')
+    with monitor('getting eids'):
+        eids = dstore['events']['eid']
+        eids.sort()
+        eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
     for ri in riskinputs:
         with monitor('getting hazard'):
-            ri.hazard_getter.init()
+            ri.hazard_getter.init(eid2idx)
+            ri.hazard_getter.eids = eids
             hazard = ri.hazard_getter.get_hazard()
         mon = monitor('build risk curves', measuremem=False)
-        eids = ri.hazard_getter.eids
-        eid2idx = ri.hazard_getter.eid2idx
         A = len(ri.aids)
         E = len(eids)
         R = ri.hazard_getter.num_rlzs
