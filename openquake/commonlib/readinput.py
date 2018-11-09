@@ -334,8 +334,9 @@ def get_site_model(oqparam, req_site_params):
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
             sm = read_csv(fname)
-            if 'site_id' not in sm.dtype.names:
-                sm.sort(order=['lon', 'lat'])
+            if 'site_id' in sm.dtype.names:
+                raise InvalidFile('%s: you passed a sites.csv file instead of '
+                                  'a site_model.csv file!' % fname)
             arrays.append(sm)
             continue
         nodes = nrml.read(fname).siteModel
