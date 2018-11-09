@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to read multiple site model files in the same calculation
   * Implemented a smart single job.ini file mode for event based risk
   * Now warnings for invalid parameters are logged in the database too
   * Fixed `oq export avg_losses-stats` for the case of one realization
