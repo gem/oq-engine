@@ -61,13 +61,6 @@ def touch_log_file(log_file):
     open(os.path.abspath(log_file), 'a').close()
 
 
-def set_level(level):
-    """
-    Initialize logs to write records with level `level` or above.
-    """
-    logging.root.setLevel(LEVELS.get(level, logging.WARNING))
-
-
 def _update_log_record(self, record):
     """
     Massage a log record before emitting it. Intended to be used by the
@@ -143,7 +136,7 @@ def handle(job_id, log_level='info', log_file=None):
         handlers.append(LogFileHandler(job_id, log_file))
     for handler in handlers:
         logging.root.addHandler(handler)
-    set_level(log_level)
+    init(job_id, LEVELS.get(log_level, logging.WARNING))
     try:
         yield
     finally:
@@ -155,10 +148,13 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.removeHandler(handler)
 
 
-def init(level=logging.INFO):
+def init(calc_id=None, level=logging.INFO):
     """Set the format of the root logger"""
-    logging.basicConfig(level=level)
-    calc_id, _ = datastore.extract_calc_id_datadir()
+    if not logging.root.handlers:  # first time
+        logging.basicConfig(level=level)
+    if calc_id is None:
+        calc_id, _ = datastore.extract_calc_id_datadir()
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
         handler.setFormatter(logging.Formatter(fmt))
+    return calc_id
