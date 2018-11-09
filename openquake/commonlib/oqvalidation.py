@@ -228,9 +228,9 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode == 'ucerf_risk'):
             raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
-            self.check_missing('site_model', 'warn')
-            self.check_missing('gsim_logic_tree', 'warn')
-            self.check_missing('source_model_logic_tree', 'warn')
+            self.check_missing('site_model', 'info')
+            self.check_missing('gsim_logic_tree', 'info')
+            self.check_missing('source_model_logic_tree', 'info')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
@@ -763,14 +763,14 @@ class OqParam(valid.ParamSet):
         """
         Make sure the given parameter is missing in the job.ini file
         """
-        assert action in ('warn', 'error'), action
+        assert action in ('debug', 'info', 'warn', 'error'), action
         if self.inputs.get(param):
-            msg = 'Please remove %s_file from %s, it makes no sense in %s' % (
+            msg = '%s_file in %s is ignored in %s' % (
                 param, self.inputs['job_ini'], self.calculation_mode)
             if action == 'error':
                 raise InvalidFile(msg)
             else:
-                logging.warn(msg)
+                getattr(logging, action)(msg)
 
     def hazard_precomputed(self):
         """
