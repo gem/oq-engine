@@ -97,7 +97,7 @@ export_dir = %s
                 'random_seed': 0,
                 'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
-                           'site_model': site_model_input,
+                           'site_model': [site_model_input],
                            'source': [source_model_input],
                            'source_model': source_model_input},
                 'hazard_imtls': {'PGA': None},
@@ -112,7 +112,7 @@ export_dir = %s
             keys, values = zip(*items)
             self.assertEqual(('job_ini', 'site_model', 'source',
                               'source_model'), keys)
-            self.assertEqual((job_config, site_model_input,
+            self.assertEqual((job_config, [site_model_input],
                               [source_model_input], source_model_input),
                              values)
 
@@ -206,7 +206,7 @@ maximum_distance=[(200, 8)]
 
 
 def sitemodel():
-    return BytesIO(b'''\
+    return [BytesIO(b'''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -215,7 +215,7 @@ def sitemodel():
         <site lon="0.0" lat="0.1" vs30="600.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="True" />
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
-</nrml>''')
+</nrml>''')]
 
 
 class ClosestSiteModelTestCase(unittest.TestCase):
