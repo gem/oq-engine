@@ -63,14 +63,15 @@ def run_job(calc_id, cfg_file, log_level='info', log_file=None, exports='',
         Name of the user running the job
     """
     # if the master dies, automatically kill the workers
-    job_ini = os.path.abspath(cfg_file)
-    job_id, oqparam = eng.job_from_file(
-        job_ini, username, hazard_calculation_id)
-    kw['username'] = username
-    eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-    for line in logs.dbcmd('list_outputs', job_id, False):
-        safeprint(line)
+    with logs.handle(calc_id, log_level, log_file):
+        job_ini = os.path.abspath(cfg_file)
+        job_id, oqparam = eng.job_from_file(
+            job_ini, username, hazard_calculation_id)
+        kw['username'] = username
+        eng.run_calc(job_id, oqparam, log_level, log_file, exports,
+                     hazard_calculation_id=hazard_calculation_id, **kw)
+        for line in logs.dbcmd('list_outputs', job_id, False):
+            safeprint(line)
     return job_id
 
 
