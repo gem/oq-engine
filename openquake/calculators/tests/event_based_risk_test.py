@@ -40,7 +40,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def assert_stats_ok(self, pkg, job_ini):
         out = self.run_calc(pkg.__file__, job_ini, exports='csv',
-                            concurrent_tasks='4')
+                            concurrent_tasks='0')
         # NB: it is important to use concurrent_tasks > 1 to test the
         # complications of concurrency (for instance the noncommutativity of
         # numpy.float32 addition when computing the average losses)
@@ -59,7 +59,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
+        self.run_calc(case_1.__file__, 'job.ini', concurrent_tasks='0')
         ekeys = [('agg_curves-stats', 'csv')]
         for ekey in ekeys:
             for fname in export(ekey, self.calc.datastore):
@@ -107,14 +107,14 @@ stddev         838           556
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
         # vulnerability function with PMF
-        self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini')
+        self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini', concurrent_tasks='0')
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini')
+        self.run_calc(case_2.__file__, 'job.ini', concurrent_tasks='0')
         fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
         os.remove(fname)
@@ -125,7 +125,7 @@ stddev         838           556
 
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
+            self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0', concurrent_tasks='0')
         self.assertEqual(
             str(ctx.exception),
             'No GMFs were generated, perhaps they were all below the '
@@ -133,13 +133,13 @@ stddev         838           556
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_sampling(self):
-        self.run_calc(case_2.__file__, 'job_sampling.ini')
+        self.run_calc(case_2.__file__, 'job_sampling.ini', concurrent_tasks='0')
         self.assertEqual(len(self.calc.datastore['events']), 20)
         # TODO: improve this test
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_correlation(self):
-        self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
+        self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0, concurrent_tasks='0')
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
@@ -156,14 +156,14 @@ stddev         838           556
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_2.__file__, 'job_err.ini')
+            self.run_calc(case_2.__file__, 'job_err.ini', concurrent_tasks='0')
         self.assertIn('not in the risk model', str(ctx.exception))
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
         self.run_calc(case_3.__file__, 'job.ini',
-                      exports='csv', concurrent_tasks='4')
+                      exports='csv', concurrent_tasks='0')
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
@@ -181,7 +181,7 @@ stddev         838           556
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
-        self.run_calc(case_4.__file__, 'job.ini')
+        self.run_calc(case_4.__file__, 'job.ini', concurrent_tasks='0')
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
@@ -196,7 +196,7 @@ stddev         838           556
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
-        self.run_calc(occupants.__file__, 'job.ini')
+        self.run_calc(occupants.__file__, 'job.ini', concurrent_tasks='0')
         fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -212,7 +212,7 @@ stddev         838           556
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_master.__file__, 'job.ini', exports='csv', concurrent_tasks='0')
         fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
@@ -260,7 +260,7 @@ stddev         838           556
         event_based.RUPTURES_PER_BLOCK = 20
 
         # this is a case with a grid and asset-hazard association
-        self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_miriam.__file__, 'job.ini', exports='csv', concurrent_tasks='0')
 
         # check minimum_magnitude >= 5.2
         minmag = self.calc.datastore['ruptures']['mag'].min()
@@ -274,7 +274,7 @@ stddev         838           556
         os.remove(fname)
 
         # this is a case with exposure and region_grid_spacing=1
-        self.run_calc(case_miriam.__file__, 'job2.ini')
+        self.run_calc(case_miriam.__file__, 'job2.ini', concurrent_tasks='0')
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
@@ -287,7 +287,7 @@ stddev         838           556
     def test_case_7a(self):
         # case with  <insuranceLimit isAbsolute="false"/>
         # this is also a case with preimported exposure
-        self.run_calc(case_7a.__file__,  'job_h.ini')
+        self.run_calc(case_7a.__file__,  'job_h.ini', concurrent_tasks='0')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
@@ -298,7 +298,7 @@ stddev         838           556
         # Turkey with SHARE logic tree; TODO: add site model
         # it has 8 realizations but 4 of them have 0 ruptures
         out = self.run_calc(case_4.__file__, 'job.ini',
-                            calculation_mode='event_based', exports='csv')
+                            calculation_mode='event_based', exports='csv', concurrent_tasks='0')
         [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
@@ -312,14 +312,14 @@ stddev         838           556
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            exports='csv')
+                            exports='csv', concurrent_tasks='0')
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
-        self.run_calc(case_4a.__file__, 'job.ini')
+        self.run_calc(case_4a.__file__, 'job.ini', concurrent_tasks='0')
         self.assertEqual(len(self.calc.datastore['events']), 5)
 
     @attr('qa', 'hazard', 'event_based_risk')
@@ -328,6 +328,6 @@ stddev         838           556
         self.run_calc(case_6c.__file__, 'job_h.ini')
         hc = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
-                            hazard_calculation_id=hc, concurrent_tasks='0')
+                            hazard_calculation_id=hc)
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
