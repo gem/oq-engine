@@ -304,8 +304,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     return job_id, oq
 
 
-def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
 
@@ -313,12 +312,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         ID of the current job
     :param oqparam:
         :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param str log_level:
-        The desired logging level. Valid choices are 'debug', 'info',
-        'progress', 'warn', 'error', and 'critical'.
-    :param str log_file:
-        Complete path (including file name) to file where logs will be written.
-        If `None`, logging will just be printed to standard output.
     :param exports:
         A comma-separated string of export types.
     """
