@@ -282,7 +282,7 @@ def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     general.zipfiles(files, archive_zip, log=log)
 
 
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(cfg_file, username, **kw):
     """
     Create a full job profile from a job config file.
 
@@ -297,10 +297,12 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :returns:
         a pair (job_id, oqparam)
     """
-    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
+    hc_id = kw.get('hazard_calculation_id')
+    oq = readinput.get_oqparam(cfg_file, hc_id=hc_id)
+    if 'calculation_mode' in kw:
+        oq.calculation_mode = kw.pop('calculation_mode')
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(),
-                        hazard_calculation_id)
+                        username, datastore.get_datadir(), hc_id)
     return job_id, oq
 
 
