@@ -47,6 +47,8 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
     """
     Run a job using the specified config file and other options.
 
+    :param calc_id:
+        Calculation ID
     :param str cfg_file:
         Path to calculation config (INI-style) files.
     :param str log_level:
@@ -61,14 +63,16 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         Name of the user running the job
     """
     # if the master dies, automatically kill the workers
-    job_ini = os.path.abspath(cfg_file)
-    job_id, oqparam = eng.job_from_file(
-        job_ini, username, hazard_calculation_id)
-    kw['username'] = username
-    eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-    for line in logs.dbcmd('list_outputs', job_id, False):
-        safeprint(line)
+    job_id = logs.init(level=getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        job_ini = os.path.abspath(cfg_file)
+        job_id, oqparam = eng.job_from_file(
+            job_ini, username, hazard_calculation_id)
+        kw['username'] = username
+        eng.run_calc(job_id, oqparam, exports,
+                     hazard_calculation_id=hazard_calculation_id, **kw)
+        for line in logs.dbcmd('list_outputs', job_id, False):
+            safeprint(line)
     return job_id
 
 
@@ -113,10 +117,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    if run:
-        # the logging will be configured in engine.py
-        pass
-    else:
+    if not run:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
 
