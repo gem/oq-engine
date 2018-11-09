@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import getpass
 import logging
@@ -43,7 +44,7 @@ def get_job_id(job_id, username=None):
 
 
 def run_job(cfg_file, log_level='info', log_file=None, exports='',
-            hazard_calculation_id=None,  username=getpass.getuser(), **kw):
+            username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
 
@@ -57,20 +58,18 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         Path to log file.
     :param exports:
         A comma-separated string of export types requested by the user.
-    :param hazard_calculation_id:
-        ID of the previous calculation or None
     :param username:
         Name of the user running the job
+    :param kw:
+        Extra parameters like hazard_calculation_id and calculation_mode
     """
     # if the master dies, automatically kill the workers
     job_id = logs.init(level=getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
         job_ini = os.path.abspath(cfg_file)
-        job_id, oqparam = eng.job_from_file(
-            job_ini, username, hazard_calculation_id)
+        job_id, oqparam = eng.job_from_file(job_ini, username, **kw)
         kw['username'] = username
-        eng.run_calc(job_id, oqparam, exports,
-                     hazard_calculation_id=hazard_calculation_id, **kw)
+        eng.run_calc(job_id, oqparam, exports, **kw)
         for line in logs.dbcmd('list_outputs', job_id, False):
             safeprint(line)
     return job_id
@@ -175,6 +174,15 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
+        if len(job_inis) == 1 and not hc_id:
+            # special case for single file event_based_risk
+            txt = open(job_inis[0]).read()
+            if re.search('calculation_mode\s*=\s*event_based_risk', txt):
+                hc_id = run_job(job_inis[0], log_level, log_file,
+                                exports, calculation_mode='event_based')
+                job_id = run_job(job_inis[0], log_level, log_file,
+                                 exports, hazard_calculation_id=hc_id)
+                return
         if len(job_inis) > 2 and hc_id:
             sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
