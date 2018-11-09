@@ -328,7 +328,7 @@ def get_site_model(oqparam, req_site_params):
     :param req_site_params:
         required site parameters
     :returns:
-        an array with fields lon, lat, vs30, measured, z1pt0, z2pt5, backarc
+        an array with fields lon, lat, vs30, ...
     """
     arrays = []
     for fname in oqparam.inputs['site_model']:
