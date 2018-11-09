@@ -409,9 +409,8 @@ class EngineRunJobTestCase(unittest.TestCase):
     def test_ebr(self):
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
-        job_id = commonlib.logs.init()
         with Print.patch() as p:
-            job_id = run_job(job_id, job_ini, log_level='error')
+            job_id = run_job(job_ini, log_level='error')
         self.assertIn('id | name', str(p))
 
         # sanity check on the performance view: make sure that the most
