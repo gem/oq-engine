@@ -62,16 +62,15 @@ class NRCan15SiteTermLinear(NRCan15SiteTerm):
         # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
         # motion will not be modified
         vs = copy.copy(vs30)
-        vs[vs >= 2000] = 1999.
+        vs[vs >= 2000] = 2000.
         #
         # Computing motion on rock
         idx = np.where(vs30 > 760)
         if np.size(idx) > 0:
             C2 = self.COEFFS_AB06r[imt]
-            fa[idx] = 10**(np.interp(np.log10(vs[idx]),
-                                     np.log10([760.0, 2000.0]),
-                                     np.log10([1.0, C2['c']])))
-            print('fa:', fa)
+            fa[idx] = 1. / 10**(np.interp(np.log10(vs[idx]),
+                                          np.log10([760.0, 2000.0]),
+                                          np.log10([1.0, C2['c']])))
         #
         # For values of Vs30 lower than 760 the amplification is computed
         # using the site term of Boore and Atkinson (2008)
