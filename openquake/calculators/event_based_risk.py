@@ -69,20 +69,17 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    dstore = riskinputs[0].hazard_getter.dstore
-    dstore.open('r')
+    event_getter = param['event_getter']
     with monitor('getting eids'):
-        eids = dstore['events']['eid']
-        eids.sort()
-        eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
+        eid2idx = event_getter.init()
+        E = len(eid2idx)
     for ri in riskinputs:
         with monitor('getting hazard'):
             ri.hazard_getter.init(eid2idx)
-            ri.hazard_getter.eids = eids
+            ri.hazard_getter.eids = eid2idx
             hazard = ri.hazard_getter.get_hazard()
         mon = monitor('build risk curves', measuremem=False)
         A = len(ri.aids)
-        E = len(eids)
         R = ri.hazard_getter.num_rlzs
         try:
             agg = numpy.zeros((E, L * I), F32)
@@ -109,7 +106,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
-                indices = numpy.array([eid2idx[eid] for eid in out.eids])
+                indices = event_getter.to_idxs(out.eids)
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
