@@ -238,7 +238,7 @@ class ClassicalTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
         # test preclassical and OQ_SAMPLE_SOURCES
-        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='.1'):
+        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
             self.run_calc(
                 case_14.__file__, 'job.ini', calculation_mode='preclassical')
         rpt = view('ruptures_per_trt', self.calc.datastore)
@@ -246,7 +246,7 @@ class ClassicalTestCase(CalculatorTestCase):
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-simple_fault.xml 0      Active Shallow Crust 66           447         
+simple_fault.xml 0      Active Shallow Crust 55           447         
 ================ ====== ==================== ============ ============""")
         # test classical
         self.assert_curves_ok([
