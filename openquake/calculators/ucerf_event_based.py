@@ -131,7 +131,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         ruptures.extend(background_ruptures)
         rupture_occ.extend(background_n_occ)
-    return ruptures, numpy.array(rupture_occ, numpy.uint16).reshape(-1, 1, 1)
+    return ruptures, rupture_occ
 
 
 def sample_background_model(
@@ -218,7 +218,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     num_ses = param['ses_per_logic_tree_path']
     samples = getattr(src, 'samples', 1)
-    n_occ = AccumDict(accum=numpy.zeros((samples, num_ses), numpy.uint16))
+    n_occ = AccumDict(accum=numpy.zeros(samples, numpy.uint16))
     with sampl_mon:
         for sam_idx in range(samples):
             for ses_idx, ses_seed in param['ses_seeds']:
@@ -226,7 +226,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                 rups, occs = generate_event_set(
                     src, background_sids, src_filter, seed)
                 for rup, occ in zip(rups, occs):
-                    n_occ[rup][sam_idx, ses_idx] = occ
+                    n_occ[rup][sam_idx] = occ
                     rup.serial = serial
                     serial += 1
     with filt_mon:
