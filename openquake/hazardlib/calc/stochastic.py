@@ -192,7 +192,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
                         i += 1
 
         # setting event IDs based on the rupture serial and the sample
-        ebr = EBRupture(rup, src.id, indices, events)
+        ebr = EBRupture(rup, src.id, src.src_group_id, indices, events)
         start = 0
         for sam_idx, n in enumerate(occ):
             eids = (U64(TWO32 * ebr.serial + TWO16 * rlzs[sam_idx]) +
