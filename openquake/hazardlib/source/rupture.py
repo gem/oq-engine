@@ -543,9 +543,10 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, sids, events):
+    def __init__(self, rupture, srcidx, grp_id, sids, events):
         self.rupture = rupture
         self.srcidx = srcidx
+        self.grp_id = grp_id
         self.sids = sids
         self.events = events
         self.eidx1 = 0
@@ -557,13 +558,6 @@ class EBRupture(object):
         Serial number of the rupture
         """
         return self.rupture.serial
-
-    @property
-    def grp_id(self):
-        """
-        Group ID of the rupture
-        """
-        return int(self.events[0]['grp_id'])  # need Python int, not uint16
 
     @property
     def weight(self):

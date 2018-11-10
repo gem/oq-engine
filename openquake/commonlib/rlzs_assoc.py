@@ -106,7 +106,7 @@ class RlzsAssoc(object):
         :param sm_id: source model ordinal (or None)
         :returns: a dictionary gsim -> rlzs
         """
-        if isinstance(trt_or_grp_id, (int, U32)):  # grp_id
+        if isinstance(trt_or_grp_id, (int, U16, U32)):  # grp_id
             trt = self.csm_info.trt_by_grp[trt_or_grp_id]
             sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
         else:  # assume TRT string
