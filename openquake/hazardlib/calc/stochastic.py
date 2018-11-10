@@ -35,7 +35,7 @@ F64 = numpy.float64
 U64 = numpy.uint64
 U16 = numpy.uint16
 event_dt = numpy.dtype(
-    [('eid', U64), ('grp_id', U16), ('ses', U16), ('sample', U16)])
+    [('eid', U64), ('grp_id', U16), ('ses', U16), ('rlz', U16)])
 
 
 def get_rlzi(eid):
@@ -187,7 +187,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
             for sam_idx in range(nr):  # numpy.ndenumerate would be slower
                 for ses_idx, num_occ in enumerate(n_occ[sam_idx]):
                     for _ in range(num_occ):
-                        events[i]['sample'] = sam_idx
+                        events[i]['rlz'] = rlzs[sam_idx]
                         events[i]['ses'] = ses_idx + 1
                         i += 1
 

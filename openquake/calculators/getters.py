@@ -367,8 +367,8 @@ class GmfGetter(object):
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                all_eids = [get_array(rup.events, sample=sample + r)['eid']
-                            for r, rlzi in enumerate(rlzs)]
+                all_eids = [get_array(rup.events, rlz=rlzi)['eid']
+                            for rlzi in rlzs]
                 num_events = sum(len(eids) for eids in all_eids)
                 if num_events == 0:
                     continue
