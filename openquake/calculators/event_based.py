@@ -68,16 +68,18 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures):
+def get_events(ebruptures, num_ses):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
     year = 0  # to be set later
     for ebr in ebruptures:
-        for event in ebr.events:
-            rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
-                   event['rlz'])
+        numpy.random.seed(ebr.serial)
+        sess = numpy.random.choice(num_ses, ebr.multiplicity)
+        for event, ses in zip(ebr.events, sess):
+            rec = (event['eid'], ebr.serial, ebr.grp_id, year,
+                   ses, event['rlz'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
 
@@ -169,7 +171,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(ruptures)
+        res.events = get_events(ruptures, param['ses_per_logic_tree_path'])
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -359,7 +361,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
-            events = get_events(ruptures)
+            events = get_events(ruptures, self.oqparam.ses_per_logic_tree_path)
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, eidx=len(dset)-len(events))
