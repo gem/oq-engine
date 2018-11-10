@@ -16,7 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
+                    id="0"
                     >
                         193273528320
                     </SES>
@@ -52,7 +52,7 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
+                    id="0"
                     >
                         292057776128
                     </SES>
