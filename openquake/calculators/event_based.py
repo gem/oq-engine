@@ -77,7 +77,7 @@ def get_events(ebruptures):
     for ebr in ebruptures:
         for event in ebr.events:
             rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
-                   event['sample'])
+                   event['rlz'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
 
@@ -97,13 +97,11 @@ def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
     nbytes = 2 + 4 + 8 + 4 * num_imts
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
-        sample = 0
         for gsim, rlzs in rlzs_by_gsim[grp_id].items():
             for ebr in ebruptures:
-                for r, rlzi in enumerate(rlzs):
+                for rlzi in rlzs:
                     n += len(ebr.rupture.sctx.sids) * len(
-                        get_array(ebr.events, sample=sample + r))
-            sample += len(rlzs)
+                        get_array(ebr.events, rlz=rlzi))
     return n * nbytes
 
 
