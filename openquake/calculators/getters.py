@@ -26,7 +26,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.hazardlib.source.rupture import (
+    BaseRupture, EBRupture, classes, TWO32)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -347,7 +348,7 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-            eids.append(ebr.events['eid'])
+            eids.append(TWO32 * ebr.serial + ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
@@ -382,7 +383,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    eids = all_eids[r]
+                    eids = TWO32 * rup.serial + numpy.array(all_eids[r])
                     e = len(eids)
                     if not e:
                         continue
@@ -557,6 +558,7 @@ class RuptureGetter(object):
         rupgeoms = self.dstore['rupgeoms']
         for rec in sorted(ruptures, key=operator.itemgetter('serial')):
             evs = events[rec['eidx1']:rec['eidx2']]
+            evs['eid'] %= TWO32  # strip the first 4 bytes
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
