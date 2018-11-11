@@ -102,14 +102,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, num_rlzs, num_ses, ir_monitor):
+    def sample_ruptures(self, num_samples, num_ses, ir_monitor):
         """
-        :param num_rlzs: number of realizations of the source model
+        :param num_samples: number of realizations of the source model
         :param num_ses: number of stochastic event sets
         :param ir_monitor: a monitor object for .iter_ruptures()
-        :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
+        :yields: pairs (rupture, num_occurrences[num_samples])
         """
-        shape = (num_rlzs, num_ses)
+        shape = (num_samples, num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
@@ -120,9 +120,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             if num_occ.any():
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
-                    num_occ *= (numpy.random.random(shape) < mutex_weight)
+                    num_occ *= numpy.random.random(shape) < mutex_weight
+                occ = num_occ.sum(axis=1)
                 if num_occ.any():
-                    yield rup, num_occ
+                    yield rup, occ
 
     def __iter__(self):
         """
