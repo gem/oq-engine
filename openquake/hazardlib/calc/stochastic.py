@@ -32,9 +32,10 @@ from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
-U64 = numpy.uint64
 U16 = numpy.uint16
-event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('rlz', U16)])
+U32 = numpy.uint32
+U64 = numpy.uint64
+event_dt = numpy.dtype([('eid', U32), ('rlz', U16)])
 
 
 def get_rlzi(eid):
@@ -134,11 +135,9 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
 
 
 def fix_shape(occur, num_rlzs):
-    nr, num_ses = occur.shape
-    assert nr == 1, nr
-    n_occ = numpy.zeros((num_rlzs, num_ses), U16)
+    n_occ = numpy.zeros(num_rlzs, U16)
     for nr in range(num_rlzs):
-        n_occ[nr, :] = occur[0, :]
+        n_occ[nr] = occur
     return n_occ
 
 
@@ -175,26 +174,22 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
 
         # creating events
         with cmaker.evs_mon:
-            occ = n_occ.sum(axis=1)  # occurrences by sam_idx
-            E = occ.sum()
+            E = n_occ.sum()
             if E == 0:
                 continue
             assert E < TWO16, E
             events = numpy.zeros(E, event_dt)
-            events['grp_id'] = src.src_group_id
             i = 0
             for sam_idx in range(nr):  # numpy.ndenumerate would be slower
-                for ses_idx, num_occ in enumerate(n_occ[sam_idx]):
-                    for _ in range(num_occ):
-                        events[i]['rlz'] = rlzs[sam_idx]
-                        i += 1
+                for _ in range(n_occ[sam_idx]):
+                    events[i]['rlz'] = rlzs[sam_idx]
+                    i += 1
 
         # setting event IDs based on the rupture serial and the sample
         ebr = EBRupture(rup, src.id, src.src_group_id, indices, events)
         start = 0
-        for sam_idx, n in enumerate(occ):
-            eids = (U64(TWO32 * ebr.serial + TWO16 * rlzs[sam_idx]) +
-                    numpy.arange(n, dtype=U64))
+        for sam_idx, n in enumerate(n_occ):
+            eids = TWO16 * rlzs[sam_idx] + numpy.arange(n, dtype=U32)
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)

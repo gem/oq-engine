@@ -78,8 +78,8 @@ def get_events(ebruptures, num_ses):
         numpy.random.seed(ebr.serial)
         sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
         for event, ses in zip(ebr.events, sess):
-            rec = (event['eid'], ebr.serial, ebr.grp_id, year,
-                   ses, event['rlz'])
+            rec = (TWO32 * ebr.serial + event['eid'], ebr.serial,
+                   ebr.grp_id, year, ses, event['rlz'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
 

@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Changed the algorithm associating events to SESs for performance reasons
+  * Changed the algorithm associating events to SESs and made the event based
+    hazard calculator faster in the case of many SESs
   * Reduced substantially the memory consumption in event based risk
   * Made it possible to read multiple site model files in the same calculation
   * Implemented a smart single job.ini file mode for event based risk
