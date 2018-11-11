@@ -76,7 +76,7 @@ def get_events(ebruptures, num_ses):
     year = 0  # to be set later
     for ebr in ebruptures:
         numpy.random.seed(ebr.serial)
-        sess = numpy.random.choice(num_ses, ebr.multiplicity)
+        sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
         for event, ses in zip(ebr.events, sess):
             rec = (event['eid'], ebr.serial, ebr.grp_id, year,
                    ses, event['rlz'])
