@@ -71,12 +71,9 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
     def gmv_close(v):
         return (gmv - half_delta <= v <= gmv + half_delta)
-    count = 0
-    for gmv_site_1, gmv_site_2 in zip(gmvs_site_1, gmvs_site_2):
-        if gmv_close(gmv_site_1) and gmv_close(gmv_site_2):
-            count += 1
-
-    prob = 1 - math.exp(- (float(count) / num_ses))
+    count = sum(1 for gmv1, gmv2 in zip(gmvs_site_1, gmvs_site_2)
+                if gmv_close(gmv1) and gmv_close(gmv2))
+    prob = 1 - math.exp(- count / num_ses)
     return prob
 
 
