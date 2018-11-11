@@ -55,11 +55,6 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(len(dic['eb_ruptures']), 5)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
-        # test export
-        mesh = numpy.array([lonlat], [('lon', float), ('lat', float)])
-        ebr = dic['eb_ruptures'][0]
-        ebr.export(mesh)
-
         # test no filtering 1
         ruptures = list(stochastic_event_set(group))
         self.assertEqual(len(ruptures), 19)
