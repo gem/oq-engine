@@ -113,22 +113,39 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
-        if isinstance(self.serial, int):  # prefilter_sources=no was given
+        nr = len(ruptures)
+        tom = getattr(self, 'temporal_occurrence_model', None)
+        unsplit = isinstance(self.serial, int)
+        if unsplit:  # prefilter_sources=no was given
             serials = numpy.arange(
                 self.serial, self.serial + self.num_ruptures)
         else:  # the serials have been generated in prefiltering
             serials = self.serial
-        for rup, serial in zip(ruptures, serials):
-            rup.serial = serial  # used as seed
-            numpy.random.seed(serial)
-            num_occ = rup.sample_number_of_occurrences(shape)
-            if num_occ.any():
-                if mutex_weight < 1:
-                    # consider only the occurrencies below the mutex_weight
-                    num_occ *= numpy.random.random(shape) < mutex_weight
-                occ = num_occ.sum(axis=1)
+        if tom and unsplit:  # time-independent source
+            _rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            if num_samples > 1:
+                rates = numpy.zeros((nr, num_samples))
+                for sam in range(num_samples):
+                    rates[:, sam] = _rates
+            else:
+                rates = _rates.reshape((nr, 1))
+            numpy.random.seed(self.serial)
+            occurs = numpy.random.poisson(rates * tom.time_span * num_ses)
+            for rup, num_occ in zip(ruptures, occurs):
                 if num_occ.any():
-                    yield rup, occ
+                    yield rup, num_occ
+        else:  # time-dependent source
+            for rup, serial in zip(ruptures, serials):
+                rup.serial = serial  # used as seed
+                numpy.random.seed(serial)
+                num_occ = rup.sample_number_of_occurrences(shape)
+                if num_occ.any():
+                    if mutex_weight < 1:
+                        # consider only the occurrencies below the mutex_weight
+                        num_occ *= numpy.random.random(shape) < mutex_weight
+                    occ = num_occ.sum(axis=1)
+                    if num_occ.any():
+                        yield rup, occ
 
     def __iter__(self):
         """
