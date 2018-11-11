@@ -383,7 +383,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    eids = TWO32 * rup.serial + numpy.array(all_eids[r])
+                    eids = U64(TWO32 * rup.serial) + numpy.array(all_eids[r])
                     e = len(eids)
                     if not e:
                         continue
