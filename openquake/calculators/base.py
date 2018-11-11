@@ -412,7 +412,9 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), srcfilter=self.get_filter())
+                oq, self.monitor(),
+                split_all=oq.prefilter_sources != 'no',
+                srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
