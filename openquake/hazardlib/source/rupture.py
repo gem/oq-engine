@@ -586,6 +586,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
+        self.events['eid'] += TWO32 * self.serial
         events_by_ses = general.group_array(self.events, 'ses')
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]

@@ -32,9 +32,10 @@ from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
-U64 = numpy.uint64
 U16 = numpy.uint16
-event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('rlz', U16)])
+U32 = numpy.uint32
+U64 = numpy.uint64
+event_dt = numpy.dtype([('eid', U32), ('rlz', U16)])
 
 
 def get_rlzi(eid):
@@ -178,7 +179,6 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
                 continue
             assert E < TWO16, E
             events = numpy.zeros(E, event_dt)
-            events['grp_id'] = src.src_group_id
             i = 0
             for sam_idx in range(nr):  # numpy.ndenumerate would be slower
                 for _ in range(n_occ[sam_idx]):
@@ -189,8 +189,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
         ebr = EBRupture(rup, src.id, src.src_group_id, indices, events)
         start = 0
         for sam_idx, n in enumerate(n_occ):
-            eids = (U64(TWO32 * ebr.serial + TWO16 * rlzs[sam_idx]) +
-                    numpy.arange(n, dtype=U64))
+            eids = TWO16 * rlzs[sam_idx] + numpy.arange(n, dtype=U32)
             ebr.events[start:start + len(eids)]['eid'] = eids
             start += len(eids)
         ebrs.append(ebr)
