@@ -131,12 +131,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 rates = _rates.reshape((nr, 1))
             numpy.random.seed(self.serial)
             occurs = numpy.random.poisson(rates * tom.time_span * num_ses)
-            for rup, num_occ in zip(ruptures, occurs):
+            for rup, serial, num_occ in zip(ruptures, serials, occurs):
                 if num_occ.any():
+                    rup.serial = serial  # used as seed
                     yield rup, num_occ
         else:  # time-dependent source
             for rup, serial in zip(ruptures, serials):
-                rup.serial = serial  # used as seed
                 numpy.random.seed(serial)
                 num_occ = rup.sample_number_of_occurrences(shape)
                 if num_occ.any():
@@ -145,6 +145,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                         num_occ *= numpy.random.random(shape) < mutex_weight
                     occ = num_occ.sum(axis=1)
                     if num_occ.any():
+                        rup.serial = serial  # used as seed
                         yield rup, occ
 
     def __iter__(self):
