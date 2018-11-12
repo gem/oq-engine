@@ -568,7 +568,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, dset.attrs['stats'].split()
+        return dset, [b.decode('utf8') for b in dset.attrs['stats']]
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
