@@ -36,8 +36,9 @@ from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
-from openquake.calculators.getters import GmfDataGetter, PmapGetter
+from openquake.calculators import getters
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -170,15 +171,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
         self.datastore.flush()
-
-    def set_log_format(self):
-        """Set the format of the root logger"""
-        fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
-            self.datastore.calc_id)
-        for handler in logging.root.handlers:
-            handler.setFormatter(logging.Formatter(fmt))
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
@@ -349,6 +343,12 @@ class HazardCalculator(BaseCalculator):
         ct = self.oqparam.concurrent_tasks or 1
         minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
         maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        if not hasattr(self, 'logged'):
+            if maxweight == minweight:
+                logging.info('Using minweight=%d', minweight)
+            else:
+                logging.info('Using maxweight=%d', maxweight)
+            self.logged = True
         return general.block_splitter(sources, maxweight, weight,
                                       operator.attrgetter('src_group_id'))
 
@@ -361,8 +361,7 @@ class HazardCalculator(BaseCalculator):
         self.src_filter = SourceFilter(
             self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            # do not preprocess
-            return
+            return UcerfFilter(self.sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
@@ -413,7 +412,9 @@ class HazardCalculator(BaseCalculator):
         self.check_overflow()  # check if self.sitecol is too large
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(), srcfilter=self.get_filter())
+                oq, self.monitor(),
+                split_all=oq.prefilter_sources != 'no',
+                srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
@@ -793,18 +794,21 @@ class RiskCalculator(HazardCalculator):
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
         dstore = self.can_read_parent() or self.datastore
+        self.param['event_getter'] = event_getter = getters.EventGetter(
+            dstore, self.oqparam.calculation_mode)
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
             # build the riskinputs
             if kind == 'poe':  # hcurves, shape (R, N)
-                getter = PmapGetter(dstore, self.rlzs_assoc, [sid])
+                getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
                 getter.num_rlzs = self.R
             else:  # gmf
-                getter = GmfDataGetter(dstore, [sid], self.R)
+                getter = getters.GmfDataGetter(dstore, [sid], self.R)
             if dstore is self.datastore:
                 # read the hazard data in the controller node
                 getter.init()
+                event_getter.init()
             else:
                 # the datastore must be closed to avoid the HDF5 fork bug
                 assert dstore.hdf5 == (), '%s is not closed!' % dstore
