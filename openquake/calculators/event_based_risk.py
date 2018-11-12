@@ -298,7 +298,6 @@ class EbrCalculator(base.RiskCalculator):
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            # TODO: remove get_rlzi(e) and make this faster
             agglosses = numpy.fromiter(
                 ((eid, rlz, losses)
                  for (eid, rlz), losses in zip(self.eidrlz, self.agglosses)
