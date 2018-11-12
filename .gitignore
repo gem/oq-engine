@@ -16,3 +16,4 @@ dist
 local_settings.py
 demos/*/*.zip
 *.swp
+venv
