@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the sampling of time-independent sources for the case of
+   `prefilter_sources=no`
   * Changed the algorithm associating events to SESs and made the event based
     hazard calculator faster in the case of many SESs
   * Reduced substantially the memory consumption in event based risk
