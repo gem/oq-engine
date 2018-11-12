@@ -43,7 +43,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO32 = 2 ** 32
+TWO32 = U64(2 ** 32)
 BLOCKSIZE = 30000  # decided by MS
 
 
@@ -78,7 +78,7 @@ def get_events(ebruptures, num_ses):
         numpy.random.seed(ebr.serial)
         sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
         for event, ses in zip(ebr.events, sess):
-            rec = (TWO32 * ebr.serial + event['eid'], ebr.serial,
+            rec = (TWO32 * U64(ebr.serial) + U64(event['eid']), ebr.serial,
                    ebr.grp_id, year, ses, event['rlz'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
