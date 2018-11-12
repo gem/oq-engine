@@ -1,6 +1,20 @@
   [Michele Simionato]
-  * Changed the building convention for the event IDs and stored the number
-    of occurrences of each rupture
+  * Changed the algorithm associating events to SESs and made the event based
+    hazard calculator faster in the case of many SESs
+  * Reduced substantially the memory consumption in event based risk
+  * Made it possible to read multiple site model files in the same calculation
+  * Implemented a smart single job.ini file mode for event based risk
+  * Now warnings for invalid parameters are logged in the database too
+  * Fixed `oq export avg_losses-stats` for the case of one realization
+  * Added `oq export losses_by_tag` and `oq export curves_by_tag`
+  * Extended `oq export` to work in a multi-user situation
+  * Forbidden event based calculations with more than `max_potential_paths`
+    in the case of full enumeration
+  * Saved a large amount of memory in event_based_risk calculations
+  * Added a command `oq export losses_by_tag/<tagname> <calc_id>`
+  * Extended `oq zip` to zip the risk files together with the hazard files
+  * Changed the building convention for the event IDs and made them unique
+    in the event loss table, even in the case of full enumeration
   * Optimized the splitting of complex fault sources
   * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
     with an incorrect structure (for instance for ci3031111)

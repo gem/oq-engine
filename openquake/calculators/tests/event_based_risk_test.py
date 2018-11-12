@@ -100,8 +100,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ============== ============= ==========
 portfolio_loss nonstructural structural
 ============== ============= ==========
-mean           4,585         15,603    
-stddev         838           555       
+mean           4,585         15,602    
+stddev         838           556       
 ============== ============= ==========''')
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -143,6 +143,16 @@ stddev         838           555
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
+        # test losses_by_tag with a single realization
+        [fname] = export(
+            ('losses_by_tag/taxonomy', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_tag.csv', fname)
+
+        # test curves_by_tag with a single realization
+        [fname] = export(
+            ('curves_by_tag/taxonomy', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/curves_by_tag.csv', fname)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
@@ -157,7 +167,7 @@ stddev         838           555
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 2119)
+        self.assertEqual(nbytes, 1989)
 
         # test postprocessing
         self.calc.datastore.close()
@@ -234,6 +244,16 @@ stddev         838           555
         fname = gettemp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
         os.remove(fname)
+
+        # check losses_by_tag
+        fnames = export(('losses_by_tag/occupancy', 'csv'),
+                        self.calc.datastore)
+        self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
+
+        # check curves_by_tag
+        fnames = export(('curves_by_tag/occupancy', 'csv'),
+                        self.calc.datastore)
+        self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):

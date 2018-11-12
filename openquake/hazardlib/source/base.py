@@ -38,7 +38,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'seed', 'id', 'min_mag']
+               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
@@ -102,27 +102,33 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, num_rlzs, num_ses, ir_monitor):
+    def sample_ruptures(self, num_samples, num_ses, ir_monitor):
         """
-        :param num_rlzs: number of realizations of the source model
+        :param num_samples: number of realizations of the source model
         :param num_ses: number of stochastic event sets
         :param ir_monitor: a monitor object for .iter_ruptures()
-        :yields: pairs (rupture, num_occurrences[num_samples, num_ses])
+        :yields: pairs (rupture, num_occurrences[num_samples])
         """
-        shape = (num_rlzs, num_ses)
+        shape = (num_samples, num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
-        for rup, serial in zip(ruptures, self.serial):
+        if isinstance(self.serial, int):  # prefilter_sources=no was given
+            serials = numpy.arange(
+                self.serial, self.serial + self.num_ruptures)
+        else:  # the serials have been generated in prefiltering
+            serials = self.serial
+        for rup, serial in zip(ruptures, serials):
             rup.serial = serial  # used as seed
             numpy.random.seed(serial)
             num_occ = rup.sample_number_of_occurrences(shape)
             if num_occ.any():
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
-                    num_occ *= (numpy.random.random(shape) < mutex_weight)
+                    num_occ *= numpy.random.random(shape) < mutex_weight
+                occ = num_occ.sum(axis=1)
                 if num_occ.any():
-                    yield rup, num_occ
+                    yield rup, occ
 
     def __iter__(self):
         """

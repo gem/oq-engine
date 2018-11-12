@@ -292,6 +292,8 @@ def build_links(items):
             for k, v in fname.items():
                 b = os.path.basename(v)
                 out.append(('reqv:' + k, "`%s <%s>`_" % (b, b)))
+        elif isinstance(fname, list):
+            out.append((key, ' '.join(os.path.basename(f) for f in fname)))
         else:
             bname = os.path.basename(fname)
             out.append((key, "`%s <%s>`_" % (bname, bname)))
@@ -729,7 +731,7 @@ def view_dupl_sources(token, dstore):
             calc_time = records['calc_time'].sum()
             tot_time += calc_time + records['split_time'].sum()
             tbl.append((source_id, calc_time, len(records)))
-    if tbl and info.attrs['has_dupl_sources']:
+    if tbl and info.attrs.get('has_dupl_sources'):
         tot = info['calc_time'].sum() + info['split_time'].sum()
         percent = tot_time / tot * 100
         m = '\nTotal time in duplicated sources: %d/%d (%d%%)' % (

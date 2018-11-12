@@ -57,7 +57,7 @@ class UcerfTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 37)
+            self.assertEqual(len(f.readlines()), 72)
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
 
         # run a regular event based on top of the UCERF ruptures and
@@ -133,10 +133,11 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk(self):
+        # the fast calculator ucerf_risk
         self.run_calc(ucerf.__file__, 'job_ebr.ini')
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
         # check the mean losses_by_period
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
@@ -145,6 +146,7 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ucerf')
     @manage_shared_dir_error
     def test_event_based_risk_sampling(self):
+        # the fast calculator ucerf_risk
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
@@ -152,7 +154,8 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqual(len(self.calc.datastore['events']), 79)
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss2.txt', fname)
+        self.assertEqualFiles(
+            'expected/portfolio_loss2.txt', fname, delta=1E-5)
 
         # check the mean losses_by_period
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
