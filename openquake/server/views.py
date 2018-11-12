@@ -486,12 +486,15 @@ def run_calc(request):
 
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
-    engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
-        username='%(username)s')
+    logs.init(%(job_id)s)
+    with logs.handle(%(job_id)s):
+        engine.run_calc(
+            %(job_id)s, oqparam, '', %(hazard_job_id)s,
+           username='%(username)s')
     os.remove(__file__)
 '''
 
@@ -501,7 +504,8 @@ def submit_job(job_ini, username, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, username, hazard_job_id)
+    job_id, oq = engine.job_from_file(
+        job_ini, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
                           username=username)

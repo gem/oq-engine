@@ -26,7 +26,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array)
+    extract, build_damage_dt, build_damage_array, _get)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez, get_mesh
 from openquake.calculators import getters
@@ -64,13 +64,9 @@ def get_rup_data(ebruptures):
 # this is used by event_based_risk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
-    oq = dstore['oqparam']
-    agg_curve = dstore[ekey[0]]
-    periods = dstore.get_attr(ekey[0], 'return_periods')
-    if ekey[0].endswith('stats'):
-        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
-    else:
-        tags = ['rlz-%03d' % r for r in range(agg_curve.shape[1])]
+    name = ekey[0].split('-')[0]
+    agg_curve, tags = _get(dstore, name)
+    periods = agg_curve.attrs['return_periods']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = (('annual_frequency_of_exceedence', 'return_period') +
               agg_curve.dtype.names)
@@ -479,3 +475,22 @@ def get_loss_ratios(lrgetter, monitor):
     with lrgetter.dstore:
         loss_ratios = lrgetter.get_all()  # list of arrays of dtype lrs_dt
     return list(zip(lrgetter.aids, loss_ratios))
+
+
+@export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
+def export_by_tag_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    token, tag = ekey[0].split('/')
+    data = extract(dstore, token + '/' + tag)
+    fnames = []
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for stat, arr in data:
+        tup = (ekey[0].replace('/', '-'), stat, ekey[1])
+        path = '%s-%s.%s' % tup
+        fname = dstore.export_path(path)
+        writer.save(arr, fname)
+        fnames.append(fname)
+    return fnames

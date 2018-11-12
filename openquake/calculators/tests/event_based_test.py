@@ -249,10 +249,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(years, [15, 29, 39, 43])
         self.assertEqualFiles('expected/rup_data.csv', fname)
 
-        # check split_time
-        split_time = self.calc.datastore['source_info']['split_time'].sum()
-        self.assertGreater(split_time, 0)
-
     @attr('qa', 'hazard', 'event_based')
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered

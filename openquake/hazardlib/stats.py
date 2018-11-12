@@ -19,6 +19,7 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+from openquake.baselib.python3compat import encode
 
 _mean = None  # set by mean_curve and std_curve
 
@@ -211,4 +212,4 @@ def set_rlzs_stats(dstore, prefix, arrayNR=None):
         statnames, statfuncs = zip(*stats)
         weights = dstore['csm_info'].rlzs['weight']
         dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
-        dstore.set_attrs(prefix + '-stats', stats=' '.join(statnames))
+        dstore.set_attrs(prefix + '-stats', stats=encode(statnames))

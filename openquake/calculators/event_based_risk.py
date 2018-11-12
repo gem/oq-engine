@@ -21,6 +21,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.calc.stochastic import get_rlzi, TWO32
 from openquake.risklib import riskinput
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -41,15 +42,13 @@ def build_loss_tables(dstore):
     oq = dstore['oqparam']
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    events = dstore['events']
     serials = dstore['ruptures']['serial']
-    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'].value:  # call .value for speed
-        rupid = rup_by_eid[rec['eid']]
-        tbl[idx_by_ser[rupid]] += rec['loss']
+        idx = idx_by_ser[rec['eid'] // TWO32]
+        tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
 
@@ -70,18 +69,28 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
+    event_getter = param['event_getter']
+    with monitor('getting eids'):
+        eid2idx = event_getter.init()
+        E = len(eid2idx)
     for ri in riskinputs:
         with monitor('getting hazard'):
-            ri.hazard_getter.init()
+            ri.hazard_getter.init(eid2idx)
+            ri.hazard_getter.eids = eid2idx
             hazard = ri.hazard_getter.get_hazard()
         mon = monitor('build risk curves', measuremem=False)
-        eids = ri.hazard_getter.eids
-        eid2idx = ri.hazard_getter.eid2idx
         A = len(ri.aids)
-        E = len(eids)
         R = ri.hazard_getter.num_rlzs
-        agg = numpy.zeros((E, R, L * I), F32)
-        avg = numpy.zeros((A, R, L * I), F32)
+        try:
+            agg = numpy.zeros((E, L * I), F32)
+        except MemoryError:
+            raise MemoryError(
+                'Building array agg of shape (%d, %d, %d)' % (E, R, L*I))
+        try:
+            avg = numpy.zeros((A, R, L * I), F32)
+        except MemoryError:
+            raise MemoryError(
+                'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
         result = dict(aids=ri.aids, avglosses=avg)
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
@@ -97,7 +106,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
-                indices = numpy.array([eid2idx[eid] for eid in out.eids])
+                indices = event_getter.to_idxs(out.eids)
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
@@ -122,7 +131,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         li = l + L * i
                         # this is the critical loop: it is important to keep it
                         # vectorized in terms of the event indices
-                        agg[indices, r, li] += losses[:, i]
+                        agg[indices, li] += losses[:, i]
 
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
@@ -193,7 +202,7 @@ class EbrCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
+        self.agglosses = numpy.zeros((self.E, self.L * self.I), F32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
@@ -288,11 +297,11 @@ class EbrCalculator(base.RiskCalculator):
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            # saving zeros is a lot faster than adding an `if loss.sum()`
+            # TODO: remove get_rlzi(e) and make this faster
             agglosses = numpy.fromiter(
-                ((e, r, loss)
+                ((e, get_rlzi(e), losses)
                  for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses) if loss.sum()), elt_dt)
+                 if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
             loss_types = ' '.join(self.oqparam.loss_dt().names)
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)

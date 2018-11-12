@@ -47,7 +47,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         siteclass='reference_siteclass',
         backarc='reference_backarc')
-    asset_loss_table = valid.Param(valid.boolean, False)
+    asset_loss_table = valid.Param(valid.boolean, False)  # used in scenario
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -103,6 +103,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 20)  # km
     max_hazard_curves = valid.Param(valid.boolean, False)
+    max_potential_paths = valid.Param(valid.positiveint, 100)
     mean_hazard_curves = valid.Param(valid.boolean, True)
     std_hazard_curves = valid.Param(valid.boolean, False)
     max_loss_curves = valid.Param(valid.boolean, False)
@@ -136,6 +137,7 @@ class OqParam(valid.ParamSet):
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, None)
+    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -226,9 +228,9 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode == 'ucerf_risk'):
             raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
-            self.check_missing('site_model', 'warn')
-            self.check_missing('gsim_logic_tree', 'warn')
-            self.check_missing('source_model_logic_tree', 'warn')
+            self.check_missing('site_model', 'info')
+            self.check_missing('gsim_logic_tree', 'info')
+            self.check_missing('source_model_logic_tree', 'info')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
@@ -761,14 +763,14 @@ class OqParam(valid.ParamSet):
         """
         Make sure the given parameter is missing in the job.ini file
         """
-        assert action in ('warn', 'error'), action
+        assert action in ('debug', 'info', 'warn', 'error'), action
         if self.inputs.get(param):
-            msg = 'Please remove %s_file from %s, it makes no sense in %s' % (
+            msg = '%s_file in %s is ignored in %s' % (
                 param, self.inputs['job_ini'], self.calculation_mode)
             if action == 'error':
                 raise InvalidFile(msg)
             else:
-                logging.warn(msg)
+                getattr(logging, action)(msg)
 
     def hazard_precomputed(self):
         """
