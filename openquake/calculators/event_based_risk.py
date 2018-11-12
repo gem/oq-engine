@@ -131,10 +131,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         li = l + L * i
                         # this is the critical loop: it is important to keep it
                         # vectorized in terms of the event indices
-                        try:
-                            agg[indices, li] += losses[:, i]
-                        except:
-                            import pdb; pdb.set_trace()
+                        agg[indices, li] += losses[:, i]
 
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
