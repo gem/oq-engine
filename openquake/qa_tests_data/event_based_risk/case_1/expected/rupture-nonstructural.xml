@@ -11,22 +11,22 @@ xmlns:gml="http://www.opengis.net/gml"
             <SES
             id="6"
             >
-                236223201281
+                236223201283
             </SES>
             <SES
             id="8"
             >
-                236223266817
+                236223201281
             </SES>
             <SES
             id="9"
             >
-                236223201280
+                236223201282
             </SES>
             <SES
             id="14"
             >
-                236223266816
+                236223201280
             </SES>
         </stochasticEventSets>
         <magnitude>

@@ -169,7 +169,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
             E = n_occ.sum()
             if E == 0:
                 continue
-            assert E < TWO16, E
+            assert E < TWO32, E
             events = numpy.zeros(E, event_dt)
             i = 0
             for sam_idx in range(nr):  # numpy.ndenumerate would be slower
@@ -179,11 +179,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
 
         # setting event IDs based on the rupture serial and the sample
         ebr = EBRupture(rup, src.id, src.src_group_id, indices, events)
-        start = 0
-        for sam_idx, n in enumerate(n_occ):
-            eids = TWO16 * rlzs[sam_idx] + numpy.arange(n, dtype=U32)
-            ebr.events[start:start + len(eids)]['eid'] = eids
-            start += len(eids)
+        ebr.events['eid'] = numpy.arange(E, dtype=U32)
         ebrs.append(ebr)
 
     return ebrs
