@@ -103,11 +103,11 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
-def generate_event_set(ucerf, background_sids, src_filter, seed):
+def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
     """
     Generates the event set corresponding to a particular branch
     """
-    serial = seed
+    serial = seed + ses_idx * TWO16
     # get rates from file
     with h5py.File(ucerf.source_file, 'r') as hdf5:
         occurrences = ucerf.tom.sample_number_of_occurrences(ucerf.rate, seed)
@@ -136,6 +136,8 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             serial += 1
             ruptures.append(brup)
         rupture_occ.extend(background_n_occ)
+
+    assert len(ruptures) < TWO16, len(ruptures)  # < 2^16 ruptures per SES
     return ruptures, rupture_occ
 
 
@@ -228,7 +230,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
             for ses_idx, ses_seed in param['ses_seeds']:
                 seed = sam_idx * TWO16 + ses_seed
                 rups, occs = generate_event_set(
-                    src, background_sids, src_filter, seed)
+                    src, background_sids, src_filter, ses_idx, seed)
                 for rup, occ in zip(rups, occs):
                     n_occ[rup][sam_idx] = occ
     with filt_mon:
