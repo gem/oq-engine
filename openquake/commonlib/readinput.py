@@ -602,10 +602,10 @@ def store_sm(smodel, hdf5path, monitor):
                              src.num_ruptures, 0, 0, 0, 0, 0))
                 geoms.append(geom)
                 gid += n
-        if geoms:
-            hdf5.extend(source_geom, numpy.concatenate(geoms))
-        if sources:
-            hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+            if geoms:
+                hdf5.extend(source_geom, numpy.concatenate(geoms))
+            if sources:
+                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
