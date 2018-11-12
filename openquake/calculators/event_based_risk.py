@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.hazardlib.calc.stochastic import get_rlzi, TWO32
+from openquake.hazardlib.calc.stochastic import TWO32
 from openquake.risklib import riskinput
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -173,9 +173,10 @@ class EbrCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.eids = sorted(parent['events']['eid'])
+            self.eidrlz = parent['events'].value[['eid', 'rlz']].copy()
         else:
-            self.eids = sorted(self.datastore['events']['eid'])
+            self.eidrlz = self.datastore['events'].value[['eid', 'rlz']].copy()
+        self.eidrlz.sort()
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -188,7 +189,7 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        self.E = len(self.eids)
+        self.E = len(self.eidrlz)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
@@ -299,8 +300,8 @@ class EbrCalculator(base.RiskCalculator):
         with self.monitor('saving event loss table', measuremem=True):
             # TODO: remove get_rlzi(e) and make this faster
             agglosses = numpy.fromiter(
-                ((e, get_rlzi(e), losses)
-                 for e, losses in zip(self.eids, self.agglosses)
+                ((eid, rlz, losses)
+                 for (eid, rlz), losses in zip(self.eidrlz, self.agglosses)
                  if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
             loss_types = ' '.join(self.oqparam.loss_dt().names)

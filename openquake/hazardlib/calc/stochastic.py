@@ -38,14 +38,6 @@ U64 = numpy.uint64
 event_dt = numpy.dtype([('eid', U32), ('rlz', U16)])
 
 
-def get_rlzi(eid):
-    """
-    :param eid: a 64 bit event ID
-    :returns: the realization index associated to the event ID
-    """
-    return (eid % TWO32) // TWO16
-
-
 def source_site_noop_filter(srcs):
     for src in srcs:
         yield src, None
