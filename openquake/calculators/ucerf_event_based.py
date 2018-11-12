@@ -107,10 +107,10 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
     """
     Generates the event set corresponding to a particular branch
     """
+    serial = seed
     # get rates from file
     with h5py.File(ucerf.source_file, 'r') as hdf5:
-        occurrences = ucerf.tom.sample_number_of_occurrences(
-            ucerf.rate, seed)
+        occurrences = ucerf.tom.sample_number_of_occurrences(ucerf.rate, seed)
         indices, = numpy.where(occurrences)
         logging.debug(
             'Considering "%s", %d ruptures', ucerf.source_id, len(indices))
@@ -121,6 +121,8 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
         for iloc, n_occ in zip(indices, occurrences[indices]):
             ucerf_rup = ucerf.get_ucerf_rupture(iloc, src_filter)
             if ucerf_rup:
+                ucerf_rup.serial = serial
+                serial += 1
                 ruptures.append(ucerf_rup)
                 rupture_occ.append(n_occ)
 
@@ -129,7 +131,10 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             hdf5, ucerf.idx_set["grid_key"], ucerf.tom, seed,
             background_sids, ucerf.min_mag, ucerf.npd, ucerf.hdd, ucerf.usd,
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
-        ruptures.extend(background_ruptures)
+        for i, brup in enumerate(background_ruptures):
+            brup.serial = serial
+            serial += 1
+            ruptures.append(brup)
         rupture_occ.extend(background_n_occ)
     return ruptures, rupture_occ
 
@@ -209,7 +214,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     [src] = sources
     res = AccumDict()
     res.calc_times = []
-    serial = 1
     sampl_mon = monitor('sampling ruptures', measuremem=True)
     filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
@@ -227,8 +231,6 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                     src, background_sids, src_filter, seed)
                 for rup, occ in zip(rups, occs):
                     n_occ[rup][sam_idx] = occ
-                    rup.serial = serial
-                    serial += 1
     with filt_mon:
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         ebruptures = stochastic.build_eb_ruptures(
