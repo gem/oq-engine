@@ -576,30 +576,36 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def store_sm(smodel, h5):
+def store_sm(smodel, hdf5path, monitor):
     """
     :param smodel: a :class:`openquake.hazardlib.nrml.SourceModel` instance
-    :param h5: a :class:`openquake.baselib.hdf5.File` instance
+    :param hdf5path: path to an hdf5 file (cache_XXX.hdf5)
+    :param monitor: a Monitor instance with an .hdf5 attribute
     """
-    sources = h5['source_info']
-    source_geom = h5['source_geom']
-    gid = 0
-    for sg in smodel:
-        srcs = []
-        geoms = []
-        for src in sg:
-            srcgeom = src.geom()
-            n = len(srcgeom)
-            geom = numpy.zeros(n, point3d)
-            geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
-            srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
-                         src.num_ruptures, 0, 0, 0, 0, 0))
-            geoms.append(geom)
-            gid += n
-        if geoms:
-            hdf5.extend(source_geom, numpy.concatenate(geoms))
-        if sources:
-            hdf5.extend(sources, numpy.array(srcs, source_info_dt))
+    h5 = monitor.hdf5
+    with monitor('store source model'):
+        sources = h5['source_info']
+        source_geom = h5['source_geom']
+        gid = 0
+        for sg in smodel:
+            if hdf5path:
+                with hdf5.File(hdf5path, 'r+') as hdf5cache:
+                    hdf5cache['grp-%02d' % sg.id] = sg
+            srcs = []
+            geoms = []
+            for src in sg:
+                srcgeom = src.geom()
+                n = len(srcgeom)
+                geom = numpy.zeros(n, point3d)
+                geom['lon'], geom['lat'], geom['depth'] = srcgeom.T
+                srcs.append((sg.id, src.source_id, src.code, gid, gid + n,
+                             src.num_ruptures, 0, 0, 0, 0, 0))
+                geoms.append(geom)
+                gid += n
+            if geoms:
+                hdf5.extend(source_geom, numpy.concatenate(geoms))
+            if sources:
+                hdf5.extend(sources, numpy.array(srcs, source_info_dt))
 
 
 def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
@@ -617,6 +623,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
+    :param srcfilter:
+        a SourceFilter instance with an .hdf5path pointing to the cache file
     :returns:
         an iterator over :class:`openquake.commonlib.logictree.LtSourceModel`
         tuples
@@ -647,6 +655,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if monitor.hdf5:
         sources = hdf5.create(monitor.hdf5, 'source_info', source_info_dt)
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
+        hdf5path = (getattr(srcfilter, 'hdf5path', None)
+                    if oqparam.prefilter_sources == 'no' else None)
     for sm in source_model_lt.gen_source_models(gsim_lt):
         src_groups = []
         for name in sm.names.split():
@@ -681,7 +691,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                     sg.id = grp_id
                     grp_id += 1
                 if monitor.hdf5:
-                    store_sm(newsm, monitor.hdf5)
+                    store_sm(newsm, hdf5path, monitor)
                 src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
