@@ -106,7 +106,7 @@ class RlzsAssoc(object):
         :param sm_id: source model ordinal (or None)
         :returns: a dictionary gsim -> rlzs
         """
-        if isinstance(trt_or_grp_id, (int, U32)):  # grp_id
+        if isinstance(trt_or_grp_id, (int, U16, U32)):  # grp_id
             trt = self.csm_info.trt_by_grp[trt_or_grp_id]
             sm_id = self.csm_info.get_sm_by_grp()[trt_or_grp_id]
         else:  # assume TRT string
@@ -123,12 +123,12 @@ class RlzsAssoc(object):
                 except ValueError:  # there is more than 1 TRT
                     gsim = gsim_by_trt[trt]
                 acc[gsim].append(rlz.ordinal)
-        return collections.OrderedDict(
-            (gsim, numpy.array(acc[gsim], dtype=U16)) for gsim in sorted(acc))
+        return {gsim: numpy.array(acc[gsim], dtype=U16)
+                for gsim in sorted(acc)}
 
     def by_grp(self):
         """
-        :returns: a dictionary grp -> [(gsim_idx, rlzis), ...]
+        :returns: a dictionary grp -> rlzis
         """
         dic = {}  # grp -> [(gsim_idx, rlzis), ...]
         for sm in self.csm_info.source_models:
@@ -138,9 +138,8 @@ class RlzsAssoc(object):
                 rlzs_by_gsim = self.get_rlzs_by_gsim(sg.trt, sm.ordinal)
                 if not rlzs_by_gsim:
                     continue
-                dic['grp-%02d' % sg.id] = [
-                    (gsim_idx, rlzs_by_gsim[gsim])
-                    for gsim_idx, gsim in enumerate(rlzs_by_gsim)]
+                dic['grp-%02d' % sg.id] = numpy.array(
+                    list(rlzs_by_gsim.values()))
         return dic
 
     def _init(self):
@@ -185,7 +184,7 @@ class RlzsAssoc(object):
                  for _ in self.realizations]
         array = self.by_grp()
         for grp in pmap_by_grp:
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in enumerate(array[grp]):
                 pmap = pmap_by_grp[grp].extract(gsim_idx)
                 for rlzi in rlzis:
                     pmaps[rlzi] |= pmap
@@ -219,22 +218,19 @@ class RlzsAssoc(object):
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
-    def __len__(self):
-        array = self.by_grp()  # TODO: remove this
-        return sum(len(array[grp]) for grp in array)
-
     def __repr__(self):
         pairs = []
         dic = self.by_grp()
+        size = sum(len(dic[grp]) for grp in dic)
         for grp in sorted(dic):
             grp_id = int(grp[4:])
             gsims = self.csm_info.get_gsims(grp_id)
-            for gsim_idx, rlzis in dic[grp]:
+            for gsim_idx, rlzis in enumerate(dic[grp]):
                 if len(rlzis) > 10:  # short representation
                     rlzis = ['%d realizations' % len(rlzis)]
                 pairs.append(('%s,%s' % (grp_id, gsims[gsim_idx]), rlzis))
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
-            self.__class__.__name__, len(self), len(self.realizations),
+            self.__class__.__name__, size, len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
 
 

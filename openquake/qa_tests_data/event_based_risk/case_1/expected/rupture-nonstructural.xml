@@ -5,18 +5,28 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <singlePlaneRupture
     id="55"
-    multiplicity="2"
+    multiplicity="4"
     >
         <stochasticEventSets>
             <SES
-            id="2"
+            id="6"
+            >
+                236223201281
+            </SES>
+            <SES
+            id="8"
+            >
+                236223266817
+            </SES>
+            <SES
+            id="9"
             >
                 236223201280
             </SES>
             <SES
-            id="16"
+            id="14"
             >
-                236223201281
+                236223266816
             </SES>
         </stochasticEventSets>
         <magnitude>

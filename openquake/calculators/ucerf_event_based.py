@@ -131,7 +131,7 @@ def generate_event_set(ucerf, background_sids, src_filter, seed):
             ucerf.lsd, ucerf.msr, ucerf.aspect, ucerf.tectonic_region_type)
         ruptures.extend(background_ruptures)
         rupture_occ.extend(background_n_occ)
-    return ruptures, numpy.array(rupture_occ, numpy.uint16).reshape(-1, 1, 1)
+    return ruptures, rupture_occ
 
 
 def sample_background_model(
@@ -216,34 +216,35 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
-    num_ses = len(param['ses_seeds'])
-    num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-    n_occ = AccumDict(accum=numpy.zeros((src.samples, num_ses), numpy.uint16))
+    num_ses = param['ses_per_logic_tree_path']
+    samples = getattr(src, 'samples', 1)
+    n_occ = AccumDict(accum=numpy.zeros(samples, numpy.uint16))
     with sampl_mon:
-        for sam_idx in range(src.samples):
+        for sam_idx in range(samples):
             for ses_idx, ses_seed in param['ses_seeds']:
                 seed = sam_idx * TWO16 + ses_seed
                 rups, occs = generate_event_set(
                     src, background_sids, src_filter, seed)
                 for rup, occ in zip(rups, occs):
-                    n_occ[rup][sam_idx, ses_idx] = occ
+                    n_occ[rup][sam_idx] = occ
                     rup.serial = serial
                     serial += 1
     with filt_mon:
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         ebruptures = stochastic.build_eb_ruptures(
-            src, slice(0, num_rlzs), num_ses, cmaker, sitecol, n_occ.items())
+            src, rlzs, num_ses, cmaker, sitecol, n_occ.items())
     res.num_events = sum(ebr.multiplicity for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}
     else:
         res.events_by_grp = {
-            src.src_group_id: event_based.get_events(ebruptures)}
+            src.src_group_id: event_based.get_events(ebruptures, num_ses)}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], src.samples)
+            param['oqparam'], param['min_iml'], samples)
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -271,7 +272,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
 
-    def from_sources(self, param, monitor):
+    def from_sources(self, param):
         """
         Generate a task for each branch
         """
@@ -287,8 +288,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
             for ses_idx in range(oq.ses_per_logic_tree_path):
                 param = param.copy()
                 param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx + 1)]
-                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id],
-                                param, monitor))
+                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id], param))
         return allargs
 
 
@@ -355,20 +355,20 @@ class UCERFRiskCalculator(EbrCalculator):
         src_filter = UcerfFilter(self.sitecol.complete, oq.maximum_distance)
 
         for sm in self.csm.source_models:
-            if sm.samples > 1:
-                logging.warn('Sampling in ucerf_risk is untested')
             ssm = self.csm.get_model(sm.ordinal)
             for ses_idx in range(oq.ses_per_logic_tree_path):
-                param = dict(ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
-                             samples=sm.samples, assetcol=self.assetcol,
-                             save_ruptures=False,
-                             ses_ratio=oq.ses_ratio,
-                             avg_losses=oq.avg_losses,
-                             elt_dt=elt_dt,
-                             min_iml=min_iml,
-                             oqparam=oq,
-                             insured_losses=oq.insured_losses)
-                yield ssm, src_filter, param, self.riskmodel, monitor
+                param = dict(
+                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                    ses_seeds=[(ses_idx, oq.ses_seed + ses_idx + 1)],
+                    samples=sm.samples, assetcol=self.assetcol,
+                    save_ruptures=False,
+                    ses_ratio=oq.ses_ratio,
+                    avg_losses=oq.avg_losses,
+                    elt_dt=elt_dt,
+                    min_iml=min_iml,
+                    oqparam=oq,
+                    insured_losses=oq.insured_losses)
+                yield ssm, src_filter, param, self.riskmodel
 
     def execute(self):
         self.riskmodel.taxonomy = self.assetcol.tagcol.taxonomy

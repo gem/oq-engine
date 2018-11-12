@@ -43,8 +43,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO32 = 2 ** 32
-RUPTURES_PER_BLOCK = 1000  # decided by MS
+TWO32 = U64(2 ** 32)
 BLOCKSIZE = 30000  # decided by MS
 
 
@@ -57,8 +56,7 @@ def build_ruptures(srcs, srcfilter, param, monitor):
     n = 0
     mon = monitor('making contexts', measuremem=False)
     for src in srcs:
-        gsims = param['gsims_by_trt'][src.tectonic_region_type]
-        dic = sample_ruptures([src], srcfilter, gsims, param, mon)
+        dic = sample_ruptures([src], param, srcfilter, mon)
         vars(src).update(dic)
         acc.append(src)
         n += len(dic['eb_ruptures'])
@@ -70,16 +68,18 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures):
+def get_events(ebruptures, num_ses):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
     year = 0  # to be set later
     for ebr in ebruptures:
-        for event in ebr.events:
-            rec = (event['eid'], ebr.serial, ebr.grp_id, year, event['ses'],
-                   event['sample'])
+        numpy.random.seed(ebr.serial)
+        sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
+        for event, ses in zip(ebr.events, sess):
+            rec = (TWO32 * U64(ebr.serial) + U64(event['eid']), ebr.serial,
+                   ebr.grp_id, year, ses, event['rlz'])
             events.append(rec)
     return numpy.array(events, readinput.stored_event_dt)
 
@@ -99,18 +99,11 @@ def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
     nbytes = 2 + 4 + 8 + 4 * num_imts
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
-        sample = 0
-        samples = samples_by_grp[grp_id]
         for gsim, rlzs in rlzs_by_gsim[grp_id].items():
             for ebr in ebruptures:
-                if samples > 1:
-                    len_eids = [len(get_array(ebr.events, sample=s)['eid'])
-                                for s in range(sample, sample + len(rlzs))]
-                else:  # full enumeration
-                    len_eids = [len(ebr.events['eid'])] * len(rlzs)
-                for r, rlzi in enumerate(rlzs):
-                    n += len(ebr.rupture.sctx.sids) * len_eids[r]
-            sample += len(rlzs)
+                for rlzi in rlzs:
+                    n += len(ebr.rupture.sctx.sids) * len(
+                        get_array(ebr.events, rlz=rlzi))
     return n * nbytes
 
 
@@ -178,7 +171,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(ruptures)
+        res.events = get_events(ruptures, param['ses_per_logic_tree_path'])
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -215,7 +208,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
 
-    def from_ruptures(self, param, monitor):
+    def from_ruptures(self, param):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
@@ -230,7 +223,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 ruptures = RuptureGetter(parent, slc, grp_id)
                 par = param.copy()
                 par['samples'] = self.samples_by_grp[grp_id]
-                yield ruptures, self.sitecol, rlzs_by_gsim, par, monitor
+                yield ruptures, self.sitecol, rlzs_by_gsim, par
 
     def zerodict(self):
         """
@@ -275,47 +268,49 @@ class EventBasedCalculator(base.HazardCalculator):
                 for grp in self.csm.src_groups}
             self.store_csm_info(eff_ruptures)
 
-    def from_sources(self, par, monitor):
+    def from_sources(self, par):
         """
         Prefilter the composite source model and store the source_info
         """
         rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.R = len(rlzs_assoc.realizations)
-        num_rlzs = {grp_id: sum(
-            len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-                    for grp_id in self.rlzs_by_gsim_grp}
 
-        def weight(ebr):
-            return numpy.sqrt(num_rlzs[ebr.grp_id] * ebr.multiplicity *
-                              len(ebr.sids))
-        param = {'ruptures_per_block': RUPTURES_PER_BLOCK}
+        def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
+            return src.num_ruptures * factor
+
+        def weight_rup(ebr):
+            return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
+
+        param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
         param['filter_distance'] = self.oqparam.filter_distance
         param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
-        param['gsims_by_trt'] = self.csm.gsim_lt.values
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
-        smap = parallel.Starmap(build_ruptures, monitor=monitor)
+        smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         start = 0
         for sm in self.csm.source_models:
             nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
             param['rlz_slice'] = slice(start, start + nr)
             start += nr
             logging.info('Sending %s', sm)
-            sources = sum([sg.sources for sg in sm.src_groups], [])
-            if not sources:
-                continue
-            for block in self.block_splitter(
-                    sources, operator.attrgetter('num_ruptures')):
-                smap.submit(block, self.src_filter, param, monitor)
-        for ruptures in block_splitter(self._store_ruptures(smap), BLOCKSIZE,
-                                       weight, operator.attrgetter('grp_id')):
+            for sg in sm.src_groups:
+                if not sg.sources:
+                    continue
+                param['rlzs_by_gsim'] = self.rlzs_by_gsim_grp[sg.id]
+                for block in self.block_splitter(sg.sources, weight_src):
+                    smap.submit(block, self.src_filter, param)
+        for ruptures in block_splitter(
+                self._store_ruptures(smap), BLOCKSIZE,
+                weight_rup, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
-            yield ruptures, self.src_filter, rlzs_by_gsim, par, monitor
+            yield ruptures, self.src_filter, rlzs_by_gsim, par
 
         self.setting_events()
+        if self.oqparam.ground_motion_fields:
+            logging.info('Processing the GMFs')
 
     def agg_dicts(self, acc, result):
         """
@@ -366,7 +361,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
-            events = get_events(ruptures)
+            events = get_events(ruptures, self.oqparam.ses_per_logic_tree_path)
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, eidx=len(dset)-len(events))
@@ -407,9 +402,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:  # from ruptures
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            iterargs = self.from_ruptures(param, self.monitor())
+            iterargs = self.from_ruptures(param)
         else:  # from sources
-            iterargs = self.from_sources(param, self.monitor())
+            iterargs = self.from_sources(param)
             if oq.ground_motion_fields is False:
                 for args in iterargs:  # store the ruptures/events
                     pass
@@ -455,8 +450,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     'No seismic events! Perhaps the investigation time is too '
                     'small or the maximum_distance is too small')
             if self.oqparam.save_ruptures:
-                logging.info('Setting %d event years on %d ruptures',
-                             num_events, self.rupser.nruptures)
+                logging.info('Setting {:,d} event years on {:,d} ruptures'.
+                             format(num_events, self.rupser.nruptures))
             with self.monitor('setting event years', measuremem=True,
                               autoflush=True):
                 set_random_years(self.datastore, 'events',

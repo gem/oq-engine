@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
+def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -233,10 +233,13 @@ def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
             sys.exit('%s does not end with .zip' % archive_zip)
         if os.path.exists(archive_zip):
             sys.exit('%s exists already' % archive_zip)
-    logging.basicConfig(level=logging.INFO)
     # do not validate to avoid permissions error on the export_dir
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
-    files = set(os.path.abspath(fname) for fname in extra)
+    files = set()
+    if risk_ini:
+        risk_ini = os.path.normpath(os.path.abspath(risk_ini))
+        oq.inputs.update(readinput.get_params([risk_ini])['inputs'])
+        files.add(os.path.normpath(os.path.abspath(job_ini)))
 
     # collect .hdf5 tables for the GSIMs, if any
     if 'gsim_logic_tree' in oq.inputs or oq.gsim:
@@ -279,7 +282,7 @@ def zip(job_ini, archive_zip, extra=(), oq=None, log=logging.info):
     general.zipfiles(files, archive_zip, log=log)
 
 
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(cfg_file, username, **kw):
     """
     Create a full job profile from a job config file.
 
@@ -294,15 +297,16 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :returns:
         a pair (job_id, oqparam)
     """
-    oq = readinput.get_oqparam(cfg_file, hc_id=hazard_calculation_id)
+    hc_id = kw.get('hazard_calculation_id')
+    oq = readinput.get_oqparam(cfg_file, hc_id=hc_id)
+    if 'calculation_mode' in kw:
+        oq.calculation_mode = kw.pop('calculation_mode')
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(),
-                        hazard_calculation_id)
+                        username, datastore.get_datadir(), hc_id)
     return job_id, oq
 
 
-def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     Run a calculation.
 
@@ -310,77 +314,70 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         ID of the current job
     :param oqparam:
         :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param str log_level:
-        The desired logging level. Valid choices are 'debug', 'info',
-        'progress', 'warn', 'error', and 'critical'.
-    :param str log_file:
-        Complete path (including file name) to file where logs will be written.
-        If `None`, logging will just be printed to standard output.
     :param exports:
         A comma-separated string of export types.
     """
     setproctitle('oq-job-%d' % job_id)
-    with logs.handle(job_id, log_level, log_file):  # run the job
-        calc = base.calculators(oqparam, calc_id=job_id)
-        calc.set_log_format()  # set the log format first of all
-        logging.info('Running %s [--hc=%s]',
-                     calc.oqparam.inputs['job_ini'],
-                     calc.oqparam.hazard_calculation_id)
-        logging.info('Using engine version %s', __version__)
-        msg = check_obsolete_version(oqparam.calculation_mode)
-        if msg:
-            logs.LOG.warn(msg)
-        if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
-            set_concurrent_tasks_default(job_id)
-        calc.from_engine = True
-        input_zip = oqparam.inputs.get('input_zip')
-        tb = 'None\n'
-        try:
-            if input_zip:  # the input was zipped from the beginning
-                data = open(input_zip, 'rb').read()
-            else:  # zip the input
-                logs.LOG.info('zipping the input files')
-                bio = io.BytesIO()
-                zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
-                data = bio.getvalue()
-            calc.datastore['input_zip'] = numpy.array(data)
-            calc.datastore.set_attrs('input_zip', nbytes=len(data))
+    calc = base.calculators(oqparam, calc_id=job_id)
+    logging.info('%s running %s [--hc=%s]',
+                 getpass.getuser(),
+                 calc.oqparam.inputs['job_ini'],
+                 calc.oqparam.hazard_calculation_id)
+    logging.info('Using engine version %s', __version__)
+    msg = check_obsolete_version(oqparam.calculation_mode)
+    if msg:
+        logs.LOG.warn(msg)
+    if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
+        set_concurrent_tasks_default(job_id)
+    calc.from_engine = True
+    input_zip = oqparam.inputs.get('input_zip')
+    tb = 'None\n'
+    try:
+        if input_zip:  # the input was zipped from the beginning
+            data = open(input_zip, 'rb').read()
+        else:  # zip the input
+            logs.LOG.info('zipping the input files')
+            bio = io.BytesIO()
+            zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
+            data = bio.getvalue()
+        calc.datastore['input/zip'] = numpy.array(data)
+        calc.datastore.set_attrs('input/zip', nbytes=len(data))
 
-            logs.dbcmd('update_job', job_id, {'status': 'executing',
-                                              'pid': _PID})
-            t0 = time.time()
-            calc.run(exports=exports,
-                     hazard_calculation_id=hazard_calculation_id,
-                     close=False, **kw)
-            logs.LOG.info('Exposing the outputs to the database')
-            expose_outputs(calc.datastore)
-            duration = time.time() - t0
-            calc._monitor.flush()
-            records = views.performance_view(calc.datastore)
-            logs.dbcmd('save_performance', job_id, records)
-            calc.datastore.close()
-            logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                          job_id, duration)
-            logs.dbcmd('finish', job_id, 'complete')
+        logs.dbcmd('update_job', job_id, {'status': 'executing',
+                                          'pid': _PID})
+        t0 = time.time()
+        calc.run(exports=exports,
+                 hazard_calculation_id=hazard_calculation_id,
+                 close=False, **kw)
+        logs.LOG.info('Exposing the outputs to the database')
+        expose_outputs(calc.datastore)
+        duration = time.time() - t0
+        calc._monitor.flush()
+        records = views.performance_view(calc.datastore)
+        logs.dbcmd('save_performance', job_id, records)
+        calc.datastore.close()
+        logs.LOG.info('Calculation %d finished correctly in %d seconds',
+                      job_id, duration)
+        logs.dbcmd('finish', job_id, 'complete')
+    except BaseException:
+        tb = traceback.format_exc()
+        try:
+            logs.LOG.critical(tb)
+            logs.dbcmd('finish', job_id, 'failed')
+        except BaseException:  # an OperationalError may always happen
+            sys.stderr.write(tb)
+        raise
+    finally:
+        # if there was an error in the calculation, this part may fail;
+        # in such a situation, we simply log the cleanup error without
+        # taking further action, so that the real error can propagate
+        try:
+            if OQ_DISTRIBUTE.startswith('celery'):
+                celery_cleanup(TERMINATE, parallel.running_tasks)
         except BaseException:
-            tb = traceback.format_exc()
-            try:
-                logs.LOG.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
-            except BaseException:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-            raise
-        finally:
-            # if there was an error in the calculation, this part may fail;
-            # in such a situation, we simply log the cleanup error without
-            # taking further action, so that the real error can propagate
-            try:
-                if OQ_DISTRIBUTE.startswith('celery'):
-                    celery_cleanup(TERMINATE, parallel.running_tasks)
-            except BaseException:
-                # log the finalization error only if there is no real error
-                if tb == 'None\n':
-                    logs.LOG.error('finalizing', exc_info=True)
+            # log the finalization error only if there is no real error
+            if tb == 'None\n':
+                logs.LOG.error('finalizing', exc_info=True)
     return calc
 
 
@@ -425,3 +422,19 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
+
+# define engine.read(calc_id)
+if config.dbserver.multi_user:
+    def read(calc_id):
+        """
+        :param calc_id: a calculation ID
+        :returns: the associated DataStore instance
+        """
+        job = logs.dbcmd('get_job', calc_id)
+        if job:
+            return datastore.read(job.ds_calc_dir + '.hdf5')
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
+else:  # get the datastore of the current user
+    read = datastore.read

@@ -18,8 +18,9 @@
 
 import os
 import time
-import psutil
+import getpass
 from datetime import datetime
+import psutil
 import numpy
 
 from openquake.baselib.general import humansize
@@ -91,6 +92,7 @@ class Monitor(object):
         self.counts = 0
         self.address = None
         self._flush = True
+        self.username = getpass.getuser()
 
     @property
     def dt(self):
@@ -196,7 +198,8 @@ class Monitor(object):
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
-        msg = '%s%s%s' % (self.__class__.__name__, calc_id, self.operation)
+        msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
+                              self.operation, self.username)
         if self.measuremem:
             return '<%s, duration=%ss, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))

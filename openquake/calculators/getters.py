@@ -26,7 +26,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.hazardlib.source.rupture import (
+    BaseRupture, EBRupture, classes, TWO32)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -132,7 +133,7 @@ class PmapGetter(object):
         grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
         array = self.rlzs_assoc.by_grp()
         for grp in grps:
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in enumerate(array[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
@@ -210,6 +211,29 @@ class PmapGetter(object):
                 dic, [stats.mean_curve, stats.std_curve])
 
 
+class EventGetter(object):
+    """
+    A class to retrieve event IDs from the datastore
+    """
+    def __init__(self, dstore, calc_mode):
+        self.dstore = dstore
+        self.eid2idx = {}
+        self.fake = calc_mode not in 'scenario_risk event_based_risk'
+
+    def init(self):
+        if len(self.eid2idx) or self.fake:  # do nothing
+            return self.eid2idx
+        self.dstore.open('r')  # if closed
+        eids = self.dstore['events']['eid']
+        eids.sort()
+        self.eid2idx = dict(
+            zip(eids, numpy.arange(len(eids), dtype=U32)))
+        return self.eid2idx
+
+    def to_idxs(self, eids):
+        return numpy.array([self.eid2idx[eid] for eid in eids])
+
+
 class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
@@ -219,7 +243,9 @@ class GmfDataGetter(collections.Mapping):
         self.sids = sids
         self.num_rlzs = num_rlzs
 
-    def init(self):
+    def init(self, eid2idx=None):
+        if eid2idx is not None:
+            self.eid2idx = eid2idx
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
@@ -227,16 +253,11 @@ class GmfDataGetter(collections.Mapping):
             self.imts = self.dstore['gmf_data/imts'].value.split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.eids = self.dstore['events']['eid']
-        self.eids.sort()
         self.data = collections.OrderedDict()
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
                 self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-        # dictionary eid -> index
-        if self.eids is not None:
-            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
@@ -327,7 +348,7 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-            eids.append(ebr.events['eid'])
+            eids.append(TWO32 * ebr.serial + ebr.events['eid'])
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
@@ -347,10 +368,9 @@ class GmfGetter(object):
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                if self.samples == 1:  # full enumeration
-                    num_events = int(rup.n_occ) * len(rlzs)
-                else:
-                    num_events = int(rup.n_occ[sample:sample + nr].sum())
+                all_eids = [get_array(rup.events, rlz=rlzi)['eid']
+                            for rlzi in rlzs]
+                num_events = sum(len(eids) for eids in all_eids)
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
@@ -363,11 +383,10 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for r, rlzi in enumerate(rlzs):
-                    if self.samples > 1:
-                        eids = get_array(rup.events, sample=sample + r)['eid']
-                    else:
-                        eids = rup.events['eid']
+                    eids = U64(TWO32 * rup.serial) + numpy.array(all_eids[r])
                     e = len(eids)
+                    if not e:
+                        continue
                     gmdata = self.gmdata[rlzi]
                     gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
@@ -539,6 +558,7 @@ class RuptureGetter(object):
         rupgeoms = self.dstore['rupgeoms']
         for rec in sorted(ruptures, key=operator.itemgetter('serial')):
             evs = events[rec['eidx1']:rec['eidx2']]
+            evs['eid'] %= TWO32  # strip the first 4 bytes
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
@@ -574,7 +594,7 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            ebr = EBRupture(rupture, rec['srcidx'], (), evs, rec['n_occ'])
+            ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (), evs)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction

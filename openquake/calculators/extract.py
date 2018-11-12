@@ -27,13 +27,14 @@ except ImportError:
     from openquake.risklib.utils import memoized
 else:
     memoized = lru_cache(100)
-from openquake.baselib.hdf5 import ArrayWrapper
+from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
 from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
 
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -562,3 +563,64 @@ def crm_attrs(dstore, what):
     """
     name = dstore['oqparam'].risk_model
     return ArrayWrapper(0, dstore.get_attrs(name))
+
+
+def _get(dstore, name):
+    try:
+        dset = dstore[name + '-stats']
+        return dset, [b.decode('utf8') for b in dset.attrs['stats']]
+    except KeyError:  # single realization
+        return dstore[name + '-rlzs'], ['mean']
+
+
+@extract.add('losses_by_tag')
+def losses_by_tag(dstore, tag):
+    """
+    Statistical average losses by tag. For instance call
+
+    $ oq extract losses_by_tag/occupancy
+    """
+    dt = [(tag, vstr)] + dstore['oqparam'].loss_dt_list()
+    aids = dstore['assetcol/array'][tag]
+    dset, stats = _get(dstore, 'avg_losses')
+    arr = dset.value
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
+    for s, stat in enumerate(stats):
+        out = numpy.zeros(len(tagvalues), dt)
+        for li, (lt, lt_dt) in enumerate(dt[1:]):
+            for i, tagvalue in enumerate(tagvalues):
+                out[i][tag] = tagvalue
+                counts = arr[aids == i + 1, s, li].sum()
+                if counts:
+                    out[i][lt] = counts
+        yield stat, out
+
+
+@extract.add('curves_by_tag')
+def curves_by_tag(dstore, tag):
+    """
+    Statistical loss curves by tag. For instance call
+
+    $ oq extract curves_by_tag/occupancy
+    """
+    dt = ([(tag, vstr), ('return_period', U32)] +
+          dstore['oqparam'].loss_dt_list())
+    aids = dstore['assetcol/array'][tag]
+    dset, stats = _get(dstore, 'curves')
+    periods = dset.attrs['return_periods']
+    arr = dset.value
+    P = arr.shape[-1]  # shape (A, S, P)
+    tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
+    for s, stat in enumerate(stats):
+        out = numpy.zeros(len(tagvalues) * P, dt)
+        for li, (lt, lt_dt) in enumerate(dt[2:]):
+            n = 0
+            for i, tagvalue in enumerate(tagvalues):
+                for p, period in enumerate(periods):
+                    out[n][tag] = tagvalue
+                    out[n]['return_period'] = period
+                    counts = arr[aids == i + 1, s, p][lt].sum()
+                    if counts:
+                        out[n][lt] = counts
+                    n += 1
+        yield stat, out

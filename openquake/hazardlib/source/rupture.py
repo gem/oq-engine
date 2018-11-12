@@ -35,6 +35,8 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+TWO16 = numpy.uint64(2 ** 16)
+TWO32 = numpy.uint64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
 classes = {}  # initialized in .init()
 
@@ -541,14 +543,14 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, sids, events, n_occ):
+    def __init__(self, rupture, srcidx, grp_id, sids, events):
         self.rupture = rupture
         self.srcidx = srcidx
+        self.grp_id = grp_id
         self.sids = sids
         self.events = events
         self.eidx1 = 0
         self.eidx2 = len(events)
-        self.n_occ = n_occ  # array of size src.samples
 
     @property
     def serial(self):
@@ -556,13 +558,6 @@ class EBRupture(object):
         Serial number of the rupture
         """
         return self.rupture.serial
-
-    @property
-    def grp_id(self):
-        """
-        Group ID of the rupture
-        """
-        return int(self.events[0]['grp_id'])  # need Python int, not uint16
 
     @property
     def weight(self):
@@ -591,6 +586,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
+        self.events['eid'] += TWO32 * self.serial
         events_by_ses = general.group_array(self.events, 'ses')
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
