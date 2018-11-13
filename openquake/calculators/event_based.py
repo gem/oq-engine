@@ -320,20 +320,26 @@ class EventBasedCalculator(base.HazardCalculator):
         ucerf = self.oqparam.calculation_mode.startswith('ucerf')
         if ucerf and hasattr(result, 'ruptures_by_grp'):
             for ruptures in result.ruptures_by_grp.values():
-                self.save_ruptures(ruptures)
+                events = self.save_ruptures(ruptures)
         elif ucerf and hasattr(result, 'events_by_grp'):
             for grp_id in result.events_by_grp:
                 events = result.events_by_grp[grp_id]
                 self.datastore.extend('events', events)
+        if ucerf and len(events):
+            eid2idx = {}
+            for eid in events['eid']:
+                eid2idx[eid] = self.idx
+                self.idx += 1
+        else:
+            eid2idx = self.eid2idx
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
             with sav_mon:
                 data = result.pop('gmfdata')
-                if not ucerf:
-                    for row in data:  # convert from event IDs to event indices
-                        row['eid'] = self.eid2idx[row['eid']]
+                for row in data:  # convert from event IDs to event indices
+                    row['eid'] = eid2idx[row['eid']]
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -368,6 +374,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, eidx=len(dset)-len(events))
+            return events
+        return ()
 
     def check_overflow(self):
         """
@@ -412,6 +420,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
+        self.idx = 0  # event ID index, used for UCERF
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
