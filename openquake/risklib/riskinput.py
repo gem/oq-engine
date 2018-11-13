@@ -277,8 +277,9 @@ class CompositeRiskModel(collections.Mapping):
                                     for imt in imt_lt]
                         elif not haz:  # no hazard for this site
                             eids = []
-                            data = [(numpy.zeros(len(hazard_getter.eids)),
-                                     hazard_getter.eids) for imt in imt_lt]
+                            data = [(numpy.zeros(hazard_getter.E),
+                                     numpy.arange(hazard_getter.E))
+                                    for imt in imt_lt]
                         else:  # classical
                             eids = hazard_getter.eids
                             data = [haz[imti[imt]] for imt in imt_lt]
@@ -350,17 +351,15 @@ class RiskInput(object):
     def epsilon_getter(self, aid, eids):
         """
         :param aid: asset ordinal
-        :param eids: ignored
+        :param eids: an array of event indices
         :returns: an array of E epsilons
         """
         if len(self.eps) == 0:
             return
-        eid2idx = self.hazard_getter.eid2idx
-        idx = [eid2idx[eid] for eid in eids]
         try:  # from ruptures
-            return self.eps[aid, idx]
+            return self.eps[aid, eids]
         except TypeError:  # from GMFs
-            return self.eps[aid][idx]
+            return self.eps[aid][eids]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (

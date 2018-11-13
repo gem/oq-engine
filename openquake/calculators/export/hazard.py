@@ -573,11 +573,10 @@ def export_gmf(ekey, dstore):
     ruptures_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
     events = dstore['events'].value
-    eventdict = dict(zip(events['eid'], events))
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         ruptures = ruptures_by_rlz[rlzi]
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
-            ses_idx = eventdict[eid]['ses']
+            ses_idx = events[eid]['ses']
             rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
