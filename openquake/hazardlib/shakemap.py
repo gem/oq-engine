@@ -160,7 +160,7 @@ def spatial_correlation_array(dmatrix, imts, correl='spatial',
         if correl == 'no correlation':
             corr[imti] = numpy.eye(n)
         if correl == 'full correlation':
-            corr[imti] = numpy.ones(n, n)
+            corr[imti] = numpy.ones((n, n))
         elif correl == 'spatial':
             corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
     return corr
