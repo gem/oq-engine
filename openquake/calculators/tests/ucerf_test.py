@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import unittest
 from decorator import decorator
 from nose.plugins.attrib import attr
 from openquake.baselib import config
@@ -134,6 +135,7 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based_risk(self):
         # the fast calculator ucerf_risk
+        raise unittest.SkipTest('ucerf_risk has been removed')
         self.run_calc(ucerf.__file__, 'job_ebr.ini')
 
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -147,6 +149,7 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based_risk_sampling(self):
         # the fast calculator ucerf_risk
+        raise unittest.SkipTest('ucerf_risk has been removed')
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
