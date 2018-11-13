@@ -78,10 +78,10 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
         alt = self.calc.datastore['losses_by_event']
-        self.assertEqual(len(alt), 20)
+        self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 20210.27, decimal=2)
+        aae(totloss, 19281.387, decimal=2)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):

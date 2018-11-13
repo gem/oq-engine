@@ -317,20 +317,31 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        # in UCERF
-        if hasattr(result, 'ruptures_by_grp'):
+        ucerf = self.oqparam.calculation_mode.startswith('ucerf')
+        if ucerf and hasattr(result, 'ruptures_by_grp'):
             for ruptures in result.ruptures_by_grp.values():
-                self.save_ruptures(ruptures)
-        elif hasattr(result, 'events_by_grp'):
+                events = self.save_ruptures(ruptures)
+        elif ucerf and hasattr(result, 'events_by_grp'):
             for grp_id in result.events_by_grp:
                 events = result.events_by_grp[grp_id]
                 self.datastore.extend('events', events)
+        if ucerf and not len(events):
+            return acc
+        elif ucerf:
+            eid2idx = {}
+            for eid in events['eid']:
+                eid2idx[eid] = self.idx
+                self.idx += 1
+        else:
+            eid2idx = self.eid2idx
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
-            data = result.pop('gmfdata')
             with sav_mon:
+                data = result.pop('gmfdata')
+                for row in data:  # convert from event IDs to event indices
+                    row['eid'] = eid2idx[row['eid']]
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -365,6 +376,8 @@ class EventBasedCalculator(base.HazardCalculator):
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, eidx=len(dset)-len(events))
+            return events
+        return ()
 
     def check_overflow(self):
         """
@@ -409,6 +422,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
+        self.idx = 0  # event ID index, used for UCERF
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
@@ -457,6 +471,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 set_random_years(self.datastore, 'events',
                                  self.oqparam.ses_seed,
                                  int(self.oqparam.investigation_time))
+
+    @cached_property
+    def eid2idx(self):
+        eids = self.datastore['events']['eid']
+        eids.sort()
+        eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
+        return eid2idx
 
     def post_execute(self, result):
         """

@@ -59,10 +59,7 @@ def scenario_risk(riskinputs, riskmodel, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   all_losses=AccumDict(accum={}))
-    with monitor('getting eids'):
-        eid2idx = param['event_getter'].init()
     for ri in riskinputs:
-        ri.hazard_getter.eid2idx = eid2idx
         for outputs in riskmodel.gen_outputs(ri, monitor):
             r = outputs.rlzi
             assets = outputs.assets

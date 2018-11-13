@@ -211,29 +211,6 @@ class PmapGetter(object):
                 dic, [stats.mean_curve, stats.std_curve])
 
 
-class EventGetter(object):
-    """
-    A class to retrieve event IDs from the datastore
-    """
-    def __init__(self, dstore, calc_mode):
-        self.dstore = dstore
-        self.eid2idx = {}
-        self.fake = calc_mode not in 'scenario_risk event_based_risk'
-
-    def init(self):
-        if len(self.eid2idx) or self.fake:  # do nothing
-            return self.eid2idx
-        self.dstore.open('r')  # if closed
-        eids = self.dstore['events']['eid']
-        eids.sort()
-        self.eid2idx = dict(
-            zip(eids, numpy.arange(len(eids), dtype=U32)))
-        return self.eid2idx
-
-    def to_idxs(self, eids):
-        return numpy.array([self.eid2idx[eid] for eid in eids])
-
-
 class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
@@ -243,9 +220,7 @@ class GmfDataGetter(collections.Mapping):
         self.sids = sids
         self.num_rlzs = num_rlzs
 
-    def init(self, eid2idx=None):
-        if eid2idx is not None:
-            self.eid2idx = eid2idx
+    def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
@@ -262,6 +237,7 @@ class GmfDataGetter(collections.Mapping):
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 1, F32))
+        self.E = len(self.dstore['events'])
 
     def get_hazard(self, gsim=None):
         """
@@ -352,8 +328,6 @@ class GmfGetter(object):
         self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
-        # dictionary eid -> index
-        self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
     def gen_gmv(self):
         """
