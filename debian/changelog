@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added the option `spatial_correlation=no correlation` for risk calculations
+    from ShakeMaps
   * Removed the experimental calculator `ucerf_risk`
   * Optimized the sampling of time-independent sources for the case of
    `prefilter_sources=no`
