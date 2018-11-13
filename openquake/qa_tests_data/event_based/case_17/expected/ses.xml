@@ -18,12 +18,12 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        639950323713
+                        639950127105
                     </SES>
                     <SES
                     id="2"
                     >
-                        639950323712 639950323714 639950323715
+                        639950127104 639950127106 639950127107
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -54,17 +54,17 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        644245291008 644245356545
+                        644245094400 644245094403
                     </SES>
                     <SES
                     id="2"
                     >
-                        644245356544
+                        644245094402
                     </SES>
                     <SES
                     id="3"
                     >
-                        644245291009 644245356546
+                        644245094401 644245094404
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -95,17 +95,17 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        648540258304
+                        648540061696
                     </SES>
                     <SES
                     id="2"
                     >
-                        648540323840 648540323841
+                        648540061698 648540061699
                     </SES>
                     <SES
                     id="3"
                     >
-                        648540258305
+                        648540061697
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
