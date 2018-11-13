@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced substantially the memory occupation in event based risk
   * Added the option `spatial_correlation=no correlation` for risk calculations
     from ShakeMaps
   * Removed the experimental calculator `ucerf_risk`
