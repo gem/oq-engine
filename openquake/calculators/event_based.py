@@ -224,7 +224,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 par = param.copy()
                 par['samples'] = self.samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
-        self.setting_events()
 
     def zerodict(self):
         """
@@ -318,11 +317,11 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        # in UCERF
-        if hasattr(result, 'ruptures_by_grp'):
+        ucerf = self.oqparam.calculation_mode.startswith('ucerf')
+        if ucerf and hasattr(result, 'ruptures_by_grp'):
             for ruptures in result.ruptures_by_grp.values():
                 self.save_ruptures(ruptures)
-        elif hasattr(result, 'events_by_grp'):
+        elif ucerf and hasattr(result, 'events_by_grp'):
             for grp_id in result.events_by_grp:
                 events = result.events_by_grp[grp_id]
                 self.datastore.extend('events', events)
@@ -332,8 +331,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gmdata += result['gmdata']
             with sav_mon:
                 data = result.pop('gmfdata')
-                for row in data:  # convert from event IDs to event indices
-                    row['eid'] = self.eid2idx[row['eid']]
+                if not ucerf:
+                    for row in data:  # convert from event IDs to event indices
+                        row['eid'] = self.eid2idx[row['eid']]
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -415,7 +415,6 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
-        self.eid2idx.clear()  # save memory
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
