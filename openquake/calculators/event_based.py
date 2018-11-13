@@ -325,7 +325,9 @@ class EventBasedCalculator(base.HazardCalculator):
             for grp_id in result.events_by_grp:
                 events = result.events_by_grp[grp_id]
                 self.datastore.extend('events', events)
-        if ucerf and len(events):
+        if ucerf and not len(events):
+            return acc
+        elif ucerf:
             eid2idx = {}
             for eid in events['eid']:
                 eid2idx[eid] = self.idx
