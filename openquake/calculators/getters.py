@@ -221,6 +221,8 @@ class GmfDataGetter(collections.Mapping):
         self.num_rlzs = num_rlzs
 
     def init(self):
+        if hasattr(self, 'data'):  # already initialized
+            return
         self.dstore.open('r')  # if not already open
         try:
             self.imts = self.dstore['gmf_data/imts'].value.split()
