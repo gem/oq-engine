@@ -76,12 +76,10 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
         if len(out.eids) == 0:  # this happens for sites with no events
             continue
         r = out.rlzi
-        idx = riskinput.hazard_getter.eid2idx
         for l, loss_ratios in enumerate(out):
             if loss_ratios is None:  # for GMFs below the minimum_intensity
                 continue
             loss_type = riskmodel.loss_types[l]
-            indices = numpy.array([idx[eid] for eid in out.eids])
             for a, asset in enumerate(out.assets):
                 ratios = loss_ratios[a]  # shape (E, 1)
                 aid = asset.ordinal
@@ -92,7 +90,7 @@ def ucerf_risk(riskinput, riskmodel, param, monitor):
 
                 # this is the critical loop: it is important to keep it
                 # vectorized in terms of the event indices
-                agg[indices, r, l] += losses[:, 0]  # 0 == no insured
+                agg[out.eids, r, l] += losses[:, 0]  # 0 == no insured
 
     it = ((eid, r, losses)
           for eid, all_losses in zip(eids, agg)
