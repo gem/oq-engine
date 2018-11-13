@@ -544,6 +544,7 @@ class EBRupture(object):
     as well as the IDs of the corresponding seismic events.
     """
     def __init__(self, rupture, srcidx, grp_id, sids, events):
+        assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
