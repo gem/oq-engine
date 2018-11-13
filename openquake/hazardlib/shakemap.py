@@ -158,9 +158,9 @@ def spatial_correlation_array(dmatrix, imts, correl='spatial',
     corr = numpy.zeros((len(imts), n, n))
     for imti, im in enumerate(imts):
         if correl == 'no correlation':
-            corr[imti] = numpy.zeros((n, n))
-        if correl == 'full correlation':
             corr[imti] = numpy.eye(n)
+        if correl == 'full correlation':
+            corr[imti] = numpy.ones((n, n))
         elif correl == 'spatial':
             corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
     return corr
@@ -291,19 +291,15 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
     mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
                       for imt in imts_ for j in range(N)])
-    if spatialcorr:
-        dmatrix = geo.geodetic.distance_matrix(
-            shakemap['lon'], shakemap['lat'])
-        spatial_corr = spatial_correlation_array(dmatrix, imts_)
-        stddev = [std[str(imt)] for imt in imts_]
-        for im, std in zip(imts_, stddev):
-            if std.sum() == 0:
-                raise ValueError('Cannot decompose the spatial covariance '
-                                 'because stddev==0 for IMT=%s' % im)
-        spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-        # mu has shape (M * N, E)
-    else:
-        spatial_cov = numpy.array([numpy.eye(N) for _ in imts_])
+    dmatrix = geo.geodetic.distance_matrix(
+        shakemap['lon'], shakemap['lat'])
+    spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
+    stddev = [std[str(imt)] for imt in imts_]
+    for im, std in zip(imts_, stddev):
+        if std.sum() == 0:
+            raise ValueError('Cannot decompose the spatial covariance '
+                             'because stddev==0 for IMT=%s' % im)
+    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
