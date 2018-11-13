@@ -577,7 +577,8 @@ def export_gmf(ekey, dstore):
         ruptures = ruptures_by_rlz[rlzi]
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
             ses_idx = events[eid]['ses']
-            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            rupid = events[eid]['rup_id']
+            rup = Rup(rupid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     for rlzi in sorted(ruptures_by_rlz):
