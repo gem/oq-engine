@@ -66,17 +66,13 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    E = param['num_events']
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    event_getter = param['event_getter']
-    with monitor('getting eids'):
-        eid2idx = event_getter.init()
-        E = len(eid2idx)
     for ri in riskinputs:
         with monitor('getting hazard'):
-            ri.hazard_getter.init(eid2idx)
-            ri.hazard_getter.eids = eid2idx
+            ri.hazard_getter.init()
             hazard = ri.hazard_getter.get_hazard()
         mon = monitor('build risk curves', measuremem=False)
         A = len(ri.aids)
@@ -106,7 +102,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
-                indices = event_getter.to_idxs(out.eids)
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
@@ -131,7 +126,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         li = l + L * i
                         # this is the critical loop: it is important to keep it
                         # vectorized in terms of the event indices
-                        agg[indices, li] += losses[:, i]
+                        agg[out.eids, li] += losses[:, i]
 
         idx = agg.nonzero()  # return only the nonzero values
         result['agglosses'] = (idx, agg[idx])
@@ -192,6 +187,7 @@ class EbrCalculator(base.RiskCalculator):
         self.E = len(self.eidrlz)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
+        self.param['num_events'] = self.E
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
