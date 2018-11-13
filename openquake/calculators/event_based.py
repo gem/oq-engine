@@ -224,6 +224,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 par = param.copy()
                 par['samples'] = self.samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
+        self.setting_events()
 
     def zerodict(self):
         """
@@ -329,8 +330,10 @@ class EventBasedCalculator(base.HazardCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
             self.gmdata += result['gmdata']
-            data = result.pop('gmfdata')
             with sav_mon:
+                data = result.pop('gmfdata')
+                for row in data:  # convert from event IDs to event indices
+                    row['eid'] = self.eid2idx[row['eid']]
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -412,6 +415,7 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
+        self.eid2idx.clear()  # save memory
         self.check_overflow()  # check the number of events
         base.save_gmdata(self, self.R)
         if self.indices:
@@ -457,6 +461,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 set_random_years(self.datastore, 'events',
                                  self.oqparam.ses_seed,
                                  int(self.oqparam.investigation_time))
+
+    @cached_property
+    def eid2idx(self):
+        eids = self.datastore['events']['eid']
+        eids.sort()
+        eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
+        return eid2idx
 
     def post_execute(self, result):
         """
