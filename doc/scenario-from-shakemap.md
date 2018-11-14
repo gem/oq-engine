@@ -88,6 +88,7 @@ cross correlation between different intensity measure types. For each kind
 of correlation you have three choices, that you can set in the `job.ini`,
 for a total of nine combinations:
 
+```
 spatial_correlation = yes, cross_correlation = yes  # the default
 spatial_correlation = no, cross_correlation = no   # disable everything
 spatial_correlation = yes, cross_correlation = no
@@ -97,6 +98,7 @@ spatial_correlation = yes, cross_correlation = full
 spatial_correlation = no, cross_correlation = full
 spatial_correlation = full, cross_correlation = no
 spatial_correlation = full, cross_correlation = yes
+```
 
 `yes` means using the correlation matrix of the Silva-Horspool paper;
 'no' mean using a unity correlation matrix; `full` means using a correlation
