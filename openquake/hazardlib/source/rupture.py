@@ -35,9 +35,10 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+U32 = numpy.uint32
 TWO16 = numpy.uint64(2 ** 16)
 TWO32 = numpy.uint64(2 ** 32)
-pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
+pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 classes = {}  # initialized in .init()
 
 
@@ -543,15 +544,14 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, events):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
         self.sids = sids
-        self.events = events
-        self.eidx1 = 0
-        self.eidx2 = len(events)
+        self.n_occ = n_occ
+        self.multiplicity = n_occ.sum()
 
     @property
     def serial(self):
@@ -567,28 +567,25 @@ class EBRupture(object):
         """
         return len(self.sids) * len(self.events)
 
-    @property
-    def eids(self):
+    def get_eids_by_rlz(self, rlzs):
         """
         An array with the underlying event IDs
         """
-        return self.events['eid']
+        i = 0
+        dic = {}
+        for rlz, n_occ in zip(rlzs, self.n_occ):
+            dic[rlz] = numpy.arange(i, i + n_occ, dtype=U32)
+            i += n_occ
+        return dic
 
-    @property
-    def multiplicity(self):
-        """
-        How many times the underlying rupture occurs.
-        """
-        return len(self.events)
-
-    def export(self, mesh):
+    def export(self, mesh, events):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        self.events['eid'] += TWO32 * self.serial
-        events_by_ses = general.group_array(self.events, 'ses')
+        events['eid'] += TWO32 * self.serial
+        events_by_ses = general.group_array(events, 'ses')
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
         new.multiplicity = self.multiplicity
@@ -629,5 +626,5 @@ class EBRupture(object):
         return new
 
     def __repr__(self):
-        return '<%s %d%s>' % (
-            self.__class__.__name__, self.serial, self.events['eid'])
+        return '<%s %d[%d]>' % (
+            self.__class__.__name__, self.serial, self.multiplicity)
