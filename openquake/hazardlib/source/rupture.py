@@ -569,7 +569,8 @@ class EBRupture(object):
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
-        An array with the underlying event IDs
+        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :returns: a dictionay rlz index -> eids array
         """
         i = 0
         dic = {}
