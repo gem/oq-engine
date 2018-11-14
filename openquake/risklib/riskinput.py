@@ -250,17 +250,18 @@ class CompositeRiskModel(collections.Mapping):
 
     def _gen_outputs(self, hazard_getter, hazard, dic):
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        with self.monitor('computing risk'):
-            for taxonomy in sorted(dic):
-                riskmodel = self[taxonomy]
-                imts = [riskmodel.risk_functions[lt].imt
-                        for lt in self.loss_types]  # imt for each loss type
-                # discard IMTs without hazard
-                imt_lt = [imt for imt in imts if imt in imti]
-                if not imt_lt:  # a warning is printed in riskmodel.check_imts
-                    continue
-                for sid, assets, epsgetter in dic[taxonomy]:
-                    for rlzi, haz in sorted(hazard[sid].items()):
+        mon = self.monitor('computing risk', measuremem=False)
+        for taxonomy in sorted(dic):
+            riskmodel = self[taxonomy]
+            imts = [riskmodel.risk_functions[lt].imt
+                    for lt in self.loss_types]  # imt for each loss type
+            # discard IMTs without hazard
+            imt_lt = [imt for imt in imts if imt in imti]
+            if not imt_lt:  # a warning is printed in riskmodel.check_imts
+                continue
+            for sid, assets, epsgetter in dic[taxonomy]:
+                for rlzi, haz in sorted(hazard[sid].items()):
+                    with mon:
                         if isinstance(haz, numpy.ndarray):
                             # NB: in GMF-based calculations the order in which
                             # the gmfs are stored is random since it depends on
@@ -287,7 +288,7 @@ class CompositeRiskModel(collections.Mapping):
                         out.sid = sid
                         out.rlzi = rlzi
                         out.eids = eids
-                        yield out
+                    yield out
 
     def reduce(self, taxonomies):
         """
