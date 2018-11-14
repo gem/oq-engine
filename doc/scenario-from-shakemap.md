@@ -1,20 +1,20 @@
-Scenario calculations starting from USGS shakemaps
+Scenario calculations starting from USGS ShakeMaps
 ==================================================
 
 Since version 3.1 the engine is able to perform `scenario_risk`
 and `scenario_damage` calculations starting from the shakemaps provided
 by the United States Geological Survey (USGS) service.
 
-First of all, one has to prepare a parent calculation containing the
-full exposure and risk functions for the region of interest, say South
-America. To that aim the user will need to write a `job_hazard.ini` file
-like this one:
+In order to enable this functionality one has to prepare a parent
+calculation containing the full exposure and risk functions for the
+region of interest, say South America. To that aim the user will need
+to write a `job_hazard.ini` file like this one:
 
 ```
    [general]
    description = Full South America
    calculation_mode = scenario
-   exposure_file = full_exposure_model.xml
+   exposure_file = exposure_model.xml
    structural_vulnerability_file = structural_vulnerability_model.xml
 ```
 By running the calculation
@@ -31,7 +31,7 @@ In this example there are only vulnerability functions for the loss type
 The hazard has to be prepared only once.
 
 Let's suppose that the calculation ID of this hazard calculation is 1000.
-We can now run the risk on a given shakemap.
+We can now run the risk on a given ShakeMap.
 For that, one need a `job_risk.ini` file like the following::
 
 ```
@@ -40,6 +40,7 @@ For that, one need a `job_risk.ini` file like the following::
    number_of_ground_motion_fields = 10
    truncation_level = 3
    shakemap_id = usp000fjta
+   hazard_calculation_id = 1000  # ID of the prepared calculation
 ```
 
 This example refers to an Earthquake happened in Pisco in Peru in 2007
@@ -48,7 +49,7 @@ The risk can be computed by running the risk file against the prepared
 hazard calculation:
 
 ```bash
-$ oq run job_risk.ini --hc 1000
+$ oq run job_risk.ini
 ```
 
 The engine will perform the following operations:
@@ -75,3 +76,39 @@ around ~500 effective sites. Computing a correlation matrix of size
 Clearly in situations in which the number of hazard sites is too large,
 approximations will have to be made, like neglecting the correlation
 effects.
+
+By default the engine tries to compute both the spatial correlation and the
+cross correlation between different intensity measure types. For each kind
+of correlation you have three choices, that you can set in the `job_risk.ini`,
+for a total of nine combinations:
+
+spatial_correlation = yes, cross_correlation = yes  # the default
+spatial_correlation = no, cross_correlation = no   # disable everything
+spatial_correlation = yes, cross_correlation = no
+spatial_correlation = no, cross_correlation = yes
+spatial_correlation = full, cross_correlation = full
+spatial_correlation = yes, cross_correlation = full
+spatial_correlation = no, cross_correlation = full
+spatial_correlation = full, cross_correlation = no
+spatial_correlation = full, cross_correlation = yes
+
+`yes` means using the correlation matrix of the Silva Horspool paper;
+'no' mean using a unity correlation matrix; `full` means using a correlation
+matrix full of 1s in all positions.
+
+Disabling some kind of correlation is useful to see how big the effect
+of the correlation is; sometimes it is also necessary because the
+calculation cannot be performed otherwise.
+
+In particular, due to numeric errors, the spatial correlation matrix - that
+by construction contains only positive numbers - can still produce small
+negative eigenvalues (of the order of -1E-15) and the calculation fails
+with an error message saying that the correlation matrix is not positive
+defined. Welcome to the world of floating point approximation!
+Rather than magically discarding negative eigenvalues the engine raises
+an error and the user has two choices: either disable the spatial correlation
+or reduce the number of sites because that can make the numerical instability
+go away. The easiest way to reduce the number of sites is setting a
+`region_grid_spacing` parameter in the `job_hazard.ini` file, then the
+engine will automatically put the assets on a grid. The larger the grid
+spacing, the smaller the number of points, until the calculation can be done.
