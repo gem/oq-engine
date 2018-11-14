@@ -607,7 +607,7 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
                 nsites = len(self.sitecol)
-                if (oq.spatial_correlation != 'no correlation' and
+                if (oq.spatial_correlation != 'no' and
                         nsites > MAXSITES):  # hard-coded, heuristic
                     raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
