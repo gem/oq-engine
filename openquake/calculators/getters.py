@@ -331,14 +331,13 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        # sample number from 0 to the number of samples of the given src model
-        for gs in self.rlzs_by_gsim:  # OrderedDict
-            rlzs = self.rlzs_by_gsim[gs]
-            for computer in self.computers:
-                rup = computer.rupture
-                sids = computer.sids
-                eids_by_rlz = rup.get_eids_by_rlz(rlzs)
-                num_events = sum(len(eids) for eids in eids_by_rlz.values())
+        for computer in self.computers:
+            rup = computer.rupture
+            sids = computer.sids
+            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
+            for gs in self.rlzs_by_gsim:  # OrderedDict
+                rlzs = self.rlzs_by_gsim[gs]
+                num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
