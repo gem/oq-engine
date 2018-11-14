@@ -55,7 +55,7 @@ The risk can be computed by running the risk file against the prepared
 hazard calculation:
 
 ```bash
-$ oq run job.ini
+$ oq engine --run job.ini
 ```
 
 The engine will perform the following operations:
