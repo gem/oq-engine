@@ -68,7 +68,11 @@ def export_ruptures_xml(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
-        ruptures_by_grp[grp_id] = [ebr.export(mesh) for ebr in ruptures]
+        ebrs = []
+        for ebr in ruptures:
+            events = dstore['events'][ebr.eidx1:ebr.eidx2]
+            ebrs.append(ebr.export(mesh, events))
+        ruptures_by_grp[grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)

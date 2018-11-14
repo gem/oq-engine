@@ -312,7 +312,6 @@ class GmfGetter(object):
         if hasattr(self, 'eids'):  # init already called
             return
         self.computers = []
-        eids = []
         for ebr in self.ebruptures:
             try:
                 computer = calc.gmf.GmfComputer(
@@ -324,8 +323,6 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-            eids.append(TWO32 * ebr.serial + ebr.events['eid'])
-        self.eids = numpy.concatenate(eids) if eids else []
         # dictionary rlzi -> array(imtls, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
 
@@ -334,17 +331,14 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        sample = 0  # in case of sampling the realizations have a corresponding
         # sample number from 0 to the number of samples of the given src model
         for gs in self.rlzs_by_gsim:  # OrderedDict
             rlzs = self.rlzs_by_gsim[gs]
-            nr = len(rlzs)
             for computer in self.computers:
                 rup = computer.rupture
                 sids = computer.sids
-                all_eids = [get_array(rup.events, rlz=rlzi)['eid']
-                            for rlzi in rlzs]
-                num_events = sum(len(eids) for eids in all_eids)
+                eids_by_rlz = rup.get_eids_by_rlz(rlzs)
+                num_events = sum(len(eids) for eids in eids_by_rlz.values())
                 if num_events == 0:
                     continue
                 # NB: the trick for performance is to keep the call to
@@ -356,8 +350,8 @@ class GmfGetter(object):
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
                 n = 0
-                for r, rlzi in enumerate(rlzs):
-                    eids = U64(TWO32 * rup.serial) + numpy.array(all_eids[r])
+                for rlzi in rlzs:
+                    eids = U64(TWO32 * rup.serial) + eids_by_rlz[rlzi]
                     e = len(eids)
                     if not e:
                         continue
@@ -374,7 +368,6 @@ class GmfGetter(object):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
                     n += e
-            sample += nr
 
     def get_hazard(self, data=None):
         """
@@ -531,8 +524,7 @@ class RuptureGetter(object):
         # this is way I am sorting with Python and not with numpy below
         rupgeoms = self.dstore['rupgeoms']
         for rec in sorted(ruptures, key=operator.itemgetter('serial')):
-            evs = events[rec['eidx1']:rec['eidx2']]
-            evs['eid'] %= TWO32  # strip the first 4 bytes
+            evs_by_rlz = group_array(events[rec['eidx1']:rec['eidx2']], 'rlz')
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
@@ -568,7 +560,8 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (), evs)
+            n_occ = numpy.array([len(evs) for evs in evs_by_rlz.values()], U32)
+            ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (), n_occ)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
