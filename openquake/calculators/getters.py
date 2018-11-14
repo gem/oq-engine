@@ -335,8 +335,7 @@ class GmfGetter(object):
             rup = computer.rupture
             sids = computer.sids
             eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
-            for gs in self.rlzs_by_gsim:  # OrderedDict
-                rlzs = self.rlzs_by_gsim[gs]
+            for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
                     continue
