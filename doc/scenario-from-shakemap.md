@@ -92,7 +92,7 @@ spatial_correlation = no, cross_correlation = full
 spatial_correlation = full, cross_correlation = no
 spatial_correlation = full, cross_correlation = yes
 
-`yes` means using the correlation matrix of the Silva Horspool paper;
+`yes` means using the correlation matrix of the Silva-Horspool paper;
 'no' mean using a unity correlation matrix; `full` means using a correlation
 matrix full of 1s in all positions.
 
