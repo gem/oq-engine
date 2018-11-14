@@ -18,7 +18,7 @@ CDIR = os.path.dirname(__file__)
 
 def mean_gmf(shakemap):
     _, gmfs = to_gmfs(
-        shakemap, 'spatial', 'cross', site_effects=True, trunclevel=3,
+        shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
         num_gmfs=10, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
@@ -51,7 +51,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(dmatrix.sum(), 18539.6131407)
 
         # spatial correlation
-        sca = spatial_correlation_array(dmatrix, imts, 'spatial')
+        sca = spatial_correlation_array(dmatrix, imts, 'yes')
         aae(sca.sum(), 36.000370229)
 
         # spatial covariance
@@ -60,7 +60,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(scov.sum(), 13.166200147)
 
         # cross correlation
-        ccor = cross_correlation_matrix(imts, 'cross')
+        ccor = cross_correlation_matrix(imts, 'yes')
         aae(ccor.sum(), 10.49124788)
 
         # cholesky decomposition
@@ -79,26 +79,26 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['val'] = val
         shakemap['std'] = std
         _, gmfs = to_gmfs(
-            shakemap, 'spatial', 'corr', site_effects=False, trunclevel=3,
+            shakemap, 'yes', 'no', site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
         # shape (R, N, E, M)
         aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
 
         _, gmfs = to_gmfs(
-            shakemap, 'spatial', 'cross', site_effects=True, trunclevel=3,
+            shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=1), [[0.4101717, 0.6240185]])  # PGA
         aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)
 
         # disable spatial correlation
         _, gmfs = to_gmfs(
-            shakemap, 'no correlation', 'corr', site_effects=False,
+            shakemap, 'no', 'no', site_effects=False,
             trunclevel=3, num_gmfs=2, seed=42)
         # shape (R, N, E, M)
         aae(gmfs[..., 0].sum(axis=1), [[0.370832, 0.5670994]])  # PGA
 
         _, gmfs = to_gmfs(
-            shakemap, 'no correlation', 'cross', site_effects=True,
+            shakemap, 'no', 'yes', site_effects=True,
             trunclevel=3, num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=1), [[0.4101737, 0.6240165]])  # PGA
         aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)

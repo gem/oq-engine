@@ -145,23 +145,24 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
 # STDPGA = the standard deviation of PGA (natural log of percent-g)
 
 
-def spatial_correlation_array(dmatrix, imts, correl='spatial',
+def spatial_correlation_array(dmatrix, imts, correl='yes',
                               vs30clustered=True):
     """
     :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
-    :param correl: 'no correlation', 'full correlation', 'spatial'
+    :param correl: 'yes', 'no' or 'full'
     :param vs30clustered: flag, True by default
     :returns: array of shape (M, N, N)
     """
+    assert correl in 'yes no full', correl
     n = len(dmatrix)
     corr = numpy.zeros((len(imts), n, n))
     for imti, im in enumerate(imts):
-        if correl == 'no correlation':
+        if correl == 'no':
             corr[imti] = numpy.eye(n)
-        if correl == 'full correlation':
+        if correl == 'full':
             corr[imti] = numpy.ones((n, n))
-        elif correl == 'spatial':
+        elif correl == 'yes':
             corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
     return corr
 
@@ -184,12 +185,13 @@ def spatial_covariance_array(stddev, corrmatrices):
     return numpy.array(matrices)
 
 
-def cross_correlation_matrix(imts, corr='cross'):
+def cross_correlation_matrix(imts, corr='yes'):
     """
     :param imts: M intensity measure types
-    :param corr: 'no correlation', 'full correlation' or 'cross'
+    :param corr: 'yes', 'no' or 'full'
     :returns: an array of shape (M, M)
     """
+    assert corr in 'yes no full', corr
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
     cross_matrix = numpy.zeros((M, M))
@@ -204,11 +206,9 @@ def cross_correlation_matrix(imts, corr='cross'):
                 Tmax = max([T1, T2])
                 Tmin = min([T1, T2])
                 II = 1 if Tmin < 0.189 else 0
-                if corr == 'no correlation':
-                    cross_matrix[i, j] = 0
-                if corr == 'full correlation':
+                if corr == 'full':
                     cross_matrix[i, j] = 0.99999
-                if corr == 'cross':
+                elif corr == 'yes':
                     cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
                         0.359 + 0.163 * II * math.log(Tmin / 0.189)
                     ) * math.log(Tmax / Tmin))
