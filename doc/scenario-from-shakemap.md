@@ -28,6 +28,12 @@ the exposure and the risk functions will be imported in the datastore.
 In this example there are only vulnerability functions for the loss type
 `structural`, but there could be more, and even fragility functions.
 
+It is essential that you have the right risk functions.
+The ShakeMaps contains data for the intensity measure types PGA, SA(0.3),
+SA(1.0) and SA(3.0). If your vulnerability functions involves an intensity
+measure type which is not in the ShakeMap (for instance SA(0.6)) you will
+get an error and it will be impossible to perform the analysis.
+
 The hazard has to be prepared only once.
 
 Let's suppose that the calculation ID of this hazard calculation is 1000.
@@ -112,3 +118,9 @@ go away. The easiest way to reduce the number of sites is setting a
 `region_grid_spacing` parameter in the `job_hazard.ini` file, then the
 engine will automatically put the assets on a grid. The larger the grid
 spacing, the smaller the number of points, until the calculation can be done.
+
+Due to numeric errors, you can also get interpolation errors when computing
+the site amplification, independently from the correlation. Moreover,
+especially for old ShakeMaps, the USGS can provide them in a format that
+the engine cannot read. So you not expect the functionality to work
+100% of the times.
