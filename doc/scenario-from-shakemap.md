@@ -8,7 +8,7 @@ by the United States Geological Survey (USGS) service.
 In order to enable this functionality one has to prepare a parent
 calculation containing the full exposure and risk functions for the
 region of interest, say South America. To that aim the user will need
-to write a `job_hazard.ini` file like this one:
+to write a `prepare_job.ini` file like this one:
 
 ```
    [general]
