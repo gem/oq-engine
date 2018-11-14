@@ -36,10 +36,11 @@ class ShakemapTestCase(unittest.TestCase):
         aae(gmf_by_imt, [0.0047045, 0.0184625, 0.0346171, 0.0175625])
 
     def test_amplify(self):
-        res = amplify_ground_shaking(T=3.0, vs30=780, gmvs=[0.1, 0.2, 0.3])
+        gmvs = numpy.array([0.1, 0.2, 0.3])
+        res = amplify_ground_shaking(T=3.0, vs30=780, gmvs=gmvs)
         aae(res, [0.09832577, 0.19690711, 0.2958982])
 
-        res = amplify_ground_shaking(T=0.3, vs30=780, gmvs=[0.1, 0.2, 0.3])
+        res = amplify_ground_shaking(T=0.3, vs30=780, gmvs=gmvs)
         aae(res, [0.09909498, 0.19870543, 0.29922175])
 
     def test_matrices(self):
