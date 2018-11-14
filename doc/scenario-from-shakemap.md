@@ -20,7 +20,7 @@ to write a `job_hazard.ini` file like this one:
 By running the calculation
 
 ```bash
-$ oq engine --run job_hazard.ini
+$ oq engine --run prepare_job.ini
 ```
 
 the exposure and the risk functions will be imported in the datastore.
@@ -38,7 +38,7 @@ The hazard has to be prepared only once.
 
 Let's suppose that the calculation ID of this hazard calculation is 1000.
 We can now run the risk on a given ShakeMap.
-For that, one need a `job_risk.ini` file like the following::
+For that, one need a `job.ini` file like the following::
 
 ```
    [general]
@@ -55,7 +55,7 @@ The risk can be computed by running the risk file against the prepared
 hazard calculation:
 
 ```bash
-$ oq run job_risk.ini
+$ oq run job.ini
 ```
 
 The engine will perform the following operations:
@@ -85,7 +85,7 @@ effects.
 
 By default the engine tries to compute both the spatial correlation and the
 cross correlation between different intensity measure types. For each kind
-of correlation you have three choices, that you can set in the `job_risk.ini`,
+of correlation you have three choices, that you can set in the `job.ini`,
 for a total of nine combinations:
 
 spatial_correlation = yes, cross_correlation = yes  # the default
@@ -115,13 +115,12 @@ Rather than magically discarding negative eigenvalues the engine raises
 an error and the user has two choices: either disable the spatial correlation
 or reduce the number of sites because that can make the numerical instability
 go away. The easiest way to reduce the number of sites is setting a
-`region_grid_spacing` parameter in the `job_hazard.ini` file, then the
+`region_grid_spacing` parameter in the `prepare_job.ini` file, then the
 engine will automatically put the assets on a grid. The larger the grid
 spacing, the smaller the number of points, until the calculation can be done.
 
-IF the ground motion values are particularly small, you can also get
-interpolation errors when computing the site amplification,
-independently from the correlation.
+IF the ground motion values or the standard deviations are particularly
+large the user will get a warning about suspicious GMFs.
 
 Moreover, especially for old ShakeMaps, the USGS can provide them in a
 format that the engine cannot read.
