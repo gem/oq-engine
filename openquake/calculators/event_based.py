@@ -78,13 +78,12 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
         numpy.random.seed(ebr.serial)
         sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
         i = 0
-        for rlzs in rlzs_by_gsim.values():
-            for rlz, eids in ebr.get_eids_by_rlz(rlzs).items():
-                for eid in eids:
-                    rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
-                           ebr.grp_id, year, sess[i], rlz)
-                    events.append(rec)
-                    i += 1
+        for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+            for eid in eids:
+                rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
+                       ebr.grp_id, year, sess[i], rlz)
+                events.append(rec)
+                i += 1
     return numpy.array(events, readinput.stored_event_dt)
 
 
