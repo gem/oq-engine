@@ -32,6 +32,7 @@ US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
+MAX_GMV = 5.  # 5 g
 
 
 class DownloadFailed(Exception):
@@ -145,23 +146,24 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
 # STDPGA = the standard deviation of PGA (natural log of percent-g)
 
 
-def spatial_correlation_array(dmatrix, imts, correl='spatial',
+def spatial_correlation_array(dmatrix, imts, correl='yes',
                               vs30clustered=True):
     """
     :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
-    :param correl: 'no correlation', 'full correlation', 'spatial'
+    :param correl: 'yes', 'no' or 'full'
     :param vs30clustered: flag, True by default
     :returns: array of shape (M, N, N)
     """
+    assert correl in 'yes no full', correl
     n = len(dmatrix)
     corr = numpy.zeros((len(imts), n, n))
     for imti, im in enumerate(imts):
-        if correl == 'no correlation':
+        if correl == 'no':
             corr[imti] = numpy.eye(n)
-        if correl == 'full correlation':
+        if correl == 'full':
             corr[imti] = numpy.ones((n, n))
-        elif correl == 'spatial':
+        elif correl == 'yes':
             corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
     return corr
 
@@ -184,12 +186,13 @@ def spatial_covariance_array(stddev, corrmatrices):
     return numpy.array(matrices)
 
 
-def cross_correlation_matrix(imts, corr='cross'):
+def cross_correlation_matrix(imts, corr='yes'):
     """
     :param imts: M intensity measure types
-    :param corr: 'no correlation', 'full correlation' or 'cross'
+    :param corr: 'yes', 'no' or 'full'
     :returns: an array of shape (M, M)
     """
+    assert corr in 'yes no full', corr
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
     cross_matrix = numpy.zeros((M, M))
@@ -204,11 +207,9 @@ def cross_correlation_matrix(imts, corr='cross'):
                 Tmax = max([T1, T2])
                 Tmin = min([T1, T2])
                 II = 1 if Tmin < 0.189 else 0
-                if corr == 'no correlation':
-                    cross_matrix[i, j] = 0
-                if corr == 'full correlation':
+                if corr == 'full':
                     cross_matrix[i, j] = 0.99999
-                if corr == 'cross':
+                elif corr == 'yes':
                     cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
                         0.359 + 0.163 * II * math.log(Tmin / 0.189)
                     ) * math.log(Tmax / Tmin))
@@ -232,8 +233,9 @@ def amplify_ground_shaking(T, vs30, gmvs):
     :param vs30: velocity
     :param gmvs: ground motion values for the current site in units of g
     """
+    gmvs[gmvs > MAX_GMV] = MAX_GMV  # accelerations > 5g are absurd
     interpolator = interpolate.interp1d(
-        [0, 0.1, 0.2, 0.3, 0.4, 10],
+        [0, 0.1, 0.2, 0.3, 0.4, 5],
         [(760 / vs30)**0.35,
          (760 / vs30)**0.35,
          (760 / vs30)**0.25,
@@ -241,7 +243,7 @@ def amplify_ground_shaking(T, vs30, gmvs):
          (760 / vs30)**-0.05,
          (760 / vs30)**-0.05],
     ) if T <= 0.3 else interpolate.interp1d(
-        [0, 0.1, 0.2, 0.3, 0.4, 10],
+        [0, 0.1, 0.2, 0.3, 0.4, 5],
         [(760 / vs30)**0.65,
          (760 / vs30)**0.65,
          (760 / vs30)**0.60,
@@ -310,4 +312,6 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     gmfs = numpy.exp(numpy.dot(L, Z) + mu) / PCTG
     if site_effects:
         gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs) * 0.8
+    if gmfs.max() > MAX_GMV:
+        logging.warn('There suspiciously large GMVs of %.2fg', gmfs.max())
     return imts, gmfs.reshape((1, M, N, num_gmfs)).transpose(0, 2, 3, 1)
