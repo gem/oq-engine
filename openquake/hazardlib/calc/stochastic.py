@@ -114,9 +114,6 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     rlzs = numpy.concatenate(list(param['rlzs_by_gsim'].values()))
     for src, sites in src_filter(sources):
         t0 = time.time()
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_ruptures *before* the filtering
         ebrs = build_eb_ruptures(src, rlzs, num_ses, cmaker, sites)
         n_evs = sum(ebr.multiplicity for ebr in ebrs)
         eb_ruptures.extend(ebrs)
@@ -149,6 +146,9 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
     samples = getattr(src, 'samples', 1)
     nr = len(rlzs)
     if rup_n_occ == ():
+        # NB: the number of occurrences is very low, << 1, so it is
+        # more efficient to filter only the ruptures that occur, i.e.
+        # to call sample_ruptures *before* the filtering
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
         if cmaker.maximum_distance:
