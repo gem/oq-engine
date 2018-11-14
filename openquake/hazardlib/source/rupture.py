@@ -567,15 +567,16 @@ class EBRupture(object):
         """
         return len(self.sids) * len(self.events)
 
-    def get_eids_by_rlz(self, rlzs):
+    def get_eids_by_rlz(self, rlzs_by_gsim):
         """
         An array with the underlying event IDs
         """
         i = 0
         dic = {}
-        for rlz, n_occ in zip(rlzs, self.n_occ):
-            dic[rlz] = numpy.arange(i, i + n_occ, dtype=U32)
-            i += n_occ
+        for rlzs in rlzs_by_gsim.values():
+            for rlz, n_occ in zip(rlzs, self.n_occ):
+                dic[rlz] = numpy.arange(i, i + n_occ, dtype=U32)
+                i += n_occ
         return dic
 
     def export(self, mesh, events):
