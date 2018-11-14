@@ -119,8 +119,11 @@ go away. The easiest way to reduce the number of sites is setting a
 engine will automatically put the assets on a grid. The larger the grid
 spacing, the smaller the number of points, until the calculation can be done.
 
-Due to numeric errors, you can also get interpolation errors when computing
-the site amplification, independently from the correlation. Moreover,
-especially for old ShakeMaps, the USGS can provide them in a format that
-the engine cannot read. So you not expect the functionality to work
-100% of the times.
+IF the ground motion values are particularly small, you can also get
+interpolation errors when computing the site amplification,
+independently from the correlation.
+
+Moreover, especially for old ShakeMaps, the USGS can provide them in a
+format that the engine cannot read.
+
+So you should not expect the functionality to work 100% of the times.
