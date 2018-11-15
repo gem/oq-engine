@@ -265,10 +265,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
-            eff_ruptures = {
-                grp.id: sum(src.num_ruptures for src in grp)
-                for grp in self.csm.src_groups}
-            self.store_csm_info(eff_ruptures)
 
     def from_sources(self, par):
         """
@@ -290,6 +286,8 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         start = 0
+        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
+        act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
         for sm in self.csm.source_models:
             nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
             param['rlz_slice'] = slice(start, start + nr)
@@ -299,18 +297,24 @@ class EventBasedCalculator(base.HazardCalculator):
                 if not sg.sources:
                     continue
                 param['rlzs_by_gsim'] = self.rlzs_by_gsim_grp[sg.id]
+                eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
                     smap.submit(block, self.src_filter, param)
         for ruptures in block_splitter(
                 self._store_ruptures(smap), BLOCKSIZE,
                 weight_rup, operator.attrgetter('grp_id')):
             ebr = ruptures[0]
+            act_ruptures[ebr.grp_id] += len(ruptures)
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
             par = par.copy()
             par['samples'] = self.samples_by_grp[ebr.grp_id]
             yield ruptures, self.src_filter, rlzs_by_gsim, par
 
         self.setting_events()
+
+        # storing logic tree info
+        self.store_csm_info(eff_ruptures)
+
         if self.oqparam.ground_motion_fields:
             logging.info('Processing the GMFs')
 
