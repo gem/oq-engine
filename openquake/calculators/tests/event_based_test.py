@@ -321,16 +321,15 @@ PGA     SA(0.3) SA(0.6)
             'hazard_curve-rlz-003.csv',
             'hazard_curve-rlz-004.csv',
         ]
-        # the --hc functionality, i.e. that the ruptures are read correctly
-        # is broken; to test it, change 'job.ini' -> 'job.ini,job.ini' below
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        # test the --hc functionality, i.e. that ruptures are read correctly
+        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable
