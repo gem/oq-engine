@@ -306,13 +306,12 @@ class EventBasedCalculator(base.HazardCalculator):
         act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
         for sm in self.csm.source_models:
             nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-            param['rlz_slice'] = slice(start, start + nr)
             start += nr
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                param['rlzs_by_gsim'] = self.rlzs_by_gsim_grp[sg.id]
+                param['gsims'] = self.rlzs_by_gsim_grp[sg.id]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
                     smap.submit(block, self.src_filter, param)
