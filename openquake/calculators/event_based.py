@@ -220,6 +220,15 @@ class EventBasedCalculator(base.HazardCalculator):
             self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
 
+    def init_logic_tree(self, csm_info):
+        self.grp_trt = csm_info.grp_by("trt")
+        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = csm_info.get_samples_by_grp()
+        self.num_rlzs_by_grp = {
+            grp_id:
+            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+            for grp_id in self.rlzs_by_gsim_grp}
+
     def from_ruptures(self, param):
         """
         :yields: the arguments for compute_gmfs_and_curves
@@ -229,6 +238,7 @@ class EventBasedCalculator(base.HazardCalculator):
         U = len(self.datastore.parent['ruptures'])
         logging.info('Found %d ruptures', U)
         parent = self.can_read_parent() or self.datastore
+        self.init_logic_tree(self.csm_info)
         for slc in split_in_slices(U, concurrent_tasks or 1):
             for grp_id in self.rlzs_by_gsim_grp:
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
@@ -241,9 +251,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
-        self.R = self.csm_info.get_num_rlzs()
         self.L = len(self.oqparam.imtls.array)
-        zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
+        zd = AccumDict(accum=ProbabilityMap(self.L))
         zd.eff_ruptures = AccumDict()
         return zd
 
@@ -311,14 +320,7 @@ class EventBasedCalculator(base.HazardCalculator):
             {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
              for gid in srcs_by_grp})
         store_rlzs_by_grp(self.datastore)
-        self.grp_trt = self.csm.info.grp_by("trt")
-        self.rlzs_by_gsim_grp = self.csm.info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = self.csm.info.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
-
+        self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
         self.setting_events()
 
@@ -518,7 +520,7 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.csm_info.get_rlzs_assoc().realizations
+            rlzs = self.csm.info.get_rlzs_assoc().realizations
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
@@ -526,10 +528,14 @@ class EventBasedCalculator(base.HazardCalculator):
             # curves if oq.individual_curves is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
+            pmaps = list(result.values())
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
+                if len(weights) != len(pmaps):
+                    raise RuntimeError('Expected %d pmaps, got %d' %
+                                       (len(weights), len(pmaps)))
                 for statname, stat in hstats:
-                    pmap = compute_pmap_stats(result.values(), [stat], weights)
+                    pmap = compute_pmap_stats(pmaps, [stat], weights)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
