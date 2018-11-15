@@ -208,8 +208,10 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
                      len(self.csm.source_models))
         self.datastore['sitecol'] = self.sitecol
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.R = len(self.rlzs_assoc.realizations)
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        self.init_logic_tree(self.csm.info)
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
