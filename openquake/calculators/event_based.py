@@ -25,8 +25,7 @@ import numpy
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_slices, humansize, get_array,
-    cached_property)
+    AccumDict, block_splitter, split_in_slices, humansize, cached_property)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -87,9 +86,10 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
     """
     events = []
     year = 0  # to be set later
+    nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     for ebr in ebruptures:
         numpy.random.seed(ebr.serial)
-        sess = numpy.random.choice(num_ses, ebr.multiplicity) + 1
+        sess = numpy.random.choice(num_ses, ebr.multiplicity(nr)) + 1
         i = 0
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             for eid in eids:
@@ -100,11 +100,10 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
     return numpy.array(events, readinput.stored_event_dt)
 
 
-def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
-                 samples_by_grp, num_imts):
+def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
     """
     :param ruptures_by_grp: dictionary grp_id -> EBRuptures
-    :param rlzs_by_gsim: dictionary grp_id -> {gsim: rlzs}
+    :param num_rlzs: dictionary grp_id -> number of realizations
     :param samples_by_grp: dictionary grp_id -> samples
     :param num_imts: number of IMTs
     :returns:
@@ -115,9 +114,9 @@ def max_gmf_size(ruptures_by_grp, rlzs_by_gsim,
     nbytes = 2 + 4 + 8 + 4 * num_imts
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
-        for gsim, rlzs in rlzs_by_gsim[grp_id].items():
-            for ebr in ebruptures:
-                n += len(ebr.rupture.sctx.sids) * ebr.multiplicity
+        nr = num_rlzs[grp_id]
+        for ebr in ebruptures:
+            n += len(ebr.rupture.sctx.sids) * ebr.multiplicity(nr)
     return n * nbytes
 
 
@@ -222,6 +221,10 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rupser = calc.RuptureSerializer(self.datastore)
         self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
         self.samples_by_grp = self.csm_info.get_samples_by_grp()
+        self.num_rlzs_by_grp = {
+            grp_id:
+            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+            for grp_id in self.rlzs_by_gsim_grp}
 
     def from_ruptures(self, param):
         """
@@ -263,7 +266,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
-                    self.rlzs_by_gsim_grp,
+                    self.num_rlzs_by_grp,
                     self.samples_by_grp,
                     len(self.oqparam.imtls))
                 calc_times += src.calc_times
@@ -283,6 +286,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        gsims_by_trt = self.csm.gsim_lt.values
         rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.R = len(rlzs_assoc.realizations)
 
@@ -290,7 +294,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return src.num_ruptures * factor
 
         def weight_rup(ebr):
-            return numpy.sqrt(ebr.multiplicity * len(ebr.sids))
+            return numpy.sqrt(ebr.n_occ.sum() * len(ebr.sids))
 
         param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
         param['filter_distance'] = self.oqparam.filter_distance
@@ -298,18 +302,14 @@ class EventBasedCalculator(base.HazardCalculator):
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
-        start = 0
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
         for sm in self.csm.source_models:
-            nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-            param['rlz_slice'] = slice(start, start + nr)
-            start += nr
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                param['rlzs_by_gsim'] = self.rlzs_by_gsim_grp[sg.id]
+                param['gsims'] = gsims_by_trt[sg.trt]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
                     smap.submit(block, self.src_filter, param)
@@ -393,11 +393,12 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
+            nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
             events = get_events(ruptures, rlzs_by_gsim,
                                 self.oqparam.ses_per_logic_tree_path)
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
-                self.rupser.save(ruptures, eidx=len(dset)-len(events))
+                self.rupser.save(ruptures, nr, eidx=len(dset)-len(events))
             return events
         return ()
 

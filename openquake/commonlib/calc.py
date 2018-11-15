@@ -342,7 +342,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.srcidx, ebr.multiplicity, ebr.eidx1, rate,
+                (ebr.serial, ebr.srcidx, ebr.n_occ.sum(), ebr.eidx1, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -399,7 +399,7 @@ class RuptureSerializer(object):
         datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
         datastore.create_dset('rupgeoms', point3d)
 
-    def save(self, ebruptures, eidx=0):
+    def save(self, ebruptures, nr, eidx=0):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 
@@ -409,7 +409,7 @@ class RuptureSerializer(object):
         pmfbytes = 0
         self.nruptures += len(ebruptures)
         for ebr in ebruptures:
-            mul = ebr.multiplicity
+            mul = ebr.multiplicity(nr)
             ebr.eidx1 = eidx
             ebr.eidx2 = eidx + mul
             eidx += mul
