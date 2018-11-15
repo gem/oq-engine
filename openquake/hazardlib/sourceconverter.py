@@ -475,10 +475,11 @@ class SourceConverter(RuptureConverter):
     """
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
-                 area_source_discretization=None, spinning_floating=True,
-                 source_id=None):
+                 area_source_discretization=None, minimum_magnitude=0,
+                 spinning_floating=True, source_id=None):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
+        self.minimum_magnitude = minimum_magnitude
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
@@ -792,11 +793,17 @@ class SourceConverter(RuptureConverter):
                         with context(self.fname, src_node):
                             raise ValueError('Found %s, expected %s' %
                                              (src_node['tectonicRegion'], trt))
-                    src.tectonic_region_type = value
+                    src.tectonic_region_type = trt
                 elif attr == 'grp_probability':
                     pass  # do not transmit
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
+            if self.minimum_magnitude:
+                src.min_mag = (
+                    self.minimum_magnitude.get(src.tectonic_region_type) or
+                    self.minimum_magnitude['default'])
+            else:
+                src.min_mag = 0
             sg.update(src)
         if srcs_weights is not None:
             if len(node) and len(srcs_weights) != len(node):
