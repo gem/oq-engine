@@ -504,7 +504,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
 
-    def read_exposure(self, haz_sitecol=None):
+    def read_exposure(self, haz_sitecol=None):  # after load_risk_model
         """
         Read the exposure, the riskmodel and update the attributes
         .sitecol, .assetcol
@@ -547,7 +547,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         return min_iml
 
-    def load_riskmodel(self):
+    def load_riskmodel(self):  # to be called before read_exposure
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
