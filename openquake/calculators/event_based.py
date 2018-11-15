@@ -45,6 +45,19 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = U64(2 ** 32)
 BLOCKSIZE = 30000  # decided by MS
+rlzs_by_grp_dt = numpy.dtype(
+    [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
+
+
+def store_rlzs_by_grp(dstore):
+    """
+    Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
+    """
+    lst = []
+    for grp, arr in dstore['csm_info'].get_rlzs_assoc().by_grp().items():
+        for gsim_id, rlzs in enumerate(arr):
+            lst.append((int(grp[4:]), gsim_id, rlzs))
+    dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
 
 
 def build_ruptures(srcs, srcfilter, param, monitor):
@@ -309,6 +322,8 @@ class EventBasedCalculator(base.HazardCalculator):
             yield ruptures, self.src_filter, rlzs_by_gsim, par
 
         self.setting_events()
+        store_rlzs_by_grp(self.datastore)
+
         if self.oqparam.ground_motion_fields:
             logging.info('Processing the GMFs')
 
