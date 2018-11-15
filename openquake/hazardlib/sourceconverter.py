@@ -32,7 +32,6 @@ from openquake.hazardlib import valid, InvalidFile
 U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
-event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('sample', U32)])
 source_dt = numpy.dtype([('srcidx', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 
@@ -461,14 +460,11 @@ class RuptureConverter(object):
                 rup = self.convert_node(node)
                 rup.serial = int(node['id'])
                 sesnodes = node.stochasticEventSets
-                events = []
+                n = 0  # number of events
                 for sesnode in sesnodes:
                     with context(self.fname, sesnode):
-                        ses = sesnode['id']
-                        for eid in sesnode.text.split():
-                            events.append((eid, ses, 0))
-                ebr = source.rupture.EBRupture(
-                    rup, 0, 0, (), numpy.array(events, event_dt))
+                        n += len(sesnode.text.split())
+                ebr = source.rupture.EBRupture(rup, 0, 0, (), numpy.array([n]))
                 ebrs.append(ebr)
         return coll
 

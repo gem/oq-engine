@@ -313,6 +313,7 @@ PGA     SA(0.3) SA(0.6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
+        # also, the grp-00 does not produce ruptures
         expected = [
             'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',
@@ -320,15 +321,16 @@ PGA     SA(0.3) SA(0.6)
             'hazard_curve-rlz-003.csv',
             'hazard_curve-rlz-004.csv',
         ]
-        # test --hc functionality, i.e. that the ruptures are read correctly
-        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
+        # the --hc functionality, i.e. that the ruptures are read correctly
+        # is broken; to test it, change 'job.ini' -> 'job.ini,job.ini' below
+        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ses.xml', fname)
 
         # check that the exported file is parseable

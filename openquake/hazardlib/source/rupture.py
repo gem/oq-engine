@@ -573,11 +573,14 @@ class EBRupture(object):
         :returns: a dictionay rlz index -> eids array
         """
         i = 0
+        j = 0
         dic = {}
         for rlzs in rlzs_by_gsim.values():
-            for rlz, n_occ in zip(rlzs, self.n_occ):
-                dic[rlz] = numpy.arange(i, i + n_occ, dtype=U32)
-                i += n_occ
+            for rlz in rlzs:
+                n_occ = self.n_occ[i]
+                dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
+                i += 1
+                j += n_occ
         return dic
 
     def export(self, mesh, events):
