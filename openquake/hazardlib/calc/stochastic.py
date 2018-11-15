@@ -35,7 +35,6 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-event_dt = numpy.dtype([('eid', U32), ('rlz', U16)])
 
 
 def source_site_noop_filter(srcs):
@@ -164,22 +163,7 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
         if not hasattr(src, 'samples'):  # full enumeration
             n_occ = fix_shape(n_occ, nr)
 
-        # creating events
-        with cmaker.evs_mon:
-            E = n_occ.sum()
-            if E == 0:
-                continue
-            assert E < TWO32, E
-            events = numpy.zeros(E, event_dt)
-            i = 0
-            for sam_idx in range(nr):  # numpy.ndenumerate would be slower
-                for _ in range(n_occ[sam_idx]):
-                    events[i]['rlz'] = rlzs[sam_idx]
-                    i += 1
-
-        # setting event IDs based on the rupture serial and the sample
-        ebr = EBRupture(rup, src.id, src.src_group_id, indices, events)
-        ebr.events['eid'] = numpy.arange(E, dtype=U32)
+        ebr = EBRupture(rup, src.id, src.src_group_id, indices, n_occ)
         ebrs.append(ebr)
 
     return ebrs
