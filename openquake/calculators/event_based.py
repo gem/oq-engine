@@ -286,6 +286,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        gsims_by_trt = self.csm.gsim_lt.values
         rlzs_assoc = self.csm_info.get_rlzs_assoc()
         self.R = len(rlzs_assoc.realizations)
 
@@ -308,7 +309,7 @@ class EventBasedCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                param['gsims'] = self.rlzs_by_gsim_grp[sg.id]
+                param['gsims'] = gsims_by_trt[sg.trt]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
                     smap.submit(block, self.src_filter, param)
