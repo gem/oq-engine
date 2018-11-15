@@ -196,7 +196,7 @@ def split_sources(srcs):
     for src in srcs:
         t0 = time.time()
         mag_a, mag_b = src.get_min_max_mag()
-        min_mag = getattr(src, 'min_mag', 0)
+        min_mag = src.min_mag
         if mag_b < min_mag:  # discard the source completely
             continue
         has_serial = hasattr(src, 'serial')
