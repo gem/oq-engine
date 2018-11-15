@@ -183,13 +183,11 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
                 job_id = run_job(job_inis[0], log_level, log_file,
                                  exports, hazard_calculation_id=hc_id)
                 return
-        if len(job_inis) > 2 and hc_id:
-            sys.exit('The multi-run functionality only works without --hc')
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
             job_id = run_job(job_ini, log_level, log_file,
                              exports, hazard_calculation_id=hc_id)
-            if i == 0:  # use the first calculation as base for the others
+            if not hc_id:  # use the first calculation as base for the others
                 hc_id = job_id
     # hazard
     elif list_hazard_calculations:
