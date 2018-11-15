@@ -323,12 +323,14 @@ def rupture_to_element(rup, parent=None):
         parent = et.Element('root')
     rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
+    n = 0
     for ses in rup.events_by_ses:
         eids = rup.events_by_ses[ses]['eid']
+        n += len(eids)
         ses_elem = et.SubElement(elem, 'SES', id=ses)
         ses_elem.text = ' '.join(str(eid) for eid in eids)
     rup_elem.set('id', rup.rupid)
-    rup_elem.set('multiplicity', str(rup.multiplicity))
+    rup_elem.set('multiplicity', str(n))
     sub_elems(rup_elem, rup, 'magnitude',  'strike', 'dip', 'rake')
     h = rup.hypocenter
     et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))
