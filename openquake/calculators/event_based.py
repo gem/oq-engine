@@ -324,7 +324,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
                  for gid in srcs_by_grp})
         else:
-            # lesses logic tree reduction
+            # lesser logic tree reduction
             self.store_csm_info(
                 {gid: sum(src.num_ruptures for src in srcs_by_grp[gid])
                  for gid in srcs_by_grp})
