@@ -219,12 +219,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = self.csm_info.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
 
     def from_ruptures(self, param):
         """
@@ -251,14 +245,13 @@ class EventBasedCalculator(base.HazardCalculator):
         self.L = len(self.oqparam.imtls.array)
         zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
         zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm_info.grp_by("trt")
         return zd
 
-    def _store_ruptures(self, ires):
+    def _store_ruptures(self, srcs_by_grp):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
         mon = self.monitor('saving ruptures', measuremem=False)
-        for srcs in ires:
+        for grp, srcs in srcs_by_grp.items():
             for src in srcs:
                 # save the events always; save the ruptures
                 # if oq.save_ruptures is true
@@ -270,9 +263,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.samples_by_grp,
                     len(self.oqparam.imtls))
                 calc_times += src.calc_times
-                del src.calc_times
-                yield from src.eb_ruptures
-                del src.eb_ruptures
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -303,7 +293,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
+        srcs_by_grp = AccumDict(accum=[])  # grp_id => srcs
         for sm in self.csm.source_models:
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
@@ -313,21 +303,35 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
                     smap.submit(block, self.src_filter, param)
-        for ruptures in block_splitter(
-                self._store_ruptures(smap), BLOCKSIZE,
-                weight_rup, operator.attrgetter('grp_id')):
-            ebr = ruptures[0]
-            act_ruptures[ebr.grp_id] += len(ruptures)
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
-            par = par.copy()
-            par['samples'] = self.samples_by_grp[ebr.grp_id]
-            yield ruptures, self.src_filter, rlzs_by_gsim, par
-
-        self.setting_events()
+        for srcs in smap:
+            srcs_by_grp[srcs[0].src_group_id] += srcs
 
         # storing logic tree info
-        self.store_csm_info(eff_ruptures)
+        self.store_csm_info(
+            {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
+             for gid in srcs_by_grp})
         store_rlzs_by_grp(self.datastore)
+        self.grp_trt = self.csm.info.grp_by("trt")
+        self.rlzs_by_gsim_grp = self.csm.info.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = self.csm.info.get_samples_by_grp()
+        self.num_rlzs_by_grp = {
+            grp_id:
+            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
+            for grp_id in self.rlzs_by_gsim_grp}
+
+        self._store_ruptures(srcs_by_grp)
+        self.setting_events()
+
+        for grp_id, srcs in srcs_by_grp.items():
+            theruptures = sum([src.eb_ruptures for src in srcs], [])
+            for ruptures in block_splitter(
+                    theruptures, BLOCKSIZE,
+                    weight_rup, operator.attrgetter('grp_id')):
+                ebr = ruptures[0]
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
+                par = par.copy()
+                par['samples'] = self.samples_by_grp[ebr.grp_id]
+                yield ruptures, self.src_filter, rlzs_by_gsim, par
 
         if self.oqparam.ground_motion_fields:
             logging.info('Processing the GMFs')
