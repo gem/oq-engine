@@ -301,12 +301,9 @@ class EventBasedCalculator(base.HazardCalculator):
         param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
-        start = 0
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
         for sm in self.csm.source_models:
-            nr = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-            start += nr
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
