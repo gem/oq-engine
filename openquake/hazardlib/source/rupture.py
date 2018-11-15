@@ -538,20 +538,31 @@ class ExportedRupture(object):
         self.indices = indices
 
 
+def fix_shape(occur, num_rlzs):
+    n_occ = numpy.zeros(num_rlzs, numpy.uint16)
+    for nr in range(num_rlzs):
+        n_occ[nr] = occur
+    return n_occ
+
+
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, mult=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
         self.sids = sids
         self.n_occ = n_occ
-        self.multiplicity = n_occ.sum()
+
+    def multiplicity(self, nr):
+        if len(self.n_occ) != nr:  # full enumeration
+            return self.n_occ.sum() * nr
+        return self.n_occ.sum()
 
     @property
     def serial(self):
@@ -575,12 +586,15 @@ class EBRupture(object):
         i = 0
         j = 0
         dic = {}
+        nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+        if len(self.n_occ) != nr:  # full enumeration
+            self.n_occ = fix_shape(self.n_occ, nr)
         for rlzs in rlzs_by_gsim.values():
             for rlz in rlzs:
-                n_occ = self.n_occ[i]
-                dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
+                n = self.n_occ[i]
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
                 i += 1
-                j += n_occ
+                j += n
         return dic
 
     def export(self, mesh, events):
@@ -593,7 +607,6 @@ class EBRupture(object):
         events_by_ses = general.group_array(events, 'ses')
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
-        new.multiplicity = self.multiplicity
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
@@ -632,4 +645,4 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.serial, self.multiplicity)
+            self.__class__.__name__, self.serial, self.n_occ.sum())
