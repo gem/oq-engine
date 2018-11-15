@@ -106,18 +106,17 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    cmaker = ContextMaker(param['rlzs_by_gsim'],
+    cmaker = ContextMaker(param['gsims'],
                           src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
-    rlzs = numpy.concatenate(list(param['rlzs_by_gsim'].values()))
     for src, sites in src_filter(sources):
         t0 = time.time()
         ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
-        n_evs = sum(ebr.multiplicity(len(rlzs)) for ebr in ebrs)
+        n_occ = sum(ebr.n_occ.sum() for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([n_evs, src.nsites, dt])
+        calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
