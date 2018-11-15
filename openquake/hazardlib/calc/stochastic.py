@@ -106,33 +106,24 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    cmaker = ContextMaker(param['rlzs_by_gsim'],
+    cmaker = ContextMaker(param['gsims'],
                           src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
-    rlzs = numpy.concatenate(list(param['rlzs_by_gsim'].values()))
     for src, sites in src_filter(sources):
         t0 = time.time()
-        ebrs = build_eb_ruptures(src, rlzs, num_ses, cmaker, sites)
-        n_evs = sum(ebr.multiplicity for ebr in ebrs)
+        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
+        n_occ = sum(ebr.n_occ.sum() for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
-        calc_times[src.id] += numpy.array([n_evs, src.nsites, dt])
+        calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
     dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
     return dic
 
 
-def fix_shape(occur, num_rlzs):
-    n_occ = numpy.zeros(num_rlzs, U16)
-    for nr in range(num_rlzs):
-        n_occ[nr] = occur
-    return n_occ
-
-
-def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
+def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
     """
     :param src: a source object
-    :param rlzs: realizations of the source model as numpy.uint16 numbers
     :param num_ses: number of stochastic event sets
     :param cmaker: a ContextMaker instance
     :param s_sites: a (filtered) site collection
@@ -142,7 +133,6 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
-    nr = len(rlzs)
     if rup_n_occ == ():
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -159,9 +149,6 @@ def build_eb_ruptures(src, rlzs, num_ses, cmaker, s_sites, rup_n_occ=()):
                     continue
         else:
             indices = ()
-
-        if len(n_occ) != nr:  # full enumeration
-            n_occ = fix_shape(n_occ, nr)
 
         ebr = EBRupture(rup, src.id, src.src_group_id, indices, n_occ)
         ebrs.append(ebr)

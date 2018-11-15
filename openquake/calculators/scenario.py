@@ -58,7 +58,7 @@ class ScenarioCalculator(base.HazardCalculator):
         ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, numpy.array([E]))
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save([ebr])
+        rupser.save([ebr], len(self.gsims))
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
