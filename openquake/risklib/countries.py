@@ -1,4 +1,7 @@
-"""\
+import sys
+import os.path
+
+COUNTRY_CODE = """\
 Afghanistan,AFG
 Albania,ALB
 Algeria,DZA
@@ -233,5 +236,5 @@ Zambia,ZMB
 Zimbabwe,ZWE
 """
 
-code = dict(line.split(',') for line in __doc__.splitlines())
-country = {v: k for k, v in code.items()}
+country2code = dict(line.split(',') for line in COUNTRY_CODE.splitlines())
+code2country = {v: k for k, v in country2code.items()}
