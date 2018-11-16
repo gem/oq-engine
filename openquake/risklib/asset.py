@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
 import logging
+import copy
 import csv
 import os
 import numpy
@@ -714,7 +715,7 @@ class Exposure(object):
         return exp
 
     @staticmethod
-    def read(fname, calculation_mode='', region_constraint='',
+    def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
              asset_prefix=''):
         """
@@ -723,15 +724,17 @@ class Exposure(object):
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
-        if isinstance(fname, list):
+        if len(fnames) > 1:
             exps = []
-            for i, path in enumerate(fname):
-                prefix = 'E%02_' % i
+            for i, fname in enumerate(fnames):
+                prefix = 'E%02d_' % i
                 exp = Exposure.read(
-                    fname, calculation_mode, region_constraint,
+                    [fname], calculation_mode, region_constraint,
                     ignore_missing_costs, asset_nodes, check_dupl, prefix)
                 exps.append(exp)
             return Exposure.combine(exps)
+        [fname] = fnames
+        logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
         param['out_of_region'] = 0
