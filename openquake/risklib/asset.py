@@ -732,6 +732,14 @@ class Exposure(object):
         assert values, 'Could not find any value??'
         return exposure
 
+    @classmethod
+    def read_header(cls, fname):
+        """
+        :param fname: path to an exposure file in XML format
+        :returns: an Exposure object without assets
+        """
+        return _get_exposure(fname, stop='assets')[0]
+
     def __init__(self, *values):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
