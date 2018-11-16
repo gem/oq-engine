@@ -297,10 +297,6 @@ class EventBasedCalculator(base.HazardCalculator):
         def weight_rup(ebr):
             return numpy.sqrt(ebr.n_occ.sum() * len(ebr.sids))
 
-        param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
-        param['filter_distance'] = self.oqparam.filter_distance
-        param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
-        param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
@@ -310,10 +306,10 @@ class EventBasedCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                param['gsims'] = gsims_by_trt[sg.trt]
+                par['gsims'] = gsims_by_trt[sg.trt]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
-                    smap.submit(block, self.src_filter, param)
+                    smap.submit(block, self.src_filter, par)
         for srcs in smap:
             srcs_by_grp[srcs[0].src_group_id] += srcs
 
@@ -449,6 +445,7 @@ class EventBasedCalculator(base.HazardCalculator):
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
+            ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         if oq.hazard_calculation_id:  # from ruptures
