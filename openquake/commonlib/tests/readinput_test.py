@@ -384,14 +384,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.calculation_mode = 'scenario'
-        oqparam.region = '''\
-POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
-        oqparam.ignore_missing_costs = []
-        oqparam.inputs = {'exposure': self.exposure}
-        exp = readinput.get_exposure(oqparam)
+        exp = readinput.get_empty_exposure(self.exposure)
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertIsNone(exp.insurance_limit_is_absolute)
         self.assertIsNone(exp.deductible_is_absolute)
