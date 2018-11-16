@@ -319,12 +319,12 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # storing logic tree info
         if self.oqparam.prefilter_sources == 'no':
-            # full logic tree reduction
+            # full logic tree reduction, experimental and risky
             self.store_csm_info(
                 {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
                  for gid in srcs_by_grp})
         else:
-            # lesser logic tree reduction
+            # regular logic tree reduction
             self.store_csm_info(
                 {gid: sum(src.num_ruptures for src in srcs_by_grp[gid])
                  for gid in srcs_by_grp})
@@ -542,8 +542,10 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
                 if len(weights) != len(pmaps):
-                    raise RuntimeError('Expected %d pmaps, got %d' %
-                                       (len(weights), len(pmaps)))
+                    # this should never happen, unless I break the
+                    # logic tree reduction mechanism during refactoring
+                    raise AssertionError('Expected %d pmaps, got %d' %
+                                         (len(weights), len(pmaps)))
                 for statname, stat in hstats:
                     pmap = compute_pmap_stats(pmaps, [stat], weights)
                     arr = numpy.zeros((N, L), F32)
