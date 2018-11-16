@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import operator
 import logging
-import copy
 import csv
 import os
 import numpy
@@ -699,22 +698,6 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @staticmethod
-    def combine(exposures):
-        exp = copy.deepcopy(exposures[0])
-        exp.description = 'Combined exposure of %d exposures' % len(exposures)
-        for exposure in exposures[1:]:
-            assert exposure.cost_types == exp.cost_types
-            assert exposure.occupancy_periods == exp.occupancy_periods
-            assert (exposure.insurance_limit_is_absolute ==
-                    exp.insurance_limit_is_absolute)
-            assert exposure.retrofitted == exp.retrofitted
-            assert exposure.area == exp.area
-            assert exposure.tagcol == exposure.tagcol
-            exp.assets.extend(exposure.assets)
-            exp.asset_ref.extend(exposure.asset_ref)
-        return exp
-
-    @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
              asset_prefix=''):
@@ -725,14 +708,25 @@ class Exposure(object):
         Node objects (one Node for each asset).
         """
         if len(fnames) > 1:
-            exps = []
             for i, fname in enumerate(fnames):
                 prefix = 'E%02d_' % i
-                exp = Exposure.read(
-                    [fname], calculation_mode, region_constraint,
-                    ignore_missing_costs, asset_nodes, check_dupl, prefix)
-                exps.append(exp)
-            return Exposure.combine(exps)
+                if i == 0:  # first exposure
+                    exp = Exposure.read(
+                        [fname], calculation_mode, region_constraint,
+                        ignore_missing_costs, asset_nodes, check_dupl, prefix)
+                else:
+                    exposure, assets = _get_exposure(fname)
+                    assert exposure.cost_types == exp.cost_types
+                    assert exposure.occupancy_periods == exp.occupancy_periods
+                    assert (exposure.insurance_limit_is_absolute ==
+                            exp.insurance_limit_is_absolute)
+                    assert exposure.retrofitted == exp.retrofitted
+                    assert exposure.area == exp.area
+                    assert exposure.tagcol == exposure.tagcol
+                    nodes = assets if assets else exposure._read_csv(
+                        assets.text, os.path.dirname(fname))
+                    exp._populate_from(nodes, exp.param, check_dupl)
+            return exp
         [fname] = fnames
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
@@ -760,6 +754,7 @@ class Exposure(object):
         # sanity checks
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
+        exposure.param = param
         return exposure
 
     @staticmethod
