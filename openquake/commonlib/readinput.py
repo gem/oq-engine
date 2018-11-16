@@ -957,7 +957,7 @@ def get_exposure(oqparam):
     return exposure
 
 
-def get_empty_exposure(fname):
+def get_exposure_skip_assets(fname):
     """
     :param fname: path to an exposure file in XML format
     :returns: an Exposure object
