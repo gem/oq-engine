@@ -698,15 +698,42 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @staticmethod
+    def combine(exposures):
+        exp = copy.deepcopy(exposures[0])
+        exp.description = 'Combined exposure of %d exposures' % len(exposures)
+        for exposure in exposures[1:]:
+            assert exposure.cost_types == exp.cost_types
+            assert exposure.occupancy_periods == exp.occupancy_periods
+            assert (exposure.insurance_limit_is_absolute ==
+                    exp.insurance_limit_is_absolute)
+            assert exposure.retrofitted == exp.retrofitted
+            assert exposure.area == exp.area
+            assert exposure.tagcol == exposure.tagcol
+            exp.assets.extend(exposure.assets)
+            exp.asset_ref.extend(exposure.asset_ref)
+        return exp
+
+    @staticmethod
     def read(fname, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False, check_dupl=True):
+             ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+             asset_prefix=''):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
+        if isinstance(fname, list):
+            exps = []
+            for i, path in enumerate(fname):
+                prefix = 'E%02_' % i
+                exp = Exposure.read(
+                    fname, calculation_mode, region_constraint,
+                    ignore_missing_costs, asset_nodes, check_dupl, prefix)
+                exps.append(exp)
+            return Exposure.combine(exps)
         param = {'calculation_mode': calculation_mode}
+        param['asset_prefix'] = asset_prefix
         param['out_of_region'] = 0
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
@@ -819,7 +846,7 @@ class Exposure(object):
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
                 raise nrml.DuplicatedID(asset_id)
-            asset_refs.add(asset_id)
+            asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset_node, param)
 
     def _add_asset(self, idx, asset_node, param):
