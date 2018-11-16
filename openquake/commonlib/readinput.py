@@ -957,6 +957,16 @@ def get_exposure(oqparam):
     return exposure
 
 
+def get_exposure_skip_assets(fname):
+    """
+    :param fname: path to an exposure file in XML format
+    :returns: an Exposure object
+
+    This function reads only the header of the exposure, so it is ultra-fast
+    """
+    return asset._get_exposure(fname, stop='assets')[0]
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     """
     :param oqparam: calculation parameters
