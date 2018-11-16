@@ -374,8 +374,8 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gmdata += result['gmdata']
             with sav_mon:
                 data = result.pop('gmfdata')
-                for row in data:  # convert from event IDs to event indices
-                    row['eid'] = eid2idx[row['eid']]
+                # convert from event IDs to event indices
+                data['eid'] = numpy.array([eid2idx[e] for e in data['eid']])
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
