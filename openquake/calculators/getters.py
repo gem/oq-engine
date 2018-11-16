@@ -22,7 +22,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import (
-    AccumDict, groupby, group_array, get_array, block_splitter)
+    AccumDict, groupby, group_array, block_splitter)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh

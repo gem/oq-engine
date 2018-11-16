@@ -219,46 +219,52 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.rlzs_by_gsim_grp = self.csm_info.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = self.csm_info.get_samples_by_grp()
+
+    def init_logic_tree(self, csm_info):
+        self.grp_trt = csm_info.grp_by("trt")
+        self.rlzs_assoc = csm_info.get_rlzs_assoc()
+        self.rlzs_by_gsim_grp = csm_info.get_rlzs_by_gsim_grp()
+        self.samples_by_grp = csm_info.get_samples_by_grp()
         self.num_rlzs_by_grp = {
             grp_id:
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
+        self.R = len(self.rlzs_assoc.realizations)
 
     def from_ruptures(self, param):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
+        self.init_logic_tree(self.csm_info)
         concurrent_tasks = oq.concurrent_tasks
         U = len(self.datastore.parent['ruptures'])
         logging.info('Found %d ruptures', U)
         parent = self.can_read_parent() or self.datastore
-        for slc in split_in_slices(U, concurrent_tasks or 1):
-            for grp_id in self.rlzs_by_gsim_grp:
-                rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                ruptures = RuptureGetter(parent, slc, grp_id)
-                par = param.copy()
-                par['samples'] = self.samples_by_grp[grp_id]
-                yield ruptures, self.sitecol, rlzs_by_gsim, par
+
+        def gen():
+            for slc in split_in_slices(U, concurrent_tasks or 1):
+                for grp_id in self.rlzs_by_gsim_grp:
+                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+                    ruptures = RuptureGetter(parent, slc, grp_id)
+                    par = param.copy()
+                    par['samples'] = self.samples_by_grp[grp_id]
+                    yield ruptures, self.sitecol, rlzs_by_gsim, par
+        return gen()
 
     def zerodict(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
-        self.R = self.csm_info.get_num_rlzs()
         self.L = len(self.oqparam.imtls.array)
-        zd = AccumDict({r: ProbabilityMap(self.L) for r in range(self.R)})
-        zd.eff_ruptures = AccumDict()
-        self.grp_trt = self.csm_info.grp_by("trt")
+        zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
-    def _store_ruptures(self, ires):
+    def _store_ruptures(self, srcs_by_grp):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
         mon = self.monitor('saving ruptures', measuremem=False)
-        for srcs in ires:
+        for grp, srcs in srcs_by_grp.items():
             for src in srcs:
                 # save the events always; save the ruptures
                 # if oq.save_ruptures is true
@@ -270,9 +276,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     self.samples_by_grp,
                     len(self.oqparam.imtls))
                 calc_times += src.calc_times
-                del src.calc_times
-                yield from src.eb_ruptures
-                del src.eb_ruptures
         self.rupser.close()
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
@@ -287,8 +290,6 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         gsims_by_trt = self.csm.gsim_lt.values
-        rlzs_assoc = self.csm_info.get_rlzs_assoc()
-        self.R = len(rlzs_assoc.realizations)
 
         def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
             return src.num_ruptures * factor
@@ -296,41 +297,52 @@ class EventBasedCalculator(base.HazardCalculator):
         def weight_rup(ebr):
             return numpy.sqrt(ebr.n_occ.sum() * len(ebr.sids))
 
-        param = dict(ruptures_per_block=self.oqparam.ruptures_per_block)
-        param['filter_distance'] = self.oqparam.filter_distance
-        param['ses_per_logic_tree_path'] = self.oqparam.ses_per_logic_tree_path
-        param['pointsource_distance'] = self.oqparam.pointsource_distance
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
-        act_ruptures = AccumDict(accum=0)  # grp_id => actual ruptures
+        srcs_by_grp = AccumDict(accum=[])  # grp_id => srcs
         for sm in self.csm.source_models:
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                param['gsims'] = gsims_by_trt[sg.trt]
+                par['gsims'] = gsims_by_trt[sg.trt]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
-                    smap.submit(block, self.src_filter, param)
-        for ruptures in block_splitter(
-                self._store_ruptures(smap), BLOCKSIZE,
-                weight_rup, operator.attrgetter('grp_id')):
-            ebr = ruptures[0]
-            act_ruptures[ebr.grp_id] += len(ruptures)
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
-            par = par.copy()
-            par['samples'] = self.samples_by_grp[ebr.grp_id]
-            yield ruptures, self.src_filter, rlzs_by_gsim, par
-
-        self.setting_events()
+                    smap.submit(block, self.src_filter, par)
+        for srcs in smap:
+            srcs_by_grp[srcs[0].src_group_id] += srcs
 
         # storing logic tree info
-        self.store_csm_info(eff_ruptures)
+        if self.oqparam.prefilter_sources == 'no':
+            # full logic tree reduction, experimental and risky
+            self.store_csm_info(
+                {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
+                 for gid in srcs_by_grp})
+        else:
+            # regular logic tree reduction
+            self.store_csm_info(
+                {gid: sum(src.num_ruptures for src in srcs_by_grp[gid])
+                 for gid in srcs_by_grp})
         store_rlzs_by_grp(self.datastore)
+        self.init_logic_tree(self.csm.info)
+        self._store_ruptures(srcs_by_grp)
+        self.setting_events()
 
-        if self.oqparam.ground_motion_fields:
-            logging.info('Processing the GMFs')
+        def gen():
+            for grp_id, srcs in srcs_by_grp.items():
+                theruptures = sum([src.eb_ruptures for src in srcs], [])
+                for ruptures in block_splitter(
+                        theruptures, BLOCKSIZE,
+                        weight_rup, operator.attrgetter('grp_id')):
+                    ebr = ruptures[0]
+                    rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
+                    par['samples'] = self.samples_by_grp[ebr.grp_id]
+                    yield ruptures, self.src_filter, rlzs_by_gsim, par
+
+            if self.oqparam.ground_motion_fields:
+                logging.info('Processing the GMFs')
+        return gen()
 
     def agg_dicts(self, acc, result):
         """
@@ -433,6 +445,7 @@ class EventBasedCalculator(base.HazardCalculator):
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
+            ruptures_per_block=oq.ruptures_per_block,
             imtls=oq.imtls, filter_distance=oq.filter_distance,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
         if oq.hazard_calculation_id:  # from ruptures
@@ -514,7 +527,7 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.csm_info.get_rlzs_assoc().realizations
+            rlzs = self.rlzs_assoc.realizations
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight for rlz in rlzs]
@@ -522,10 +535,16 @@ class EventBasedCalculator(base.HazardCalculator):
             # curves if oq.individual_curves is set; for the moment we
             # save the statistical curves only
             hstats = oq.hazard_stats()
+            pmaps = list(result.values())
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
+                if len(weights) != len(pmaps):
+                    # this should never happen, unless I break the
+                    # logic tree reduction mechanism during refactoring
+                    raise AssertionError('Expected %d pmaps, got %d' %
+                                         (len(weights), len(pmaps)))
                 for statname, stat in hstats:
-                    pmap = compute_pmap_stats(result.values(), [stat], weights)
+                    pmap = compute_pmap_stats(pmaps, [stat], weights)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
