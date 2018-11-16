@@ -697,8 +697,8 @@ class Exposure(object):
               'area', 'assets', 'asset_refs',
               'cost_calculator', 'tagcol']
 
-    @classmethod
-    def read(cls, fname, calculation_mode='', region_constraint='',
+    @staticmethod
+    def read(fname, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
@@ -732,8 +732,8 @@ class Exposure(object):
         assert values, 'Could not find any value??'
         return exposure
 
-    @classmethod
-    def read_header(cls, fname):
+    @staticmethod
+    def read_header(fname):
         """
         :param fname: path to an exposure file in XML format
         :returns: an Exposure object without assets
