@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, block_splitter, split_in_slices, humansize, cached_property)
+    AccumDict, split_in_blocks, split_in_slices, humansize, cached_property)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -43,7 +43,6 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = U64(2 ** 32)
-BLOCKSIZE = 30000  # decided by MS
 rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 
@@ -242,7 +241,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Found %d ruptures', U)
         parent = self.can_read_parent() or self.datastore
 
-        def gen():
+        def genargs():
             for slc in split_in_slices(U, concurrent_tasks or 1):
                 for grp_id in self.rlzs_by_gsim_grp:
                     rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
@@ -250,7 +249,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     par = param.copy()
                     par['samples'] = self.samples_by_grp[grp_id]
                     yield ruptures, self.sitecol, rlzs_by_gsim, par
-        return gen()
+        return genargs()
 
     def zerodict(self):
         """
@@ -295,7 +294,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return src.num_ruptures * factor
 
         def weight_rup(ebr):
-            return numpy.sqrt(ebr.n_occ.sum() * len(ebr.sids))
+            return 1
 
         logging.info('Building ruptures')
         smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
@@ -329,20 +328,23 @@ class EventBasedCalculator(base.HazardCalculator):
         self._store_ruptures(srcs_by_grp)
         self.setting_events()
 
-        def gen():
+        def genargs():
+            ruptures = []
             for grp_id, srcs in srcs_by_grp.items():
-                theruptures = sum([src.eb_ruptures for src in srcs], [])
-                for ruptures in block_splitter(
-                        theruptures, BLOCKSIZE,
-                        weight_rup, operator.attrgetter('grp_id')):
-                    ebr = ruptures[0]
-                    rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
-                    par['samples'] = self.samples_by_grp[ebr.grp_id]
-                    yield ruptures, self.src_filter, rlzs_by_gsim, par
+                for src in srcs:
+                    ruptures.extend(src.eb_ruptures)
+            ruptures.sort(key=operator.attrgetter('serial'))  # not mandatory
+            ct = self.oqparam.concurrent_tasks or 1
+            for rups in split_in_blocks(ruptures, ct,
+                                        key=operator.attrgetter('grp_id')):
+                ebr = rups[0]
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[ebr.grp_id]
+                par['samples'] = self.samples_by_grp[ebr.grp_id]
+                yield rups, self.src_filter, rlzs_by_gsim, par
 
             if self.oqparam.ground_motion_fields:
                 logging.info('Processing the GMFs')
-        return gen()
+        return genargs()
 
     def agg_dicts(self, acc, result):
         """
@@ -459,6 +461,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     pass
                 return {}
         self.idx = 0  # event ID index, used for UCERF
+        # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
