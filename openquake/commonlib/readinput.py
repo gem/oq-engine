@@ -939,27 +939,32 @@ def get_risk_model(oqparam):
     return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
 
-def get_exposure(oqparam, header_only=False):
+def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param header_only:
-        if True, read only the header of the exposure and ignore the assets
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    fname = oqparam.inputs['exposure']
-    if header_only:
-        return asset._get_exposure(fname, stop='assets')[0]
     logging.info('Reading the exposure')
     exposure = asset.Exposure.read(
-        fname, oqparam.calculation_mode,
+        oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
+
+
+def get_empty_exposure(fname):
+    """
+    :param fname: path to an exposure file in XML format
+    :returns: an Exposure object
+
+    This function reads only the header of the exposure, so it is ultra-fast
+    """
+    return asset._get_exposure(fname, stop='assets')[0]
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
