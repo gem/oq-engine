@@ -384,7 +384,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
-        exp, _assets = asset._get_exposure(self.exposure, stop='assets')
+        exp = asset.Exposure.read_header(self.exposure)
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertIsNone(exp.insurance_limit_is_absolute)
         self.assertIsNone(exp.deductible_is_absolute)

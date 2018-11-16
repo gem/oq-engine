@@ -697,8 +697,8 @@ class Exposure(object):
               'area', 'assets', 'asset_refs',
               'cost_calculator', 'tagcol']
 
-    @classmethod
-    def read(cls, fname, calculation_mode='', region_constraint='',
+    @staticmethod
+    def read(fname, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
@@ -731,6 +731,14 @@ class Exposure(object):
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
         return exposure
+
+    @staticmethod
+    def read_header(fname):
+        """
+        :param fname: path to an exposure file in XML format
+        :returns: an Exposure object without assets
+        """
+        return _get_exposure(fname, stop='assets')[0]
 
     def __init__(self, *values):
         assert len(values) == len(self.fields)

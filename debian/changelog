@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an easy way to read the exposure header
+  * Added a way to run Python scripts using the engine libraries via `oq shell`
   * Improved the minimum_magnitude feature
   * Fixed the check on missing hazard IMTs
   * Reduced substantially the memory occupation in event based risk
