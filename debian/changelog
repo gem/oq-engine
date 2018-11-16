@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an easy way to read the exposure header
   * Improved the minimum_magnitude feature
   * Fixed the check on missing hazard IMTs
   * Reduced substantially the memory occupation in event based risk
