@@ -904,8 +904,8 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
     """
     mon = monitor('split_filter')
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    logging.info('Splitting/filtering sources with %s',
-                 srcfilter.__class__.__name__)
+    msg = 'Splitting/filtering' if split else 'Filtering'
+    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
@@ -924,11 +924,7 @@ def parallel_split_filter(csm, srcfilter, split, monitor):
             arr[i, 0] += stime[i]  # split_time
             arr[i, 1] += 1         # num_split
             srcs_by_grp[split.src_group_id].append(split)
-    if seed and not srcs_by_grp:
-        sys.stderr.write('Too much sampling, no sources\n')
-        sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
-    elif not srcs_by_grp:
-        # raise an exception in the regular case (no sample_factor)
+    if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
         source_info[:, 'split_time'] = arr[:, 0]
