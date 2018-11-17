@@ -863,8 +863,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
     # splitting assumes that the serials have been initialized already
-    if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
-        csm = parallel_split_filter(csm, srcfilter, monitor('prefilter'))
+    split = (split_all and oqparam.calculation_mode not in
+             'ucerf_hazard ucerf_risk')
+    csm = parallel_split_filter(csm, srcfilter, split, monitor('prefilter'))
     return csm
 
 
@@ -885,7 +886,17 @@ def split_filter(srcs, srcfilter, seed, monitor):
         yield splits, stime
 
 
-def parallel_split_filter(csm, srcfilter, monitor):
+def only_filter(srcs, srcfilter, dummy, monitor):
+    """
+    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
+    if there are filtered sources.
+    """
+    srcs = list(srcfilter.filter(srcs))
+    if srcs:
+        yield srcs, {src.id: 0 for src in srcs}
+
+
+def parallel_split_filter(csm, srcfilter, split, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
@@ -898,7 +909,8 @@ def parallel_split_filter(csm, srcfilter, monitor):
     sources = csm.get_sources()
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
-        split_filter, (sources, srcfilter, seed, mon),
+        split_filter if split else only_filter,
+        (sources, srcfilter, seed, mon),
         maxweight=RUPTURES_PER_BLOCK, distribute=dist,
         progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
