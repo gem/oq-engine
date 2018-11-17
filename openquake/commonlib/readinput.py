@@ -26,6 +26,7 @@ import zipfile
 import logging
 import tempfile
 import operator
+import functools
 import configparser
 import collections
 import numpy
@@ -545,20 +546,20 @@ class SourceModelFactory(object):
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
-            a copy of the original source model with changed sources (if any)
-            or the original model with unchanged sources
+            a copy of the original source model with changed sources, if any
         """
         check_nonparametric_sources(fname, sm, investigation_time)
-        if apply_uncertainties:
-            sm = copy.deepcopy(sm)
-            for group in sm:
-                for src in group:
-                    apply_uncertainties(src)
-                    self.changed_sources += 1
-                    # NB: redoing count_ruptures which can be slow
+        newsm = nrml.SourceModel(
+            [], sm.name, sm.investigation_time, sm.start_time)
+        for group in sm:
+            newgroup = apply_uncertainties(group)
+            newsm.src_groups.append(newgroup)
+            if getattr(newgroup, 'applied_uncertainties', []):
+                self.changed_sources += len(newgroup)
+                for src in newgroup:  # redoing count_ruptures can be slow
                     src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
-        return sm
+        return newsm
 
 
 source_info_dt = numpy.dtype([
@@ -633,6 +634,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     spinning_off = oqparam.pointsource_distance == {'default': 0.0}
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smlt_dir = os.path.dirname(source_model_lt.filename)
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
@@ -645,12 +648,16 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
-        logging.info('Reading the source model(s)')
-        dic = logictree.parallel_read_source_models(
-            gsim_lt, source_model_lt, converter, srcfilter, monitor)
+        logging.info('Reading the source model(s) in parallel')
+        smap = parallel.Starmap(
+            nrml.read_source_models, monitor=monitor, distribute=dist)
+        for sm in source_model_lt.gen_source_models(gsim_lt):
+            for name in sm.names.split():
+                fname = os.path.abspath(os.path.join(smlt_dir, name))
+                smap.submit([fname], converter)
+        dic = {sm.fname: sm for sm in smap}
 
     # consider only the effective realizations
-    smlt_dir = os.path.dirname(source_model_lt.filename)
     idx = 0
     grp_id = 0
     if monitor.hdf5:
@@ -659,6 +666,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5path = (getattr(srcfilter, 'hdf5path', None)
                     if oqparam.prefilter_sources == 'no' else None)
     for sm in source_model_lt.gen_source_models(gsim_lt):
+        apply_unc = functools.partial(
+            source_model_lt.apply_uncertainties, sm.path)
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
@@ -677,7 +686,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                          src.num_ruptures, 0, 0, 0, 0, 0))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
-                apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:

@@ -35,7 +35,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5, node, parallel
+from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
@@ -476,11 +476,11 @@ class FakeSmlt(object):
             yield LtSourceModel(
                 rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
 
-    def make_apply_uncertainties(self, branch_ids):
+    def apply_uncertainties(self, branch_ids, sourcegroup):
         """
-        :returns: a do nothing function
+        :returns: the sourcegroup unchanged
         """
-        return lambda source: None
+        return sourcegroup
 
     def get_trts(self):
         """
@@ -1227,7 +1227,7 @@ class SourceModelLogicTree(object):
                 self.source_ids.add(source_id)
                 self.source_types.add(source_type)
 
-    def make_apply_uncertainties(self, branch_ids):
+    def apply_uncertainties(self, branch_ids, source_group):
         """
         Parse the path through the source model logic tree and return
         "apply uncertainties" function.
@@ -1235,11 +1235,10 @@ class SourceModelLogicTree(object):
         :param branch_ids:
             List of string identifiers of branches, representing the path
             through source model logic tree.
+        :param source_group:
+            A group of sources
         :return:
-            Function to be applied to all the sources as they get read from
-            the database and converted to hazardlib representation. Function
-            takes one argument, that is the hazardlib source object, and
-            applies uncertainties to it in-place.
+            A copy of the original group with modified sources
         """
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
@@ -1252,13 +1251,16 @@ class SourceModelLogicTree(object):
             branchset = branch.child_branchset
 
         if not branchsets_and_uncertainties:
-            return  # nothing changed
+            return source_group  # nothing changed
 
-        def apply_uncertainties(source):
-            for branchset, value in branchsets_and_uncertainties:
+        sg = copy.deepcopy(source_group)
+        sg.applied_uncertainties = []
+        for branchset, value in branchsets_and_uncertainties:
+            for source in sg.sources:
                 branchset.apply_uncertainty(value, source)
-
-        return apply_uncertainties
+                sg.applied_uncertainties.append(
+                    (branchset.uncertainty_type, value))
+        return sg  # something changed
 
     def samples_by_lt_path(self):
         """
@@ -1549,30 +1551,3 @@ class GsimLogicTree(object):
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
-
-def parallel_read_source_models(gsim_lt, source_model_lt,
-                                converter, srcfilter, monitor):
-    """
-    Convert the source model files listed in the logic tree
-    into picked files.
-
-    :param gsim_lt: a :class:`GsimLogicTree` instance
-    :param source_model_lt: a :class:`SourceModelLogicTree` instance
-    :param converter:
-        a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
-    :param srcfilter: a SourceFilter or None
-    :param monitor: a `openquake.baselib.performance.Monitor` instance
-    :returns: a dictionary file -> file.pik
-    """
-    smlt_dir = os.path.dirname(source_model_lt.filename)
-    fnames = set()
-    for sm in source_model_lt.gen_source_models(gsim_lt):
-        for name in sm.names.split():
-            fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
-    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
-    dic = parallel.Starmap.apply(
-        nrml.read_source_models,
-        (sorted(fnames), converter, srcfilter, monitor),
-        distribute=dist).reduce()
-    return dic
