@@ -476,11 +476,10 @@ class FakeSmlt(object):
             yield LtSourceModel(
                 rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
 
-    def make_apply_uncertainties(self, branch_ids):
+    def apply_uncertainties(self, branch_ids, source):
         """
         :returns: a do nothing function
         """
-        return lambda source: None
 
     def get_trts(self):
         """
@@ -1227,7 +1226,7 @@ class SourceModelLogicTree(object):
                 self.source_ids.add(source_id)
                 self.source_types.add(source_type)
 
-    def make_apply_uncertainties(self, branch_ids):
+    def apply_uncertainties(self, branch_ids, source):
         """
         Parse the path through the source model logic tree and return
         "apply uncertainties" function.
@@ -1254,11 +1253,8 @@ class SourceModelLogicTree(object):
         if not branchsets_and_uncertainties:
             return  # nothing changed
 
-        def apply_uncertainties(source):
-            for branchset, value in branchsets_and_uncertainties:
-                branchset.apply_uncertainty(value, source)
-
-        return apply_uncertainties
+        for branchset, value in branchsets_and_uncertainties:
+            branchset.apply_uncertainty(value, source)
 
     def samples_by_lt_path(self):
         """

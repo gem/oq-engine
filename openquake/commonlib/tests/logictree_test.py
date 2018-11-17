@@ -2451,13 +2451,13 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
 
     def test_parse_source_model_logictree_path(self):
-        make_apply_un = self.source_model_lt.make_apply_uncertainties
-        make_apply_un(['b1', 'b5', 'b8'])(None)
+        apply_un = self.source_model_lt.apply_uncertainties
+        apply_un(['b1', 'b5', 'b8'], None)
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', -0.2),
                           ('bGRRelative', -0.1)])
         del self.uncertainties_applied[:]
-        make_apply_un(['b1', 'b3', 'b6'])(None)
+        apply_un(['b1', 'b3', 'b6'], None)
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
