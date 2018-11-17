@@ -647,7 +647,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     elif in_memory:
         logging.info('Reading the source model(s)')
         dic = logictree.parallel_read_source_models(
-            gsim_lt, source_model_lt, converter, monitor)
+            gsim_lt, source_model_lt, converter, srcfilter, monitor)
 
     # consider only the effective realizations
     smlt_dir = os.path.dirname(source_model_lt.filename)

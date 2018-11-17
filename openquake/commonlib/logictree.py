@@ -1552,7 +1552,7 @@ class GsimLogicTree(object):
 
 
 def parallel_read_source_models(gsim_lt, source_model_lt,
-                                converter, monitor):
+                                converter, srcfilter, monitor):
     """
     Convert the source model files listed in the logic tree
     into picked files.
@@ -1561,6 +1561,7 @@ def parallel_read_source_models(gsim_lt, source_model_lt,
     :param source_model_lt: a :class:`SourceModelLogicTree` instance
     :param converter:
         a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
+    :param srcfilter: a SourceFilter or None
     :param monitor: a `openquake.baselib.performance.Monitor` instance
     :returns: a dictionary file -> file.pik
     """
@@ -1571,6 +1572,7 @@ def parallel_read_source_models(gsim_lt, source_model_lt,
             fnames.add(os.path.abspath(os.path.join(smlt_dir, name)))
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     dic = parallel.Starmap.apply(
-        nrml.read_source_models, (sorted(fnames), converter, monitor),
+        nrml.read_source_models,
+        (sorted(fnames), converter, srcfilter, monitor),
         distribute=dist).reduce()
     return dic
