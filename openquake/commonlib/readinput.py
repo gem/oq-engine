@@ -634,6 +634,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     spinning_off = oqparam.pointsource_distance == {'default': 0.0}
     if spinning_off:
         logging.info('Removing nodal plane and hypocenter distributions')
+    dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
+    smlt_dir = os.path.dirname(source_model_lt.filename)
     converter = sourceconverter.SourceConverter(
         oqparam.investigation_time,
         oqparam.rupture_mesh_spacing,
@@ -646,12 +648,16 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     if oqparam.calculation_mode.startswith('ucerf'):
         [grp] = nrml.to_python(oqparam.inputs["source_model"], converter)
     elif in_memory:
-        logging.info('Reading the source model(s)')
-        dic = logictree.parallel_read_source_models(
-            gsim_lt, source_model_lt, converter, monitor)
+        logging.info('Reading the source model(s) in parallel')
+        smap = parallel.Starmap(
+            nrml.read_source_models, monitor=monitor, distribute=dist)
+        for sm in source_model_lt.gen_source_models(gsim_lt):
+            for name in sm.names.split():
+                fname = os.path.abspath(os.path.join(smlt_dir, name))
+                smap.submit([fname], converter)
+        dic = {sm.fname: sm for sm in smap}
 
     # consider only the effective realizations
-    smlt_dir = os.path.dirname(source_model_lt.filename)
     idx = 0
     grp_id = 0
     if monitor.hdf5:
