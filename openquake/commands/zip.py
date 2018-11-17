@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib import sap
-from openquake.engine.engine import zip
+from openquake.engine.engine import zip_job
 
-zip = sap.Script(zip)
+zip = sap.Script(zip_job, name='zip')
 zip.arg('job_ini', 'path to a job.ini file')
 zip.arg('archive_zip', 'path to a non-existing .zip file')
 zip.opt('risk_ini', 'optional .ini file for risk')
