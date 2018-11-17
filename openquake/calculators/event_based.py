@@ -323,17 +323,10 @@ class EventBasedCalculator(base.HazardCalculator):
         for srcs in smap:
             srcs_by_grp[srcs[0].src_group_id] += srcs
 
-        # storing logic tree info
-        if self.oqparam.prefilter_sources == 'no':
-            # full logic tree reduction, experimental and risky
-            self.store_csm_info(
-                {gid: sum(len(src.eb_ruptures) for src in srcs_by_grp[gid])
-                 for gid in srcs_by_grp})
-        else:
-            # regular logic tree reduction
-            self.store_csm_info(
-                {gid: sum(src.num_ruptures for src in srcs_by_grp[gid])
-                 for gid in srcs_by_grp})
+        # logic tree reduction
+        self.store_csm_info(
+            {gid: sum(src.num_ruptures for src in srcs_by_grp[gid])
+             for gid in srcs_by_grp})
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
