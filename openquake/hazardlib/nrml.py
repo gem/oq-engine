@@ -306,12 +306,22 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter,  monitor):
+def filter_sm(source_model, srcfilter):
+    """
+    Filter the sources inside a source model
+    """
+    for sg in source_model.src_groups:
+        sg.sources = list(srcfilter.filter(sg))
+
+
+def read_source_models(fnames, converter, srcfilter, monitor):
     """
     :param fnames:
         list of source model files
     :param converter:
         a SourceConverter instance
+    :param srcfilter:
+        a SourceFilter instance or None
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
     :returns:
@@ -328,6 +338,8 @@ def read_source_models(fnames, converter,  monitor):
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.relpath = fname[P:]
+        if srcfilter:
+            filter_sm(sm, srcfilter)
         fname2sm[fname] = sm
     return fname2sm
 
