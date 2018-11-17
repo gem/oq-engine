@@ -554,10 +554,9 @@ class SourceModelFactory(object):
         for group in sm:
             newgroup = apply_uncertainties(group)
             newsm.src_groups.append(newgroup)
-            if newgroup is not group:
+            if getattr(newgroup, 'applied_uncertainties', []):
                 self.changed_sources += len(newgroup)
-                for src in newgroup:
-                    # NB: redoing count_ruptures which can be slow
+                for src in newgroup:  # redoing count_ruptures can be slow
                     src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
         return newsm
