@@ -123,12 +123,4 @@ def export_output(dskey, calc_id, datadir, target_dir, export_types):
     if export_types and not outkey:
         yield 'There is no exporter for %s, %s' % (dskey, export_types)
         return
-    the_file = export_from_db(outkey, calc_id, datadir, target_dir)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        yield('Files exported:')
-        for fname in fnames:
-            yield os.path.join(dname, fname)
-    else:
-        yield 'File exported: %s' % the_file
+    yield from export_from_db(outkey, calc_id, datadir, target_dir)
