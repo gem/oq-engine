@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
+def zip_job(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -334,14 +334,18 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     tb = 'None\n'
     try:
         if input_zip:  # the input was zipped from the beginning
+            1 / 0
             data = open(input_zip, 'rb').read()
-        else:  # zip the input
+        elif oqparam.hazard_calculation_id:  # zip the input
             logs.LOG.info('zipping the input files')
             bio = io.BytesIO()
-            zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
+            zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
             data = bio.getvalue()
-        calc.datastore['input/zip'] = numpy.array(data)
-        calc.datastore.set_attrs('input/zip', nbytes=len(data))
+        else:
+            data = Non
+        if data:
+            calc.datastore['input/zip'] = numpy.array(data)
+            calc.datastore.set_attrs('input/zip', nbytes=len(data))
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})
