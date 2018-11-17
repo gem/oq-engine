@@ -72,7 +72,6 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
-import os
 import re
 import sys
 import decimal
