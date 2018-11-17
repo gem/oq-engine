@@ -72,7 +72,6 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
-import os
 import re
 import sys
 import decimal
@@ -306,30 +305,17 @@ validators = {
 }
 
 
-def filter_sm(source_model, srcfilter):
-    """
-    Filter the sources inside a source model
-    """
-    for sg in source_model.src_groups:
-        sg.sources = list(srcfilter.filter(sg))
-
-
-def read_source_models(fnames, converter, srcfilter, monitor):
+def read_source_models(fnames, converter, monitor):
     """
     :param fnames:
         list of source model files
     :param converter:
         a SourceConverter instance
-    :param srcfilter:
-        a SourceFilter instance or None
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
-    :returns:
-        a dictionary fname -> SourceModel instance
+    :yields:
+        SourceModel instances
     """
-    fname2sm = {}
-    prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
-    P = len(prefix) + 1
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
@@ -337,11 +323,8 @@ def read_source_models(fnames, converter, srcfilter, monitor):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        sm.relpath = fname[P:]
-        if srcfilter:
-            filter_sm(sm, srcfilter)
-        fname2sm[fname] = sm
-    return fname2sm
+        sm.fname = fname
+        yield sm
 
 
 def read(source, chatty=True, stop=None):
