@@ -687,6 +687,18 @@ def _get_exposure(fname, stop=None):
     return exp, exposure.assets
 
 
+def _minimal_tagcol(fnames):
+    tagnames = None
+    for fname in fnames:
+        exp = Exposure.read_header(fname)
+        if tagnames is None:
+            tagnames = set(exp.tagcol.tagnames)
+        else:
+            tagnames &= set(exp.tagcol.tagnames)
+    tagnames -= set(['taxonomy'])
+    return TagCollection(['taxonomy'] + list(tagnames))
+
+
 class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
@@ -708,12 +720,15 @@ class Exposure(object):
         Node objects (one Node for each asset).
         """
         if len(fnames) > 1:
+            tagcol = _minimal_tagcol(fnames)
             for i, fname in enumerate(fnames):
                 prefix = 'E%02d_' % i
                 if i == 0:  # first exposure
                     exp = Exposure.read(
                         [fname], calculation_mode, region_constraint,
                         ignore_missing_costs, asset_nodes, check_dupl, prefix)
+                    exp.tagcol = tagcol
+                    exp.description = 'Composite exposure[%d]' % len(fnames)
                 else:
                     exposure, assets = _get_exposure(fname)
                     assert exposure.cost_types == exp.cost_types
@@ -722,7 +737,7 @@ class Exposure(object):
                             exp.insurance_limit_is_absolute)
                     assert exposure.retrofitted == exp.retrofitted
                     assert exposure.area == exp.area
-                    assert exposure.tagcol == exposure.tagcol
+                    exposure.tagcol = exp.tagcol
                     nodes = assets if assets else exposure._read_csv(
                         assets.text, os.path.dirname(fname))
                     exp._populate_from(nodes, exp.param, check_dupl)
