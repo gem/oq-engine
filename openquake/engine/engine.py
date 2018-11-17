@@ -251,7 +251,7 @@ def zip_job(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
                     files.add(table)
 
     # collect exposure.csv, if any
-    exposures_xml = oq.inputs.get('exposure')
+    exposures_xml = oq.inputs.get('exposure', [])
     for exposure_xml in exposures_xml:
         dname = os.path.dirname(exposure_xml)
         expo = nrml.read(exposure_xml, stop='asset')[0]
