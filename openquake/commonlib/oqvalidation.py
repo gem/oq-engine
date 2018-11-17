@@ -254,6 +254,11 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
+        # check for preclassical
+        if (self.calculation_mode == 'preclassical' and
+                self.prefilter_sources != 'no'):
+            logging.error('You forgot to set prefilter_sources = no')
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
