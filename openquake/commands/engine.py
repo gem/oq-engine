@@ -174,8 +174,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        if len(job_inis) == 1 and not hc_id:
-            # special case for single file event_based_risk
+        if len(job_inis) == 1 and not hc_id and job_inis[0].endswith('.ini'):
+            # for single file event_based_risk run two calculations and exit
             txt = open(job_inis[0]).read()
             if re.search(r'calculation_mode\s*=\s*event_based_risk', txt):
                 hc_id = run_job(job_inis[0], log_level, log_file,
