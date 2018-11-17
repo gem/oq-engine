@@ -1227,7 +1227,7 @@ class SourceModelLogicTree(object):
                 self.source_ids.add(source_id)
                 self.source_types.add(source_type)
 
-    def apply_uncertainties(self, branch_ids, source_group, applied=None):
+    def apply_uncertainties(self, branch_ids, source_group):
         """
         Parse the path through the source model logic tree and return
         "apply uncertainties" function.
@@ -1254,11 +1254,12 @@ class SourceModelLogicTree(object):
             return source_group  # nothing changed
 
         sg = copy.deepcopy(source_group)
+        sg.applied_uncertainties = []
         for branchset, value in branchsets_and_uncertainties:
-            for source in sg:
+            for source in sg.sources:
                 branchset.apply_uncertainty(value, source)
-                if applied is not None:  # used in the test
-                    applied.append((branchset.uncertainty_type, value))
+                sg.applied_uncertainties.append(
+                    (branchset.uncertainty_type, value))
         return sg  # something changed
 
     def samples_by_lt_path(self):
