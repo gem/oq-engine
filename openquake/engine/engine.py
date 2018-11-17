@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
+def zip_job(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -330,18 +330,16 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
         set_concurrent_tasks_default(job_id)
     calc.from_engine = True
-    input_zip = oqparam.inputs.get('input_zip')
     tb = 'None\n'
     try:
-        if input_zip:  # the input was zipped from the beginning
-            data = open(input_zip, 'rb').read()
-        else:  # zip the input
+        if not oqparam.hazard_calculation_id:
             logs.LOG.info('zipping the input files')
             bio = io.BytesIO()
-            zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
-            data = bio.getvalue()
-        calc.datastore['input/zip'] = numpy.array(data)
-        calc.datastore.set_attrs('input/zip', nbytes=len(data))
+            zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
+            data = numpy.array(bio.getvalue())
+            calc.datastore['input/zip'] = data
+            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
+            del bio, data  # save memory
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})
