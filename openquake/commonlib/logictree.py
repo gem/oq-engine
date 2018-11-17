@@ -35,7 +35,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 import numpy
-from openquake.baselib import hdf5, node, parallel
+from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby, duplicated
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib.source as ohs
@@ -476,10 +476,11 @@ class FakeSmlt(object):
             yield LtSourceModel(
                 rlz.value, rlz.weight, ('b1',), [], num_gsim_paths, i, 1)
 
-    def apply_uncertainties(self, branch_ids, source):
+    def apply_uncertainties(self, branch_ids, sourcegroup):
         """
-        :returns: a do nothing function
+        :returns: the sourcegroup unchanged
         """
+        return sourcegroup
 
     def get_trts(self):
         """
@@ -1226,7 +1227,7 @@ class SourceModelLogicTree(object):
                 self.source_ids.add(source_id)
                 self.source_types.add(source_type)
 
-    def apply_uncertainties(self, branch_ids, source):
+    def apply_uncertainties(self, branch_ids, source_group, applied=None):
         """
         Parse the path through the source model logic tree and return
         "apply uncertainties" function.
@@ -1234,11 +1235,10 @@ class SourceModelLogicTree(object):
         :param branch_ids:
             List of string identifiers of branches, representing the path
             through source model logic tree.
+        :param source_group:
+            A group of sources
         :return:
-            Function to be applied to all the sources as they get read from
-            the database and converted to hazardlib representation. Function
-            takes one argument, that is the hazardlib source object, and
-            applies uncertainties to it in-place.
+            A copy of the original group with modified sources
         """
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
@@ -1251,12 +1251,15 @@ class SourceModelLogicTree(object):
             branchset = branch.child_branchset
 
         if not branchsets_and_uncertainties:
-            return  # nothing changed
+            return source_group  # nothing changed
 
+        sg = copy.deepcopy(source_group)
         for branchset, value in branchsets_and_uncertainties:
-            branchset.apply_uncertainty(value, source)
-
-        return True  # something changed
+            for source in sg:
+                branchset.apply_uncertainty(value, source)
+                if applied is not None:  # used in the test
+                    applied.append((branchset.uncertainty_type, value))
+        return sg  # something changed
 
     def samples_by_lt_path(self):
         """

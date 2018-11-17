@@ -546,19 +546,21 @@ class SourceModelFactory(object):
         :param investigation_time:
             the investigation_time in the job.ini
         :returns:
-            a copy of the original source model with changed sources (if any)
-            or the original model with unchanged sources
+            a copy of the original source model with changed sources, if any
         """
         check_nonparametric_sources(fname, sm, investigation_time)
-        sm = copy.deepcopy(sm)
+        newsm = nrml.SourceModel(
+            [], sm.name, sm.investigation_time, sm.start_time)
         for group in sm:
-            for src in group:
-                if apply_uncertainties(src):
-                    self.changed_sources += 1
+            newgroup = apply_uncertainties(group)
+            newsm.src_groups.append(newgroup)
+            if newgroup is not group:
+                self.changed_sources += len(newgroup)
+                for src in newgroup:
                     # NB: redoing count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
-        return sm
+        return newsm
 
 
 source_info_dt = numpy.dtype([
@@ -665,6 +667,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5path = (getattr(srcfilter, 'hdf5path', None)
                     if oqparam.prefilter_sources == 'no' else None)
     for sm in source_model_lt.gen_source_models(gsim_lt):
+        apply_unc = functools.partial(
+            source_model_lt.apply_uncertainties, sm.path)
         src_groups = []
         for name in sm.names.split():
             fname = os.path.abspath(os.path.join(smlt_dir, name))
@@ -683,8 +687,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                          src.num_ruptures, 0, 0, 0, 0, 0))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
-                apply_unc = functools.partial(
-                    source_model_lt.apply_uncertainties, sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:
