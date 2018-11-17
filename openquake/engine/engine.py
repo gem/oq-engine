@@ -342,7 +342,7 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
             data = bio.getvalue()
         else:
-            data = Non
+            data = None
         if data:
             calc.datastore['input/zip'] = numpy.array(data)
             calc.datastore.set_attrs('input/zip', nbytes=len(data))
