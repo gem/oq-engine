@@ -332,13 +332,13 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     calc.from_engine = True
     tb = 'None\n'
     try:
-        if oqparam.hazard_calculation_id:
+        if not oqparam.hazard_calculation_id:
             logs.LOG.info('zipping the input files')
             bio = io.BytesIO()
             zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
             data = numpy.array(bio.getvalue())
             calc.datastore['input/zip'] = data
-            calc.datastore.set_attrs('input/zip', nbytes=len(data))
+            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
             del bio, data  # save memory
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
