@@ -632,24 +632,17 @@ def get_result(request, result_id):
             'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
     elif len(exported) > 1:
         # Building an archive so that there can be a single file download
-        # NB: I am hiding the archive by starting its name with a '.',
-        # to avoid confusing the users, since the unzipped files are
-        # already in the tmpdir
-        archname = '.' + ds_key + '-' + export_type + '.zip'
+        archname = ds_key + '-' + export_type + '.zip'
         zipfiles(exported, os.path.join(tmpdir, archname))
         exported = os.path.join(tmpdir, archname)
     else:  # single file
         exported = exported[0]
-        
+
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
 
-    bname = os.path.basename(exported)
-    if bname.startswith('.'):  # strip it
-        bname = bname[1:]
-    fname = 'output-%s-%s' % (result_id, bname)
-    # 'b' is needed when running the WebUI on Windows
-    stream = FileWrapper(open(exported, 'rb'))
+    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(tmpdir))
     response = FileResponse(stream, content_type=content_type)
