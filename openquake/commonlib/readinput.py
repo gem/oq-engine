@@ -26,6 +26,7 @@ import zipfile
 import logging
 import tempfile
 import operator
+import functools
 import configparser
 import collections
 import numpy
@@ -677,7 +678,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                          src.num_ruptures, 0, 0, 0, 0, 0))]
                 hdf5.extend(sources, numpy.array(data, source_info_dt))
             elif in_memory:
-                apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
+                apply_unc = functools.partial(
+                    source_model_lt.apply_uncertainties, sm.path)
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:
