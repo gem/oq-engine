@@ -330,22 +330,16 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
         set_concurrent_tasks_default(job_id)
     calc.from_engine = True
-    input_zip = oqparam.inputs.get('input_zip')
     tb = 'None\n'
     try:
-        if input_zip:  # the input was zipped from the beginning
-            1 / 0
-            data = open(input_zip, 'rb').read()
-        elif oqparam.hazard_calculation_id:  # zip the input
+        if oqparam.hazard_calculation_id:
             logs.LOG.info('zipping the input files')
             bio = io.BytesIO()
             zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
-            data = bio.getvalue()
-        else:
-            data = None
-        if data:
-            calc.datastore['input/zip'] = numpy.array(data)
+            data = numpy.array(bio.getvalue())
+            calc.datastore['input/zip'] = data
             calc.datastore.set_attrs('input/zip', nbytes=len(data))
+            del bio, data  # save memory
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})
