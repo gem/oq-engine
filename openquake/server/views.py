@@ -42,7 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, gettemp
+from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -626,17 +626,26 @@ def get_result(request, result_id):
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
-    if exported is None:
+    if not exported:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for %s' % (export_type, ds_key))
-
+            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
+    elif len(exported) > 1:
+        # Building an archive so that there can be a single file download
+        # NB: I am hiding the archive by starting its name with a '.',
+        # to avoid confusing the users, since the unzipped files are
+        # already in the tmpdir
+        archname = '.' + ds_key + '-' + export_type + '.zip'
+        zipfiles(exported, os.path.join(tmpdir, archname))
+        exported = os.path.join(tmpdir, archname)
+    else:  # single file
+        exported = exported[0]
+        
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
 
     bname = os.path.basename(exported)
-    if bname.startswith('.'):
-        # the "." is added by `export_from_db`, strip it
+    if bname.startswith('.'):  # strip it
         bname = bname[1:]
     fname = 'output-%s-%s' % (result_id, bname)
     # 'b' is needed when running the WebUI on Windows
