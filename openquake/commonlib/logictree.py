@@ -1256,6 +1256,8 @@ class SourceModelLogicTree(object):
         for branchset, value in branchsets_and_uncertainties:
             branchset.apply_uncertainty(value, source)
 
+        return True  # something changed
+
     def samples_by_lt_path(self):
         """
         Returns a dictionary lt_path -> how many times that path was sampled

@@ -550,11 +550,10 @@ class SourceModelFactory(object):
             or the original model with unchanged sources
         """
         check_nonparametric_sources(fname, sm, investigation_time)
-        if apply_uncertainties:
-            sm = copy.deepcopy(sm)
-            for group in sm:
-                for src in group:
-                    apply_uncertainties(src)
+        sm = copy.deepcopy(sm)
+        for group in sm:
+            for src in group:
+                if apply_uncertainties(src):
                     self.changed_sources += 1
                     # NB: redoing count_ruptures which can be slow
                     src.num_ruptures = src.count_ruptures()
