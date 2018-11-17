@@ -21,6 +21,7 @@ Tests for python logic tree processor.
 """
 
 import os
+import mock
 import codecs
 import unittest
 import collections
@@ -2434,33 +2435,20 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def setUp(self):
         oqparam = tests.get_oqparam('classical_job.ini')
-
-        self.uncertainties_applied = []
-
-        def apply_uncertainty(branchset, value, source):
-            fingerprint = (branchset.uncertainty_type, value)
-            self.uncertainties_applied.append(fingerprint)
-        self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
-        logictree.BranchSet.apply_uncertainty = apply_uncertainty
-
         self.source_model_lt = readinput.get_source_model_lt(oqparam)
         self.gmpe_lt = readinput.get_gsim_lt(
             oqparam, ['Active Shallow Crust', 'Subduction Interface'])
 
-    def tearDown(self):
-        logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
-
     def test_parse_source_model_logictree_path(self):
         apply_un = self.source_model_lt.apply_uncertainties
-        apply_un(['b1', 'b5', 'b8'], None)
-        self.assertEqual(self.uncertainties_applied,
-                         [('maxMagGRRelative', -0.2),
-                          ('bGRRelative', -0.1)])
-        del self.uncertainties_applied[:]
-        apply_un(['b1', 'b3', 'b6'], None)
-        self.assertEqual(self.uncertainties_applied,
-                         [('maxMagGRRelative', 0.2),
-                          ('bGRRelative', 0.1)])
+        applied = []
+        apply_un(['b1', 'b5', 'b8'], [mock.Mock()], applied)
+        self.assertEqual(applied, [('maxMagGRRelative', -0.2),
+                                   ('bGRRelative', -0.1)])
+        applied = []
+        apply_un(['b1', 'b3', 'b6'], [mock.Mock()], applied)
+        self.assertEqual(applied, [('maxMagGRRelative', 0.2),
+                                   ('bGRRelative', 0.1)])
 
     def test_parse_invalid_smlt(self):
         smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
