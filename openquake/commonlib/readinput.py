@@ -117,7 +117,7 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key in ('hazard_curves_csv', 'site_model_file'):
+        if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
@@ -862,11 +862,10 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
-    if srcfilter and oqparam.prefilter_sources != 'no':
+    if (srcfilter and oqparam.prefilter_sources != 'no' and
+            oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
         mon = monitor('split_filter')
-        split = (split_all and oqparam.calculation_mode not in
-                 'ucerf_hazard ucerf_risk')
-        csm = parallel_split_filter(csm, srcfilter, split, mon)
+        csm = parallel_split_filter(csm, srcfilter, split_all, mon)
     return csm
 
 
@@ -966,9 +965,11 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    logging.info('Reading the exposure')
+    fnames = oqparam.inputs['exposure']
+    if len(fnames) > 1:
+        raise NotImplementedError('Multifile exposure')
     exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
+        fnames[0], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
