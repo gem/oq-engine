@@ -117,7 +117,7 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key in ('hazard_curves_csv', 'site_model_file'):
+        if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
@@ -966,9 +966,9 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    logging.info('Reading the exposure')
+    [fname] = oqparam.inputs['exposure']
     exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
+        fname, oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
