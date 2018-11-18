@@ -176,7 +176,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
             # special case for single file event_based_risk
-            logs.init()  # init logs before calling get_oqparam
+            # init logs before calling get_oqparam
+            logs.init(level=getattr(logging, log_level.upper()))
             oq = readinput.get_oqparam(job_inis[0])
             if oq.calculation_mode == 'event_based_risk':
                 hc_id = run_job(job_inis[0], log_level, log_file,
