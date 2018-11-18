@@ -301,6 +301,13 @@ def job_from_file(cfg_file, username, **kw):
     oq = readinput.get_oqparam(cfg_file, hc_id=hc_id)
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
+    if 'exposure_file' in kw:  # hack used in commands.engine
+        fnames = kw.pop('exposure_file').split()
+        if fnames:
+            oq.inputs['exposure'] = fnames
+        else:
+            del oq.inputs['exposure']
+
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                         username, datastore.get_datadir(), hc_id)
     return job_id, oq
@@ -333,13 +340,19 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     tb = 'None\n'
     try:
         if not oqparam.hazard_calculation_id:
-            logs.LOG.info('zipping the input files')
-            bio = io.BytesIO()
-            zip_job(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
-            data = numpy.array(bio.getvalue())
+            if 'input_zip' in oqparam.inputs:  # starting from an archive
+                with open(oqparam.inputs['input_zip'], 'rb') as arch:
+                    data = numpy.array(arch.read())
+            else:
+                logs.LOG.info('zipping the input files')
+                bio = io.BytesIO()
+                zip_job(
+                    oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
+                data = numpy.array(bio.getvalue())
+                del bio
             calc.datastore['input/zip'] = data
             calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
-            del bio, data  # save memory
+            del data  # save memory
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})

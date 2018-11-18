@@ -966,9 +966,11 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    [fname] = oqparam.inputs['exposure']
+    fnames = oqparam.inputs['exposure']
+    if len(fnames) > 1:
+        raise NotImplementedError('Multifile exposure')
     exposure = asset.Exposure.read(
-        fname, oqparam.calculation_mode,
+        fnames[0], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
