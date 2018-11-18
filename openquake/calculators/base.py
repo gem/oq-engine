@@ -413,7 +413,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(),
-                split_all=oq.prefilter_sources != 'no',
+                split_all=oq.split_sources,
                 srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
