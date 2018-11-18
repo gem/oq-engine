@@ -63,7 +63,7 @@ def store_rlzs_by_grp(dstore):
     Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
     """
     lst = []
-    assoc =  dstore['csm_info'].get_rlzs_assoc()
+    assoc = dstore['csm_info'].get_rlzs_assoc()
     logging.info('There are %d realizations', len(assoc.realizations))
     for grp, arr in assoc.by_grp().items():
         for gsim_id, rlzs in enumerate(arr):
@@ -481,9 +481,17 @@ class EventBasedCalculator(base.HazardCalculator):
                 dset = self.datastore.create_dset(
                     'gmf_data/indices', hdf5.vuint32,
                     shape=(N, 2), fillvalue=None)
+                num_evs = self.datastore.create_dset(
+                    'gmf_data/events_by_sid', U32, (N,))
                 for sid in self.sitecol.complete.sids:
-                    dset[sid, 0] = self.indices[sid, 0]
-                    dset[sid, 1] = self.indices[sid, 1]
+                    start = numpy.array(self.indices[sid, 0])
+                    stop = numpy.array(self.indices[sid, 1])
+                    dset[sid, 0] = start
+                    dset[sid, 1] = stop
+                    num_evs[sid] = (stop - start).sum()
+                self.datastore.set_attrs(
+                    'gmf_data', avg_events_by_sid=num_evs.value.sum() / N,
+                    max_events_by_sid=num_evs.value.max())
         elif (oq.ground_motion_fields and
               'ucerf' not in oq.calculation_mode):
             raise RuntimeError('No GMFs were generated, perhaps they were '
