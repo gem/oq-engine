@@ -183,9 +183,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
                                 exports, calculation_mode='event_based',
                                 exposure_file='')
                 for exp_file in oq.inputs['exposure']:
-                    run_job(job_inis[0], log_level, log_file,
-                            exports, hazard_calculation_id=hc_id,
-                            exposure_file=exp_file)
+                    try:
+                        run_job(job_inis[0], log_level, log_file,
+                                exports, hazard_calculation_id=hc_id,
+                                exposure_file=exp_file)
+                    except Exception:  # skip failed computations
+                        pass
                 return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
