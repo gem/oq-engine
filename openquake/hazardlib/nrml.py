@@ -305,7 +305,7 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter,  monitor):
+def read_source_models(fnames, converter, monitor):
     """
     :param fnames:
         list of source model files
