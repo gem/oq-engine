@@ -63,7 +63,9 @@ def store_rlzs_by_grp(dstore):
     Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
     """
     lst = []
-    for grp, arr in dstore['csm_info'].get_rlzs_assoc().by_grp().items():
+    assoc =  dstore['csm_info'].get_rlzs_assoc()
+    logging.info('There are %d realizations', len(assoc.realizations))
+    for grp, arr in assoc.by_grp().items():
         for gsim_id, rlzs in enumerate(arr):
             lst.append((int(grp[4:]), gsim_id, rlzs))
     dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
