@@ -175,11 +175,12 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
-            # special case for single file event_based_risk
             # init logs before calling get_oqparam
             logs.init(level=getattr(logging, log_level.upper()))
             oq = readinput.get_oqparam(job_inis[0])
-            if oq.calculation_mode == 'event_based_risk':
+            if (oq.calculation_mode == 'event_based_risk' and
+                    'site_model' in oq.inputs):
+                # special case for single file global risk model
                 hc_id = run_job(job_inis[0], log_level, log_file,
                                 exports, calculation_mode='event_based',
                                 exposure_file='')
