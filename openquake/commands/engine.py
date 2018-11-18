@@ -23,7 +23,7 @@ import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs
+from openquake.commonlib import logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -176,12 +176,15 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
             # special case for single file event_based_risk
-            txt = open(job_inis[0]).read()
-            if re.search(r'calculation_mode\s*=\s*event_based_risk', txt):
+            oq = readinput.get_oqparam(job_inis[0])
+            if oq.calculation_mode == 'event_based_risk':
                 hc_id = run_job(job_inis[0], log_level, log_file,
-                                exports, calculation_mode='event_based')
-                job_id = run_job(job_inis[0], log_level, log_file,
-                                 exports, hazard_calculation_id=hc_id)
+                                exports, calculation_mode='event_based',
+                                exposure_file='')
+                for exp_file in oq.inputs['exposure_file'].split():
+                    run_job(job_inis[0], log_level, log_file,
+                            exports, hazard_calculation_id=hc_id,
+                            exposure_file=exp_file)
                 return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
