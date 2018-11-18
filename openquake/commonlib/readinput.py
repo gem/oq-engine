@@ -862,9 +862,11 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
-    # splitting assumes that the serials have been initialized already
-    if split_all and oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk':
-        csm = parallel_split_filter(csm, srcfilter, monitor('prefilter'))
+    if srcfilter and oqparam.prefilter_sources != 'no':
+        mon = monitor('split_filter')
+        split = (split_all and oqparam.calculation_mode not in
+                 'ucerf_hazard ucerf_risk')
+        csm = parallel_split_filter(csm, srcfilter, split, mon)
     return csm
 
 
@@ -885,7 +887,17 @@ def split_filter(srcs, srcfilter, seed, monitor):
         yield splits, stime
 
 
-def parallel_split_filter(csm, srcfilter, monitor):
+def only_filter(srcs, srcfilter, dummy, monitor):
+    """
+    Filter the given sources. Yield a pair (filtered_sources, {src.id: 0})
+    if there are filtered sources.
+    """
+    srcs = list(srcfilter.filter(srcs))
+    if srcs:
+        yield srcs, {src.id: 0 for src in srcs}
+
+
+def parallel_split_filter(csm, srcfilter, split, monitor):
     """
     Apply :func:`split_filter` in parallel to the composite source model.
 
@@ -893,12 +905,13 @@ def parallel_split_filter(csm, srcfilter, monitor):
     """
     mon = monitor('split_filter')
     seed = int(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    logging.info('Splitting/filtering sources with %s',
-                 srcfilter.__class__.__name__)
+    msg = 'Splitting/filtering' if split else 'Filtering'
+    logging.info('%s sources with %s', msg, srcfilter.__class__.__name__)
     sources = csm.get_sources()
     dist = 'no' if os.environ.get('OQ_DISTRIBUTE') == 'no' else 'processpool'
     smap = parallel.Starmap.apply(
-        split_filter, (sources, srcfilter, seed, mon),
+        split_filter if split else only_filter,
+        (sources, srcfilter, seed, mon),
         maxweight=RUPTURES_PER_BLOCK, distribute=dist,
         progress=logging.debug, weight=operator.attrgetter('num_ruptures'))
     if monitor.hdf5:
@@ -912,11 +925,7 @@ def parallel_split_filter(csm, srcfilter, monitor):
             arr[i, 0] += stime[i]  # split_time
             arr[i, 1] += 1         # num_split
             srcs_by_grp[split.src_group_id].append(split)
-    if seed and not srcs_by_grp:
-        sys.stderr.write('Too much sampling, no sources\n')
-        sys.exit(0)  # returncode 0 to avoid breaking the mosaic tests
-    elif not srcs_by_grp:
-        # raise an exception in the regular case (no sample_factor)
+    if not srcs_by_grp:
         raise RuntimeError('All sources were filtered away!')
     elif monitor.hdf5:
         source_info[:, 'split_time'] = arr[:, 0]

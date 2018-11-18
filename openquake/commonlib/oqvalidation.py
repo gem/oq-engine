@@ -150,6 +150,7 @@ class OqParam(valid.ParamSet):
     source_id = valid.Param(valid.source_id, None)
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
+    split_sources = valid.Param(valid.boolean, True)
     pointsource_distance = valid.Param(valid.maximum_distance, {})
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -253,11 +254,6 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
-
-        # check for preclassical
-        if (self.calculation_mode == 'preclassical' and
-                self.prefilter_sources != 'no'):
-            logging.error('You forgot to set prefilter_sources = no')
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
