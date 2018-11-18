@@ -706,6 +706,7 @@ class Exposure(object):
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
+        logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['out_of_region'] = 0
         if region_constraint:
