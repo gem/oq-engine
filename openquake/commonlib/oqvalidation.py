@@ -255,10 +255,6 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
-        # check for preclassical
-        if self.calculation_mode == 'preclassical' and self.split_sources:
-            logging.error('You forgot to set split_sources = false')
-
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and not self.iml_disagg:
