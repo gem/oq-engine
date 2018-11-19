@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import re
 import sys
+import time
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore
@@ -180,6 +180,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             oq = readinput.get_oqparam(job_inis[0])
             if (oq.calculation_mode == 'event_based_risk' and
                     'site_model' in oq.inputs):
+                t0 = time.time()
                 # special case for single file global risk model
                 hc_id = run_job(job_inis[0], log_level, log_file,
                                 exports, calculation_mode='event_based',
@@ -191,6 +192,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
                                 exposure_file=exp_file)
                     except Exception:  # skip failed computations
                         pass
+                dt = time.time() - t0
+                logging.info('Ran %d calculations in %.1f minutes',
+                             len(oq.inputs['exposure']) + 1, dt / 60)
                 return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
