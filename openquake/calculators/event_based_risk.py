@@ -81,7 +81,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         except MemoryError:
             raise MemoryError(
                 'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
-        result = dict(aids=ri.aids, avglosses=avg)
+        result = dict(aids=ri.aids, avglosses=avg, agglosses=[])
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
@@ -121,7 +121,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         agglosses[:, l + L * i] += losses[:, i]
 
             # agglosses
-            yield dict(eids=out.eids, agglosses=agglosses)
+            result['agglosses'].append((out.eids, agglosses))
 
         if 'builder' in param:
             clp = param['conditional_loss_poes']
@@ -245,9 +245,8 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
-        if 'eids' in dic:
-            self.agglosses[dic['eids']] += dic['agglosses']  # shape (E, LI)
-            return
+        for eids, agglosses in dic.pop('agglosses'):  # shape (E, LI)
+            self.agglosses[eids] += agglosses
         aids = dic.pop('aids')
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
