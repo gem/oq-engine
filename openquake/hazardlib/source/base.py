@@ -109,11 +109,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :param ir_monitor: a monitor object for .iter_ruptures()
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
-        shape = (num_samples, num_ses)
         mutex_weight = getattr(self, 'mutex_weight', 1)
         with ir_monitor:
             ruptures = list(self.iter_ruptures())
-        nr = len(ruptures)
         tom = getattr(self, 'temporal_occurrence_model', None)
         unsplit = isinstance(self.serial, int)
         if unsplit:  # prefilter_sources=no was given
@@ -122,31 +120,26 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         else:  # the serials have been generated in prefiltering
             serials = self.serial
         if tom and unsplit:  # time-independent source
-            _rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            if num_samples > 1:
-                rates = numpy.zeros((nr, num_samples))
-                for sam in range(num_samples):
-                    rates[:, sam] = _rates
-            else:
-                rates = _rates.reshape((nr, 1))
+            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
-            occurs = numpy.random.poisson(rates * tom.time_span * num_ses)
+            occurs = numpy.random.poisson(rates * tom.time_span
+                                          * num_ses * num_samples)
             for rup, serial, num_occ in zip(ruptures, serials, occurs):
-                if num_occ.any():
+                if num_occ:
                     rup.serial = serial  # used as seed
                     yield rup, num_occ
         else:  # time-dependent source
             for rup, serial in zip(ruptures, serials):
                 numpy.random.seed(serial)
-                num_occ = rup.sample_number_of_occurrences(shape)
-                if num_occ.any():
+                [num_occ] = sum(rup.sample_number_of_occurrences()
+                                for _ in range(num_samples))
+                if num_occ:
                     if mutex_weight < 1:
                         # consider only the occurrencies below the mutex_weight
-                        num_occ *= numpy.random.random(shape) < mutex_weight
-                    occ = num_occ.sum(axis=1)
-                    if num_occ.any():
+                        num_occ *= numpy.random.random() < mutex_weight
+                    if num_occ:
                         rup.serial = serial  # used as seed
-                        yield rup, occ
+                        yield rup, num_occ
 
     def __iter__(self):
         """

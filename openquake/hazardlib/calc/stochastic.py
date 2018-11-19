@@ -113,7 +113,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     for src, sites in src_filter(sources):
         t0 = time.time()
         ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
-        n_occ = sum(ebr.n_occ.sum() for ebr in ebrs)
+        n_occ = sum(ebr.n_occ for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
