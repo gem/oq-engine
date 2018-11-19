@@ -15,24 +15,30 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
+from openquake.baselib import sap
 from openquake.risklib.countries import code2country
 
-# example: utils/addcol.py Exposure_Res_Venezuela.csv country=VEN
+# example: utils/addcol.py country=VEN Exposure_Res_Venezuela.csv
 
 
-def main(fname, namevalue):
+@sap.Script
+def addcol(namevalue, fnames):
     name, value = namevalue.split('=')
     if name == 'country':
         assert value in code2country, value
-    header, *lines = open(fname).readlines()
-    out = [header.rstrip() + ',' + name]
-    for line in lines:
-        out.append(line.rstrip() + ',' + value)
-    with open(fname, 'w') as f:
-        for line in out:
-            f.write(line + '\n')
+    for fname in fnames:
+        header, *lines = open(fname).readlines()
+        out = [header.rstrip() + ',' + name]
+        for line in lines:
+            out.append(line.rstrip() + ',' + value)
+        with open(fname, 'w') as f:
+            for line in out:
+                f.write(line + '\n')
+        print('Added %s to %s' % (namevalue, fname))
 
+
+addcol.arg('namevalue', 'string of the form column_name=column_value')
+addcol.arg('fnames', 'CSV files to update', nargs='+')
 
 if __name__ == '__main__':
-    main(*sys.argv[1:])
+    addcol.callfunc()
