@@ -719,6 +719,7 @@ class Exposure(object):
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
+        logging.info('Reading %s', fname)
         if len(fnames) > 1:
             tagcol = _minimal_tagcol(fnames)
             for i, fname in enumerate(fnames):
