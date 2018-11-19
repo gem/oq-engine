@@ -356,7 +356,7 @@ class RuptureSerializer(object):
     """
     rupture_dt = numpy.dtype([
         ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-        ('multiplicity', U16),
+        ('n_occ', U16),
         ('eidx1', U32), ('eidx2', U32), ('gidx1', U32), ('gidx2', U32),
         ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
@@ -383,7 +383,8 @@ class RuptureSerializer(object):
             points = mesh.reshape(3, -1).T   # shape (n, 3)
             n = len(points)
             tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-                   rup.code, ebrupture.n_occ, ebrupture.eidx1, ebrupture.eidx2,
+                   rup.code, ebrupture.n_occ,
+                   ebrupture.eidx1, ebrupture.eidx2,
                    offset, offset + n, getattr(ebrupture, 'pmfx', -1),
                    rup.mag, rup.rake, rate, hypo, sy, sz)
             offset += n
