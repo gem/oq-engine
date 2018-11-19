@@ -93,11 +93,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
+            agglosses = numpy.zeros((len(out.eids), L*I), F32)
             for l, loss_ratios in enumerate(out):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
                 loss_type = riskmodel.loss_types[l]
-                agglosses = numpy.zeros((len(out.eids), I), F32)
                 for a, asset in enumerate(out.assets):
                     ratios = loss_ratios[a]  # shape (E, I)
                     aid = asset.ordinal
@@ -118,11 +118,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                             avg[idx, r, l + L * i] = rat[i]
 
                     # agglosses
-                    agglosses += losses
+                    for i in range(I):
+                        agglosses[:, l + L * i] += losses[:, i]
 
-                # agglosses
-                for i in range(I):
-                    agg.append((out.eids, l + L * i, agglosses[:, i]))
+            # agglosses
+            agg.append((out.eids, agglosses))
 
         result['agglosses'] = agg
         if 'builder' in param:
@@ -249,8 +249,8 @@ class EbrCalculator(base.RiskCalculator):
             dictionary with agglosses, avglosses
         """
         aids = dic.pop('aids')
-        for eids, li, agglosses in dic.pop('agglosses'):
-            self.agglosses[eids, li] += agglosses
+        for eids, agglosses in dic.pop('agglosses'):
+            self.agglosses[eids] += agglosses  # shape (E, LI)
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
