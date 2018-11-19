@@ -66,7 +66,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    E = param['num_events']
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
@@ -78,16 +77,11 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         A = len(ri.aids)
         R = ri.hazard_getter.num_rlzs
         try:
-            agg = numpy.zeros((E, L * I), F32)
-        except MemoryError:
-            raise MemoryError(
-                'Building array agg of shape (%d, %d, %d)' % (E, R, L*I))
-        try:
             avg = numpy.zeros((A, R, L * I), F32)
         except MemoryError:
             raise MemoryError(
                 'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
-        result = dict(aids=ri.aids, avglosses=avg)
+        result = dict(aids=ri.aids, avglosses=avg, agglosses=[])
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
@@ -98,6 +92,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             if len(out.eids) == 0:  # this happens for sites with no events
                 continue
             r = out.rlzi
+            agglosses = numpy.zeros((len(out.eids), L*I), F32)
             for l, loss_ratios in enumerate(out):
                 if loss_ratios is None:  # for GMFs below the minimum_intensity
                     continue
@@ -123,13 +118,13 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
                     # agglosses
                     for i in range(I):
-                        li = l + L * i
-                        # this is the critical loop: it is important to keep it
-                        # vectorized in terms of the event indices
-                        agg[out.eids, li] += losses[:, i]
+                        agglosses[:, l + L * i] += losses[:, i]
 
-        idx = agg.nonzero()  # return only the nonzero values
-        result['agglosses'] = (idx, agg[idx])
+            # NB: I could yield the agglosses per output, but then I would
+            # have millions of small outputs with big data transfer and slow
+            # saving time
+            result['agglosses'].append((out.eids, agglosses))
+
         if 'builder' in param:
             clp = param['conditional_loss_poes']
             result['curves-rlzs'], result['curves-stats'] = builder.pair(
@@ -187,7 +182,6 @@ class EbrCalculator(base.RiskCalculator):
         self.E = len(self.eidrlz)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
-        self.param['num_events'] = self.E
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
@@ -253,9 +247,9 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
+        for eids, agglosses in dic.pop('agglosses'):  # shape (E, LI)
+            self.agglosses[eids] += agglosses
         aids = dic.pop('aids')
-        idx, agg = dic.pop('agglosses')
-        self.agglosses[idx] += agg
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
