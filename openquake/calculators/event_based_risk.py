@@ -76,7 +76,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         mon = monitor('build risk curves', measuremem=False)
         A = len(ri.aids)
         R = ri.hazard_getter.num_rlzs
-        agg = []  # triples (eids, li, losses)
+        agg = []  # pairs (eids[E], agglosses[E, LI])
         try:
             avg = numpy.zeros((A, R, L * I), F32)
         except MemoryError:
@@ -182,7 +182,6 @@ class EbrCalculator(base.RiskCalculator):
         self.E = len(self.eidrlz)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
-        self.param['num_events'] = self.E
         self.param['insured_losses'] = oq.insured_losses
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
