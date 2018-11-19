@@ -545,6 +545,26 @@ def fix_shape(occur, num_rlzs):
     return n_occ
 
 
+def get_eids_by_rlz(n_occ, rlzs_by_gsim):
+    """
+    :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+    :returns: a dictionay rlz index -> eids array
+    """
+    i = 0
+    j = 0
+    dic = {}
+    for rlzs in rlzs_by_gsim.values():
+        for rlz in rlzs:
+            try:
+                n = n_occ[i]
+            except IndexError:
+                n = n_occ[0]  # there is a single n_occ
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+            i += 1
+            j += n
+    return dic
+
+
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
@@ -561,7 +581,7 @@ class EBRupture(object):
 
     def multiplicity(self, nr):
         if len(self.n_occ) != nr:  # full enumeration
-            return self.n_occ.sum() * nr
+            return self.n_occ.sum() * numpy.uint16(nr)
         return self.n_occ.sum()
 
     @property
@@ -577,25 +597,6 @@ class EBRupture(object):
         Weight of the EBRupture
         """
         return len(self.sids) * len(self.events)
-
-    def get_eids_by_rlz(self, rlzs_by_gsim):
-        """
-        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :returns: a dictionay rlz index -> eids array
-        """
-        i = 0
-        j = 0
-        dic = {}
-        nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-        if len(self.n_occ) != nr:  # full enumeration
-            self.n_occ = fix_shape(self.n_occ, nr)
-        for rlzs in rlzs_by_gsim.values():
-            for rlz in rlzs:
-                n = self.n_occ[i]
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-                i += 1
-                j += n
-        return dic
 
     def export(self, mesh, events):
         """

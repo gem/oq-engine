@@ -167,7 +167,7 @@ stddev         838           555
 
         # test the number of bytes saved in the rupture records
         nbytes = self.calc.datastore.get_attr('ruptures', 'nbytes')
-        self.assertEqual(nbytes, 1989)
+        self.assertEqual(nbytes, 2015)
 
         # test postprocessing
         self.calc.datastore.close()
