@@ -272,7 +272,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        return self.mfd.get_min_max_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
+        return max(self.min_mag, min_mag), max_mag
 
     def __repr__(self):
         """
