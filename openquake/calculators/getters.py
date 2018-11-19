@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, EBRupture, classes, TWO32)
+    BaseRupture, EBRupture, classes, TWO32, get_eids_by_rlz)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -334,7 +334,7 @@ class GmfGetter(object):
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
-            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
+            eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
