@@ -550,18 +550,12 @@ def get_eids_by_rlz(n_occ, rlzs_by_gsim):
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
     :returns: a dictionay rlz index -> eids array
     """
-    i = 0
     j = 0
     dic = {}
     for rlzs in rlzs_by_gsim.values():
         for rlz in rlzs:
-            try:
-                n = n_occ[i]
-            except IndexError:
-                n = n_occ[0]  # there is a single n_occ
-            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-            i += 1
-            j += n
+            dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
+            j += n_occ
     return dic
 
 
@@ -580,9 +574,7 @@ class EBRupture(object):
         self.n_occ = n_occ
 
     def multiplicity(self, nr):
-        if len(self.n_occ) != nr:  # full enumeration
-            return self.n_occ.sum() * numpy.uint16(nr)
-        return self.n_occ.sum()
+        return self.n_occ * nr
 
     @property
     def serial(self):
