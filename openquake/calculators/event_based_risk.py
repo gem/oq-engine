@@ -76,7 +76,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         mon = monitor('build risk curves', measuremem=False)
         A = len(ri.aids)
         R = ri.hazard_getter.num_rlzs
-        agg = []  # pairs (eids[E], agglosses[E, LI])
         try:
             avg = numpy.zeros((A, R, L * I), F32)
         except MemoryError:
@@ -122,9 +121,8 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                         agglosses[:, l + L * i] += losses[:, i]
 
             # agglosses
-            agg.append((out.eids, agglosses))
+            yield dict(eids=out.eids, agglosses=agglosses)
 
-        result['agglosses'] = agg
         if 'builder' in param:
             clp = param['conditional_loss_poes']
             result['curves-rlzs'], result['curves-stats'] = builder.pair(
@@ -247,9 +245,10 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
+        if 'eids' in dic:
+            self.agglosses[dic['eids']] += dic['agglosses']  # shape (E, LI)
+            return
         aids = dic.pop('aids')
-        for eids, agglosses in dic.pop('agglosses'):
-            self.agglosses[eids] += agglosses  # shape (E, LI)
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
