@@ -91,7 +91,7 @@ class SourceGroup(collections.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1,
+                 min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
                  tot_ruptures=0):
         # checks
         self.trt = trt
@@ -136,15 +136,14 @@ class SourceGroup(collections.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
+        if not src.min_mag:  # if not set already
+            src.min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
         nr = get_set_num_ruptures(src)
         if nr == 0:  # the minimum_magnitude filters all ruptures
             return
         self.tot_ruptures += nr
         self.sources.append(src)
-        min_mag, max_mag = src.get_min_max_mag()
-        prev_min_mag = self.min_mag
-        if prev_min_mag is None or min_mag < prev_min_mag:
-            self.min_mag = min_mag
+        _, max_mag = src.get_min_max_mag()
         prev_max_mag = self.max_mag
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
@@ -475,7 +474,8 @@ class SourceConverter(RuptureConverter):
     """
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
-                 area_source_discretization=None, minimum_magnitude=0,
+                 area_source_discretization=None,
+                 minimum_magnitude={'default': 0},
                  spinning_floating=True, source_id=None):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
@@ -776,7 +776,7 @@ class SourceConverter(RuptureConverter):
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
                                   'srcs_weights')}
-        sg = SourceGroup(trt)
+        sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
@@ -798,12 +798,6 @@ class SourceConverter(RuptureConverter):
                     pass  # do not transmit
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
-            if self.minimum_magnitude:
-                src.min_mag = (
-                    self.minimum_magnitude.get(src.tectonic_region_type) or
-                    self.minimum_magnitude['default'])
-            else:
-                src.min_mag = 0
             sg.update(src)
         if srcs_weights is not None:
             if len(node) and len(srcs_weights) != len(node):
