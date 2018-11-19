@@ -565,7 +565,7 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, mult=1):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx

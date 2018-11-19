@@ -563,7 +563,7 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            n_occ = numpy.fromiter(n_evs_by_rlz.values(), U32)
+            n_occ = sum(n_evs_by_rlz.values())
             ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (), n_occ)
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']

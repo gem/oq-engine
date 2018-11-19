@@ -93,23 +93,20 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures, rlzs_by_gsim, num_ses):
+def get_events(ebruptures, rlzs_by_gsim, num_ses, full_enum):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
     year = 0  # to be set later
-    nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     for ebr in ebruptures:
         numpy.random.seed(ebr.serial)
-        sess = numpy.random.choice(num_ses, ebr.multiplicity(nr)) + 1
-        i = 0
         for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim).items():
-            for eid in eids:
+            sess = numpy.random.choice(num_ses, len(eids)) + 1
+            for eid, ses in zip(eids, sess):
                 rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
-                       ebr.grp_id, year, sess[i], rlz)
+                       ebr.grp_id, year, ses, rlz)
                 events.append(rec)
-                i += 1
     return numpy.array(events, readinput.stored_event_dt)
 
 
@@ -198,7 +195,9 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
         res.events = get_events(
-            ruptures, rlzs_by_gsim, param['ses_per_logic_tree_path'])
+            ruptures, rlzs_by_gsim,
+            param['ses_per_logic_tree_path'],
+            param['full_enum'])
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -415,7 +414,8 @@ class EventBasedCalculator(base.HazardCalculator):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
             nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
             events = get_events(ruptures, rlzs_by_gsim,
-                                self.oqparam.ses_per_logic_tree_path)
+                                self.oqparam.ses_per_logic_tree_path,
+                                self.param['full_enum'])
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, nr, eidx=len(dset)-len(events))
@@ -450,6 +450,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.min_iml = self.get_min_iml(oq)
         param = dict(
             oqparam=oq, min_iml=self.min_iml,
+            full_enum=oq.number_of_logic_tree_samples == 0,
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
