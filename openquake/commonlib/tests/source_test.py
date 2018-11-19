@@ -651,16 +651,6 @@ class SourceGroupTestCase(unittest.TestCase):
             trts, ['Active Shallow Crust', 'Stable Continental Crust',
                    'Subduction Interface', 'Volcanic'])
 
-        self.check('Volcanic', 'max_mag', 6.5)
-        self.check('Subduction Interface', 'max_mag', 6.5)
-        self.check('Stable Continental Crust', 'max_mag', 6.5)
-        self.check('Active Shallow Crust', 'max_mag', 6.95)
-
-        self.check('Volcanic', 'min_mag', 5.0)
-        self.check('Subduction Interface', 'min_mag', 5.5)
-        self.check('Stable Continental Crust', 'min_mag', 5.5)
-        self.check('Active Shallow Crust', 'min_mag', 5.0)
-
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
