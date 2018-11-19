@@ -120,7 +120,9 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     for i in range(I):
                         agglosses[:, l + L * i] += losses[:, i]
 
-            # agglosses
+            # NB: I could yield the agglosses per output, but then I would
+            # have millions of small outputs with big data transfer and slow
+            # saving time
             result['agglosses'].append((out.eids, agglosses))
 
         if 'builder' in param:
