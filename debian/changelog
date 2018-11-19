@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made the event ID unique also in scenario calculations with
+    multiple realizations
   * Removed the annoying hidden .zip archives littering the export directory
   * Added an easy way to read the exposure header
   * Added a way to run Python scripts using the engine libraries via `oq shell`

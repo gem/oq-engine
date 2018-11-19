@@ -357,7 +357,7 @@ def export_dmg_by_event(ekey, dstore):
     dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     all_losses = dstore[ekey[0]].value  # shape (E, R, LI)
-    eids = dstore['events']['eid']
+    events_by_rlz = group_array(dstore['events'], 'rlz')
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
@@ -366,7 +366,7 @@ def export_dmg_by_event(ekey, dstore):
         for rlz in rlzs:
             data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = eids
+            arr['event_id'] = events_by_rlz[rlz.ordinal]['eid']
             arr['rlzi'] = rlz.ordinal
             for field in damage_dt.names:
                 arr[field] = data[field].squeeze()
