@@ -33,7 +33,8 @@ from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, readinput
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter, RuptureGetter
+from openquake.calculators.getters import (
+    GmfGetter, RuptureGetter, get_eids_by_rlz)
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -103,7 +104,7 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
         numpy.random.seed(ebr.serial)
         sess = numpy.random.choice(num_ses, ebr.multiplicity(nr)) + 1
         i = 0
-        for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+        for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim).items():
             for eid in eids:
                 rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
                        ebr.grp_id, year, sess[i], rlz)
