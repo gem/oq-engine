@@ -750,22 +750,6 @@ def getid(src):
         return src['id']
 
 
-def set_min_mag(srcs, min_mag):
-    """
-    Set the attribute .min_mag
-
-    :param srcs: a sequence of sources
-    :param min_mag: a dictionary TRT- > magnitude or a scalar
-    """
-    for src in srcs:
-        try:
-            mmag = min_mag[src.tectonic_region_type]
-        except KeyError:
-            mmag = min_mag['default']
-        if mmag:
-            src.min_mag = mmag
-
-
 def random_filtered_sources(sources, srcfilter, seed):
     """
     :param sources: a list of sources
@@ -852,9 +836,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
         # this way the serials are independent from the site collection
         csm.init_serials(oqparam.ses_seed)
 
-    # TODO: check why the seeds still depend on the minimun_magnitude
-    set_min_mag(csm.get_sources(), oqparam.minimum_magnitude)
-
     if oqparam.disagg_by_src:
         csm = csm.grp_by_src()  # one group per source
 
@@ -862,11 +843,10 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
 
-    if srcfilter:
+    if (srcfilter and oqparam.prefilter_sources != 'no' and
+            oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
         mon = monitor('split_filter')
-        split = (split_all and oqparam.calculation_mode not in
-                 'ucerf_hazard ucerf_risk')
-        csm = parallel_split_filter(csm, srcfilter, split, mon)
+        csm = parallel_split_filter(csm, srcfilter, split_all, mon)
     return csm
 
 
@@ -966,8 +946,9 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+
     exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
+        fnames[0], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
