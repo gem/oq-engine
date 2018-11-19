@@ -474,7 +474,8 @@ class SourceConverter(RuptureConverter):
     """
     def __init__(self, investigation_time=50., rupture_mesh_spacing=10.,
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
-                 area_source_discretization=None, minimum_magnitude=0,
+                 area_source_discretization=None,
+                 minimum_magnitude={'default': 0},
                  spinning_floating=True, source_id=None):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
