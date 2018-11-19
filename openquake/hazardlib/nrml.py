@@ -196,7 +196,8 @@ def get_source_model_04(node, fname, converter=default):
         source_ids.add(src.source_id)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+    src_groups = sorted(sourceconverter.SourceGroup(
+        trt, srcs, min_mag=converter.minimum_magnitude)
                         for trt, srcs in groups.items())
     return SourceModel(src_groups, node.get('name', ''))
 
