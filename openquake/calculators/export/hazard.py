@@ -710,12 +710,11 @@ def export_gmf_scenario_csv(ekey, dstore):
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    seed = oq.random_seed if oq.number_of_logic_tree_samples else 0
-    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, seed)
+    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
         eids for eids in get_eids_by_rlz(
-            ebr.n_occ, rlzs_by_gsim, ebr.samples).values()]) +
+            ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).values()]) +
             TWO32 * numpy.uint64(ebr.serial))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
