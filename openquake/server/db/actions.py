@@ -767,8 +767,10 @@ def get_job_from_checksum(db, checksum):
     :param job_id:
         job ID
     :returns:
-        the job ID associated to the checksum
+        the job ID associated to the checksum or None
     """
-    job_id = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
-                checksum, scalar=True)
-    return job_id
+    rows = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+              checksum)
+    if not rows:
+        return
+    return rows[-1].job_id

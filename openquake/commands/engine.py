@@ -28,7 +28,7 @@ from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
-from openquake.server import dbserver, dbapi
+from openquake.server import dbserver
 from openquake.commands.abort import abort
 
 
@@ -116,10 +116,9 @@ class EBRunner(object):
         self.log_file = log_file
         self.exports = exports
         checksum = readinput.get_hazard_checksum32(oqparam)
-        try:
-            # retrieve an old calculation with the right checksum, if any
-            self.hc_id = logs.dbcmd('get_job_from_checksum', checksum)
-        except dbapi.NotFound:
+        # retrieve an old calculation with the right checksum, if any
+        self.hc_id = logs.dbcmd('get_job_from_checksum', checksum)
+        if self.hc_id is None:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
                                  exports, calculation_mode='event_based',
@@ -134,10 +133,10 @@ class EBRunner(object):
                         self.exports, hazard_calculation_id=self.hc_id,
                         exposure_file=exp_file)
             except Exception:  # skip failed computations
-                pass  # the errors are already logged
+                logging.error(exp_file, exc_info=True)
         dt = time.time() - t0
-        logging.info('Ran %d calculations in %.1f minutes',
-                     len(self.oqparam.inputs['exposure']) + 1, dt / 60)
+        logging.info('Ran %d risk calculations in %.1f minutes',
+                     len(self.oqparam.inputs['exposure']), dt / 60)
 
 
 @sap.Script
