@@ -67,58 +67,6 @@ export_dir = %s
             readinput.get_params([job_config])
         self.assertIn('is an absolute path', str(ctx.exception))
 
-    def test_get_oqparam_with_files(self):
-        temp_dir = tempfile.mkdtemp()
-        source_model_input = general.gettemp(dir=temp_dir)
-        site_model_input = general.gettemp(dir=temp_dir, content="foo")
-        job_config = general.gettemp(dir=temp_dir, content="""
-[general]
-calculation_mode = event_based
-[site]
-source_model_file = %s
-site_model_file = %s
-maximum_distance=1
-truncation_level=0
-random_seed=0
-intensity_measure_types = PGA
-investigation_time = 50
-export_dir = %s
-        """ % (os.path.basename(source_model_input),
-               os.path.basename(site_model_input), TMP))
-
-        try:
-            exp_base_path = os.path.dirname(job_config)
-
-            expected_params = {
-                'export_dir': TMP,
-                'base_path': exp_base_path,
-                'calculation_mode': 'event_based',
-                'truncation_level': 0.0,
-                'random_seed': 0,
-                'maximum_distance': {'default': 1},
-                'inputs': {'job_ini': job_config,
-                           'site_model': [site_model_input],
-                           'source': [source_model_input],
-                           'source_model': source_model_input},
-                'hazard_imtls': {'PGA': None},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
-            }
-
-            params = getparams(readinput.get_oqparam(job_config))
-            for key in expected_params:
-                self.assertEqual(expected_params[key], params[key])
-            items = sorted(params['inputs'].items())
-            keys, values = zip(*items)
-            self.assertEqual(('job_ini', 'site_model', 'source',
-                              'source_model'), keys)
-            self.assertEqual((job_config, [site_model_input],
-                              [source_model_input], source_model_input),
-                             values)
-
-        finally:
-            shutil.rmtree(temp_dir)
-
     def test_get_oqparam_with_sites_csv(self):
         sites_csv = general.gettemp('1.0,2.1\n3.0,4.1\n5.0,6.1')
         try:
