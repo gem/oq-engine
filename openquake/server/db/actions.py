@@ -760,17 +760,16 @@ def get_checksum_from_job(db, job_id):
     return checksum
 
 
-def get_job_from_checksum(db, checksum):
+def get_jobs_from_checksum(db, checksum):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         job ID
     :returns:
-        the job ID associated to the checksum or None
+        the jobs associated to the checksum
     """
-    rows = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+    jobs = db('SELECT * FROM job WHERE id IN ('
+              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
               checksum)
-    if not rows:
-        return
-    return rows[-1].job_id
+    return jobs
