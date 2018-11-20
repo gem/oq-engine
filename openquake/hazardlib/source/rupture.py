@@ -539,15 +539,15 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids_by_rlz(n_occ, rlzs_by_gsim, seed):
+def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples):
     """
     :param n_occ: number of occurrences
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-    :param seed: random seed used to associate the rlzs
+    :param samples: number of samples in current source group
     :returns: a dictionay rlz index -> eids array
     """
     j = 0
-    if not seed:  # full enumeration
+    if samples == 1:  # full enumeration or akin to it
         dic = {}
         for rlzs in rlzs_by_gsim.values():
             for rlz in rlzs:
@@ -555,11 +555,9 @@ def get_eids_by_rlz(n_occ, rlzs_by_gsim, seed):
                 j += n_occ
     else:  # associated eids to the realizations
         dic = collections.defaultdict(list)
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        numpy.random.seed(seed)
-        for rlz in numpy.random.choice(rlzs, n_occ):
-            dic[rlz].append(j)
-            j += 1
+        rlz_iter = itertools.cycle(itertools.chain(*rlzs_by_gsim.values()))
+        for j in range(n_occ):
+            dic[next(rlz_iter)].append(j)
     return dic
 
 
@@ -569,13 +567,14 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, samples=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
         self.sids = sids
         self.n_occ = n_occ
+        self.samples = samples
 
     def multiplicity(self, nr):
         return self.n_occ * nr
