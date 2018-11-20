@@ -539,7 +539,15 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples):
+def random_histogram(number, nbins, seed):
+    """
+    Distribute an integer number on a set of bins homogenously
+    """
+    numpy.random.seed(seed)
+    return numpy.histogram(numpy.random.random(number), nbins)[0]
+
+
+def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples, serial):
     """
     :param n_occ: number of occurrences
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
@@ -547,17 +555,19 @@ def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples):
     :returns: a dictionay rlz index -> eids array
     """
     j = 0
+    dic = {}
     if samples == 1:  # full enumeration or akin to it
-        dic = {}
         for rlzs in rlzs_by_gsim.values():
             for rlz in rlzs:
                 dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
                 j += n_occ
     else:  # associated eids to the realizations
-        dic = collections.defaultdict(list)
-        rlz_iter = itertools.cycle(itertools.chain(*rlzs_by_gsim.values()))
-        for j in range(n_occ):
-            dic[next(rlz_iter)].append(j)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        assert len(rlzs) == samples
+        histo = random_histogram(n_occ, samples, serial)
+        for rlz, n in zip(rlzs, histo):
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
+            j += n
     return dic
 
 

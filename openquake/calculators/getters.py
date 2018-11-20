@@ -333,7 +333,7 @@ class GmfGetter(object):
             rup = computer.rupture
             sids = computer.sids
             eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
-                                          rup.samples)
+                                          rup.samples, rup.serial)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
