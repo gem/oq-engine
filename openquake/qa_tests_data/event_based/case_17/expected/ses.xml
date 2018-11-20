@@ -18,17 +18,12 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        1279900254209 1279900254215
+                        1279900254208 1279900254210 1279900254211 1284195221504 1284195221505
                     </SES>
                     <SES
                     id="2"
                     >
-                        1279900254208 1279900254210 1279900254211 1279900254214
-                    </SES>
-                    <SES
-                    id="3"
-                    >
-                        1279900254212 1279900254213
+                        1279900254209 1284195221506 1284195221507
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -53,23 +48,18 @@ xmlns:gml="http://www.opengis.net/gml"
             </singlePlaneRupture>
             <singlePlaneRupture
             id="150"
-            multiplicity="10"
+            multiplicity="5"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        1288490188800 1288490188803 1288490188805 1288490188806 1288490188809
+                        1292785156098
                     </SES>
                     <SES
                     id="2"
                     >
-                        1288490188802 1288490188808
-                    </SES>
-                    <SES
-                    id="3"
-                    >
-                        1288490188801 1288490188804 1288490188807
+                        1288490188804 1292785156096 1292785156097 1292785156099
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -94,25 +84,9 @@ xmlns:gml="http://www.opengis.net/gml"
             </singlePlaneRupture>
             <singlePlaneRupture
             id="151"
-            multiplicity="8"
+            multiplicity="0"
             >
-                <stochasticEventSets>
-                    <SES
-                    id="1"
-                    >
-                        1297080123392 1297080123396 1297080123399
-                    </SES>
-                    <SES
-                    id="2"
-                    >
-                        1297080123394 1297080123395 1297080123398
-                    </SES>
-                    <SES
-                    id="3"
-                    >
-                        1297080123393 1297080123397
-                    </SES>
-                </stochasticEventSets>
+                <stochasticEventSets />
                 <magnitude>
                     6.3000002e+00
                 </magnitude>
