@@ -101,7 +101,7 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses, seed):
     year = 0  # to be set later
     for ebr in ebruptures:
         for rlz, eids in get_eids_by_rlz(
-                ebr.n_occ, rlzs_by_gsim, ebr.samples).items():
+                ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).items():
             numpy.random.seed(ebr.serial + rlz)
             sess = numpy.random.choice(num_ses, len(eids)) + 1
             for eid, ses in zip(eids, sess):
@@ -203,7 +203,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
-        param['oqparam'], param['min_iml'], param['random_seed'])
+        param['oqparam'], param['min_iml'])
     res.update(getter.compute_gmfs_curves(monitor))
     return res
 
