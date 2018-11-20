@@ -545,7 +545,7 @@ def fix_shape(occur, num_rlzs):
     return n_occ
 
 
-def get_eids_by_rlz(n_occ, rlzs_by_gsim):
+def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples):
     """
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
     :returns: a dictionay rlz index -> eids array
@@ -553,6 +553,8 @@ def get_eids_by_rlz(n_occ, rlzs_by_gsim):
     i = 0
     j = 0
     dic = {}
+    if samples > 1:
+        assert len(n_occ) == sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     for rlzs in rlzs_by_gsim.values():
         for rlz in rlzs:
             try:
@@ -571,13 +573,14 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, mult=1):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, samples=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
         self.sids = sids
         self.n_occ = n_occ
+        self.samples = samples
 
     def multiplicity(self, nr):
         if len(self.n_occ) != nr:  # full enumeration
