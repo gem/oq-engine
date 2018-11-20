@@ -57,7 +57,7 @@ class ScenarioCalculator(base.HazardCalculator):
         E = oq.number_of_ground_motion_fields
         events = numpy.zeros(E * R, readinput.stored_event_dt)
         n_occ = numpy.array([E])
-        for rlz, eids in get_eids_by_rlz(n_occ, rlzs_by_gsim).items():
+        for rlz, eids in get_eids_by_rlz(n_occ, rlzs_by_gsim, 1).items():
             events[rlz * E: rlz * E + E]['eid'] = eids
             events[rlz * E: rlz * E + E]['rlz'] = rlz
         ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, n_occ)
