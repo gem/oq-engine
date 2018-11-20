@@ -741,9 +741,21 @@ def add_checksum(db, job_id, value):
     :param job_id:
         job ID
     :param value:
-        value of the checksum (32 bit integer(
+        value of the checksum (32 bit integer)
     """
     return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
+
+
+def update_job_checksum(db, job_id, value):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :param value:
+        value of the checksum (32 bit integer)
+    """
+    db('UPDATE checksum SET job_id=?x WHERE value=?x)', job_id, value)
 
 
 def get_checksum_from_job(db, job_id):
