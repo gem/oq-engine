@@ -109,7 +109,8 @@ class EBRunner(object):
     """
     A class to run event based risk calculations
     """
-    def __init__(self, job_ini, oqparam, log_level, log_file, exports):
+    def __init__(self, job_ini, oqparam, log_level, log_file, exports,
+                 no_cache):
         self.job_ini = job_ini
         self.oqparam = oqparam
         self.log_level = log_level
@@ -123,13 +124,18 @@ class EBRunner(object):
                 'There are multiple jobs associated to the '
                 'hazard checksum %d: %s; please clean the database' %
                 (checksum, [job.id for job in jobs]))
-        elif not jobs or not os.path.exists(jobs[0].ds_calc_dir + '.hdf5'):
+        elif not jobs:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
                                  exports, calculation_mode='event_based',
                                  exposure_file='')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
-            return
+        elif no_cache or not os.path.exists(jobs[0].ds_calc_dir + '.hdf5'):
+            # recompute and update the job associated to the checksum
+            self.hc_id = run_job(job_ini, log_level, log_file,
+                                 exports, calculation_mode='event_based',
+                                 exposure_file='')
+            logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
             self.hc_id = jobs[0].id
 
@@ -154,7 +160,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info'):
+           log_level='info', no_cache=False):
     """
     Run a calculation using the traditional command line API
     """
@@ -222,7 +228,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             oq = readinput.get_oqparam(job_inis[0])
             if (oq.calculation_mode == 'event_based_risk' and
                     'site_model' in oq.inputs):
-                ebr = EBRunner(job_inis[0], oq, log_level, log_file, exports)
+                ebr = EBRunner(
+                    job_inis[0], oq, log_level, log_file, exports, no_cache)
                 ebr.run_risk()
                 return
         for i, job_ini in enumerate(job_inis):
@@ -329,3 +336,4 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
+engine.flg('no_cache', 'Disable the event based hazard cache')
