@@ -162,7 +162,11 @@ def get_last_calc_id(username=None):
 
 
 def init(calc_id=None, level=logging.INFO):
-    """Set the format of the root logger"""
+    """
+    1. initialize the root logger (if not already initialized)
+    2. set the format of the root handlers (if any)
+    3. return a new calculation ID candidate if calc_id is None
+    """
     if not logging.root.handlers:  # first time
         logging.basicConfig(level=level)
     if calc_id is None:
