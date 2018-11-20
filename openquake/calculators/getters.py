@@ -271,7 +271,7 @@ class GmfGetter(object):
     ground motion values.
     """
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam,
-                 min_iml, samples=1):
+                 min_iml, random_seed):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol.complete
@@ -291,7 +291,7 @@ class GmfGetter(object):
             else oqparam.maximum_distance,
             {'filter_distance': oqparam.filter_distance})
         self.correl_model = oqparam.correl_model
-        self.samples = samples
+        self.seed = random_seed
 
     @property
     def sids(self):
@@ -334,7 +334,8 @@ class GmfGetter(object):
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
-            eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim)
+            eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
+                                          self.seed)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
@@ -557,7 +558,7 @@ class RuptureGetter(object):
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
             ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (),
-                            rec['multiplicity'])
+                            rec['n_occ'])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
