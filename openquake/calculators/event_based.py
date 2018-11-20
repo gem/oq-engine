@@ -93,15 +93,16 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures, rlzs_by_gsim, num_ses, full_enum):
+def get_events(ebruptures, rlzs_by_gsim, num_ses, seed):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
     year = 0  # to be set later
     for ebr in ebruptures:
-        numpy.random.seed(ebr.serial)
-        for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim).items():
+        for rlz, eids in get_eids_by_rlz(
+                ebr.n_occ, rlzs_by_gsim, seed).items():
+            numpy.random.seed(ebr.serial + rlz)
             sess = numpy.random.choice(num_ses, len(eids)) + 1
             for eid, ses in zip(eids, sess):
                 rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
@@ -197,12 +198,12 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         res.events = get_events(
             ruptures, rlzs_by_gsim,
             param['ses_per_logic_tree_path'],
-            param['full_enum'])
+            param['random_seed'])
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
-        param['oqparam'], param['min_iml'], param['samples'])
+        param['oqparam'], param['min_iml'], param['random_seed'])
     res.update(getter.compute_gmfs_curves(monitor))
     return res
 
@@ -415,7 +416,7 @@ class EventBasedCalculator(base.HazardCalculator):
             nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
             events = get_events(ruptures, rlzs_by_gsim,
                                 self.oqparam.ses_per_logic_tree_path,
-                                self.param['full_enum'])
+                                self.param['random_seed'])
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, nr, eidx=len(dset)-len(events))
@@ -448,9 +449,9 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         self.min_iml = self.get_min_iml(oq)
-        param = dict(
+        param = self.param.copy()
+        param.update(
             oqparam=oq, min_iml=self.min_iml,
-            full_enum=oq.number_of_logic_tree_samples == 0,
             save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
