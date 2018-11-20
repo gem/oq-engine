@@ -1289,9 +1289,12 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def get_checksum32(inputs):
+def get_checksum32(inputs, extra=''):
     """
-    Build an unsigned 32 bit integer from the input files of the calculation
+    Build an unsigned 32 bit integer from the input files of a calculation.
+
+    :param inputs: a dictionary key -> pathname
+    :param extra: an extra string to refine the checksum (optional)
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
@@ -1311,4 +1314,29 @@ def get_checksum32(inputs):
             checksum = zlib.adler32(data, checksum) & 0xffffffff
         else:
             raise ValueError('%s does not exist or is not a file' % fname)
+    if extra:
+        checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
+
+
+def get_hazard_checksum32(oqparam):
+    """
+    Extract the checksum from the hazard part of a computation, i.e.
+    ignoring risk functions, exposure and risk parameters.
+    """
+    hazard_inputs = {}
+    for key, val in oqparam.inputs.items():
+        if key in ('site_model', 'source_model_logic_tree',
+                   'gsim_logic_tree', 'source'):
+            hazard_inputs[key] = val
+    hazard_params = []
+    for key, val in vars(oqparam).items():
+        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                   'width_of_mfd_bin', 'area_source_discretization',
+                   'random_seed', 'ses_seed', 'truncation_level',
+                   'maximum_distance', 'investigation_time',
+                   'number_of_logic_tree_samples', 'ses_per_logic_tre_path',
+                   'minimum_magnitude', 'prefilter_sources', 'sites',
+                   'pointsource_distance', 'filter_distance'):
+            hazard_params.append('%s = %s' % (key, val))
+    return get_checksum32(hazard_inputs, '\n'.join(hazard_params))
