@@ -335,7 +335,7 @@ class GmfGetter(object):
             rup = computer.rupture
             sids = computer.sids
             eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
-                                          self.seed)
+                                          rup.samples)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
@@ -515,7 +515,9 @@ class RuptureGetter(object):
         for key, val in attrs.items():
             if key.startswith('code_'):
                 code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-        grp_trt = self.dstore['csm_info'].grp_by("trt")
+        csm_info = self.dstore['csm_info']
+        grp_trt = csm_info.grp_by("trt")
+        samples = csm_info.get_samples_by_grp()
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
@@ -557,8 +559,9 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (),
-                            rec['n_occ'])
+            grp_id = rec['grp_id']
+            ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
+                            rec['n_occ'], samples[grp_id])
             ebr.eidx1 = rec['eidx1']
             ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction

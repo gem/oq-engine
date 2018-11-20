@@ -133,11 +133,11 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
     # NB: s_sites can be None if cmaker.maximum_distance is False, then
     # the contexts are not computed and the ruptures not filtered
     ebrs = []
+    samples = getattr(src, 'samples', 1)
     if rup_n_occ == ():
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        samples = getattr(src, 'samples', 1)
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
         if cmaker.maximum_distance:
@@ -150,7 +150,7 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
         else:
             indices = ()
 
-        ebr = EBRupture(rup, src.id, src.src_group_id, indices, n_occ)
+        ebr = EBRupture(rup, src.id, src.src_group_id, indices, n_occ, samples)
         ebrs.append(ebr)
 
     return ebrs

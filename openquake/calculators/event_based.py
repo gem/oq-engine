@@ -101,7 +101,7 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses, seed):
     year = 0  # to be set later
     for ebr in ebruptures:
         for rlz, eids in get_eids_by_rlz(
-                ebr.n_occ, rlzs_by_gsim, seed).items():
+                ebr.n_occ, rlzs_by_gsim, ebr.samples).items():
             numpy.random.seed(ebr.serial + rlz)
             sess = numpy.random.choice(num_ses, len(eids)) + 1
             for eid, ses in zip(eids, sess):
