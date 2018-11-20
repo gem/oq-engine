@@ -713,7 +713,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, samples)
     getter.init()
     eids = (numpy.concatenate([
-        eids for eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim).values()]) +
+        eids for eids in get_eids_by_rlz(
+                ebr.n_occ, rlzs_by_gsim, ebr.samples).values()]) +
             TWO32 * numpy.uint64(ebr.serial))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
