@@ -178,8 +178,6 @@ def get_params(job_inis, **kw):
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
         inputs['source'] = logictree.collect_info(smlt).smpaths
-    elif 'source_model' in inputs:
-        inputs['source'] = [inputs['source_model']]
     if inputs.get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
