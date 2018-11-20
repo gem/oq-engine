@@ -270,8 +270,7 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam,
-                 min_iml, random_seed):
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam, min_iml):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol.complete
@@ -291,7 +290,6 @@ class GmfGetter(object):
             else oqparam.maximum_distance,
             {'filter_distance': oqparam.filter_distance})
         self.correl_model = oqparam.correl_model
-        self.seed = random_seed
 
     @property
     def sids(self):
