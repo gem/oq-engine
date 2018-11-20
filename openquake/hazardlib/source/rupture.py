@@ -24,6 +24,7 @@ import abc
 import numpy
 import math
 import itertools
+import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -538,24 +539,27 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def fix_shape(occur, num_rlzs):
-    n_occ = numpy.zeros(num_rlzs, numpy.uint16)
-    for nr in range(num_rlzs):
-        n_occ[nr] = occur
-    return n_occ
-
-
-def get_eids_by_rlz(n_occ, rlzs_by_gsim):
+def get_eids_by_rlz(n_occ, rlzs_by_gsim, seed):
     """
+    :param n_occ: number of occurrences
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+    :param seed: random seed used to associate the rlzs
     :returns: a dictionay rlz index -> eids array
     """
     j = 0
-    dic = {}
-    for rlzs in rlzs_by_gsim.values():
-        for rlz in rlzs:
-            dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
-            j += n_occ
+    if not seed:  # full enumeration
+        dic = {}
+        for rlzs in rlzs_by_gsim.values():
+            for rlz in rlzs:
+                dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
+                j += n_occ
+    else:  # associated eids to the realizations
+        dic = collections.defaultdict(list)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        numpy.random.seed(seed)
+        for rlz in numpy.random.choice(rlzs, n_occ):
+            dic[rlz].append(j)
+            j += 1
     return dic
 
 

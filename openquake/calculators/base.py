@@ -658,7 +658,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves,
-                          full_enum=oq.number_of_logic_tree_samples == 0)
+                          random_seed=oq.random_seed
+                          if oq.number_of_logic_tree_samples else 0)
 
     def store_csm_info(self, eff_ruptures):
         """
