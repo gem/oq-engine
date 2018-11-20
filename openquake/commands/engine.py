@@ -117,13 +117,21 @@ class EBRunner(object):
         self.exports = exports
         checksum = readinput.get_hazard_checksum32(oqparam)
         # retrieve an old calculation with the right checksum, if any
-        self.hc_id = logs.dbcmd('get_job_from_checksum', checksum)
-        if self.hc_id is None:
+        jobs = logs.dbcmd('get_jobs_from_checksum', checksum)
+        if not jobs:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
                                  exports, calculation_mode='event_based',
                                  exposure_file='')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
+        elif len(jobs) > 1:
+            raise RuntimeError(
+                'There are multiple jobs associated to the '
+                'hazard checksum %d: %s; please clean the database' %
+                (checksum, [job.id for job in jobs]))
+            return
+        else:
+            self.hc_id = jobs[0].id
 
     def run_risk(self):
         t0 = time.time()
