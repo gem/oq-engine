@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import csv
 import copy
 import zlib
@@ -60,7 +59,7 @@ U64 = numpy.uint64
 
 Site = collections.namedtuple('Site', 'sid lon lat')
 stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
+    ('eid', U64), ('rup_id', U32), ('grp_id', U16),
     ('ses', U16), ('rlz', U16)])
 
 
