@@ -228,9 +228,9 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode == 'ucerf_risk'):
             raise ValueError('You cannot use the --hc option with ucerf_risk')
         if self.hazard_precomputed() and self.job_type == 'risk':
-            self.check_missing('site_model', 'info')
-            self.check_missing('gsim_logic_tree', 'info')
-            self.check_missing('source_model_logic_tree', 'info')
+            self.check_missing('site_model', 'debug')
+            self.check_missing('gsim_logic_tree', 'debug')
+            self.check_missing('source_model_logic_tree', 'debug')
 
         # check the gsim_logic_tree
         if self.inputs.get('gsim_logic_tree'):
