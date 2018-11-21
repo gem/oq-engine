@@ -93,22 +93,17 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures, rlzs_by_gsim, num_ses):
+def get_events(ebruptures, rlzs_by_gsim):
     """
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
-    nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     for ebr in ebruptures:
-        numpy.random.seed(ebr.serial)
-        sess = numpy.random.choice(num_ses, ebr.multiplicity(nr)) + 1
-        i = 0
         for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim,
                                          ebr.samples).items():
             for eid in eids:
-                rec = (TWO32 * U64(ebr.serial) + eid, ebr.grp_id, sess[i], rlz)
+                rec = (TWO32 * U64(ebr.serial) + eid, ebr.grp_id, rlz)
                 events.append(rec)
-                i += 1
     return numpy.array(events, readinput.stored_event_dt)
 
 
@@ -177,8 +172,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(
-            ruptures, rlzs_by_gsim, param['ses_per_logic_tree_path'])
+        res.events = get_events(ruptures, rlzs_by_gsim)
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -394,8 +388,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
             nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-            events = get_events(ruptures, rlzs_by_gsim,
-                                self.oqparam.ses_per_logic_tree_path)
+            events = get_events(ruptures, rlzs_by_gsim)
             dset = self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, nr, eidx=len(dset)-len(events))
@@ -508,9 +501,6 @@ class EventBasedCalculator(base.HazardCalculator):
         return eid2idx
 
     def post_execute(self, result):
-        """
-        Save the SES collection
-        """
         oq = self.oqparam
         if 'ucerf' in oq.calculation_mode:
             self.rupser.close()
