@@ -953,6 +953,14 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+def random_histogram(counts, nbins, seed):
+    """
+    Distribute a total number of counts on a set of bins homogenously
+    """
+    numpy.random.seed(seed)
+    return numpy.histogram(numpy.random.random(counts), nbins)[0]
+
+
 def safeprint(*args, **kwargs):
     """
     Convert and print characters using the proper encoding
