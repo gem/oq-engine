@@ -287,6 +287,9 @@ class EventBasedCalculator(base.HazardCalculator):
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
+        nr = len(self.datastore['ruptures'])
+        ne = len(self.datastore['events'])
+        logging.info('Stored {:,d} ruptures and {:,d} events'.format(nr, ne))
 
         def genargs():
             ruptures = []
