@@ -746,16 +746,17 @@ def add_checksum(db, job_id, value):
     return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
 
 
-def update_job_checksum(db, job_id, value):
+def update_job_checksum(db, job_id, checksum):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         job ID
-    :param value:
-        value of the checksum (32 bit integer)
+    :param checksum:
+        the checksum (32 bit integer)
     """
-    db('UPDATE checksum SET job_id=?x WHERE value=?x)', job_id, value)
+    db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+       job_id, checksum)
 
 
 def get_checksum_from_job(db, job_id):
@@ -772,16 +773,19 @@ def get_checksum_from_job(db, job_id):
     return checksum
 
 
-def get_jobs_from_checksum(db, checksum):
+def get_job_from_checksum(db, checksum):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         job ID
     :returns:
-        the jobs associated to the checksum
+        the job associated to the checksum or None
     """
-    jobs = db('SELECT * FROM job WHERE id IN ('
+    # there is an UNIQUE constraint both on hazard_checksum and job_id
+    jobs = db('SELECT * FROM job WHERE id = ('
               'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
-              checksum)
-    return jobs
+              checksum)  # 0 or 1 jobs
+    if not jobs:
+        return
+    return jobs[0]
