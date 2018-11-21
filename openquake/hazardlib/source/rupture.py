@@ -24,6 +24,7 @@ import abc
 import numpy
 import math
 import itertools
+import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -35,10 +36,13 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+U16 = numpy.uint16
 U32 = numpy.uint32
-TWO16 = numpy.uint64(2 ** 16)
-TWO32 = numpy.uint64(2 ** 32)
+U64 = numpy.uint64
+TWO16 = U64(2 ** 16)
+TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
+eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
 
 
@@ -587,14 +591,38 @@ class EBRupture(object):
         """
         return self.rupture.serial
 
-    def export(self, mesh, events):
+    def get_events(self, rlzs_by_gsim):
+        """
+        :returns: an array of events with fields eid, rlz
+        """
+        all_eids, rlzs = [], []
+        for rlz, eids in get_eids_by_rlz(
+                self.n_occ, rlzs_by_gsim, self.samples, self.serial).items():
+            all_eids.extend(TWO32 * U64(self.serial) + eids)
+            rlzs.extend([rlz] * len(eids))
+        return numpy.fromiter(zip(all_eids, rlzs), eidrlz_dt)
+
+    def get_events_by_ses(self, events, num_ses):
+        """
+        :returns: a dictionary ses index -> events array
+        """
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        events_by_ses = collections.defaultdict(list)
+        for ses, event in zip(sess, events):
+            events_by_ses[ses].append(event)
+        for ses in events_by_ses:
+            events_by_ses[ses] = numpy.array(events_by_ses[ses])
+        return events_by_ses
+
+    def export(self, mesh, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events['eid'] += TWO32 * self.serial
-        events_by_ses = general.group_array(events, 'ses')
+        events = self.get_events(rlzs_by_gsim)
+        events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
