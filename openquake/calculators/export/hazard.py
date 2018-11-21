@@ -567,6 +567,8 @@ def export_gmf(ekey, dstore):
     """
     sitecol = dstore['sitecol']
     oq = dstore['oqparam']
+    if oq.ses_per_logic_tree_path > 1:
+        logging.error('This export is broken!')
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
@@ -576,28 +578,28 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    ruptures_by_rlz = collections.defaultdict(list)
+    events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
     eids = dstore['events']['eid']
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
-        ruptures = ruptures_by_rlz[rlzi]
+        events = events_by_rlz[rlzi]
         for idx, gmfa in group_array(gmf_arr, 'eid').items():
             eid = eids[idx]
             ses_idx = 1  # FIXME
-            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-            ruptures.append(rup)
+            rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            events.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    for rlzi in sorted(ruptures_by_rlz):
-        ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
+    for rlzi in sorted(events_by_rlz):
+        events_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
         fname = dstore.build_fname('gmf', rlzi, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlzi],
+            ('gmf', fmt), fname, sitecol, oq.imtls, events_by_rlz[rlzi],
             rlzs[rlzi], investigation_time)
     return fnames
 
 
-Rup = collections.namedtuple('Rup', ['eid', 'ses_idx', 'indices', 'gmfa'])
+Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
