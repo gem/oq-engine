@@ -196,7 +196,8 @@ def export_maxloss_ruptures(ekey, dstore):
     for loss_type in oq.loss_dt().names:
         ebr = getters.get_maxloss_rupture(dstore, loss_type)
         events = dstore['events'][ebr.eidx1:ebr.eidx2]
-        root = hazard_writers.rupture_to_element(ebr.export(mesh, events))
+        root = hazard_writers.rupture_to_element(
+            ebr.export(mesh, events, oq.ses_per_logic_tree_path))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:
             nrml.write(list(root), fh)
