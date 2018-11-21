@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a re-use hazard feature in event_based_risk in single-file mode
   * Made the event ID unique also in scenario calculations with
     multiple realizations
   * Removed the annoying hidden .zip archives littering the export directory
