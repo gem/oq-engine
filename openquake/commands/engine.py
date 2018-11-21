@@ -110,7 +110,7 @@ class EBRunner(object):
     A class to run event based risk calculations
     """
     def __init__(self, job_ini, oqparam, log_level, log_file, exports,
-                 no_cache):
+                 reuse_hazard):
         self.job_ini = job_ini
         self.oqparam = oqparam
         self.log_level = log_level
@@ -118,26 +118,25 @@ class EBRunner(object):
         self.exports = exports
         checksum = readinput.get_hazard_checksum32(oqparam)
         # retrieve an old calculation with the right checksum, if any
-        jobs = logs.dbcmd('get_jobs_from_checksum', checksum)
-        if len(jobs) > 1:
-            raise RuntimeError(
-                'There are multiple jobs associated to the '
-                'hazard checksum %d: %s; please clean the database' %
-                (checksum, [job.id for job in jobs]))
-        elif not jobs:
+        job = logs.dbcmd('get_job_from_checksum', checksum)
+        if job is None:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
                                  exports, calculation_mode='event_based',
                                  exposure_file='')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
-        elif no_cache or not os.path.exists(jobs[0].ds_calc_dir + '.hdf5'):
+        elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
                                  exports, calculation_mode='event_based',
                                  exposure_file='')
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
-            self.hc_id = jobs[0].id
+            # sanity check
+            assert job.description == oqparam.description, (
+                job.description, oqparam.description)
+            self.hc_id = job.id
+            logging.info('Reusing job #%d', job.id)
 
     def run_risk(self):
         t0 = time.time()
@@ -160,7 +159,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info', no_cache=False):
+           log_level='info', reuse_hazard=False):
     """
     Run a calculation using the traditional command line API
     """
@@ -226,11 +225,11 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             # init logs before calling get_oqparam
             logs.init(level=getattr(logging, log_level.upper()))
             oq = readinput.get_oqparam(job_inis[0])
-            if (oq.calculation_mode == 'event_based_risk' and
-                    'site_model' in oq.inputs):
-                ebr = EBRunner(
-                    job_inis[0], oq, log_level, log_file, exports, no_cache)
-                ebr.run_risk()
+            if oq.calculation_mode.startswith('event_based'):
+                ebr = EBRunner(job_inis[0], oq, log_level, log_file,
+                               exports, reuse_hazard)
+                if oq.calculation_mode.endswith('risk'):
+                    ebr.run_risk()
                 return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
@@ -297,7 +296,7 @@ use in debugging and profiling.''', action='store_true')
 engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
 engine.opt('config_file', 'Custom openquake.cfg file, to override default '
            'configurations')
-engine._add('make_html_report', '--make-html-report', '-r',
+engine._add('make_html_report', '--make-html-report', '--r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
@@ -336,4 +335,4 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
-engine.flg('no_cache', 'Disable the event based hazard cache')
+engine.flg('reuse_hazard', 'Reuse the event based hazard if available')
