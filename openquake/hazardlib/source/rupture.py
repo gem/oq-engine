@@ -615,6 +615,12 @@ class EBRupture(object):
             events_by_ses[ses] = numpy.array(events_by_ses[ses])
         return events_by_ses
 
+    def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
+        events = self.get_events(rlzs_by_gsim)
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        return dict(zip(events['eid'], sess))
+
     def export(self, mesh, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
