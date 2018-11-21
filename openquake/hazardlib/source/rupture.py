@@ -24,7 +24,7 @@ import abc
 import numpy
 import math
 import itertools
-from openquake.baselib import general
+import collections
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -601,14 +601,27 @@ class EBRupture(object):
         """
         return len(self.sids) * len(self.events)
 
-    def export(self, mesh, events):
+    def get_events_by_ses(self, events, num_ses):
+        """
+        :returns: a dictionary ses index -> events array
+        """
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        events_by_ses = collections.defaultdict(list)
+        for ses, event in zip(sess, events):
+            events_by_ses[ses].append(event)
+        for ses in events_by_ses:
+            events_by_ses[ses] = numpy.array(events_by_ses[ses])
+        return events_by_ses
+
+    def export(self, mesh, events, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
         events['eid'] += TWO32 * self.serial
-        events_by_ses = general.group_array(events, 'ses')
+        events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
