@@ -72,7 +72,7 @@ def export_ruptures_xml(ekey, dstore):
         ebrs = []
         for ebr in ruptures:
             events = dstore['events'][ebr.eidx1:ebr.eidx2]
-            ebrs.append(ebr.export(mesh, events))
+            ebrs.append(ebr.export(mesh, events, oq.ses_per_logic_tree_path))
         ruptures_by_grp[grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
