@@ -40,6 +40,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
@@ -205,6 +206,12 @@ def export_maxloss_ruptures(ekey, dstore):
     return fnames
 
 
+def year_dict(eids, investigation_time, ses_seed):
+    numpy.random.seed(ses_seed)
+    years = numpy.random.choice(int(investigation_time), len(eids)) + 1
+    return dict(zip(numpy.sort(eids), years))  # eid -> year
+
+
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
 @depr('This exporter will be removed soon')
@@ -230,7 +237,12 @@ def export_agg_losses_ebr(ekey, dstore):
     elt_dt = numpy.dtype(dtlist)
     elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    events_by_rupid = group_array(dstore['events'].value, 'rup_id')
+    events = dstore['events'].value
+    events_by_rupid = collections.defaultdict(list)
+    for event in events:
+        rupid = event['eid'] // TWO32
+        events_by_rupid[rupid].append(event)
+    year_of = year_dict(events['eid'], oq.investigation_time, oq.ses_seed)
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
@@ -245,11 +257,11 @@ def export_agg_losses_ebr(ekey, dstore):
     for r, row in enumerate(agg_losses):
         rec = elt[r]
         event = event_by_eid[row['eid']]
-        rec['event_id'] = event['eid']
-        rec['year'] = event['year']
+        rec['event_id'] = eid = event['eid']
+        rec['year'] = year_of[eid]
         rec['rlzi'] = row['rlzi']
         if rup_data:
-            rec['rup_id'] = rup_id = event['rup_id']
+            rec['rup_id'] = rup_id = event['eid'] // TWO32
             (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
              rec['centroid_depth']) = rup_data[rup_id]
         for lt, i in lti.items():

@@ -245,8 +245,6 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        #years = sorted(self.calc.datastore['events']['year'])
-        #self.assertEqual(years, [15, 29, 39, 43])
         self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
@@ -340,9 +338,6 @@ PGA     SA(0.3) SA(0.6)
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
-        #events = extract(self.calc.datastore, 'events')
-        #years = numpy.unique(events['year'])
-        #numpy.testing.assert_equal(years, [1])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
