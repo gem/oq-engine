@@ -40,6 +40,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
@@ -235,7 +236,10 @@ def export_agg_losses_ebr(ekey, dstore):
     elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     events = dstore['events'].value
-    events_by_rupid = group_array(events, 'rup_id')
+    events_by_rupid = collections.defaultdict(list)
+    for event in events:
+        rupid = event['eid'] // TWO32
+        events_by_rupid[rupid].append(event)
     year_of = year_dict(events['eid'], oq.investigation_time, oq.ses_seed)
     rup_data = {}
     event_by_eid = {}  # eid -> event
@@ -255,7 +259,7 @@ def export_agg_losses_ebr(ekey, dstore):
         rec['year'] = year_of[eid]
         rec['rlzi'] = row['rlzi']
         if rup_data:
-            rec['rup_id'] = rup_id = event['rup_id']
+            rec['rup_id'] = rup_id = event['eid'] // TWO32
             (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
              rec['centroid_depth']) = rup_data[rup_id]
         for lt, i in lti.items():
