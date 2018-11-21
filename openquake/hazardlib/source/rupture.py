@@ -42,7 +42,7 @@ U64 = numpy.uint64
 TWO16 = U64(2 ** 16)
 TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
-eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
+events_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
 
 
@@ -600,7 +600,7 @@ class EBRupture(object):
                 self.n_occ, rlzs_by_gsim, self.samples, self.serial).items():
             all_eids.extend(TWO32 * U64(self.serial) + eids)
             rlzs.extend([rlz] * len(eids))
-        return numpy.fromiter(zip(all_eids, rlzs), eidrlz_dt)
+        return numpy.fromiter(zip(all_eids, rlzs), events_dt)
 
     def get_events_by_ses(self, events, num_ses):
         """
