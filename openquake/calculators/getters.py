@@ -502,7 +502,7 @@ class RuptureGetter(object):
             rgetter = self.__class__(self.dstore, idxs, self.grp_id)
             rup = self.dstore['ruptures'][idxs]
             # use int below, otherwise n_events would be a numpy.uint64
-            rgetter.n_events = int((rup['eidx2'] - rup['eidx1']).sum())
+            rgetter.n_events = int(rup['n_occ'])
             getters.append(rgetter)
         return getters
 
@@ -560,8 +560,6 @@ class RuptureGetter(object):
             grp_id = rec['grp_id']
             ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
                             rec['n_occ'], samples[grp_id])
-            ebr.eidx1 = rec['eidx1']
-            ebr.eidx2 = rec['eidx2']
             # not implemented: rupture_slip_direction
             yield ebr
 
