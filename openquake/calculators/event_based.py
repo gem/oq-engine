@@ -92,7 +92,7 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_eidrlz(ebruptures, rlzs_by_gsim):
+def get_events(ebruptures, rlzs_by_gsim):
     ebrs = list(ebruptures)  # iterate on the rupture getter
     if not ebrs:
         return ()
@@ -152,7 +152,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
-        res.eidrlz = get_eidrlz(ruptures, rlzs_by_gsim)
+        res.events = get_events(ruptures, rlzs_by_gsim)
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -366,11 +366,11 @@ class EventBasedCalculator(base.HazardCalculator):
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
             nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-            eidrlz = get_eidrlz(ruptures, rlzs_by_gsim)
-            self.datastore.extend('events', eidrlz)
+            events = get_events(ruptures, rlzs_by_gsim)
+            self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
                 self.rupser.save(ruptures, nr)
-            return eidrlz
+            return events
         return ()
 
     def check_overflow(self):

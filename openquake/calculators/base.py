@@ -658,9 +658,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'sitecol'):
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
-        self.param = dict(individual_curves=oq.individual_curves,
-                          random_seed=oq.random_seed
-                          if oq.number_of_logic_tree_samples else 0)
+        self.param = dict(individual_curves=oq.individual_curves)
 
     def store_csm_info(self, eff_ruptures):
         """
@@ -761,7 +759,7 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, rupture.eidrlz_dt)
+            events = numpy.zeros(E, rupture.events_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
         return sitecol, assetcol
@@ -934,7 +932,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
-        events = numpy.zeros(len(eids), rupture.eidrlz_dt)
+        events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
         dstore['events'] = events
 
@@ -957,7 +955,7 @@ def import_gmfs(dstore, fname, sids):
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
-    events = numpy.zeros(len(eids), rupture.eidrlz_dt)
+    events = numpy.zeros(len(eids), rupture.events_dt)
     events['eid'] = eids
     dstore['events'] = events
     # store the GMFs
