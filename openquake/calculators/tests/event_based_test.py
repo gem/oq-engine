@@ -27,7 +27,6 @@ from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.calculators.extract import extract
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves

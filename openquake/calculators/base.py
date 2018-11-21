@@ -32,6 +32,7 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -51,8 +52,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
-
-eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 
 
 class InvalidCalculationID(Exception):
@@ -762,7 +761,7 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, eidrlz_dt)
+            events = numpy.zeros(E, rupture.eidrlz_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
         return sitecol, assetcol
@@ -935,7 +934,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
-        events = numpy.zeros(len(eids), eidrlz_dt)
+        events = numpy.zeros(len(eids), rupture.eidrlz_dt)
         events['eid'] = eids
         dstore['events'] = events
 
@@ -958,7 +957,7 @@ def import_gmfs(dstore, fname, sids):
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
-    events = numpy.zeros(len(eids), eidrlz_dt)
+    events = numpy.zeros(len(eids), rupture.eidrlz_dt)
     events['eid'] = eids
     dstore['events'] = events
     # store the GMFs

@@ -33,8 +33,7 @@ from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
-from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, get_eids_by_rlz)
+from openquake.calculators.getters import GmfGetter, RuptureGetter
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -94,13 +93,11 @@ def build_ruptures(srcs, srcfilter, param, monitor):
 
 
 def get_eidrlz(ebruptures, rlzs_by_gsim):
-    all_eids, rlzs = [], []
-    for ebr in ebruptures:
-        for rlz, eids in get_eids_by_rlz(
-                ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).items():
-            all_eids.extend(TWO32 * U64(ebr.serial) + eids)
-            rlzs.extend([rlz] * len(eids))
-    return numpy.fromiter(zip(all_eids, rlzs), base.eidrlz_dt)
+    ebrs = list(ebruptures)  # iterate on the rupture getter
+    if not ebrs:
+        return ()
+    return numpy.concatenate(
+        [ebr.get_events(rlzs_by_gsim) for ebr in ebrs])
 
 
 def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
@@ -319,9 +316,9 @@ class EventBasedCalculator(base.HazardCalculator):
             for ruptures in result.ruptures_by_grp.values():
                 events = self.save_ruptures(ruptures)
         elif ucerf and hasattr(result, 'events_by_grp'):
-            for grp_id, eidrlz in result.eids_by_grp.items():
-                self.datastore.extend('events', eidrlz)
-        if ucerf and not len(events):
+            [(grp_id, events)] = result.events_by_grp.items()
+            self.datastore.extend('events', events)
+        if ucerf and len(events) == 0:
             return acc
         elif ucerf:
             eid2idx = {}
@@ -469,14 +466,10 @@ class EventBasedCalculator(base.HazardCalculator):
         return eid2idx
 
     def post_execute(self, result):
-        """
-        Save the SES collection
-        """
         oq = self.oqparam
         if 'ucerf' in oq.calculation_mode:
             self.rupser.close()
             self.csm.info.update_eff_ruptures(self.csm.get_num_ruptures())
-            self.setting_events()
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
