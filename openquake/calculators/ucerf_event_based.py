@@ -181,12 +181,12 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     else:
         res.events_by_grp = {
             src.src_group_id: event_based.get_events(
-                ebruptures, rlzs_by_gsim, num_ses)}
+                ebruptures, rlzs_by_gsim, num_ses, param['random_seed'])}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], samples)
+            param['oqparam'], param['min_iml'])
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
