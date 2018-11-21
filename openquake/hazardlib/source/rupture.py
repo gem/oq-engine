@@ -24,7 +24,6 @@ import abc
 import numpy
 import math
 import itertools
-import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -539,20 +538,12 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def random_histogram(number, nbins, seed):
-    """
-    Distribute an integer number on a set of bins homogenously
-    """
-    numpy.random.seed(seed)
-    return numpy.histogram(numpy.random.random(number), nbins)[0]
-
-
 def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples, serial):
     """
     :param n_occ: number of occurrences
     :params rlzs_by_gsim: a dictionary gsims -> rlzs array
     :param samples: number of samples in current source group
-    :returns: a dictionay rlz index -> eids array
+    :returns: a dictionary rlz index -> eids array
     """
     j = 0
     dic = {}
@@ -564,7 +555,7 @@ def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples, serial):
     else:  # associated eids to the realizations
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         assert len(rlzs) == samples
-        histo = random_histogram(n_occ, samples, serial)
+        histo = general.random_histogram(n_occ, samples, serial)
         for rlz, n in zip(rlzs, histo):
             dic[rlz] = numpy.arange(j, j + n, dtype=U32)
             j += n
