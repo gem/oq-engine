@@ -84,8 +84,6 @@ def gsim(value, **kwargs):
     elif value.startswith('GMPETable'):
         gsim_class = GMPETable
     else:
-        #if value == 'NRCan15SiteTerm':
-        #    import pdb; pdb.set_trace()
         try:
             gsim_class = registry[value]
         except KeyError:

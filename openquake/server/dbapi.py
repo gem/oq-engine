@@ -302,6 +302,8 @@ class Db(object):
             return self.local.conn
         except AttributeError:
             self.local.conn = self.connect(*self.args, **self.kw)
+            #  honor ON DELETE CASCADE
+            self.local.conn.execute('PRAGMA foreign_keys = ON')
             return self.local.conn
 
     @property
