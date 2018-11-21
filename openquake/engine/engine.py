@@ -305,7 +305,7 @@ def job_from_file(job_ini, job_id, username, **kw):
         fnames = kw.pop('exposure_file').split()
         if fnames:
             oq.inputs['exposure'] = fnames
-        else:
+        elif 'exposure' in oq.inputs:
             del oq.inputs['exposure']
     logs.dbcmd('create_job', oq.calculation_mode, oq.description,
                username, datastore.get_datadir(), job_id, hc_id)
