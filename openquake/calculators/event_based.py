@@ -106,8 +106,7 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
         for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim,
                                          ebr.samples).items():
             for eid in eids:
-                rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
-                       ebr.grp_id, sess[i], rlz)
+                rec = (TWO32 * U64(ebr.serial) + eid, ebr.grp_id, sess[i], rlz)
                 events.append(rec)
                 i += 1
     return numpy.array(events, readinput.stored_event_dt)
