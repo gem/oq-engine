@@ -131,15 +131,16 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         else:  # time-dependent source
             for rup, serial in zip(ruptures, serials):
                 numpy.random.seed(serial)
-                num_occ = rup.sample_number_of_occurrences(
-                    (num_samples, num_ses)).sum()
+                occurs = rup.sample_number_of_occurrences(
+                    (num_samples, num_ses))
+                if mutex_weight < 1:
+                    # consider only the occurrencies below the mutex_weight
+                    occurs *= (numpy.random.random((num_samples, num_ses)) <
+                               mutex_weight)
+                num_occ = occurs.sum()
                 if num_occ:
-                    if mutex_weight < 1:
-                        # consider only the occurrencies below the mutex_weight
-                        num_occ *= numpy.random.random() < mutex_weight
-                    if num_occ:
-                        rup.serial = serial  # used as seed
-                        yield rup, num_occ
+                    rup.serial = serial  # used as seed
+                    yield rup, num_occ
 
     def __iter__(self):
         """
