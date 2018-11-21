@@ -28,7 +28,7 @@ from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, _get)
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import savez, get_mesh
+from openquake.calculators.export.hazard import savez, get_mesh, get_events
 from openquake.calculators import getters
 from openquake.commonlib import writers, hazard_writers
 from openquake.commonlib.util import (
@@ -191,10 +191,12 @@ def export_maxloss_ruptures(ekey, dstore):
     """
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
+    rlzs_by_gsim = dstore['csm_info'].get_rlzs_by_gsim_grp()
     fnames = []
     for loss_type in oq.loss_dt().names:
         ebr = getters.get_maxloss_rupture(dstore, loss_type)
-        events = dstore['events'][ebr.eidx1:ebr.eidx2]
+        events = get_events([ebr], rlzs_by_gsim[ebr.grp_id],
+                            oq.ses_per_logic_tree_path, oq.random_seed)
         root = hazard_writers.rupture_to_element(ebr.export(mesh, events))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:

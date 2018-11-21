@@ -31,7 +31,7 @@ from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.getters import (
     GmfGetter, RuptureGetter, get_eids_by_rlz)
@@ -46,6 +46,7 @@ F64 = numpy.float64
 TWO32 = U64(2 ** 32)
 rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
+eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 
 
 def replace_eid(data, eid2idx):
@@ -93,22 +94,14 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures, rlzs_by_gsim, num_ses, seed):
-    """
-    Extract an array of dtype stored_event_dt from a list of EBRuptures
-    """
-    events = []
-    year = 0  # to be set later
+def get_eidrlz(ebruptures, rlzs_by_gsim):
+    all_eids, rlzs = [], []
     for ebr in ebruptures:
         for rlz, eids in get_eids_by_rlz(
                 ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).items():
-            numpy.random.seed(ebr.serial + rlz)
-            sess = numpy.random.choice(num_ses, len(eids)) + 1
-            for eid, ses in zip(eids, sess):
-                rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
-                       ebr.grp_id, year, ses, rlz)
-                events.append(rec)
-    return numpy.array(events, readinput.stored_event_dt)
+            all_eids.extend(TWO32 * U64(ebr.serial) + eids)
+            rlzs.extend([rlz] * len(eids))
+    return numpy.fromiter(zip(all_eids, rlzs), eidrlz_dt)
 
 
 def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
@@ -129,38 +122,6 @@ def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
         for ebr in ebruptures:
             n += len(ebr.rupture.sctx.sids) * ebr.multiplicity(nr)
     return n * nbytes
-
-
-def set_counts(dstore, dsetname):
-    """
-    :param dstore: a DataStore instance
-    :param dsetname: name of dataset with a field `grp_id`
-    :returns: a dictionary grp_id > counts
-    """
-    groups = dstore[dsetname]['grp_id']
-    unique, counts = numpy.unique(groups, return_counts=True)
-    dic = dict(zip(unique, counts))
-    dstore.set_attrs(dsetname, by_grp=sorted(dic.items()))
-    return dic
-
-
-def set_random_years(dstore, name, ses_seed, investigation_time):
-    """
-    Set on the `events` dataset year labels sensitive to the
-    SES ordinal and the investigation time.
-
-    :param dstore: a DataStore instance
-    :param name: name of the dataset ('events')
-    :param ses_seed: seed to use in numpy.random.choice
-    :param investigation_time: investigation time
-    """
-    events = dstore[name].value
-    numpy.random.seed(ses_seed)
-    years = numpy.random.choice(investigation_time, len(events)) + 1
-    year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
-    for event in events:
-        event['year'] = year_of[event['eid']]
-    dstore[name] = events
 
 
 # ######################## GMF calculator ############################ #
@@ -195,10 +156,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         sitecol = src_filter.sitecol
     if not param['oqparam'].save_ruptures or isinstance(
             ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(
-            ruptures, rlzs_by_gsim,
-            param['ses_per_logic_tree_path'],
-            param['random_seed'])
+        res.eidrlz = get_eidrlz(ruptures, rlzs_by_gsim)
     else:
         res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
@@ -333,7 +291,6 @@ class EventBasedCalculator(base.HazardCalculator):
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
-        self.setting_events()
 
         def genargs():
             ruptures = []
@@ -363,9 +320,8 @@ class EventBasedCalculator(base.HazardCalculator):
             for ruptures in result.ruptures_by_grp.values():
                 events = self.save_ruptures(ruptures)
         elif ucerf and hasattr(result, 'events_by_grp'):
-            for grp_id in result.events_by_grp:
-                events = result.events_by_grp[grp_id]
-                self.datastore.extend('events', events)
+            for grp_id, eidrlz in result.eids_by_grp.items():
+                self.datastore.extend('events', eidrlz)
         if ucerf and not len(events):
             return acc
         elif ucerf:
@@ -414,13 +370,11 @@ class EventBasedCalculator(base.HazardCalculator):
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
             nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-            events = get_events(ruptures, rlzs_by_gsim,
-                                self.oqparam.ses_per_logic_tree_path,
-                                self.param['random_seed'])
-            dset = self.datastore.extend('events', events)
+            eidrlz = get_eidrlz(ruptures, rlzs_by_gsim)
+            self.datastore.extend('events', eidrlz)
             if self.oqparam.save_ruptures:
-                self.rupser.save(ruptures, nr, eidx=len(dset)-len(events))
-            return events
+                self.rupser.save(ruptures, nr)
+            return eidrlz
         return ()
 
     def check_overflow(self):
@@ -507,25 +461,6 @@ class EventBasedCalculator(base.HazardCalculator):
         for sm_id in ds['gmf_data']:
             ds.set_nbytes('gmf_data/' + sm_id)
         ds.set_nbytes('gmf_data')
-
-    def setting_events(self):
-        """
-        Call set_random_years on the events dataset
-        """
-        if self.oqparam.hazard_calculation_id is None:
-            num_events = sum(set_counts(self.datastore, 'events').values())
-            if num_events == 0:
-                raise RuntimeError(
-                    'No seismic events! Perhaps the investigation time is too '
-                    'small or the maximum_distance is too small')
-            if self.oqparam.save_ruptures:
-                logging.info('Setting {:,d} event years on {:,d} ruptures'.
-                             format(num_events, self.rupser.nruptures))
-            with self.monitor('setting event years', measuremem=True,
-                              autoflush=True):
-                set_random_years(self.datastore, 'events',
-                                 self.oqparam.ses_seed,
-                                 int(self.oqparam.investigation_time))
 
     @cached_property
     def eid2idx(self):

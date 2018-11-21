@@ -42,6 +42,7 @@ F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -52,10 +53,32 @@ Consider canceling the operation and accessing directly %s.'''
 # with compression you can save 60% of space by losing only 10% of saving time
 savez = numpy.savez_compressed
 
+stored_event_dt = numpy.dtype([
+    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
+    ('ses', U16), ('rlz', U16)])
+
 
 def add_quotes(values):
     # used to source names in CSV files
     return ['"%s"' % val for val in values]
+
+
+def get_events(ebruptures, rlzs_by_gsim, num_ses, seed):
+    """
+    Extract an array of dtype stored_event_dt from a list of EBRuptures
+    """
+    events = []
+    year = 0  # to be set later
+    for ebr in ebruptures:
+        for rlz, eids in get_eids_by_rlz(
+                ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).items():
+            numpy.random.seed(ebr.serial + rlz)
+            sess = numpy.random.choice(num_ses, len(eids)) + 1
+            for eid, ses in zip(eids, sess):
+                rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
+                       ebr.grp_id, year, ses, rlz)
+                events.append(rec)
+    return numpy.array(events, stored_event_dt)
 
 
 @export.add(('ruptures', 'xml'))
@@ -66,12 +89,14 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    rlzs_by_gsim = dstore['csm_info'].get_rlzs_by_gsim_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
         ebrs = []
         for ebr in ruptures:
-            events = dstore['events'][ebr.eidx1:ebr.eidx2]
+            events = get_events([ebr], rlzs_by_gsim[grp_id],
+                                oq.ses_per_logic_tree_path, oq.random_seed)
             ebrs.append(ebr.export(mesh, events))
         ruptures_by_grp[grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
@@ -577,12 +602,12 @@ def export_gmf(ekey, dstore):
     fnames = []
     ruptures_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
-    events = dstore['events'].value
+    eids = dstore['events']['eid']
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         ruptures = ruptures_by_rlz[rlzi]
         for idx, gmfa in group_array(gmf_arr, 'eid').items():
-            ses_idx = events[idx]['ses']
-            eid = events[idx]['eid']
+            eid = eids[idx]
+            ses_idx = 1  # FIXME
             rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
