@@ -587,13 +587,6 @@ class EBRupture(object):
         """
         return self.rupture.serial
 
-    @property
-    def weight(self):
-        """
-        Weight of the EBRupture
-        """
-        return len(self.sids) * len(self.events)
-
     def export(self, mesh, events):
         """
         Yield :class:`Rupture` objects, with all the
