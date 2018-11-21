@@ -52,6 +52,8 @@ U64 = numpy.uint64
 F32 = numpy.float32
 TWO16 = 2 ** 16
 
+eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
+
 
 class InvalidCalculationID(Exception):
     """
@@ -760,7 +762,7 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, readinput.stored_event_dt)
+            events = numpy.zeros(E, eidrlz_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
         return sitecol, assetcol
@@ -933,7 +935,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
-        events = numpy.zeros(len(eids), readinput.stored_event_dt)
+        events = numpy.zeros(len(eids), eidrlz_dt)
         events['eid'] = eids
         dstore['events'] = events
 
@@ -956,7 +958,7 @@ def import_gmfs(dstore, fname, sids):
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
-    events = numpy.zeros(len(eids), readinput.stored_event_dt)
+    events = numpy.zeros(len(eids), eidrlz_dt)
     events['eid'] = eids
     dstore['events'] = events
     # store the GMFs

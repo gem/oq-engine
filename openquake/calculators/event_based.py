@@ -46,7 +46,6 @@ F64 = numpy.float64
 TWO32 = U64(2 ** 32)
 rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
-eidrlz_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 
 
 def replace_eid(data, eid2idx):
@@ -101,7 +100,7 @@ def get_eidrlz(ebruptures, rlzs_by_gsim):
                 ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).items():
             all_eids.extend(TWO32 * U64(ebr.serial) + eids)
             rlzs.extend([rlz] * len(eids))
-    return numpy.fromiter(zip(all_eids, rlzs), eidrlz_dt)
+    return numpy.fromiter(zip(all_eids, rlzs), base.eidrlz_dt)
 
 
 def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
