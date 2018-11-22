@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug with the IMT `SA(1)` considered different from `SA(1.0)`
   * Removed the long-time deprecated GMF exporter in XML format for event_based
   * Added a re-use hazard feature in event_based_risk in single-file mode
   * Made the event ID unique also in scenario calculations with
