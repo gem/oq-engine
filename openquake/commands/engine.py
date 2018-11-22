@@ -221,6 +221,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         if len(job_inis) == 1 and not hc_id:
             # init logs before calling get_oqparam but without creating a job
             logs.init('nojob', getattr(logging, log_level.upper()))
+            # not using logs.handle that logs on the db
             oq = readinput.get_oqparam(job_inis[0])
             if oq.calculation_mode.startswith('event_based'):
                 ebr = EBRunner(job_inis[0], oq, log_level, log_file,
