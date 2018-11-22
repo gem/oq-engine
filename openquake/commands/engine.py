@@ -48,8 +48,6 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     """
     Run a job using the specified config file and other options.
 
-    :param calc_id:
-        Calculation ID
     :param str job_ini:
         Path to calculation config (INI-style) files.
     :param str log_level:
@@ -63,8 +61,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    # if the master dies, automatically kill the workers
-    job_id = logs.init(level=getattr(logging, log_level.upper()))
+    job_id = logs.init('job', getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
         job_ini = os.path.abspath(job_ini)
         oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
@@ -165,7 +162,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     if not run:
         # configure a basic logging
-        logging.basicConfig(level=logging.INFO)
+        logs.init()
 
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
@@ -187,7 +184,6 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         sys.exit(err)
 
     if upgrade_db:
-        logs.init()
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
         if msg.startswith('Your database is already updated'):
             pass
@@ -222,8 +218,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
-            # init logs before calling get_oqparam
-            logs.init(level=getattr(logging, log_level.upper()))
+            # init logs before calling get_oqparam but without creating a job
+            logs.init('nojob', getattr(logging, log_level.upper()))
+            # not using logs.handle that logs on the db
             oq = readinput.get_oqparam(job_inis[0])
             if oq.calculation_mode.startswith('event_based'):
                 ebr = EBRunner(job_inis[0], oq, log_level, log_file,
