@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the rupture generation in case of sampling and changed the
+    algorithm and seeds
   * Fixed a bug with the IMT `SA(1)` considered different from `SA(1.0)`
   * Removed the long-time deprecated GMF exporter in XML format for event_based
   * Added a re-use hazard feature in event_based_risk in single-file mode

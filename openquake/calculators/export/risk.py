@@ -192,11 +192,13 @@ def export_maxloss_ruptures(ekey, dstore):
     """
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
+    rlzs_by_gsim = dstore['csm_info'].get_rlzs_by_gsim_grp()
+    num_ses = oq.ses_per_logic_tree_path
     fnames = []
     for loss_type in oq.loss_dt().names:
         ebr = getters.get_maxloss_rupture(dstore, loss_type)
-        events = dstore['events'][ebr.eidx1:ebr.eidx2]
-        root = hazard_writers.rupture_to_element(ebr.export(mesh, events))
+        root = hazard_writers.rupture_to_element(
+            ebr.export(mesh, rlzs_by_gsim[ebr.grp_id], num_ses))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:
             nrml.write(list(root), fh)
