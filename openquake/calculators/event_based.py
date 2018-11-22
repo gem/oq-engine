@@ -287,8 +287,13 @@ class EventBasedCalculator(base.HazardCalculator):
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
+
+        # reorder events
+        evs = self.datastore['events'].value
+        evs.sort(order='eid')
+        self.datastore['events'] = evs
         nr = len(self.datastore['ruptures'])
-        ne = len(self.datastore['events'])
+        ne = len(evs)
         logging.info('Stored {:,d} ruptures and {:,d} events'.format(nr, ne))
 
         def genargs():
@@ -464,7 +469,6 @@ class EventBasedCalculator(base.HazardCalculator):
     @cached_property
     def eid2idx(self):
         eids = self.datastore['events']['eid']
-        eids.sort()
         eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
         return eid2idx
 
