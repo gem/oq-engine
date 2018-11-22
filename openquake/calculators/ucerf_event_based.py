@@ -161,7 +161,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
     num_ses = param['ses_per_logic_tree_path']
     samples = getattr(src, 'samples', 1)
-    n_occ = AccumDict(accum=numpy.zeros(samples, numpy.uint16))
+    n_occ = AccumDict(accum=0)
     with sampl_mon:
         for sam_idx in range(samples):
             for ses_idx, ses_seed in param['ses_seeds']:
@@ -169,24 +169,21 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                 rups, occs = generate_event_set(
                     src, background_sids, src_filter, ses_idx, seed)
                 for rup, occ in zip(rups, occs):
-                    n_occ[rup][sam_idx] = occ
+                    n_occ[rup] += occ
     with filt_mon:
-        nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
         ebruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
-    res.num_events = sum(ebr.multiplicity(nr) for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}
     else:
         res.events_by_grp = {
-            src.src_group_id: event_based.get_events(
-                ebruptures, rlzs_by_gsim, num_ses)}
+            src.src_group_id: event_based.get_events(ebruptures, rlzs_by_gsim)}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
             rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'], samples)
+            param['oqparam'], param['min_iml'])
         res.update(getter.compute_gmfs_curves(monitor))
     return res
 
