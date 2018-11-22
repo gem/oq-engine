@@ -565,10 +565,12 @@ def export_gmf(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    sitecol = dstore['sitecol']
     oq = dstore['oqparam']
-    if oq.ses_per_logic_tree_path > 1:
-        logging.error('This export is broken!')
+    if not oq.calculation_mode.startswith('scenario'):
+        logging.warn('The GMF exporter in .xml format has been removed, '
+                     'use the one in .csv format')
+        return []
+    sitecol = dstore['sitecol']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
@@ -581,11 +583,11 @@ def export_gmf(ekey, dstore):
     events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
     eids = dstore['events']['eid']
+    ses_idx = 1  # for scenario only
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         events = events_by_rlz[rlzi]
         for idx, gmfa in group_array(gmf_arr, 'eid').items():
             eid = eids[idx]
-            ses_idx = 1  # FIXME
             rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             events.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
