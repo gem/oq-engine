@@ -98,7 +98,6 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
     Extract an array of dtype stored_event_dt from a list of EBRuptures
     """
     events = []
-    year = 0  # to be set later
     nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
     for ebr in ebruptures:
         numpy.random.seed(ebr.serial)
@@ -107,8 +106,7 @@ def get_events(ebruptures, rlzs_by_gsim, num_ses):
         for rlz, eids in get_eids_by_rlz(ebr.n_occ, rlzs_by_gsim,
                                          ebr.samples).items():
             for eid in eids:
-                rec = (TWO32 * U64(ebr.serial) + eid, ebr.serial,
-                       ebr.grp_id, year, sess[i], rlz)
+                rec = (TWO32 * U64(ebr.serial) + eid, ebr.grp_id, sess[i], rlz)
                 events.append(rec)
                 i += 1
     return numpy.array(events, readinput.stored_event_dt)
@@ -145,25 +143,6 @@ def set_counts(dstore, dsetname):
     dic = dict(zip(unique, counts))
     dstore.set_attrs(dsetname, by_grp=sorted(dic.items()))
     return dic
-
-
-def set_random_years(dstore, name, ses_seed, investigation_time):
-    """
-    Set on the `events` dataset year labels sensitive to the
-    SES ordinal and the investigation time.
-
-    :param dstore: a DataStore instance
-    :param name: name of the dataset ('events')
-    :param ses_seed: seed to use in numpy.random.choice
-    :param investigation_time: investigation time
-    """
-    events = dstore[name].value
-    numpy.random.seed(ses_seed)
-    years = numpy.random.choice(investigation_time, len(events)) + 1
-    year_of = dict(zip(numpy.sort(events['eid']), years))  # eid -> year
-    for event in events:
-        event['year'] = year_of[event['eid']]
-    dstore[name] = events
 
 
 # ######################## GMF calculator ############################ #
@@ -520,11 +499,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if self.oqparam.save_ruptures:
                 logging.info('Setting {:,d} event years on {:,d} ruptures'.
                              format(num_events, self.rupser.nruptures))
-            with self.monitor('setting event years', measuremem=True,
-                              autoflush=True):
-                set_random_years(self.datastore, 'events',
-                                 self.oqparam.ses_seed,
-                                 int(self.oqparam.investigation_time))
 
     @cached_property
     def eid2idx(self):
