@@ -307,8 +307,11 @@ def job_from_file(job_ini, job_id, username, **kw):
             oq.inputs['exposure'] = fnames
         elif 'exposure' in oq.inputs:
             del oq.inputs['exposure']
-    logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-               username, datastore.get_datadir(), job_id, hc_id)
+    logs.dbcmd('update_job', job_id,
+               dict(calculation_mode=oq.calculation_mode,
+                    description=oq.description,
+                    user_name=username,
+                    hazard_calculation_id=hc_id))
     return oq
 
 
