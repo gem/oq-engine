@@ -581,9 +581,6 @@ class EBRupture(object):
         self.n_occ = n_occ
         self.samples = samples
 
-    def multiplicity(self, nr):
-        return self.n_occ * nr
-
     @property
     def serial(self):
         """
