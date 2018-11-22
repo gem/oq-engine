@@ -114,9 +114,8 @@ def max_gmf_size(ruptures_by_grp, num_rlzs, samples_by_grp, num_imts):
     nbytes = 2 + 4 + 8 + 4 * num_imts
     n = 0
     for grp_id, ebruptures in ruptures_by_grp.items():
-        nr = num_rlzs[grp_id]
         for ebr in ebruptures:
-            n += len(ebr.rupture.sctx.sids) * ebr.multiplicity(nr)
+            n += len(ebr.rupture.sctx.sids) * ebr.n_occ
     return n * nbytes
 
 

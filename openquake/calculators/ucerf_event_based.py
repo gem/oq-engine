@@ -171,10 +171,8 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
     with filt_mon:
-        nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
         ebruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
-    res.num_events = sum(ebr.multiplicity(nr) for ebr in ebruptures)
     res['ruptures'] = {src.src_group_id: ebruptures}
     if param['save_ruptures']:
         res.ruptures_by_grp = {src.src_group_id: ebruptures}
