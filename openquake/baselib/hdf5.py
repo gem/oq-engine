@@ -306,6 +306,7 @@ class File(h5py.File):
         if items:
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
+                assert v is not None, k  # sanity check
                 a[k] = v
 
     def __setitem__(self, path, obj):
@@ -436,6 +437,7 @@ def save(path, items, **extra):
     """
     with File(path, 'w') as f:
         for key, val in items:
+            assert val is not None, key  # sanity check
             try:
                 f[key] = val
             except ValueError as err:
