@@ -585,8 +585,7 @@ def export_gmf(ekey, dstore):
     ses_idx = 1  # for scenario only
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         ruptures = ruptures_by_rlz[rlzi]
-        for idx, gmfa in group_array(gmf_arr, 'eid').items():
-            ses_idx = events[idx]['ses']
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
             rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             ruptures.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
