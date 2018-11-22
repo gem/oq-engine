@@ -582,12 +582,10 @@ def export_gmf(ekey, dstore):
     fnames = []
     events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
-    eids = dstore['events']['eid']
     ses_idx = 1  # for scenario only
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
         events = events_by_rlz[rlzi]
-        for idx, gmfa in group_array(gmf_arr, 'eid').items():
-            eid = eids[idx]
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
             rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
             events.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
