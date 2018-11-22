@@ -372,11 +372,10 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
-            nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
             events = get_events(ruptures, rlzs_by_gsim)
             self.datastore.extend('events', events)
             if self.oqparam.save_ruptures:
-                self.rupser.save(ruptures, nr)
+                self.rupser.save(ruptures)
             return events
         return ()
 
