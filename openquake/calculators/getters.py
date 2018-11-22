@@ -270,8 +270,7 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam,
-                 min_iml, samples=1):
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam, min_iml):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol.complete
@@ -291,7 +290,6 @@ class GmfGetter(object):
             else oqparam.maximum_distance,
             {'filter_distance': oqparam.filter_distance})
         self.correl_model = oqparam.correl_model
-        self.samples = samples
 
     @property
     def sids(self):
@@ -335,7 +333,7 @@ class GmfGetter(object):
             rup = computer.rupture
             sids = computer.sids
             eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
-                                          rup.samples)
+                                          rup.samples, rup.serial)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
@@ -504,7 +502,7 @@ class RuptureGetter(object):
             rgetter = self.__class__(self.dstore, idxs, self.grp_id)
             rup = self.dstore['ruptures'][idxs]
             # use int below, otherwise n_events would be a numpy.uint64
-            rgetter.n_events = int((rup['eidx2'] - rup['eidx1']).sum())
+            rgetter.n_events = int(rup['n_occ'])
             getters.append(rgetter)
         return getters
 
@@ -515,22 +513,17 @@ class RuptureGetter(object):
         for key, val in attrs.items():
             if key.startswith('code_'):
                 code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-        grp_trt = self.dstore['csm_info'].grp_by("trt")
-        events = self.dstore['events']
+        csm_info = self.dstore['csm_info']
+        grp_trt = csm_info.grp_by("trt")
+        samples = csm_info.get_samples_by_grp()
         ruptures = self.dstore['ruptures'][self.mask]
         # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
         # <ufunc 'greater'> returned a result with an error set
         # this is way I am sorting with Python and not with numpy below
         rupgeoms = self.dstore['rupgeoms']
-        rlzs_by_grp = self.dstore['csm_info'].get_rlzs_assoc().by_grp()
         for rec in sorted(ruptures, key=operator.itemgetter('serial')):
             if self.grp_id is not None and self.grp_id != rec['grp_id']:
                 continue
-            rlzs = rlzs_by_grp['grp-%02d' % rec['grp_id']]
-            evs = events[rec['eidx1']:rec['eidx2']]
-            n_evs_by_rlz = {rlz: 0 for rlzs_ in rlzs for rlz in rlzs_}
-            for ev in evs:
-                n_evs_by_rlz[ev['rlz']] += 1
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sy'], rec['sz'])
@@ -564,10 +557,9 @@ class RuptureGetter(object):
                 # fault surface, strike and dip will be computed
                 rupture.surface.strike = rupture.surface.dip = None
                 rupture.surface.__init__(RectangularMesh(*mesh))
-            n_occ = numpy.fromiter(n_evs_by_rlz.values(), U32)
-            ebr = EBRupture(rupture, rec['srcidx'], rec['grp_id'], (), n_occ)
-            ebr.eidx1 = rec['eidx1']
-            ebr.eidx2 = rec['eidx2']
+            grp_id = rec['grp_id']
+            ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
+                            rec['n_occ'], samples[grp_id])
             # not implemented: rupture_slip_direction
             yield ebr
 

@@ -42,6 +42,7 @@ F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -66,13 +67,13 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    rlzs_by_grp = dstore['csm_info'].get_rlzs_by_gsim_grp()
+    num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
     ruptures_by_grp = {}
     for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
-        ebrs = []
-        for ebr in ruptures:
-            events = dstore['events'][ebr.eidx1:ebr.eidx2]
-            ebrs.append(ebr.export(mesh, events))
+        ebrs = [ebr.export(mesh, rlzs_by_grp[ebr.grp_id], num_ses)
+                for ebr in ruptures]
         ruptures_by_grp[grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
@@ -579,27 +580,26 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    ruptures_by_rlz = collections.defaultdict(list)
+    events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
-    events = dstore['events'].value
     ses_idx = 1  # for scenario only
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
-        ruptures = ruptures_by_rlz[rlzi]
+        events = events_by_rlz[rlzi]
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
-            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-            ruptures.append(rup)
+            rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            events.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    for rlzi in sorted(ruptures_by_rlz):
-        ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
+    for rlzi in sorted(events_by_rlz):
+        events_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
         fname = dstore.build_fname('gmf', rlzi, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlzi],
+            ('gmf', fmt), fname, sitecol, oq.imtls, events_by_rlz[rlzi],
             rlzs[rlzi], investigation_time)
     return fnames
 
 
-Rup = collections.namedtuple('Rup', ['eid', 'ses_idx', 'indices', 'gmfa'])
+Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
@@ -713,11 +713,11 @@ def export_gmf_scenario_csv(ekey, dstore):
     samples = samples[ebr.grp_id]
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, samples)
+    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
         eids for eids in get_eids_by_rlz(
-                ebr.n_occ, rlzs_by_gsim, ebr.samples).values()]) +
+            ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).values()]) +
             TWO32 * numpy.uint64(ebr.serial))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
