@@ -149,10 +149,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         # use the ruptures sampled in prefiltering
         grp_id = ruptures[0].grp_id
         sitecol = src_filter.sitecol
-    if isinstance(ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(ruptures, rlzs_by_gsim)
-    else:
-        res['ruptures'] = {grp_id: ruptures}
+    res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'])
