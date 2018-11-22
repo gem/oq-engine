@@ -247,8 +247,8 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
-        for eids, agglosses in dic.pop('agglosses'):  # shape (E, LI)
-            self.agglosses[eids] += agglosses
+        for idxs, agglosses in dic.pop('agglosses'):  # shape (E, LI)
+            self.agglosses[idxs] += agglosses
         aids = dic.pop('aids')
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
