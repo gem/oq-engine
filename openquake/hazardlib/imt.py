@@ -44,13 +44,15 @@ def imt2tup(string):
     ('PGA',)
     >>> imt2tup('SA(1.0)')
     ('SA', 1.0)
+    >>> imt2tup('SA(1)')
+    ('SA', 1.0)
     """
     s = string.strip()
     if not s.endswith(')'):
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
     name, rest = s.split('(', 1)
-    return (name,) + ast.literal_eval(rest[:-1] + ',')
+    return (name,) + tuple(float(x) for x in ast.literal_eval(rest[:-1] + ','))
 
 
 def from_string(imt):
