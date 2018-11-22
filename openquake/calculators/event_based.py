@@ -149,8 +149,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         # use the ruptures sampled in prefiltering
         grp_id = ruptures[0].grp_id
         sitecol = src_filter.sitecol
-    if not param['oqparam'].save_ruptures or isinstance(
-            ruptures, RuptureGetter):  # ruptures already saved
+    if isinstance(ruptures, RuptureGetter):  # ruptures already saved
         res.events = get_events(ruptures, rlzs_by_gsim)
     else:
         res['ruptures'] = {grp_id: ruptures}
@@ -232,8 +231,6 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures', measuremem=False)
         for grp, srcs in srcs_by_grp.items():
             for src in srcs:
-                # save the events always; save the ruptures
-                # if oq.save_ruptures is true
                 with mon:
                     self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
@@ -319,19 +316,14 @@ class EventBasedCalculator(base.HazardCalculator):
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
         ucerf = self.oqparam.calculation_mode.startswith('ucerf')
-        if ucerf and hasattr(result, 'ruptures_by_grp'):
-            for ruptures in result.ruptures_by_grp.values():
-                events = self.save_ruptures(ruptures)
-        elif ucerf and hasattr(result, 'events_by_grp'):
-            [(grp_id, events)] = result.events_by_grp.items()
-            self.datastore.extend('events', events)
-        if ucerf and len(events) == 0:
-            return acc
-        elif ucerf:
+        if ucerf:
+            [ruptures] = result.ruptures_by_grp.values()
+            events = self.save_ruptures(ruptures)
             eid2idx = {}
-            for eid in events['eid']:
-                eid2idx[eid] = self.idx
-                self.idx += 1
+            if len(events):
+                for eid in events['eid']:
+                    eid2idx[eid] = self.idx
+                    self.idx += 1
         else:
             eid2idx = self.eid2idx
         sav_mon = self.monitor('saving gmfs')
@@ -365,18 +357,13 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def save_ruptures(self, ruptures):
         """
-        Extend the 'events' dataset with the events from the given ruptures;
-        also, save the ruptures if the flag `save_ruptures` is on.
-
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
             rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
-            nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
             events = get_events(ruptures, rlzs_by_gsim)
             self.datastore.extend('events', events)
-            if self.oqparam.save_ruptures:
-                self.rupser.save(ruptures, nr)
+            self.rupser.save(ruptures)
             return events
         return ()
 
@@ -409,7 +396,6 @@ class EventBasedCalculator(base.HazardCalculator):
         param = self.param.copy()
         param.update(
             oqparam=oq, min_iml=self.min_iml,
-            save_ruptures=oq.save_ruptures,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
             ruptures_per_block=oq.ruptures_per_block,
