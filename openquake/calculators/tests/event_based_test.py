@@ -166,10 +166,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
         [fname, _sitefile] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
-
-        ltr0 = out['gmf_data', 'xml'][0]
-        self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
-                              ltr0)
+        self.assertEqual(out['gmf_data', 'xml'], [])  # exported removed
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hc-mean.csv', fname)
 
@@ -245,8 +242,6 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        years = sorted(self.calc.datastore['events']['year'])
-        self.assertEqual(years, [15, 29, 39, 43])
         self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
@@ -341,8 +336,6 @@ PGA     SA(0.3) SA(0.6)
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
         events = extract(self.calc.datastore, 'events')
-        years = numpy.unique(events['year'])
-        numpy.testing.assert_equal(years, [1])
         [fname, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
