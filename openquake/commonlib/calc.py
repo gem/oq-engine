@@ -400,7 +400,7 @@ class RuptureSerializer(object):
         datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
         datastore.create_dset('rupgeoms', point3d)
 
-    def save(self, ebruptures, nr):
+    def save(self, ebruptures):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 

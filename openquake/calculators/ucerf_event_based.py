@@ -174,11 +174,7 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
         ebruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
     res['ruptures'] = {src.src_group_id: ebruptures}
-    if param['save_ruptures']:
-        res.ruptures_by_grp = {src.src_group_id: ebruptures}
-    else:
-        res.events_by_grp = {
-            src.src_group_id: event_based.get_events(ebruptures, rlzs_by_gsim)}
+    res.ruptures_by_grp = {src.src_group_id: ebruptures}
     res.eff_ruptures = {src.src_group_id: src.num_ruptures}
     if param.get('gmf'):
         getter = getters.GmfGetter(
