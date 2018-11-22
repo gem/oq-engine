@@ -504,7 +504,7 @@ def submit_job(job_ini, username, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id = logs.init()
+    job_id = logs.init('job')
     oq = engine.job_from_file(
         job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
