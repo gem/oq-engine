@@ -61,7 +61,6 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    # if the master dies, automatically kill the workers
     job_id = logs.init('job', getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
         job_ini = os.path.abspath(job_ini)
