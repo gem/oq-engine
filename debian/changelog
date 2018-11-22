@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the `save_ruptures` flag in the job.ini since ruptures must be saved
+    always
   * Optimized the rupture generation in case of sampling and changed the
     algorithm and seeds
   * Fixed a bug with the IMT `SA(1)` considered different from `SA(1.0)`
