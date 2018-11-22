@@ -48,8 +48,6 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
     """
     Run a job using the specified config file and other options.
 
-    :param calc_id:
-        Calculation ID
     :param str job_ini:
         Path to calculation config (INI-style) files.
     :param str log_level:
@@ -64,7 +62,7 @@ def run_job(job_ini, log_level='info', log_file=None, exports='',
         Extra parameters like hazard_calculation_id and calculation_mode
     """
     # if the master dies, automatically kill the workers
-    job_id = logs.init(level=getattr(logging, log_level.upper()))
+    job_id = logs.init('job', level=getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
         job_ini = os.path.abspath(job_ini)
         oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
@@ -222,7 +220,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
-            # init logs before calling get_oqparam
+            # init logs before calling get_oqparam but without creating a job
             logs.init(level=getattr(logging, log_level.upper()))
             oq = readinput.get_oqparam(job_inis[0])
             if oq.calculation_mode.startswith('event_based'):
