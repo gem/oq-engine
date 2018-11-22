@@ -84,36 +84,23 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, calc_mode, description, user_name, datadir,
-               calc_id, hc_id=None):
+def create_job(db, datadir):
     """
     Create job for the given user, return it.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
-    :param str calc_mode:
-        Calculation mode, such as classical, event_based, etc
-    :param user_name:
-        User who owns/started this job.
     :param datadir:
         Data directory of the user who owns/started this job.
-    :param calc_id:
-        ID to use for the job, assuming it is free
-    :param description:
-         Description of the calculation
-    :param hc_id:
-        If not None, then the created job is a risk job
     :returns:
-        :class:`openquake.server.db.models.OqJob` instance.
+        the job ID
     """
-    job = dict(id=calc_id,
-               calculation_mode=calc_mode,
-               description=description,
-               user_name=user_name,
-               hazard_calculation_id=hc_id,
-               is_running=1,
+    calc_id = get_calc_id(db, datadir) + 1
+    job = dict(id=calc_id, is_running=1, description='just created',
+               user_name='openquake', calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
+    return db('INSERT INTO job (?S) VALUES (?X)',
+              job.keys(), job.values()).lastrowid
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
