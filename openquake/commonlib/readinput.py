@@ -825,6 +825,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if not in_memory:
         return csm
 
+    nr = sum(src.num_ruptures for src in csm.get_sources())
+    logging.info('The complete source model has {:,d} ruptures'.format(nr))
+
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
         # this way the serials are independent from the site collection
