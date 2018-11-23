@@ -29,6 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
@@ -47,16 +48,17 @@ rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 
 
-def replace_eid(data, eid2idx):
+def get_idxs(data, eid2idx):
     """
     Convert from event IDs to event indices.
 
     :param data: an array with a field eid
     :param eid2idx: a dictionary eid -> idx
+    :returns: the array of event indices
     """
     uniq, inv = numpy.unique(data['eid'], return_inverse=True)
-    data['eid'] = numpy.array([eid2idx[eid] for eid in uniq])[inv]
-
+    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
+    return idxs
 
 def store_rlzs_by_grp(dstore):
     """
@@ -149,10 +151,7 @@ def compute_gmfs(ruptures, src_filter, rlzs_by_gsim, param, monitor):
         # use the ruptures sampled in prefiltering
         grp_id = ruptures[0].grp_id
         sitecol = src_filter.sitecol
-    if isinstance(ruptures, RuptureGetter):  # ruptures already saved
-        res.events = get_events(ruptures, rlzs_by_gsim)
-    else:
-        res['ruptures'] = {grp_id: ruptures}
+    res['ruptures'] = {grp_id: ruptures}
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'])
@@ -195,6 +194,8 @@ class EventBasedCalculator(base.HazardCalculator):
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
         self.R = len(self.rlzs_assoc.realizations)
+        self.mon_rups = self.monitor('saving ruptures', measuremem=False)
+        self.mon_evs = self.monitor('saving events', measuremem=False)
 
     def from_ruptures(self, param):
         """
@@ -223,16 +224,17 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
+        if not self.oqparam.calculation_mode.startswith('ucerf'):
+            self.E = len(self.datastore['events'])
+            self.rlzi = numpy.zeros(self.E, U16)
         return zd
 
     def _store_ruptures(self, srcs_by_grp):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        mon = self.monitor('saving ruptures', measuremem=False)
         for grp, srcs in srcs_by_grp.items():
             for src in srcs:
-                with mon:
-                    self.save_ruptures(src.eb_ruptures)
+                self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     self.num_rlzs_by_grp,
@@ -284,6 +286,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
 
+        self.check_overflow()  # check the number of events
         # reorder events
         evs = self.datastore['events'].value
         evs.sort(order='eid')
@@ -332,7 +335,12 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gmdata += result['gmdata']
             with sav_mon:
                 data = result.pop('gmfdata')
-                replace_eid(data, eid2idx)  # this has to be fast
+                if len(data) == 0:
+                    return acc
+                idxs = get_idxs(data, eid2idx)  # this has to be fast
+                data['eid'] = idxs  # replace eid with idx
+                if not ucerf:
+                    self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -360,10 +368,16 @@ class EventBasedCalculator(base.HazardCalculator):
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
-            events = get_events(ruptures, rlzs_by_gsim)
-            self.datastore.extend('events', events)
-            self.rupser.save(ruptures)
+            with self.mon_rups:
+                self.rupser.save(ruptures)
+            with self.mon_evs:
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
+                num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+                eids = numpy.concatenate([rup.get_eids(num_rlzs)
+                                          for rup in ruptures])
+                events = numpy.zeros(len(eids), rupture.events_dt)
+                events['eid'] = eids
+                self.datastore.extend('events', events)
             return events
         return ()
 
@@ -416,7 +430,10 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
-        self.check_overflow()  # check the number of events
+
+        # storing events['rlz']
+        if not self.datastore.parent and 'ucerf' not in oq.calculation_mode:
+            self.datastore['events']['rlz'] = self.rlzi
         base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
