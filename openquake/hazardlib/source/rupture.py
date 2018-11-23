@@ -605,8 +605,7 @@ class EBRupture(object):
         :returns: an array of event IDs
         """
         num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        start = TWO32 * U64(self.serial)
-        return numpy.arange(num_events, dtype=U64) + start
+        return TWO32 * U64(self.serial) + numpy.arange(num_events, dtype=U64)
 
     def get_events_by_ses(self, events, num_ses):
         """
