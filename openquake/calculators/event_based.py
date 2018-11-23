@@ -362,6 +362,10 @@ class EventBasedCalculator(base.HazardCalculator):
             with self.mon_evs:
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
                 events = get_events(ruptures, rlzs_by_gsim)
+                num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
+                eids = numpy.concatenate([rup.get_eids(num_rlzs)
+                                          for rup in ruptures])
+                numpy.testing.assert_equal(eids, events['eid'])
                 self.datastore.extend('events', events)
             return events
         return ()
