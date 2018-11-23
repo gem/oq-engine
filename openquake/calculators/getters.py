@@ -516,14 +516,12 @@ class RuptureGetter(object):
         csm_info = self.dstore['csm_info']
         grp_trt = csm_info.grp_by("trt")
         samples = csm_info.get_samples_by_grp()
-        ruptures = self.dstore['ruptures'][self.mask]
-        # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
-        # <ufunc 'greater'> returned a result with an error set
-        # this is way I am sorting with Python and not with numpy below
         rupgeoms = self.dstore['rupgeoms']
-        for rec in sorted(ruptures, key=operator.itemgetter('serial')):
-            if self.grp_id is not None and self.grp_id != rec['grp_id']:
-                continue
+        ruptures = self.dstore['ruptures'][self.mask]
+        for rec in ruptures:
+            if self.grp_id is not None:  # ruptures must have same grp_id
+                assert self.grp_id == rec['grp_id'], (
+                    self.grp_id, rec['grp_id'])
             mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
             geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                 rec['sy'], rec['sz'])
