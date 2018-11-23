@@ -82,7 +82,8 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         except MemoryError:
             raise MemoryError(
                 'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
-        result = dict(aids=ri.aids, avglosses=avg, agglosses=AccumDict())
+        result = dict(aids=ri.aids, avglosses=avg)
+        acc = AccumDict()  # accumulator eidx -> agglosses
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
@@ -124,7 +125,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow
             # saving time
-            result['agglosses'] += dict(zip(out.eids, agglosses))
+            acc += dict(zip(out.eids, agglosses))
 
         if 'builder' in param:
             clp = param['conditional_loss_poes']
@@ -140,6 +141,8 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
 
         # store info about the GMFs, must be done at the end
         result['gmdata'] = ri.gmdata
+        result['agglosses'] = (numpy.array(list(acc)),
+                               numpy.array(list(acc.values())))
         yield result
 
 
@@ -247,8 +250,8 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
-        for idxs, agglosses in dic.pop('agglosses').items():
-            self.agglosses[idxs] += agglosses
+        idxs, agglosses = dic.pop('agglosses')
+        self.agglosses[idxs] += agglosses
         aids = dic.pop('aids')
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
