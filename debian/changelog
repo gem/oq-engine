@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the saving of the events
   * Removed the `save_ruptures` flag in the job.ini since ruptures must be saved
     always
   * Optimized the rupture generation in case of sampling and changed the
