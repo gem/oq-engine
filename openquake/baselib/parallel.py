@@ -446,7 +446,7 @@ class IterResult(object):
                 val = result.get()
                 self.received.append(len(result.pik))
                 if hasattr(result, 'nbytes'):
-                    nbytes +=result.nbytes
+                    nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
