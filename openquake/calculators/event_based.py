@@ -222,10 +222,11 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
-        self.E = len(self.datastore['events'])
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        self.rlzi = numpy.zeros(self.E, U16)
+        if not self.oqparam.calculation_mode.startswith('ucerf'):
+            self.E = len(self.datastore['events'])
+            self.rlzi = numpy.zeros(self.E, U16)
         return zd
 
     def _store_ruptures(self, srcs_by_grp):
@@ -338,7 +339,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     return acc
                 idxs = get_idxs(data, eid2idx)  # this has to be fast
                 data['eid'] = idxs  # replace eid with idx
-                self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
+                if not ucerf:
+                    self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -430,7 +432,8 @@ class EventBasedCalculator(base.HazardCalculator):
         ).reduce(self.agg_dicts, self.zerodict())
 
         # storing events['rlz']
-        self.datastore['events']['rlz'] = self.rlzi
+        if not self.datastore.parent and 'ucerf' not in oq.calculation_mode:
+            self.datastore['events']['rlz'] = self.rlzi
         base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
