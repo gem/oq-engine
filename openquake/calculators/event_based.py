@@ -204,19 +204,24 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.init_logic_tree(self.csm_info)
         concurrent_tasks = oq.concurrent_tasks
-        U = len(self.datastore.parent['ruptures'])
-        logging.info('Found %d ruptures', U)
-        parent = self.can_read_parent() or self.datastore
-
-        def genargs():
-            for slc in split_in_slices(U, concurrent_tasks or 1):
-                for grp_id in self.rlzs_by_gsim_grp:
-                    rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-                    ruptures = RuptureGetter(parent, slc, grp_id)
-                    par = param.copy()
-                    par['samples'] = self.samples_by_grp[grp_id]
-                    yield ruptures, self.sitecol, rlzs_by_gsim, par
-        return genargs()
+        dset = self.datastore.parent.getitem('ruptures')
+        rups = dset.value[['serial', 'grp_id']]
+        logging.info('Found %d ruptures', len(rups))
+        parent = self.datastore.parent
+        allargs = []
+        start = 0
+        for block in split_in_blocks(rups, concurrent_tasks or 1,
+                                     key=operator.itemgetter(1)):
+            nr = len(block)  # number of ruptures per block
+            grp_id = block[0]['grp_id']
+            rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+            rgetter = RuptureGetter(
+                parent, slice(start, start + nr), grp_id)
+            par = param.copy()
+            par['samples'] = self.samples_by_grp[grp_id]
+            allargs.append((rgetter, self.sitecol, rlzs_by_gsim, par))
+            start += nr
+        return allargs
 
     def zerodict(self):
         """
@@ -242,6 +247,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     len(self.oqparam.imtls))
                 calc_times += src.calc_times
         self.rupser.close()
+        # order the ruptures by serial
+        attrs = self.datastore.getitem('ruptures').attrs
+        sorted_ruptures = self.datastore.getitem('ruptures').value
+        sorted_ruptures.sort(order='serial')
+        self.datastore['ruptures'] = sorted_ruptures
+        self.datastore.set_attrs('ruptures', **attrs)
         if gmf_size:
             self.datastore.set_attrs('events', max_gmf_size=gmf_size)
             msg = 'less than ' if self.min_iml.sum() else ''
