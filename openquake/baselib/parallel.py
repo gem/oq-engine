@@ -445,6 +445,8 @@ class IterResult(object):
             elif isinstance(result, Result):
                 val = result.get()
                 self.received.append(len(result.pik))
+                if hasattr(result, 'nbytes'):
+                    nbytes +=result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
@@ -462,6 +464,9 @@ class IterResult(object):
             logging.info('Received %s from %d outputs in %d seconds, biggest '
                          'output=%s', humansize(tot), len(self.received),
                          time.time() - t0, humansize(max_per_output))
+            if nbytes:
+                logging.info('Received nbytes %s',
+                             {k: humansize(v) for k, v in nbytes.items()})
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
