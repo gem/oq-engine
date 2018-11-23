@@ -29,6 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.source import rupture
 from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
@@ -47,16 +48,17 @@ rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 
 
-def replace_eid(data, eid2idx):
+def get_idxs(data, eid2idx):
     """
     Convert from event IDs to event indices.
 
     :param data: an array with a field eid
     :param eid2idx: a dictionary eid -> idx
+    :returns: the array of event indices
     """
     uniq, inv = numpy.unique(data['eid'], return_inverse=True)
-    data['eid'] = numpy.array([eid2idx[eid] for eid in uniq])[inv]
-
+    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
+    return idxs
 
 def store_rlzs_by_grp(dstore):
     """
@@ -329,7 +331,13 @@ class EventBasedCalculator(base.HazardCalculator):
             self.gmdata += result['gmdata']
             with sav_mon:
                 data = result.pop('gmfdata')
-                replace_eid(data, eid2idx)  # this has to be fast
+                if len(data) == 0:
+                    return acc
+                events_dset = self.datastore['events']
+                idxs = get_idxs(data, eid2idx)  # this has to be fast
+                for idx, rlzi in zip(idxs, data['rlzi']):
+                    events_dset[idx, 'rlz'] = rlzi
+                data['eid'] = idxs  # replace eid with idx
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -361,11 +369,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.rupser.save(ruptures)
             with self.mon_evs:
                 rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
-                events = get_events(ruptures, rlzs_by_gsim)
                 num_rlzs = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
                 eids = numpy.concatenate([rup.get_eids(num_rlzs)
                                           for rup in ruptures])
-                numpy.testing.assert_equal(eids, events['eid'])
+                events = numpy.zeros(len(eids), rupture.events_dt)
+                events['eid'] = eids
                 self.datastore.extend('events', events)
             return events
         return ()
