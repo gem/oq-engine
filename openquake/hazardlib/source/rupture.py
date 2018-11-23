@@ -599,6 +599,14 @@ class EBRupture(object):
             rlzs.extend([rlz] * len(eids))
         return numpy.fromiter(zip(all_eids, rlzs), events_dt)
 
+    def get_eids(self, num_rlzs):
+        """
+        :param num_rlzs: the number of realizations for the given group
+        :returns: an array of event IDs
+        """
+        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
+        return TWO32 * U64(self.serial) + numpy.arange(num_events, dtype=U64)
+
     def get_events_by_ses(self, events, num_ses):
         """
         :returns: a dictionary ses index -> events array
