@@ -279,6 +279,9 @@ class Result(object):
     :param msg: message string (default empty)
     """
     def __init__(self, val, mon, tb_str='', msg='', count=0):
+        if isinstance(val, dict):
+            # store the size in bytes of the content
+            self.nbytes = {k: len(Pickled(v)) for k, v in val.items()}
         self.pik = Pickled(val)
         self.mon = mon
         self.tb_str = tb_str
@@ -300,7 +303,7 @@ class Result(object):
         return val
 
     @classmethod
-    def new(cls, func, args, mon, splice=False, count=0):
+    def new(cls, func, args, mon, count=0):
         """
         :returns: a new Result instance
         """
@@ -315,7 +318,6 @@ class Result(object):
                          count=count)
         else:
             res = Result(val, mon, count=count)
-        res.splice = splice
         return res
 
 
@@ -431,6 +433,7 @@ class IterResult(object):
         t0 = time.time()
         self.received = []
         first_time = True
+        nbytes = AccumDict()
         for result in self.iresults:
             msg = check_mem_usage()  # log a warning if too much memory is used
             if msg and first_time:
@@ -442,6 +445,8 @@ class IterResult(object):
             elif isinstance(result, Result):
                 val = result.get()
                 self.received.append(len(result.pik))
+                if hasattr(result, 'nbytes'):
+                    nbytes += result.nbytes
             else:  # this should never happen
                 raise ValueError(result)
             if OQ_DISTRIBUTE == 'processpool' and sys.platform != 'darwin':
@@ -452,16 +457,16 @@ class IterResult(object):
             else:
                 mem_gb = numpy.nan
             self.save_task_info(result.mon, mem_gb)
-            if result.splice:
-                yield from val
-            else:
-                yield val
+            yield val
         if self.received:
             tot = sum(self.received)
             max_per_output = max(self.received)
             logging.info('Received %s from %d outputs in %d seconds, biggest '
                          'output=%s', humansize(tot), len(self.received),
                          time.time() - t0, humansize(max_per_output))
+            if nbytes:
+                logging.info('Received nbytes %s',
+                             {k: humansize(v) for k, v in nbytes.items()})
 
     def save_task_info(self, mon, mem_gb):
         if self.hdf5:
