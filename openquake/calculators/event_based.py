@@ -192,6 +192,8 @@ class EventBasedCalculator(base.HazardCalculator):
             sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
             for grp_id in self.rlzs_by_gsim_grp}
         self.R = len(self.rlzs_assoc.realizations)
+        self.mon_rups = self.monitor('saving ruptures', measuremem=False)
+        self.mon_evs = self.monitor('saving events', measuremem=False)
 
     def from_ruptures(self, param):
         """
@@ -225,11 +227,9 @@ class EventBasedCalculator(base.HazardCalculator):
     def _store_ruptures(self, srcs_by_grp):
         gmf_size = 0
         calc_times = AccumDict(accum=numpy.zeros(3, F32))
-        mon = self.monitor('saving ruptures', measuremem=False)
         for grp, srcs in srcs_by_grp.items():
             for src in srcs:
-                with mon:
-                    self.save_ruptures(src.eb_ruptures)
+                self.save_ruptures(src.eb_ruptures)
                 gmf_size += max_gmf_size(
                     {src.src_group_id: src.eb_ruptures},
                     self.num_rlzs_by_grp,
@@ -357,10 +357,12 @@ class EventBasedCalculator(base.HazardCalculator):
         :param ruptures: a list of EBRuptures
         """
         if len(ruptures):
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
-            events = get_events(ruptures, rlzs_by_gsim)
-            self.datastore.extend('events', events)
-            self.rupser.save(ruptures)
+            with self.mon_rups:
+                self.rupser.save(ruptures)
+            with self.mon_evs:
+                rlzs_by_gsim = self.rlzs_by_gsim_grp[ruptures[0].grp_id]
+                events = get_events(ruptures, rlzs_by_gsim)
+                self.datastore.extend('events', events)
             return events
         return ()
 
