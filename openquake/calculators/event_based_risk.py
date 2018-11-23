@@ -251,7 +251,8 @@ class EbrCalculator(base.RiskCalculator):
             dictionary with agglosses, avglosses
         """
         idxs, agglosses = dic.pop('agglosses')
-        self.agglosses[idxs] += agglosses
+        if len(idxs):
+            self.agglosses[idxs] += agglosses
         aids = dic.pop('aids')
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
