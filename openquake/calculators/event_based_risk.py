@@ -211,7 +211,7 @@ class EbrCalculator(base.RiskCalculator):
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
         self.loss_maps_dt = oq.loss_dt((F32, (C,)))
-        if oq.individual_curves:
+        if oq.individual_curves or R == 1:
             self.datastore.create_dset(
                 'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
             self.datastore.set_attrs(
@@ -331,7 +331,7 @@ class EbrCalculator(base.RiskCalculator):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
         units = self.assetcol.cost_calculator.get_units(
             loss_types=array.dtype.names)
-        if oq.individual_curves:
+        if oq.individual_curves or self.R == 1:
             self.datastore['agg_curves-rlzs'] = array
             self.datastore.set_attrs(
                 'agg_curves-rlzs',

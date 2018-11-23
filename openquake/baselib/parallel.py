@@ -465,7 +465,7 @@ class IterResult(object):
                          'output=%s', humansize(tot), len(self.received),
                          time.time() - t0, humansize(max_per_output))
             if nbytes:
-                logging.info('Received nbytes %s',
+                logging.info('Received %s',
                              {k: humansize(v) for k, v in nbytes.items()})
 
     def save_task_info(self, mon, mem_gb):
