@@ -606,7 +606,7 @@ class EBRupture(object):
         """
         num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
         start = TWO32 * U64(self.serial)
-        return numpy.arange(start, start + U64(num_events), dtype=U64)
+        return numpy.arange(num_events, dtype=U64) + start
 
     def get_events_by_ses(self, events, num_ses):
         """
