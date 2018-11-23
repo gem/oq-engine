@@ -19,6 +19,7 @@ import logging
 import operator
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.hazardlib.calc.stochastic import TWO32
@@ -81,7 +82,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
         except MemoryError:
             raise MemoryError(
                 'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
-        result = dict(aids=ri.aids, avglosses=avg, agglosses=[])
+        result = dict(aids=ri.aids, avglosses=avg, agglosses=AccumDict())
         aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
         if 'builder' in param:
             builder = param['builder']
@@ -123,7 +124,7 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
             # NB: I could yield the agglosses per output, but then I would
             # have millions of small outputs with big data transfer and slow
             # saving time
-            result['agglosses'].append((out.eids, agglosses))
+            result['agglosses'] += dict(zip(out.eids, agglosses))
 
         if 'builder' in param:
             clp = param['conditional_loss_poes']
@@ -246,7 +247,7 @@ class EbrCalculator(base.RiskCalculator):
         :param dic:
             dictionary with agglosses, avglosses
         """
-        for idxs, agglosses in dic.pop('agglosses'):  # shape (E, LI)
+        for idxs, agglosses in dic.pop('agglosses').items():
             self.agglosses[idxs] += agglosses
         aids = dic.pop('aids')
         if self.oqparam.avg_losses:
