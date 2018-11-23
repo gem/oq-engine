@@ -222,8 +222,10 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
+        self.E = len(self.datastore['events'])
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
+        self.rlzi = numpy.zeros(self.E, U16)
         return zd
 
     def _store_ruptures(self, srcs_by_grp):
@@ -283,6 +285,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.init_logic_tree(self.csm.info)
         self._store_ruptures(srcs_by_grp)
 
+        self.check_overflow()  # check the number of events
         # reorder events
         evs = self.datastore['events'].value
         evs.sort(order='eid')
@@ -333,11 +336,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 data = result.pop('gmfdata')
                 if len(data) == 0:
                     return acc
-                events_dset = self.datastore['events']
                 idxs = get_idxs(data, eid2idx)  # this has to be fast
-                for idx, rlzi in zip(idxs, data['rlzi']):
-                    events_dset[idx, 'rlz'] = rlzi
                 data['eid'] = idxs  # replace eid with idx
+                self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -427,7 +428,9 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
-        self.check_overflow()  # check the number of events
+
+        # storing events['rlz']
+        self.datastore['events']['rlz'] = self.rlzi
         base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
