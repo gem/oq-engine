@@ -218,12 +218,14 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         # branch then `parallel.Starmap` will run the task in core
         rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
         ufilter = UcerfFilter(self.sitecol, self.oqparam.maximum_distance)
+        ses_idx = 0
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             [sm] = ssm.source_models
             srcs = ssm.get_sources()
-            for ses_idx in range(oq.ses_per_logic_tree_path):
+            for i in range(oq.ses_per_logic_tree_path):
                 param = param.copy()
-                param['ses_seeds'] = [(ses_idx, oq.ses_seed + ses_idx + 1)]
+                param['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
                 allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id], param))
+                ses_idx += 1
         return allargs
