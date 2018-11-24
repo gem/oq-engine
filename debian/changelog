@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Refactored the UCERF event based calculator to work as much as possible
+    the regular calculator
   * Optimized the management and storage of the aggregate losses in the event
     based risk calculation; also, reduced the memory consumption
   * Changed the default for `individual_curves` to "false", which is the right
