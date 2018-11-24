@@ -143,13 +143,10 @@ def compute_gmfs(ruptures, sitecol, rlzs_by_gsim, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    grp_id = ruptures[0].grp_id
-    res = AccumDict(ruptures={grp_id: ruptures})
     getter = GmfGetter(
         rlzs_by_gsim, ruptures, sitecol,
         param['oqparam'], param['min_iml'])
-    res.update(getter.compute_gmfs_curves(monitor))
-    return res
+    return getter.compute_gmfs_curves(monitor)
 
 
 @base.calculators.add('event_based')
