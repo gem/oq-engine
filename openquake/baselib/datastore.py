@@ -187,8 +187,8 @@ class DataStore(collections.MutableMapping):
                 kw['swmr'] = True
             try:
                 self.hdf5 = hdf5.File(self.hdf5path, **kw)
-            except OSError:
-                raise OSError('%s is locked' % self.hdf5path)
+            except OSError as exc:
+                raise OSError('%s in %s' % (exc, self.hdf5path))
 
     @property
     def export_dir(self):
