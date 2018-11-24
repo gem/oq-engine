@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the event based calculator to store the ruptures incrementally
+    without keeping them all in memory
   * Refactored the UCERF event based calculator to work as much as possible
     the regular calculator
   * Optimized the management and storage of the aggregate losses in the event
