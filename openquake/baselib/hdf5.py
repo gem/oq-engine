@@ -366,6 +366,12 @@ class File(h5py.File):
             obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
         return nbytes
 
+    def getitem(self, name):
+        """
+        Return a dataset by using h5py.File.__getitem__
+        """
+        return h5py.File.__getitem__(self, name)
+
     def save(self, nodedict, root=''):
         """
         Save a node dictionary in the .hdf5 file, starting from the root

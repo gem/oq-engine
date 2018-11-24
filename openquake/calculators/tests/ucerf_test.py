@@ -54,7 +54,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
-
         # check the distribution of the events
         self.assertEventsByRlz([58, 1, 1, 1, 3, 4, 1, 1, 2, 2, 4, 3, 2, 2, 3,
                                 3, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1,
