@@ -455,7 +455,8 @@ class IterResult(object):
                 mem_gb = (memory_rss(os.getpid()) + sum(
                     memory_rss(pid) for pid in Starmap.pids)) / GB
             else:
-                mem_gb = numpy.nan
+                # measure only the memory used by the main process
+                mem_gb = memory_rss(os.getpid()) / GB
             self.save_task_info(result.mon, mem_gb)
             yield val
         if self.received:
