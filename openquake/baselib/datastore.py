@@ -24,6 +24,8 @@ import h5py
 
 from openquake.baselib import hdf5, config
 
+CALC_REGEX = r'calc_(\d+)\.hdf5'
+
 
 def get_datadir():
     """
@@ -48,11 +50,11 @@ def get_calc_ids(datadir=None):
     datadir = datadir or get_datadir()
     if not os.path.exists(datadir):
         return []
-    calc_ids = []
+    calc_ids = set()
     for f in os.listdir(datadir):
-        mo = re.match(r'calc_(\d+)\.hdf5', f)
+        mo = re.match(CALC_REGEX, f)
         if mo:
-            calc_ids.append(int(mo.group(1)))
+            calc_ids.add(int(mo.group(1)))
     return sorted(calc_ids)
 
 
@@ -101,7 +103,7 @@ def extract_calc_id_datadir(hdf5path=None, datadir=None):
     except ValueError:
         hdf5path = os.path.abspath(hdf5path)
         datadir = os.path.dirname(hdf5path)
-        mo = re.match('calc_(\d+)\.hdf5', os.path.basename(hdf5path))
+        mo = re.match(CALC_REGEX, os.path.basename(hdf5path))
         if mo is None:
             raise ValueError('Cannot extract calc_id from %s' % hdf5path)
         calc_id = int(mo.group(1))
@@ -183,7 +185,10 @@ class DataStore(collections.MutableMapping):
             kw = dict(mode=mode, libver='latest')
             if mode == 'r':
                 kw['swmr'] = True
-            self.hdf5 = hdf5.File(self.hdf5path, **kw)
+            try:
+                self.hdf5 = hdf5.File(self.hdf5path, **kw)
+            except OSError:
+                raise OSError('%s is locked' % self.hdf5path)
 
     @property
     def export_dir(self):

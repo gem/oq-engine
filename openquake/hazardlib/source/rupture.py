@@ -674,4 +674,4 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.serial, self.n_occ.sum())
+            self.__class__.__name__, self.serial, self.n_occ)
