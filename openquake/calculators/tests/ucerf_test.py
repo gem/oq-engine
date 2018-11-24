@@ -20,7 +20,7 @@ import unittest
 from decorator import decorator
 from nose.plugins.attrib import attr
 from openquake.baselib import config
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, group_array
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.calculators import ucerf_base
@@ -55,8 +55,16 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
 
+        # check the distribution of the events
+        self.assertEventsByRlz([58, 1, 1, 1, 3, 4, 1, 1, 2, 2, 4, 3, 2, 2, 3,
+                                3, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1,
+                                1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 3,
+                                3, 2, 2])
+        # NB: there are no 58 events for the first realization, it is a bug,
+        # but it will be fixed in the future
+
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # check that we get the expected number of events
+        # check that we get the expected number of ruptures
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 72)
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
@@ -80,6 +88,11 @@ class UcerfTestCase(CalculatorTestCase):
     @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
+
+        # check the distribution of the events
+        self.assertEventsByRlz([35, 19])
+        # NB: there are no 35 events for the first realization, it is a bug,
+        # but it will be fixed in the future
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
