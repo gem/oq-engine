@@ -17,11 +17,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import itertools
-import operator
-import logging
 import numpy
 from openquake.baselib import hdf5, datastore
-from openquake.baselib.general import AccumDict, groupby, group_array
+from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -425,20 +423,20 @@ class GmfGetter(object):
         return res
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None)):
+def get_ruptures_by_grp(dstore):
     """
     Extracts the ruptures corresponding to the given slice. If missing,
     extract all ruptures.
 
     :returns: a dictionary grp_id -> list of EBRuptures
     """
-    if slice_.stop is None:
-        n = len(dstore['ruptures']) - (slice_.start or 0)
-        logging.info('Reading %d ruptures from the datastore', n)
-    rgetter = RuptureGetter.from_(dstore, slice_)
-    return groupby(rgetter, operator.attrgetter('grp_id'))
+    csm_info = dstore['csm_info']
+    grp_ids = csm_info.get_samples_by_grp()
+    return {grp_id: RuptureGetter(dstore.hdf5path, csm_info, grp_id=grp_id)
+            for grp_id in grp_ids}
 
 
+# FIXME: restore this functionality
 def get_maxloss_rupture(dstore, loss_type):
     """
     :param dstore: a DataStore instance
@@ -468,11 +466,7 @@ class RuptureGetter(object):
     :param grp_id:
         the group ID of the ruptures, if they are homogeneous, or None
     """
-    @classmethod
-    def from_(cls, dstore, slice_):
-        return cls(dstore.hdf5path, dstore['csm_info'], slice_)
-
-    def __init__(self, hdf5path, csm_info, mask=None, grp_id=None):
+    def __init__(self, hdf5path, csm_info, mask=None, grp_id=0):
         self.hdf5path = hdf5path
         self.mask = slice(None) if mask is None else mask
         self.grp_id = grp_id
@@ -487,11 +481,9 @@ class RuptureGetter(object):
                 if key.startswith('code_'):
                     code2cls[int(key[5:])] = [classes[v] for v in val.split()]
             rupgeoms = dstore['rupgeoms']
-            ruptures = dstore['ruptures'][self.mask]
+            ruptures = get_array(
+                dstore['ruptures'][self.mask], grp_id=self.grp_id)
             for rec in ruptures:
-                if self.grp_id is not None:  # ruptures must have same grp_id
-                    assert self.grp_id == rec['grp_id'], (
-                        self.grp_id, rec['grp_id'])
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sy'], rec['sz'])
