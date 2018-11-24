@@ -669,6 +669,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.src_group_id = grp_id
                 src.id = idx
                 if oqparam.number_of_logic_tree_samples:
                     src.samples = sm.samples
