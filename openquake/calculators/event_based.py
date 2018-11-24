@@ -179,6 +179,7 @@ class EventBasedCalculator(base.HazardCalculator):
                   else self.datastore)
         rups = dstore.getitem('ruptures').value[['serial', 'grp_id']]
         start = 0
+        monitor = self.monitor('getting ruptures')
         for block in split_in_blocks(rups, concurrent_tasks or 1,
                                      key=operator.itemgetter(1)):
             nr = len(block)  # number of ruptures per block
@@ -189,8 +190,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
                 continue
-            ruptures = list(
-                RuptureGetter(dstore.hdf5path, self.csm_info, slc, grp_id))
+            with monitor:
+                ruptures = list(
+                    RuptureGetter(dstore.hdf5path, self.csm_info, slc, grp_id))
             if ruptures:
                 par = param.copy()
                 par['samples'] = self.samples_by_grp[grp_id]
