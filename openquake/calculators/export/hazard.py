@@ -70,11 +70,14 @@ def export_ruptures_xml(ekey, dstore):
     rlzs_by_grp = dstore['csm_info'].get_rlzs_by_gsim_grp()
     num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
-    ruptures_by_grp = {}
-    for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
+    ruptures_by_grp = get_ruptures_by_grp(dstore)
+    for grp_id, ruptures in list(ruptures_by_grp.items()):
         ebrs = [ebr.export(mesh, rlzs_by_grp[ebr.grp_id], num_ses)
                 for ebr in ruptures]
-        ruptures_by_grp[grp_id] = ebrs
+        if ebrs:
+            ruptures_by_grp[grp_id] = ebrs
+        else:  # empty group
+            del ruptures_by_grp[grp_id]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
