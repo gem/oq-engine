@@ -38,8 +38,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 
-save_ruptures = event_based.EventBasedCalculator.save_ruptures
-
 
 def generate_event_set(ucerf, background_sids, src_filter, ses_idx, seed):
     """
