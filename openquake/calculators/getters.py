@@ -20,7 +20,7 @@ import itertools
 import operator
 import logging
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, datastore
 from openquake.baselib.general import AccumDict, groupby, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
@@ -480,17 +480,14 @@ class RuptureGetter(object):
         self.samples = csm_info.get_samples_by_grp()
 
     def __iter__(self):
-        with hdf5.File(self.hdf5path, 'r') as h5:
-            try:
-                attrs = h5.getitem('ruptures').attrs
-            except:
-                import pdb; pdb.set_trace()
+        with datastore.read(self.hdf5path) as dstore:
+            attrs = dstore.get_attrs('ruptures')
             code2cls = {}  # code -> rupture_cls, surface_cls
             for key, val in attrs.items():
                 if key.startswith('code_'):
                     code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-            rupgeoms = h5['rupgeoms']
-            ruptures = h5['ruptures'][self.mask]
+            rupgeoms = dstore['rupgeoms']
+            ruptures = dstore['ruptures'][self.mask]
             for rec in ruptures:
                 if self.grp_id is not None:  # ruptures must have same grp_id
                     assert self.grp_id == rec['grp_id'], (
@@ -538,8 +535,8 @@ class RuptureGetter(object):
     def __len__(self):
         if hasattr(self.mask, 'start'):  # is a slice
             if self.mask.start is None and self.mask.stop is None:
-                with hdf5.File(self.hdf5path) as h5:
-                    return len(h5['ruptures'])
+                with datastore.read(self.hdf5path) as dstore:
+                    return len(dstore['ruptures'])
             else:
                 return self.mask.stop - self.mask.start
         elif isinstance(self.mask, list):
