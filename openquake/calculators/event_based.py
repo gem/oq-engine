@@ -255,6 +255,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
 
         def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
@@ -268,17 +269,22 @@ class EventBasedCalculator(base.HazardCalculator):
             self.build_ruptures.__func__, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         srcs_by_grp = AccumDict(accum=[])  # grp_id => srcs
+        ses_idx = 0
         for sm_id, sm in enumerate(self.csm.source_models):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
                 par['gsims'] = gsims_by_trt[sg.trt]
-                # NB: the ses_seeds below are used in UCERF
-                par['ses_seeds'] = [(sm_id, self.oqparam.ses_seed + sm_id + 1)]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
-                    smap.submit(block, self.src_filter, par)
+                    if 'ucerf' in oq.calculation_mode:
+                        for i in range(oq.ses_per_logic_tree_path):
+                            par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
+                            smap.submit(block, self.src_filter, par)
+                            ses_idx += 1
+                    else:
+                        smap.submit(block, self.src_filter, par)
         for srcs in smap:
             srcs_by_grp[srcs[0].src_group_id] += srcs
 
@@ -294,6 +300,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # reorder events
         evs = self.datastore['events'].value
         evs.sort(order='eid')
+        # check that the event IDs are really unique (sanity check)
+        num_unique = len(numpy.unique(evs['eid']))
+        assert num_unique == len(evs), (num_unique, len(evs))
         self.datastore['events'] = evs
         nr = len(self.datastore['ruptures'])
         ne = len(evs)
