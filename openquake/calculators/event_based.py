@@ -246,10 +246,13 @@ class EventBasedCalculator(base.HazardCalculator):
                     else:
                         smap.submit(block, self.src_filter, par)
         for srcs in smap:
+            eb_ruptures = []
             for src in srcs:
-                if src.eb_ruptures:
-                    with self.mon_rups:
-                        self.rupser.save(src.eb_ruptures)
+                eb_ruptures.extend(src.eb_ruptures)
+            if eb_ruptures:
+                with self.mon_rups:
+                    self.rupser.save(eb_ruptures)
+            for src in srcs:
                 calc_times += src.calc_times
                 eff_ruptures[sg.id] += src.num_ruptures
         self.rupser.close()
