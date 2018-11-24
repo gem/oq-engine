@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import time
 import logging
 import collections
 import numpy
@@ -26,7 +27,7 @@ from openquake.hazardlib.calc import stochastic
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
-from openquake.calculators import base, event_based, getters
+from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
     DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
 
@@ -141,11 +142,10 @@ def sample_background_model(
 
 
 @util.reader
-def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
+def build_ruptures(sources, src_filter, param, monitor):
     """
     :param sources: a list with a single UCERF source
     :param src_filter: a SourceFilter instance
-    :param rlzs_by_gsim: a dictionary gsim -> rlzs
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
@@ -158,10 +158,11 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
     res.trt = DEFAULT_TRT
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
-    cmaker = ContextMaker(rlzs_by_gsim, src_filter.integration_distance)
+    cmaker = ContextMaker(param['gsims'], src_filter.integration_distance)
     num_ses = param['ses_per_logic_tree_path']
     samples = getattr(src, 'samples', 1)
     n_occ = AccumDict(accum=0)
+    t0 = time.time()
     with sampl_mon:
         for sam_idx in range(samples):
             for ses_idx, ses_seed in param['ses_seeds']:
@@ -170,18 +171,13 @@ def compute_hazard(sources, src_filter, rlzs_by_gsim, param, monitor):
                     src, background_sids, src_filter, ses_idx, seed)
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
+    tot_occ = sum(n_occ.values())
     with filt_mon:
-        ebruptures = stochastic.build_eb_ruptures(
+        src.eb_ruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
-    res['ruptures'] = {src.src_group_id: ebruptures}
-    res.ruptures_by_grp = {src.src_group_id: ebruptures}
-    res.eff_ruptures = {src.src_group_id: src.num_ruptures}
-    if param.get('gmf'):
-        getter = getters.GmfGetter(
-            rlzs_by_gsim, ebruptures, sitecol,
-            param['oqparam'], param['min_iml'])
-        res.update(getter.compute_gmfs_curves(monitor))
-    return res
+    dt = time.time() - t0
+    src.calc_times = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
+    return [src]
 
 
 @base.calculators.add('ucerf_hazard')
@@ -189,7 +185,7 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures and GMFs together
     """
-    core_task = compute_hazard
+    build_ruptures = build_ruptures
 
     def pre_execute(self):
         """
@@ -208,24 +204,5 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-
-    def from_sources(self, param):
-        """
-        Generate a task for each branch
-        """
-        oq = self.oqparam
-        allargs = []  # it is better to return a list; if there is single
-        # branch then `parallel.Starmap` will run the task in core
-        rlzs_by_gsim = self.csm.info.get_rlzs_by_gsim_grp()
-        ufilter = UcerfFilter(self.sitecol, self.oqparam.maximum_distance)
-        ses_idx = 0
-        for sm_id in range(len(self.csm.source_models)):
-            ssm = self.csm.get_model(sm_id)
-            [sm] = ssm.source_models
-            srcs = ssm.get_sources()
-            for i in range(oq.ses_per_logic_tree_path):
-                param = param.copy()
-                param['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
-                allargs.append((srcs, ufilter, rlzs_by_gsim[sm_id], param))
-                ses_idx += 1
-        return allargs
+        self.src_filter = UcerfFilter(
+            self.sitecol, self.oqparam.maximum_distance)

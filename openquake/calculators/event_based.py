@@ -60,6 +60,7 @@ def get_idxs(data, eid2idx):
     idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
     return idxs
 
+
 def store_rlzs_by_grp(dstore):
     """
     Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
@@ -78,7 +79,7 @@ def build_ruptures(srcs, srcfilter, param, monitor):
     A small wrapper around :func:
     `openquake.hazardlib.calc.stochastic.sample_ruptures`
     """
-    acc = []
+    acc = []  # a list of sources with an attribute eb_ruptures
     n = 0
     mon = monitor('making contexts', measuremem=False)
     for src in srcs:
@@ -168,6 +169,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
+    build_ruptures = build_ruptures
 
     @cached_property
     def csm_info(self):
@@ -224,9 +226,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        if not self.oqparam.calculation_mode.startswith('ucerf'):
-            self.E = len(self.datastore['events'])
-            self.rlzi = numpy.zeros(self.E, U16)
+        self.E = len(self.datastore['events'])
+        self.rlzi = numpy.zeros(self.E, U16)
         return zd
 
     def _store_ruptures(self, srcs_by_grp):
@@ -254,6 +255,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
+        oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
 
         def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
@@ -263,10 +265,12 @@ class EventBasedCalculator(base.HazardCalculator):
             return 1
 
         logging.info('Building ruptures')
-        smap = parallel.Starmap(build_ruptures, monitor=self.monitor())
+        smap = parallel.Starmap(
+            self.build_ruptures.__func__, monitor=self.monitor())
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         srcs_by_grp = AccumDict(accum=[])  # grp_id => srcs
-        for sm in self.csm.source_models:
+        ses_idx = 0
+        for sm_id, sm in enumerate(self.csm.source_models):
             logging.info('Sending %s', sm)
             for sg in sm.src_groups:
                 if not sg.sources:
@@ -274,7 +278,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 par['gsims'] = gsims_by_trt[sg.trt]
                 eff_ruptures[sg.id] += sum(src.num_ruptures for src in sg)
                 for block in self.block_splitter(sg.sources, weight_src):
-                    smap.submit(block, self.src_filter, par)
+                    if 'ucerf' in oq.calculation_mode:
+                        for i in range(oq.ses_per_logic_tree_path):
+                            par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
+                            smap.submit(block, self.src_filter, par)
+                            ses_idx += 1
+                    else:
+                        smap.submit(block, self.src_filter, par)
         for srcs in smap:
             srcs_by_grp[srcs[0].src_group_id] += srcs
 
@@ -290,6 +300,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # reorder events
         evs = self.datastore['events'].value
         evs.sort(order='eid')
+        # check that the event IDs are really unique (sanity check)
+        num_unique = len(numpy.unique(evs['eid']))
+        assert num_unique == len(evs), (num_unique, len(evs))
         self.datastore['events'] = evs
         nr = len(self.datastore['ruptures'])
         ne = len(evs)
@@ -318,17 +331,7 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        ucerf = self.oqparam.calculation_mode.startswith('ucerf')
-        if ucerf:
-            [ruptures] = result.ruptures_by_grp.values()
-            events = self.save_ruptures(ruptures)
-            eid2idx = {}
-            if len(events):
-                for eid in events['eid']:
-                    eid2idx[eid] = self.idx
-                    self.idx += 1
-        else:
-            eid2idx = self.eid2idx
+        eid2idx = self.eid2idx
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         if 'gmdata' in result:
@@ -339,8 +342,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     return acc
                 idxs = get_idxs(data, eid2idx)  # this has to be fast
                 data['eid'] = idxs  # replace eid with idx
-                if not ucerf:
-                    self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
+                self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -425,14 +427,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 for args in iterargs:  # store the ruptures/events
                     pass
                 return {}
-        self.idx = 0  # event ID index, used for UCERF
         # call compute_gmfs in parallel
         acc = parallel.Starmap(
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
 
         # storing events['rlz']
-        if not self.datastore.parent and 'ucerf' not in oq.calculation_mode:
+        if not self.datastore.parent:
             self.datastore['events']['rlz'] = self.rlzi
         base.save_gmdata(self, self.R)
         if self.indices:
@@ -455,8 +456,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore.set_attrs(
                     'gmf_data', avg_events_by_sid=num_evs.value.sum() / N,
                     max_events_by_sid=num_evs.value.max())
-        elif (oq.ground_motion_fields and
-              'ucerf' not in oq.calculation_mode):
+        elif oq.ground_motion_fields:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         return acc
@@ -476,9 +476,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         oq = self.oqparam
-        if 'ucerf' in oq.calculation_mode:
-            self.rupser.close()
-            self.csm.info.update_eff_ruptures(self.csm.get_num_ruptures())
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
