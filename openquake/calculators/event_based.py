@@ -178,14 +178,14 @@ class EventBasedCalculator(base.HazardCalculator):
         concurrent_tasks = oq.concurrent_tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        rups = dstore.getitem('ruptures').value
-        code2cls = get_code2cls(dstore.get_attrs('ruptures'))
         start = 0
-        monitor = self.monitor('getting ruptures')
-        hdf5cache = dstore.hdf5cache()
-        with hdf5.File(hdf5cache, 'r+') as cache:
-            if 'rupgeoms' not in cache:
-                dstore.hdf5.copy('rupgeoms', cache)
+        with self.monitor('getting ruptures'):
+            rups = dstore.getitem('ruptures').value
+            code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+            hdf5cache = dstore.hdf5cache()
+            with hdf5.File(hdf5cache, 'r+') as cache:
+                if 'rupgeoms' not in cache:
+                    dstore.hdf5.copy('rupgeoms', cache)
         by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
         for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
@@ -197,10 +197,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             par = param.copy()
             par['samples'] = self.samples_by_grp[grp_id]
-            with monitor:
-                rup_array = rups[start: start + nr]
-                ruptures = RuptureGetter(hdf5cache, code2cls, rup_array,
-                                         self.grp_trt[grp_id], par['samples'])
+            rup_array = rups[start: start + nr]
+            ruptures = RuptureGetter(hdf5cache, code2cls, rup_array,
+                                     self.grp_trt[grp_id], par['samples'])
             if ruptures:
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
                 start += nr
