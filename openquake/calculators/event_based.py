@@ -177,25 +177,26 @@ class EventBasedCalculator(base.HazardCalculator):
         concurrent_tasks = oq.concurrent_tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        rups = dstore.getitem('ruptures').value[['serial', 'grp_id']]
+        rups = dstore.getitem('ruptures').value
         start = 0
         monitor = self.monitor('getting ruptures')
         for block in split_in_blocks(rups, concurrent_tasks or 1,
                                      key=operator.itemgetter(1)):
             nr = len(block)  # number of ruptures per block
-            slc = slice(start, start + nr)
             grp_id = block[0]['grp_id']
             rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
             if not rlzs_by_gsim:
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
                 continue
+            par = param.copy()
+            par['samples'] = self.samples_by_grp[grp_id]
             with monitor:
+                rup_array = rups[start: start + nr]
                 ruptures = list(
-                    RuptureGetter(dstore.hdf5path, self.csm_info, slc, grp_id))
+                    RuptureGetter(dstore.hdf5path, rup_array,
+                                  self.grp_trt[grp_id], par['samples']))
             if ruptures:
-                par = param.copy()
-                par['samples'] = self.samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
                 start += nr
                 if nr > oq.ruptures_per_block:
