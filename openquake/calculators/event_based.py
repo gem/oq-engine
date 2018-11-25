@@ -267,28 +267,21 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_csm_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
-
-        # order the ruptures by serial
-        attrs = self.datastore.getitem('ruptures').attrs
-        sorted_ruptures = self.datastore.getitem('ruptures').value
-        sorted_ruptures.sort(order='serial')
-        self.datastore['ruptures'] = sorted_ruptures
-        self.datastore.set_attrs('ruptures', **attrs)
-
+        logging.info('Storing source_info')
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
 
-        self.save_events(sorted_ruptures)
+        logging.info('Reordering the ruptures and the events')
+        attrs = self.datastore.getitem('ruptures').attrs
+        sorted_ruptures = self.datastore.getitem('ruptures').value
+        # order the ruptures by serial
+        sorted_ruptures.sort(order='serial')
+        self.datastore['ruptures'] = sorted_ruptures
+        self.datastore.set_attrs('ruptures', **attrs)
+        n_events = self.save_events(sorted_ruptures)
         self.check_overflow()  # check the number of events
-        # reorder events
-        evs = self.datastore['events'].value
-        evs.sort(order='eid')
-        # check that the event IDs are really unique (sanity check)
-        num_unique = len(numpy.unique(evs['eid']))
-        assert num_unique == len(evs), (num_unique, len(evs))
-        self.datastore['events'] = evs
         logging.info('Stored {:,d} ruptures and {:,d} events'
-                     .format(len(sorted_ruptures), len(evs)))
+                     .format(len(sorted_ruptures), n_events))
         return self.from_ruptures(par)
 
     def agg_dicts(self, acc, result):
@@ -333,13 +326,15 @@ class EventBasedCalculator(base.HazardCalculator):
     def save_events(self, rup_array):
         """
         :param rup_array: an array of ruptures with fields grp_id
+        :returns: the number of saved events
         """
         with self.monitor('saving events'):
             eids = rupture.get_eids(
                 rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
             events = numpy.zeros(len(eids), rupture.events_dt)
             events['eid'] = eids
-            self.datastore.extend('events', events)
+            self.datastore['events'] = events
+        return len(eids)
 
     def check_overflow(self):
         """
