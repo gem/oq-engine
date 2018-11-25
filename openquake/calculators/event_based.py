@@ -237,8 +237,6 @@ class EventBasedCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                for src in sg:
-                    eff_ruptures[sg.id] += src.num_ruptures
                 par['gsims'] = gsims_by_trt[sg.trt]
                 for block in self.block_splitter(sg.sources, weight_src):
                     if 'ucerf' in oq.calculation_mode:
@@ -253,6 +251,7 @@ class EventBasedCalculator(base.HazardCalculator):
             eb_ruptures = []
             for src in srcs:
                 eb_ruptures.extend(src.eb_ruptures)
+                eff_ruptures[src.src_group_id] += src.num_ruptures
             if eb_ruptures:
                 with mon:
                     self.rupser.save(eb_ruptures)
