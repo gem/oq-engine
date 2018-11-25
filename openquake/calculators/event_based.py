@@ -34,7 +34,8 @@ from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter, RuptureGetter
+from openquake.calculators.getters import (
+    GmfGetter, RuptureGetter, get_code2cls)
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -178,8 +179,12 @@ class EventBasedCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         rups = dstore.getitem('ruptures').value
+        code2cls = get_code2cls(dstore.get_attrs('ruptures'))
         start = 0
         monitor = self.monitor('getting ruptures')
+        hdf5cache = dstore.hdf5cache()
+        with hdf5.File(hdf5cache, 'r+') as cache:
+             dstore.hdf5.copy('rupgeoms', cache)
         for block in split_in_blocks(rups, concurrent_tasks or 1,
                                      key=operator.itemgetter(1)):
             nr = len(block)  # number of ruptures per block
@@ -194,7 +199,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with monitor:
                 rup_array = rups[start: start + nr]
                 ruptures = list(
-                    RuptureGetter(dstore.hdf5path, rup_array,
+                    RuptureGetter(dstore.hdf5path, code2cls, rup_array,
                                   self.grp_trt[grp_id], par['samples']))
             if ruptures:
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
