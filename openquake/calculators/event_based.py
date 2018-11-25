@@ -223,11 +223,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
 
-        def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
-            return src.num_ruptures * factor
-
-        def weight_rup(ebr):
-            return 1
+        def weight_src(src):
+            return src.num_ruptures
 
         logging.info('Building ruptures')
         smap = parallel.Starmap(
