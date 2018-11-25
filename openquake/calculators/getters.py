@@ -481,8 +481,8 @@ class RuptureGetter(object):
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
     def __iter__(self):
-        with datastore.read(self.hdf5path) as h5:
-            rupgeoms = h5['rupgeoms']
+        with datastore.read(self.hdf5path) as dstore:
+            rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
