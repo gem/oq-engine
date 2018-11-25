@@ -577,7 +577,10 @@ class OqParam(valid.ParamSet):
         the poes list must be non-empty.
         """
         if self.hazard_maps or self.uniform_hazard_spectra:
-            return bool(self.poes)
+            if not self.poes and self.return_periods:
+                self.poes = [round(1 - numpy.exp(-1/t), 5)
+                             for t in self.return_periods]
+            return len(self.poes)
         else:
             return True
 
