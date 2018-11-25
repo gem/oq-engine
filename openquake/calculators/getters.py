@@ -431,9 +431,12 @@ def get_ruptures_by_grp(dstore):
     :returns: a dictionary grp_id -> list of EBRuptures
     """
     csm_info = dstore['csm_info']
-    grp_ids = csm_info.get_samples_by_grp()
-    return {grp_id: RuptureGetter(dstore.hdf5path, csm_info, grp_id=grp_id)
-            for grp_id in grp_ids}
+    grp_trt = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rupdict = group_array(dstore['ruptures'].value, 'grp_id')
+    return {grp_id: RuptureGetter(
+        dstore.hdf5path, rup_array, grp_trt[grp_id], samples[grp_id])
+            for grp_id, rup_array in rupdict.items()}
 
 
 # FIXME: restore this functionality
@@ -457,40 +460,36 @@ class RuptureGetter(object):
 
     :param hdf5path:
         path to an HDF5 file with a dataset names `ruptures`
-    :param mask:
-        which ruptures to read; it can be:
-        - None: read all ruptures
-        - a slice
-        - a boolean mask
-        - a list of integers
-    :param grp_id:
-        the group ID of the ruptures, if they are homogeneous, or None
+    :param rup_array:
+        an array of rupture parameters with homogeneous grp_id
     """
-    def __init__(self, hdf5path, csm_info, mask=None, grp_id=0):
+    def __init__(self, hdf5path, rup_array, trt, samples):
         self.hdf5path = hdf5path
-        self.mask = slice(None) if mask is None else mask
-        self.grp_id = grp_id
-        self.grp_trt = csm_info.grp_by("trt")
-        self.samples = csm_info.get_samples_by_grp()
+        self.rup_array = rup_array
+        self.trt = trt
+        self.samples = samples
+        [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
-    def __iter__(self):
+    def init(self):
+        self.code2cls = {}  # code -> rupture_cls, surface_cls
         with datastore.read(self.hdf5path) as dstore:
             attrs = dstore.get_attrs('ruptures')
-            code2cls = {}  # code -> rupture_cls, surface_cls
-            for key, val in attrs.items():
-                if key.startswith('code_'):
-                    code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+        for key, val in attrs.items():
+            if key.startswith('code_'):
+                self.code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+
+    def __iter__(self):
+        self.init()
+        with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
-            ruptures = get_array(
-                dstore['ruptures'][self.mask], grp_id=self.grp_id)
-            for rec in ruptures:
+            for rec in self.rup_array:
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sy'], rec['sz'])
                 mesh[0] = geom['lon']
                 mesh[1] = geom['lat']
                 mesh[2] = geom['depth']
-                rupture_cls, surface_cls = code2cls[rec['code']]
+                rupture_cls, surface_cls = self.code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
                 rupture.serial = rec['serial']
                 rupture.surface = object.__new__(surface_cls)
@@ -498,7 +497,7 @@ class RuptureGetter(object):
                 rupture.rake = rec['rake']
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
-                rupture.tectonic_region_type = self.grp_trt[rec['grp_id']]
+                rupture.tectonic_region_type = self.trt
                 pmfx = rec['pmfx']
                 if pmfx != -1:
                     rupture.pmf = hdf5['pmfs'][pmfx]
@@ -520,19 +519,9 @@ class RuptureGetter(object):
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
-                                rec['n_occ'], self.samples[grp_id])
+                                rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 yield ebr
 
     def __len__(self):
-        if hasattr(self.mask, 'start'):  # is a slice
-            if self.mask.start is None and self.mask.stop is None:
-                with datastore.read(self.hdf5path) as dstore:
-                    return len(dstore['ruptures'])
-            else:
-                return self.mask.stop - self.mask.start
-        elif isinstance(self.mask, list):
-            # NB: h5py wants lists, not arrays of indices
-            return len(self.mask)
-        else:  # is a boolean mask
-            return self.mask.sum()
+        return len(self.rup_array)

@@ -710,11 +710,13 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
-    ruptures = list(RuptureGetter(
-        dstore.hdf5path, csm_info, slice(ridx, ridx + 1)))
+    rup_array = dstore['ruptures'][ridx: ridx + 1]
+    # for scenario there is an unique grp_id=0
+    trt = csm_info.grp_by("trt")[0]
+    samples = csm_info.get_samples_by_grp()[0]
+    ruptures = list(RuptureGetter(dstore.hdf5path, rup_array, trt, samples))
     [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
-    samples = samples[ebr.grp_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
     getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml)
