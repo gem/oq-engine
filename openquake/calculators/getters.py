@@ -501,7 +501,7 @@ class RuptureGetter(object):
                 rupture.tectonic_region_type = self.trt
                 pmfx = rec['pmfx']
                 if pmfx != -1:
-                    rupture.pmf = hdf5['pmfs'][pmfx]
+                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])
