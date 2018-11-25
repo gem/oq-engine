@@ -199,7 +199,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with monitor:
                 rup_array = rups[start: start + nr]
                 ruptures = list(
-                    RuptureGetter(dstore.hdf5path, code2cls, rup_array,
+                    RuptureGetter(hdf5cache, code2cls, rup_array,
                                   self.grp_trt[grp_id], par['samples']))
             if ruptures:
                 yield ruptures, self.sitecol, rlzs_by_gsim, par

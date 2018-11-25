@@ -24,7 +24,7 @@ import h5py
 
 from openquake.baselib import hdf5, config
 
-CALC_REGEX = r'calc_(\d+)\.hdf5'
+CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
 def get_datadir():
@@ -54,7 +54,7 @@ def get_calc_ids(datadir=None):
     for f in os.listdir(datadir):
         mo = re.match(CALC_REGEX, f)
         if mo:
-            calc_ids.add(int(mo.group(1)))
+            calc_ids.add(int(mo.group(2)))
     return sorted(calc_ids)
 
 
@@ -106,7 +106,7 @@ def extract_calc_id_datadir(hdf5path=None, datadir=None):
         mo = re.match(CALC_REGEX, os.path.basename(hdf5path))
         if mo is None:
             raise ValueError('Cannot extract calc_id from %s' % hdf5path)
-        calc_id = int(mo.group(1))
+        calc_id = int(mo.group(2))
     return calc_id, datadir
 
 
