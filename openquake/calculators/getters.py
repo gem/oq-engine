@@ -423,7 +423,7 @@ class GmfGetter(object):
         return res
 
 
-def get_ruptures_by_grp(dstore):
+def get_ruptures_by_grp(dstore, slc=slice(None)):
     """
     Extracts the ruptures corresponding to the given slice. If missing,
     extract all ruptures.
@@ -433,9 +433,10 @@ def get_ruptures_by_grp(dstore):
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
-    rupdict = group_array(dstore['ruptures'].value, 'grp_id')
+    rupdict = group_array(dstore['ruptures'][slc], 'grp_id')
+    code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     return {grp_id: RuptureGetter(
-        dstore.hdf5path, rup_array, grp_trt[grp_id], samples[grp_id])
+        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id], samples[grp_id])
             for grp_id, rup_array in rupdict.items()}
 
 
@@ -454,6 +455,14 @@ def get_maxloss_rupture(dstore, loss_type):
     return ebr
 
 
+def get_code2cls(ruptures_attrs):
+    code2cls = {}  # code -> rupture_cls, surface_cls
+    for key, val in ruptures_attrs.items():
+        if key.startswith('code_'):
+            code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+    return code2cls
+
+
 class RuptureGetter(object):
     """
     Iterable over ruptures.
@@ -463,23 +472,15 @@ class RuptureGetter(object):
     :param rup_array:
         an array of rupture parameters with homogeneous grp_id
     """
-    def __init__(self, hdf5path, rup_array, trt, samples):
+    def __init__(self, hdf5path, code2cls, rup_array, trt, samples):
         self.hdf5path = hdf5path
+        self.code2cls = code2cls
         self.rup_array = rup_array
         self.trt = trt
         self.samples = samples
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
-    def init(self):
-        self.code2cls = {}  # code -> rupture_cls, surface_cls
-        with datastore.read(self.hdf5path) as dstore:
-            attrs = dstore.get_attrs('ruptures')
-        for key, val in attrs.items():
-            if key.startswith('code_'):
-                self.code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-
     def __iter__(self):
-        self.init()
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
