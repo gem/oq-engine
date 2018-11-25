@@ -18,7 +18,7 @@
 import collections
 import itertools
 import numpy
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, datastore
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
@@ -481,7 +481,7 @@ class RuptureGetter(object):
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
     def __iter__(self):
-        with hdf5.File(self.hdf5path, 'r') as h5:
+        with datastore.read(self.hdf5path) as h5:
             rupgeoms = h5['rupgeoms']
             for rec in self.rup_array:
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
