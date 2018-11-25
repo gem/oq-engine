@@ -137,11 +137,14 @@ class EBRunner(object):
 
     def run_risk(self):
         t0 = time.time()
-        for exp_file in self.oqparam.inputs['exposure']:
+        exposures = self.oqparam.inputs['exposure']
+        for i, exp_file in enumerate(exposures, 1):
+            descr = self.oqparam.description + ' [%s %d of %d]' % (
+                os.path.basename(exp_file), i, len(exposures))
             try:
                 run_job(self.job_ini, self.log_level, self.log_file,
                         self.exports, hazard_calculation_id=self.hc_id,
-                        exposure_file=exp_file)
+                        exposure_file=exp_file, description=descr)
             except Exception:  # skip failed computations
                 logging.error(exp_file, exc_info=True)
         dt = time.time() - t0
