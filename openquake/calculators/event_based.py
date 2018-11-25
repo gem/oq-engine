@@ -184,7 +184,8 @@ class EventBasedCalculator(base.HazardCalculator):
         monitor = self.monitor('getting ruptures')
         hdf5cache = dstore.hdf5cache()
         with hdf5.File(hdf5cache, 'r+') as cache:
-             dstore.hdf5.copy('rupgeoms', cache)
+            if 'rupgeoms' not in cache:
+                dstore.hdf5.copy('rupgeoms', cache)
         for block in split_in_blocks(rups, concurrent_tasks or 1,
                                      key=operator.itemgetter(1)):
             nr = len(block)  # number of ruptures per block
