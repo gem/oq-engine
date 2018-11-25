@@ -186,8 +186,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with hdf5.File(hdf5cache, 'r+') as cache:
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
-        for block in split_in_blocks(rups, concurrent_tasks or 1,
-                                     key=operator.itemgetter(1)):
+        by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
+        for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
             grp_id = block[0]['grp_id']
             rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
