@@ -121,12 +121,14 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_gmfs(ruptures, sitecol, rlzs_by_gsim, param, monitor):
+def compute_gmfs(rupgetter, sitecol, rlzs_by_gsim, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    with monitor('getting ruptures'):
+        ebruptures = list(rupgetter)
     getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol,
+        rlzs_by_gsim, ebruptures, sitecol,
         param['oqparam'], param['min_iml'])
     return getter.compute_gmfs_curves(monitor)
 
