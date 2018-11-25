@@ -198,9 +198,8 @@ class EventBasedCalculator(base.HazardCalculator):
             par['samples'] = self.samples_by_grp[grp_id]
             with monitor:
                 rup_array = rups[start: start + nr]
-                ruptures = list(
-                    RuptureGetter(hdf5cache, code2cls, rup_array,
-                                  self.grp_trt[grp_id], par['samples']))
+                ruptures = RuptureGetter(hdf5cache, code2cls, rup_array,
+                                         self.grp_trt[grp_id], par['samples'])
             if ruptures:
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
                 start += nr
