@@ -203,9 +203,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if ruptures:
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
                 start += nr
-                if nr > oq.ruptures_per_block:
-                    logging.info('Sending %d ruptures of group #%d',
-                                 nr, grp_id)
         if self.datastore.parent:
             self.datastore.parent.close()
 
