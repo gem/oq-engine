@@ -34,7 +34,7 @@ from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, RuptureGetter, get_ruptures_by_grp)
+    GmfGetter, PmapGetter, get_ruptures_by_grp)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -701,7 +701,6 @@ def export_gmf_scenario_csv(ekey, dstore):
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    samples = csm_info.get_samples_by_grp()
     num_ruptures = len(dstore['ruptures'])
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
@@ -710,16 +709,12 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
-    rup_array = dstore['ruptures'][ridx: ridx + 1]
     # for scenario there is an unique grp_id=0
-    trt = csm_info.grp_by("trt")[0]
-    samples = csm_info.get_samples_by_grp()[0]
-    ruptures = list(RuptureGetter(dstore.hdf5path, rup_array, trt, samples))
-    [ebr] = ruptures
+    [ebr] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1))[0]
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml)
+    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
         eids for eids in get_eids_by_rlz(
