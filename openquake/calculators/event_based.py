@@ -158,8 +158,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.mon_rups = self.monitor('saving ruptures')
-        self.mon_evs = self.monitor('saving events')
 
     def init_logic_tree(self, csm_info):
         self.grp_trt = csm_info.grp_by("trt")
@@ -256,12 +254,13 @@ class EventBasedCalculator(base.HazardCalculator):
                             ses_idx += 1
                     else:
                         smap.submit(block, self.src_filter, par)
+        mon = self.monitor('saving ruptures')
         for srcs in smap:
             eb_ruptures = []
             for src in srcs:
                 eb_ruptures.extend(src.eb_ruptures)
             if eb_ruptures:
-                with self.mon_rups:
+                with mon:
                     self.rupser.save(eb_ruptures)
             for src in srcs:
                 calc_times += src.calc_times
@@ -338,7 +337,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         :param rup_array: an array of ruptures with fields grp_id
         """
-        with self.mon_evs:
+        with self.monitor('saving events'):
             eids = rupture.get_eids(
                 rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
             events = numpy.zeros(len(eids), rupture.events_dt)
