@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
 
 
-class BindiEtAl2011Low(BindiEtAl2011):
+class BindiEtAl2011Ita19Low(BindiEtAl2011):
     """
     Implements the lower term of the ITA19 backbone model.
     """
@@ -76,7 +76,6 @@ class BindiEtAl2011Low(BindiEtAl2011):
         tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
         return tmp
 
-
     DELTACOEFF = CoeffsTable(sa_damping=5, table="""
     imt   a      b     c
     pga   0.101 -1.136 3.555
@@ -95,7 +94,8 @@ class BindiEtAl2011Low(BindiEtAl2011):
     4.00  0.076 -0.906 3.046
         """)
 
-class BindiEtAl2011Upp(BindiEtAl2011):
+
+class BindiEtAl2011Ita19Upp(BindiEtAl2011Ita19Low):
     """
     Implements the upper term of the ITA19 backbone model.
     """
@@ -110,4 +110,3 @@ class BindiEtAl2011Upp(BindiEtAl2011):
                                                    stddev_types)
         delta = self._get_delta(imt, rup.mag)
         return mean+delta, stddevs
-
