@@ -274,10 +274,14 @@ class TagCollection(object):
         assert tagnames[0] == 'taxonomy', tagnames
         assert len(tagnames) == len(set(tagnames)), (
             'The tagnames %s contain duplicates' % tagnames)
-        self.tagnames = tagnames
-        for tagname in self.tagnames:
-            setattr(self, tagname + '_idx', {'?': 0})
-            setattr(self, tagname, ['?'])
+        self.tagnames = []
+        for tagname in tagnames:
+            self.add_tagname(tagname)
+
+    def add_tagname(self, tagname):
+        self.tagnames.append(tagname)
+        setattr(self, tagname + '_idx', {'?': 0})
+        setattr(self, tagname, ['?'])
 
     def add(self, tagname, tagvalue):
         """
@@ -293,7 +297,7 @@ class TagCollection(object):
                 raise InvalidFile('contains more then %d tags' % TWO16)
             return idx
 
-    def add_tags(self, dic):
+    def add_tags(self, dic, prefix):
         """
         :param dic: a dictionary tagname -> tagvalue
         :returns: a list of tag indices, one per tagname
@@ -310,6 +314,8 @@ class TagCollection(object):
                     raise ValueError(
                         'Invalid tagvalue="%s"' % tagvalue)
             idxs.append(self.add(tagname, tagvalue))
+        if prefix:
+            idxs.append(self.add('exposure', prefix))
         if dic:
             raise ValueError(
                 'Unknown tagname %s or <tagNames> not '
@@ -687,6 +693,18 @@ def _get_exposure(fname, stop=None):
     return exp, exposure.assets
 
 
+def _minimal_tagcol(fnames):
+    tagnames = None
+    for fname in fnames:
+        exp = Exposure.read_header(fname)
+        if tagnames is None:
+            tagnames = set(exp.tagcol.tagnames)
+        else:
+            tagnames &= set(exp.tagcol.tagnames)
+    tagnames -= set(['taxonomy'])
+    return TagCollection(['taxonomy'] + list(tagnames) + ['exposure'])
+
+
 class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
@@ -698,16 +716,44 @@ class Exposure(object):
               'cost_calculator', 'tagcol']
 
     @staticmethod
-    def read(fname, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False, check_dupl=True):
+    def read(fnames, calculation_mode='', region_constraint='',
+             ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+             asset_prefix='', tagcol=None):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
+        if len(fnames) > 1:
+            tagcol = _minimal_tagcol(fnames)
+            for i, fname in enumerate(fnames, 1):
+                prefix = 'E%02d_' % i
+                if i == 1:  # first exposure
+                    exp = Exposure.read(
+                        [fname], calculation_mode, region_constraint,
+                        ignore_missing_costs, asset_nodes, check_dupl,
+                        prefix, tagcol)
+                    exp.description = 'Composite exposure[%d]' % len(fnames)
+                else:
+                    logging.info('Reading %s', fname)
+                    exposure, assets = _get_exposure(fname)
+                    assert exposure.cost_types == exp.cost_types
+                    assert exposure.occupancy_periods == exp.occupancy_periods
+                    assert (exposure.insurance_limit_is_absolute ==
+                            exp.insurance_limit_is_absolute)
+                    assert exposure.retrofitted == exp.retrofitted
+                    assert exposure.area == exp.area
+                    exposure.tagcol = exp.tagcol
+                    nodes = assets if assets else exposure._read_csv(
+                        assets.text, os.path.dirname(fname))
+                    exp.param['asset_prefix'] = prefix
+                    exp._populate_from(nodes, exp.param, check_dupl)
+            return exp
+        [fname] = fnames
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
+        param['asset_prefix'] = asset_prefix
         param['out_of_region'] = 0
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
@@ -716,6 +762,8 @@ class Exposure(object):
         param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assets = _get_exposure(param['fname'])
+        if tagcol:
+            exposure.tagcol = tagcol
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
             ['occupants'])
         nodes = assets if assets else exposure._read_csv(
@@ -731,6 +779,7 @@ class Exposure(object):
         # sanity checks
         values = any(len(ass.values) + ass.number for ass in exposure.assets)
         assert values, 'Could not find any value??'
+        exposure.param = param
         return exposure
 
     @staticmethod
@@ -776,7 +825,7 @@ class Exposure(object):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
-                elif expected_header - header:
+                elif expected_header - header - {'exposure'}:
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
@@ -805,7 +854,7 @@ class Exposure(object):
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
-                            if tagname != 'taxonomy':
+                            if tagname not in ('taxonomy', 'exposure'):
                                 tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:
@@ -820,7 +869,7 @@ class Exposure(object):
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
                 raise nrml.DuplicatedID(asset_id)
-            asset_refs.add(asset_id)
+            asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset_node, param)
 
     def _add_asset(self, idx, asset_node, param):
@@ -829,10 +878,11 @@ class Exposure(object):
         insurance_limits = {}
         retrofitted = None
         asset_id = asset_node['id'].encode('utf8')
+        prefix = param['asset_prefix'].encode('utf8')
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
         with context(param['fname'], asset_node):
-            self.asset_refs.append(asset_id)
+            self.asset_refs.append(prefix + asset_id)
             taxonomy = asset_node['taxonomy']
             if 'damage' in param['calculation_mode']:
                 # calculators of 'damage' kind require the 'number'
@@ -857,7 +907,7 @@ class Exposure(object):
             tagnode = getattr(asset_node, 'tags', None)
             dic = {} if tagnode is None else tagnode.attrib.copy()
             dic['taxonomy'] = taxonomy
-            idxs = self.tagcol.add_tags(dic)
+            idxs = self.tagcol.add_tags(dic, prefix)
         try:
             costs = asset_node.costs
         except AttributeError:

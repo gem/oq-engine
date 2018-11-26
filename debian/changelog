@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented multi-exposure functionality in event based risk
   * Changed the event based calculator to store the ruptures incrementally
     without keeping them all in memory
   * Refactored the UCERF event based calculator to work as much as possible

@@ -119,12 +119,14 @@ class EBRunner(object):
         if job is None:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based')
+                                 exports, calculation_mode='event_based',
+                                 exposure_file='')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based')
+                                 exports, calculation_mode='event_based',
+                                 exposure_file='')
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
             # sanity check
@@ -134,20 +136,8 @@ class EBRunner(object):
             logging.info('Reusing job #%d', job.id)
 
     def run_risk(self):
-        t0 = time.time()
-        exposures = self.oqparam.inputs['exposure']
-        for i, exp_file in enumerate(exposures, 1):
-            descr = self.oqparam.description + ' [%s %d of %d]' % (
-                os.path.basename(exp_file)[:-4], i, len(exposures))
-            try:
-                run_job(self.job_ini, self.log_level, self.log_file,
-                        self.exports, hazard_calculation_id=self.hc_id,
-                        exposure_file=exp_file, description=descr)
-            except Exception:  # skip failed computations
-                logging.error(exp_file, exc_info=True)
-        dt = time.time() - t0
-        logging.info('Ran %d risk calculations in %.1f minutes',
-                     len(self.oqparam.inputs['exposure']), dt / 60)
+        run_job(self.job_ini, self.log_level, self.log_file,
+                self.exports, hazard_calculation_id=self.hc_id)
 
 
 @sap.Script
