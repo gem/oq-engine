@@ -71,10 +71,30 @@ class BindiEtAl2011Low(BindiEtAl2011):
         return mean, stddevs
 
     def _get_delta(self, imt, mag):
+        print(imt)
         # Get the coefficients needed to compute the delta used for scaling
         coeffs = self.DELTACOEFF[imt]
-        return coeffs[0]*mag**2 + coeffs[1]*mag + coeffs[2]
+        print(coeffs)
+        return coeffs['a']*mag**2 + coeffs['b']*mag + coeffs['c']
 
+
+    DELTACOEFF = CoeffsTable(sa_damping=5, table="""
+    imt   a      b     c
+    pga   0.101 -1.136 3.555
+    pgv   0.066 -0.741 2.400
+    0.05  0.105 -1.190 3.691
+    0.1   0.112 -1.284 4.001
+    0.15  0.094 -1.033 3.177
+    0.2   0.085 -0.907 2.831
+    0.3   0.086 -0.927 2.869
+    0.4   0.088 -0.974 3.076
+    0.5   0.083 -0.916 2.933
+    0.75  0.073 -0.808 2.628
+    1.00  0.066 -0.736 2.420
+    2.00  0.041 -0.512 1.888
+    3.00  0.050 -0.616 2.193
+    4.00  0.076 -0.906 3.046
+        """)
 
 class BindiEtAl2011Upp(BindiEtAl2011):
     """
@@ -92,21 +112,3 @@ class BindiEtAl2011Upp(BindiEtAl2011):
         delta = self._get_delta(imt, rup.mag)
         return mean+delta, stddevs
 
-
-DELTACOEFF = CoeffsTable(sa_damping=5, table="""
-IMT   a      b     c
-PGA   0.101 -1.136 3.555
-PGV   0.066 -0.741 2.400
-0.05  0.105 -1.190 3.691
-0.1   0.112 -1.284 4.001
-0.15  0.094 -1.033 3.177
-0.2   0.085 -0.907 2.831
-0.3   0.086 -0.927 2.869
-0.4   0.088 -0.974 3.076
-0.5   0.083 -0.916 2.933
-0.75  0.073 -0.808 2.628
-1s    0.066 -0.736 2.420
-2s    0.041 -0.512 1.888
-3s    0.050 -0.616 2.193
-4s    0.076 -0.906 3.046
-    """)
