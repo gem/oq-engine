@@ -396,6 +396,9 @@ def get_site_collection(oqparam):
                     sitecol._set(name, 0)  # the default
                 else:
                     sitecol._set(name, params[name])
+    elif mesh is None:
+        raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
+                          % oqparam.inputs['job_ini'])
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
@@ -944,11 +947,8 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    fnames = oqparam.inputs['exposure']
-    if len(fnames) > 1:
-        raise NotImplementedError('Multifile exposure')
     exposure = asset.Exposure.read(
-        fnames[0], oqparam.calculation_mode,
+        oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
