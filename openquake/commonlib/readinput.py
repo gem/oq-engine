@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import csv
 import copy
 import zlib
@@ -59,9 +58,6 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 
 Site = collections.namedtuple('Site', 'sid lon lat')
-stored_event_dt = numpy.dtype([
-    ('eid', U64), ('rup_id', U32), ('grp_id', U16), ('year', U32),
-    ('ses', U16), ('rlz', U16)])
 
 
 class DuplicatedPoint(Exception):
@@ -178,8 +174,6 @@ def get_params(job_inis, **kw):
     smlt = inputs.get('source_model_logic_tree')
     if smlt:
         inputs['source'] = logictree.collect_info(smlt).smpaths
-    elif 'source_model' in inputs:
-        inputs['source'] = [inputs['source_model']]
     if inputs.get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
@@ -675,6 +669,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                src.src_group_id = grp_id
                 src.id = idx
                 if oqparam.number_of_logic_tree_samples:
                     src.samples = sm.samples
@@ -699,9 +694,9 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         idx += 1
                     sg.id = grp_id
                     grp_id += 1
+                    src_groups.append(sg)
                 if monitor.hdf5:
                     store_sm(newsm, hdf5path, monitor)
-                src_groups.extend(newsm.src_groups)
             else:  # just collect the TRT models
                 src_groups.extend(logictree.read_source_groups(fname))
 
@@ -830,6 +825,9 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                     % (sm, dupl))
     if not in_memory:
         return csm
+
+    nr = sum(src.num_ruptures for src in csm.get_sources())
+    logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
@@ -1287,9 +1285,12 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def get_checksum32(inputs):
+def get_checksum32(inputs, extra=''):
     """
-    Build an unsigned 32 bit integer from the input files of the calculation
+    Build an unsigned 32 bit integer from the input files of a calculation.
+
+    :param inputs: a dictionary key -> pathname
+    :param extra: an extra string to refine the checksum (optional)
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
@@ -1309,4 +1310,29 @@ def get_checksum32(inputs):
             checksum = zlib.adler32(data, checksum) & 0xffffffff
         else:
             raise ValueError('%s does not exist or is not a file' % fname)
+    if extra:
+        checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
+
+
+def get_hazard_checksum32(oqparam):
+    """
+    Extract the checksum from the hazard part of a computation, i.e.
+    ignoring risk functions, exposure and risk parameters.
+    """
+    hazard_inputs = {}
+    for key, val in oqparam.inputs.items():
+        if key in ('site_model', 'source_model_logic_tree',
+                   'gsim_logic_tree', 'source'):
+            hazard_inputs[key] = val
+    hazard_params = []
+    for key, val in vars(oqparam).items():
+        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                   'width_of_mfd_bin', 'area_source_discretization',
+                   'random_seed', 'ses_seed', 'truncation_level',
+                   'maximum_distance', 'investigation_time',
+                   'number_of_logic_tree_samples', 'ses_per_logic_tre_path',
+                   'minimum_magnitude', 'prefilter_sources', 'sites',
+                   'pointsource_distance', 'filter_distance'):
+            hazard_params.append('%s = %s' % (key, val))
+    return get_checksum32(hazard_inputs, '\n'.join(hazard_params))

@@ -306,6 +306,7 @@ class File(h5py.File):
         if items:
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
+                assert v is not None, k  # sanity check
                 a[k] = v
 
     def __setitem__(self, path, obj):
@@ -364,6 +365,12 @@ class File(h5py.File):
         else:  # recursively determine the size of the datagroup
             obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
         return nbytes
+
+    def getitem(self, name):
+        """
+        Return a dataset by using h5py.File.__getitem__
+        """
+        return h5py.File.__getitem__(self, name)
 
     def save(self, nodedict, root=''):
         """
@@ -436,6 +443,7 @@ def save(path, items, **extra):
     """
     with File(path, 'w') as f:
         for key, val in items:
+            assert val is not None, key  # sanity check
             try:
                 f[key] = val
             except ValueError as err:
