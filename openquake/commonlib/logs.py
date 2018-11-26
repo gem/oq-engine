@@ -161,12 +161,20 @@ def get_last_calc_id(username=None):
         return datastore.get_last_calc_id()
 
 
-def init(calc_id=None, level=logging.INFO):
-    """Set the format of the root logger"""
+def init(calc_id='nojob', level=logging.INFO):
+    """
+    1. initialize the root logger (if not already initialized)
+    2. set the format of the root handlers (if any)
+    3. return a new calculation ID candidate if calc_id is None
+    """
     if not logging.root.handlers:  # first time
         logging.basicConfig(level=level)
-    if calc_id is None:
-        calc_id = get_last_calc_id() + 1
+    if calc_id == 'job':  # produce a calc_id by creating a job in the db
+        calc_id = dbcmd('create_job', datastore.get_datadir())
+    elif calc_id == 'nojob':  # produce a calc_id without creating a job
+        calc_id = datastore.get_last_calc_id() + 1
+    else:
+        assert isinstance(calc_id, int), calc_id
     fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
     for handler in logging.root.handlers:
         handler.setFormatter(logging.Formatter(fmt))
