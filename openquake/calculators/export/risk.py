@@ -40,6 +40,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+TWO32 = 2 ** 32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
@@ -191,16 +192,24 @@ def export_maxloss_ruptures(ekey, dstore):
     """
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
+    rlzs_by_gsim = dstore['csm_info'].get_rlzs_by_gsim_grp()
+    num_ses = oq.ses_per_logic_tree_path
     fnames = []
     for loss_type in oq.loss_dt().names:
         ebr = getters.get_maxloss_rupture(dstore, loss_type)
-        events = dstore['events'][ebr.eidx1:ebr.eidx2]
-        root = hazard_writers.rupture_to_element(ebr.export(mesh, events))
+        root = hazard_writers.rupture_to_element(
+            ebr.export(mesh, rlzs_by_gsim[ebr.grp_id], num_ses))
         dest = dstore.export_path('rupture-%s.xml' % loss_type)
         with open(dest, 'wb') as fh:
             nrml.write(list(root), fh)
         fnames.append(dest)
     return fnames
+
+
+def year_dict(eids, investigation_time, ses_seed):
+    numpy.random.seed(ses_seed)
+    years = numpy.random.choice(int(investigation_time), len(eids)) + 1
+    return dict(zip(numpy.sort(eids), years))  # eid -> year
 
 
 # this is used by event_based_risk
@@ -228,7 +237,12 @@ def export_agg_losses_ebr(ekey, dstore):
     elt_dt = numpy.dtype(dtlist)
     elt = numpy.zeros(len(agg_losses), elt_dt)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    events_by_rupid = group_array(dstore['events'].value, 'rup_id')
+    events = dstore['events'].value
+    events_by_rupid = collections.defaultdict(list)
+    for event in events:
+        rupid = event['eid'] // TWO32
+        events_by_rupid[rupid].append(event)
+    year_of = year_dict(events['eid'], oq.investigation_time, oq.ses_seed)
     rup_data = {}
     event_by_eid = {}  # eid -> event
     # populate rup_data and event_by_eid
@@ -243,11 +257,11 @@ def export_agg_losses_ebr(ekey, dstore):
     for r, row in enumerate(agg_losses):
         rec = elt[r]
         event = event_by_eid[row['eid']]
-        rec['event_id'] = event['eid']
-        rec['year'] = event['year']
+        rec['event_id'] = eid = event['eid']
+        rec['year'] = year_of[eid]
         rec['rlzi'] = row['rlzi']
         if rup_data:
-            rec['rup_id'] = rup_id = event['rup_id']
+            rec['rup_id'] = rup_id = event['eid'] // TWO32
             (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
              rec['centroid_depth']) = rup_data[rup_id]
         for lt, i in lti.items():
@@ -357,7 +371,7 @@ def export_dmg_by_event(ekey, dstore):
     dt_list = [('event_id', numpy.uint64), ('rlzi', numpy.uint16)] + [
         (f, damage_dt.fields[f][0]) for f in damage_dt.names]
     all_losses = dstore[ekey[0]].value  # shape (E, R, LI)
-    eids = dstore['events']['eid']
+    events_by_rlz = group_array(dstore['events'], 'rlz')
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.build_fname('dmg_by_event', '', 'csv')
@@ -366,7 +380,7 @@ def export_dmg_by_event(ekey, dstore):
         for rlz in rlzs:
             data = all_losses[:, rlz.ordinal].copy().view(damage_dt)  # shape E
             arr = numpy.zeros(len(data), dt_list)
-            arr['event_id'] = eids
+            arr['event_id'] = events_by_rlz[rlz.ordinal]['eid']
             arr['rlzi'] = rlz.ordinal
             for field in damage_dt.names:
                 arr[field] = data[field].squeeze()

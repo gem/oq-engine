@@ -318,7 +318,7 @@ class RuptureData(object):
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
             ('rup_id', U32), ('srcidx', U32), ('multiplicity', U16),
-            ('eidx', U32), ('occurrence_rate', F64),
+            ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
             ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
@@ -342,7 +342,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.srcidx, ebr.n_occ.sum(), ebr.eidx1, rate,
+                (ebr.serial, ebr.srcidx, ebr.n_occ.sum(), rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
@@ -357,7 +357,7 @@ class RuptureSerializer(object):
     rupture_dt = numpy.dtype([
         ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
         ('n_occ', U16),
-        ('eidx1', U32), ('eidx2', U32), ('gidx1', U32), ('gidx2', U32),
+        ('gidx1', U32), ('gidx2', U32),
         ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
@@ -383,8 +383,7 @@ class RuptureSerializer(object):
             points = mesh.reshape(3, -1).T   # shape (n, 3)
             n = len(points)
             tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-                   rup.code, ebrupture.n_occ.sum(),
-                   ebrupture.eidx1, ebrupture.eidx2,
+                   rup.code, ebrupture.n_occ,
                    offset, offset + n, getattr(ebrupture, 'pmfx', -1),
                    rup.mag, rup.rake, rate, hypo, sy, sz)
             offset += n
@@ -401,20 +400,15 @@ class RuptureSerializer(object):
         datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
         datastore.create_dset('rupgeoms', point3d)
 
-    def save(self, ebruptures, nr, eidx=0):
+    def save(self, ebruptures):
         """
         Populate a dictionary of site IDs tuples and save the ruptures.
 
         :param ebruptures: a list of EBRupture objects to save
-        :param eidx: the last event index saved
         """
         pmfbytes = 0
         self.nruptures += len(ebruptures)
         for ebr in ebruptures:
-            mul = ebr.multiplicity(nr)
-            ebr.eidx1 = eidx
-            ebr.eidx2 = eidx + mul
-            eidx += mul
             rup = ebr.rupture
             if hasattr(rup, 'pmf'):
                 pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
