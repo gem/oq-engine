@@ -1333,7 +1333,7 @@ def get_hazard_checksum32(oqparam):
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'ses_seed', 'truncation_level',
                    'maximum_distance', 'investigation_time',
-                   'number_of_logic_tree_samples', 'ses_per_logic_tre_path',
+                   'number_of_logic_tree_samples', 'ses_per_logic_tree_path',
                    'minimum_magnitude', 'prefilter_sources', 'sites',
                    'pointsource_distance', 'filter_distance'):
             hazard_params.append('%s = %s' % (key, val))
