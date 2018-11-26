@@ -97,7 +97,7 @@ def prepare_site_model(exposure_xml, vs30_csv,
         fields.append('vs30measured')
     with performance.Monitor(hdf5.path, hdf5, measuremem=True) as mon:
         mesh, assets_by_site = Exposure.read(
-            [exposure_xml], check_dupl=False).get_mesh_assets_by_site()
+            exposure_xml, check_dupl=False).get_mesh_assets_by_site()
         mon.hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, req_site_params=req_site_params)
         if grid_spacing:
@@ -108,15 +108,20 @@ def prepare_site_model(exposure_xml, vs30_csv,
             logging.info(
                 'Associating exposure grid with %d locations to %d '
                 'exposure sites', len(haz_sitecol), len(assets_by_site))
-            haz_sitecol, assets_by, _discarded = assoc(
+            haz_sitecol, assets_by, discarded = assoc(
                 assets_by_site, haz_sitecol, grid_spacing * SQRT2, 'filter')
+            if discarded:
+                logging.info('Discarded %d sites with assets '
+                             '[use oq plot_assets]', len(discarded))
+                mon.hdf5['discarded'] = numpy.array(discarded)
             haz_sitecol.make_complete()
         else:
             haz_sitecol = assetcol
+            discarded = []
         vs30orig = read_vs30(vs30_csv)
         logging.info('Associating %d hazard sites to %d site parameters',
                      len(haz_sitecol), len(vs30orig))
-        sitecol, vs30, discarded = assoc(
+        sitecol, vs30, _ = assoc(
             vs30orig, haz_sitecol, site_param_distance, 'warn')
         sitecol.array['vs30'] = vs30['vs30']
         if z1pt0:
@@ -126,18 +131,13 @@ def prepare_site_model(exposure_xml, vs30_csv,
         if vs30measured:
             sitecol.array['vs30measured'] = False  # it is inferred
         mon.hdf5['sitecol'] = sitecol
-        if discarded:
-            mon.hdf5['discarded'] = numpy.array(discarded)
         write_csv(output, sitecol.array[fields])
-    if discarded:
-        logging.info('Discarded %d sites with assets [use oq plot_assets]',
-                     len(discarded))
     logging.info('Saved %d rows in %s' % (len(sitecol), output))
     logging.info(mon)
     return sitecol
 
 
-prepare_site_model.arg('exposure_xml', 'exposure in XML format')
+prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='+')
 prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
                        nargs='+')
 prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')

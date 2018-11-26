@@ -439,10 +439,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         inputdir = os.path.dirname(case_16.__file__)
         output = gettemp(suffix='.csv')
         grid_spacing = 50
-        exposure_csv = os.path.join(inputdir, 'exposure.xml')
+        exposure_xml = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model.func(
-            exposure_csv, [vs30_csv], True, True, True,
+            [exposure_xml], [vs30_csv], True, True, True,
             grid_spacing, 5, output)
         sm = read_csv(output)
         self.assertEqual(sm['vs30measured'].sum(), 0)
@@ -450,6 +450,6 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model.func(exposure_csv, [vs30_csv],
+        sc = prepare_site_model.func([exposure_xml], [vs30_csv],
                                      True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
