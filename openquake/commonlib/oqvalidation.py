@@ -300,10 +300,11 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if self.region_grid_spacing and (
-                'sites' in self.inputs or 'site_model' in self.inputs):
-            logging.warn('Using a grid together with specifying explicitly '
-                         'the sites is deprecated')
+        if (self.region_grid_spacing and 'site_model' in self.inputs
+                and 'exposure' in self.inputs):
+            raise ValueError(
+                'You cannot specify a grid, a site model and an exposure at '
+                'the same time: use oq prepare_site_model instead')
 
     def check_gsims(self, gsims):
         """
