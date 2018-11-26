@@ -301,6 +301,8 @@ def job_from_file(job_ini, job_id, username, **kw):
     oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
+    if 'description' in kw:
+        oq.description = kw.pop('description')
     if 'exposure_file' in kw:  # hack used in commands.engine
         fnames = kw.pop('exposure_file').split()
         if fnames:
