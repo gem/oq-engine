@@ -5,11 +5,10 @@ language: python
 python:
  - "3.6"
 
-# FIXME temporarily disable cache
-# cache:
-#   pip: true
-#   directories:
-#   - wheels  
+cache:
+  pip: true
+  directories:
+  - wheels  
 
 jobs:
   include:
