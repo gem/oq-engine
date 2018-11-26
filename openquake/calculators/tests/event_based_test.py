@@ -298,12 +298,8 @@ class EventBasedTestCase(CalculatorTestCase):
                       ground_motion_fields='false')
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
-        self.assertEqual(view('global_gmfs', self.calc.datastore), '''\
-======= ======= =======
-PGA     SA(0.3) SA(0.6)
-======= ======= =======
-0.00460 0.00214 0.00175
-======= ======= =======''')
+        tmp = gettemp(view('global_gmfs', self.calc.datastore))
+        self.assertEqualFiles('expected/global_gmfs.txt', tmp)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
