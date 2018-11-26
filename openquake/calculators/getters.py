@@ -17,11 +17,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import itertools
-import operator
-import logging
 import numpy
 from openquake.baselib import hdf5, datastore
-from openquake.baselib.general import AccumDict, groupby, group_array
+from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -425,20 +423,24 @@ class GmfGetter(object):
         return res
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None)):
+def get_ruptures_by_grp(dstore, slc=slice(None)):
     """
     Extracts the ruptures corresponding to the given slice. If missing,
     extract all ruptures.
 
     :returns: a dictionary grp_id -> list of EBRuptures
     """
-    if slice_.stop is None:
-        n = len(dstore['ruptures']) - (slice_.start or 0)
-        logging.info('Reading %d ruptures from the datastore', n)
-    rgetter = RuptureGetter.from_(dstore, slice_)
-    return groupby(rgetter, operator.attrgetter('grp_id'))
+    csm_info = dstore['csm_info']
+    grp_trt = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rupdict = group_array(dstore['ruptures'][slc], 'grp_id')
+    code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+    return {grp_id: RuptureGetter(
+        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id], samples[grp_id])
+            for grp_id, rup_array in rupdict.items()}
 
 
+# FIXME: restore this functionality
 def get_maxloss_rupture(dstore, loss_type):
     """
     :param dstore: a DataStore instance
@@ -453,52 +455,42 @@ def get_maxloss_rupture(dstore, loss_type):
     return ebr
 
 
+def get_code2cls(ruptures_attrs):
+    code2cls = {}  # code -> rupture_cls, surface_cls
+    for key, val in ruptures_attrs.items():
+        if key.startswith('code_'):
+            code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+    return code2cls
+
+
 class RuptureGetter(object):
     """
     Iterable over ruptures.
 
     :param hdf5path:
         path to an HDF5 file with a dataset names `ruptures`
-    :param mask:
-        which ruptures to read; it can be:
-        - None: read all ruptures
-        - a slice
-        - a boolean mask
-        - a list of integers
-    :param grp_id:
-        the group ID of the ruptures, if they are homogeneous, or None
+    :param rup_array:
+        an array of rupture parameters with homogeneous grp_id
     """
-    @classmethod
-    def from_(cls, dstore, slice_):
-        return cls(dstore.hdf5path, dstore['csm_info'], slice_)
-
-    def __init__(self, hdf5path, csm_info, mask=None, grp_id=None):
+    def __init__(self, hdf5path, code2cls, rup_array, trt, samples):
         self.hdf5path = hdf5path
-        self.mask = slice(None) if mask is None else mask
-        self.grp_id = grp_id
-        self.grp_trt = csm_info.grp_by("trt")
-        self.samples = csm_info.get_samples_by_grp()
+        self.code2cls = code2cls
+        self.rup_array = rup_array
+        self.trt = trt
+        self.samples = samples
+        [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
     def __iter__(self):
         with datastore.read(self.hdf5path) as dstore:
-            attrs = dstore.get_attrs('ruptures')
-            code2cls = {}  # code -> rupture_cls, surface_cls
-            for key, val in attrs.items():
-                if key.startswith('code_'):
-                    code2cls[int(key[5:])] = [classes[v] for v in val.split()]
             rupgeoms = dstore['rupgeoms']
-            ruptures = dstore['ruptures'][self.mask]
-            for rec in ruptures:
-                if self.grp_id is not None:  # ruptures must have same grp_id
-                    assert self.grp_id == rec['grp_id'], (
-                        self.grp_id, rec['grp_id'])
+            for rec in self.rup_array:
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sy'], rec['sz'])
                 mesh[0] = geom['lon']
                 mesh[1] = geom['lat']
                 mesh[2] = geom['depth']
-                rupture_cls, surface_cls = code2cls[rec['code']]
+                rupture_cls, surface_cls = self.code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
                 rupture.serial = rec['serial']
                 rupture.surface = object.__new__(surface_cls)
@@ -506,10 +498,10 @@ class RuptureGetter(object):
                 rupture.rake = rec['rake']
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
-                rupture.tectonic_region_type = self.grp_trt[rec['grp_id']]
+                rupture.tectonic_region_type = self.trt
                 pmfx = rec['pmfx']
                 if pmfx != -1:
-                    rupture.pmf = hdf5['pmfs'][pmfx]
+                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])
@@ -528,19 +520,9 @@ class RuptureGetter(object):
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
-                                rec['n_occ'], self.samples[grp_id])
+                                rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 yield ebr
 
     def __len__(self):
-        if hasattr(self.mask, 'start'):  # is a slice
-            if self.mask.start is None and self.mask.stop is None:
-                with datastore.read(self.hdf5path) as dstore:
-                    return len(dstore['ruptures'])
-            else:
-                return self.mask.stop - self.mask.start
-        elif isinstance(self.mask, list):
-            # NB: h5py wants lists, not arrays of indices
-            return len(self.mask)
-        else:  # is a boolean mask
-            return self.mask.sum()
+        return len(self.rup_array)

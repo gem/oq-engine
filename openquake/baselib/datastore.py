@@ -24,7 +24,7 @@ import h5py
 
 from openquake.baselib import hdf5, config
 
-CALC_REGEX = r'calc_(\d+)\.hdf5'
+CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
 def get_datadir():
@@ -54,7 +54,7 @@ def get_calc_ids(datadir=None):
     for f in os.listdir(datadir):
         mo = re.match(CALC_REGEX, f)
         if mo:
-            calc_ids.add(int(mo.group(1)))
+            calc_ids.add(int(mo.group(2)))
     return sorted(calc_ids)
 
 
@@ -84,7 +84,7 @@ def hdf5new(datadir=None):
     return new
 
 
-def extract_calc_id_datadir(hdf5path=None, datadir=None):
+def extract_calc_id_datadir(hdf5path, datadir=None):
     """
     Extract the calculation ID from the given hdf5path or integer:
 
@@ -96,8 +96,6 @@ def extract_calc_id_datadir(hdf5path=None, datadir=None):
     ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
     """
     datadir = datadir or get_datadir()
-    if hdf5path is None:  # use a new datastore
-        return get_last_calc_id(datadir) + 1, datadir
     try:
         calc_id = int(hdf5path)
     except ValueError:
@@ -106,7 +104,7 @@ def extract_calc_id_datadir(hdf5path=None, datadir=None):
         mo = re.match(CALC_REGEX, os.path.basename(hdf5path))
         if mo is None:
             raise ValueError('Cannot extract calc_id from %s' % hdf5path)
-        calc_id = int(mo.group(1))
+        calc_id = int(mo.group(2))
     return calc_id, datadir
 
 
@@ -154,23 +152,29 @@ class DataStore(collections.MutableMapping):
     """
     def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
         datadir = datadir or get_datadir()
-        calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
+        if isinstance(calc_id, str):  # passed a real path
+            self.hdf5path = calc_id
+            self.calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
+        else:
+            if calc_id is None:  # use a new datastore
+                self.calc_id = get_last_calc_id(datadir) + 1
+            elif calc_id < 0:  # use an old datastore
+                calc_ids = get_calc_ids(datadir)
+                try:
+                    self.calc_id = calc_ids[calc_id]
+                except IndexError:
+                    raise IndexError(
+                        'There are %d old calculations, cannot '
+                        'retrieve the %s' % (len(calc_ids), calc_id))
+            else:  # use the given datastore
+                self.calc_id = calc_id
+            self.hdf5path = os.path.join(
+                datadir, 'calc_%s.hdf5' % self.calc_id)
         if not os.path.exists(datadir):
             os.makedirs(datadir)
-        if calc_id < 0:  # use an old datastore
-            calc_ids = get_calc_ids(datadir)
-            try:
-                self.calc_id = calc_ids[calc_id]
-            except IndexError:
-                raise IndexError('There are %d old calculations, cannot '
-                                 'retrieve the %s' % (len(calc_ids), calc_id))
-        else:  # use the given datastore
-            self.calc_id = calc_id
         self.params = params
         self.parent = ()  # can be set later
         self.datadir = datadir
-        self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
-        self.hdf5path = self.calc_dir + '.hdf5'
         self.mode = mode or ('r+' if os.path.exists(self.hdf5path) else 'w')
         if self.mode == 'r' and not os.path.exists(self.hdf5path):
             raise IOError('File not found: %s' % self.hdf5path)
