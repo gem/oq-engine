@@ -573,11 +573,13 @@ class OqParam(valid.ParamSet):
 
     def is_valid_poes(self):
         """
-        When computing hazard maps and/or uniform hazard spectra,
-        the poes list must be non-empty.
+        When computing hazard maps and/or uniform hazard spectra, you must
+        specify poes or return_periods, but not both.
         """
         if self.hazard_maps or self.uniform_hazard_spectra:
-            if not self.poes and self.return_periods:
+            if self.poes and self.return_periods:
+                return False  # too much specification
+            elif self.return_periods:  # infer the poes
                 self.poes = [round(1 - numpy.exp(-1/t), 5)
                              for t in self.return_periods]
             return len(self.poes)
