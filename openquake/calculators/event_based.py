@@ -34,7 +34,8 @@ from openquake.risklib.riskinput import str2rsi
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
-from openquake.calculators.getters import GmfGetter, RuptureGetter
+from openquake.calculators.getters import (
+    GmfGetter, RuptureGetter, get_code2cls)
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -120,12 +121,14 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_gmfs(ruptures, sitecol, rlzs_by_gsim, param, monitor):
+def compute_gmfs(rupgetter, sitecol, rlzs_by_gsim, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    with monitor('getting ruptures'):
+        ebruptures = list(rupgetter)
     getter = GmfGetter(
-        rlzs_by_gsim, ruptures, sitecol,
+        rlzs_by_gsim, ebruptures, sitecol,
         param['oqparam'], param['min_iml'])
     return getter.compute_gmfs_curves(monitor)
 
@@ -155,8 +158,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
         self.rupser = calc.RuptureSerializer(self.datastore)
-        self.mon_rups = self.monitor('saving ruptures', measuremem=False)
-        self.mon_evs = self.monitor('saving events', measuremem=False)
 
     def init_logic_tree(self, csm_info):
         self.grp_trt = csm_info.grp_by("trt")
@@ -177,28 +178,31 @@ class EventBasedCalculator(base.HazardCalculator):
         concurrent_tasks = oq.concurrent_tasks
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        rups = dstore.getitem('ruptures').value[['serial', 'grp_id']]
         start = 0
-        for block in split_in_blocks(rups, concurrent_tasks or 1,
-                                     key=operator.itemgetter(1)):
+        with self.monitor('getting ruptures'):
+            rups = dstore.getitem('ruptures').value
+            code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+            hdf5cache = dstore.hdf5cache()
+            with hdf5.File(hdf5cache, 'r+') as cache:
+                if 'rupgeoms' not in cache:
+                    dstore.hdf5.copy('rupgeoms', cache)
+        by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
+        for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
-            slc = slice(start, start + nr)
             grp_id = block[0]['grp_id']
             rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
             if not rlzs_by_gsim:
                 # this may happen if a source model has no sources, like
                 # in event_based_risk/case_3
                 continue
-            ruptures = list(
-                RuptureGetter(dstore.hdf5path, self.csm_info, slc, grp_id))
+            par = param.copy()
+            par['samples'] = self.samples_by_grp[grp_id]
+            rup_array = rups[start: start + nr]
+            ruptures = RuptureGetter(hdf5cache, code2cls, rup_array,
+                                     self.grp_trt[grp_id], par['samples'])
             if ruptures:
-                par = param.copy()
-                par['samples'] = self.samples_by_grp[grp_id]
                 yield ruptures, self.sitecol, rlzs_by_gsim, par
                 start += nr
-                if nr > oq.ruptures_per_block:
-                    logging.info('Sending %d ruptures of group #%d',
-                                 nr, grp_id)
         if self.datastore.parent:
             self.datastore.parent.close()
 
@@ -219,11 +223,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.csm.gsim_lt.values
 
-        def weight_src(src, factor=numpy.sqrt(len(self.sitecol))):
-            return src.num_ruptures * factor
-
-        def weight_rup(ebr):
-            return 1
+        def weight_src(src):
+            return src.num_ruptures
 
         logging.info('Building ruptures')
         smap = parallel.Starmap(
@@ -236,8 +237,6 @@ class EventBasedCalculator(base.HazardCalculator):
             for sg in sm.src_groups:
                 if not sg.sources:
                     continue
-                for src in sg:
-                    eff_ruptures[sg.id] += src.num_ruptures
                 par['gsims'] = gsims_by_trt[sg.trt]
                 for block in self.block_splitter(sg.sources, weight_src):
                     if 'ucerf' in oq.calculation_mode:
@@ -247,12 +246,14 @@ class EventBasedCalculator(base.HazardCalculator):
                             ses_idx += 1
                     else:
                         smap.submit(block, self.src_filter, par)
+        mon = self.monitor('saving ruptures')
         for srcs in smap:
             eb_ruptures = []
             for src in srcs:
                 eb_ruptures.extend(src.eb_ruptures)
+                eff_ruptures[src.src_group_id] += src.num_ruptures
             if eb_ruptures:
-                with self.mon_rups:
+                with mon:
                     self.rupser.save(eb_ruptures)
             for src in srcs:
                 calc_times += src.calc_times
@@ -262,28 +263,21 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_csm_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
-
-        # order the ruptures by serial
-        attrs = self.datastore.getitem('ruptures').attrs
-        sorted_ruptures = self.datastore.getitem('ruptures').value
-        sorted_ruptures.sort(order='serial')
-        self.datastore['ruptures'] = sorted_ruptures
-        self.datastore.set_attrs('ruptures', **attrs)
-
+        logging.info('Storing source_info')
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
 
-        self.save_events(sorted_ruptures)
+        logging.info('Reordering the ruptures and the events')
+        attrs = self.datastore.getitem('ruptures').attrs
+        sorted_ruptures = self.datastore.getitem('ruptures').value
+        # order the ruptures by serial
+        sorted_ruptures.sort(order='serial')
+        self.datastore['ruptures'] = sorted_ruptures
+        self.datastore.set_attrs('ruptures', **attrs)
+        n_events = self.save_events(sorted_ruptures)
         self.check_overflow()  # check the number of events
-        # reorder events
-        evs = self.datastore['events'].value
-        evs.sort(order='eid')
-        # check that the event IDs are really unique (sanity check)
-        num_unique = len(numpy.unique(evs['eid']))
-        assert num_unique == len(evs), (num_unique, len(evs))
-        self.datastore['events'] = evs
         logging.info('Stored {:,d} ruptures and {:,d} events'
-                     .format(len(sorted_ruptures), len(evs)))
+                     .format(len(sorted_ruptures), n_events))
         return self.from_ruptures(par)
 
     def agg_dicts(self, acc, result):
@@ -328,13 +322,15 @@ class EventBasedCalculator(base.HazardCalculator):
     def save_events(self, rup_array):
         """
         :param rup_array: an array of ruptures with fields grp_id
+        :returns: the number of saved events
         """
-        with self.mon_evs:
+        with self.monitor('saving events'):
             eids = rupture.get_eids(
                 rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
             events = numpy.zeros(len(eids), rupture.events_dt)
             events['eid'] = eids
-            self.datastore.extend('events', events)
+            self.datastore['events'] = events
+        return len(eids)
 
     def check_overflow(self):
         """
