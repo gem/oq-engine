@@ -380,16 +380,15 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
             if oqparam.region_grid_spacing:
-                # associate the site parameters to the grid assuming they
-                # have been prepared correctly, i.e. they are on the location
-                # of the assets; discard empty sites silently
-                sitecol, params, discarded = geo.utils.assoc(
+                # associate the site parameters to the grid discarding empty
+                # sites silently; notice that there cannot be an exposure
+                sitecol, params, _ = geo.utils.assoc(
                     sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
                 sitecol.make_complete()
             else:
                 # associate the site parameters to the sites without
                 # discarding any site but warning for far away parameters
-                sc, params, discarded = geo.utils.assoc(
+                sc, params, _ = geo.utils.assoc(
                     sm, sitecol, oqparam.max_site_model_distance, 'warn')
             for name in req_site_params:
                 if name == 'backarc' and name not in params.dtype.names:
@@ -988,8 +987,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
             oqparam.asset_hazard_distance, 'filter')
-        if oqparam.region_grid_spacing:  # it is normal to discard sites
-            discarded = []
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
