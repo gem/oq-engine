@@ -88,14 +88,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   fname, delta=1E-5)
 
         # test portfolio loss
-        pf = view('portfolio_loss', self.calc.datastore)
-        self.assertEqual(pf, '''\
-============== ============= ==========
-portfolio_loss nonstructural structural
-============== ============= ==========
-mean           4,585         15,603    
-stddev         839           556       
-============== ============= ==========''')
+        tmp = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
 
         # test the rup_loss_table exporter
         raise unittest.SkipTest('rup_loss_table')
