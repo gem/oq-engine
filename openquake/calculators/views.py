@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, DictArray, AccumDict, CallableDict)
+    humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import decode
