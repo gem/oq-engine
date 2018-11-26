@@ -718,7 +718,7 @@ class Exposure(object):
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-             asset_prefix=''):
+             asset_prefix='', tagcol=None):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
@@ -732,8 +732,8 @@ class Exposure(object):
                 if i == 0:  # first exposure
                     exp = Exposure.read(
                         [fname], calculation_mode, region_constraint,
-                        ignore_missing_costs, asset_nodes, check_dupl, prefix)
-                    exp.tagcol = tagcol
+                        ignore_missing_costs, asset_nodes, check_dupl,
+                        prefix, tagcol)
                     exp.description = 'Composite exposure[%d]' % len(fnames)
                 else:
                     logging.info('Reading %s', fname)
@@ -762,7 +762,8 @@ class Exposure(object):
         param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assets = _get_exposure(param['fname'])
-        exposure.tagcol.add_tagname('exposure')
+        if tagcol:
+            exposure.tagcol = tagcol
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
             ['occupants'])
         nodes = assets if assets else exposure._read_csv(
