@@ -282,35 +282,39 @@ def zip_job(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     general.zipfiles(files, archive_zip, log=log)
 
 
-def job_from_file(cfg_file, username, **kw):
+def job_from_file(job_ini, job_id, username, **kw):
     """
     Create a full job profile from a job config file.
 
-    :param str cfg_file:
-        Path to a job.ini file.
-    :param str username:
+    :param job_ini:
+        Path to a job.ini file
+    :param job_id:
+        ID of the created job
+    :param username:
         The user who will own this job profile and all results
-    :param str datadir:
-        Data directory of the user
-    :param hazard_calculation_id:
-        ID of a previous calculation or None
+    :param kw:
+         Extra parameters including `calculation_mode` and `exposure_file`
     :returns:
-        a pair (job_id, oqparam)
+        an oqparam instance
     """
     hc_id = kw.get('hazard_calculation_id')
-    oq = readinput.get_oqparam(cfg_file, hc_id=hc_id)
+    oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
+    if 'description' in kw:
+        oq.description = kw.pop('description')
     if 'exposure_file' in kw:  # hack used in commands.engine
         fnames = kw.pop('exposure_file').split()
         if fnames:
             oq.inputs['exposure'] = fnames
-        else:
+        elif 'exposure' in oq.inputs:
             del oq.inputs['exposure']
-
-    job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(), hc_id)
-    return job_id, oq
+    logs.dbcmd('update_job', job_id,
+               dict(calculation_mode=oq.calculation_mode,
+                    description=oq.description,
+                    user_name=username,
+                    hazard_calculation_id=hc_id))
+    return oq
 
 
 def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):

@@ -174,6 +174,16 @@ class CalculatorTestCase(unittest.TestCase):
         with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())
 
+    def assertEventsByRlz(self, events_by_rlz):
+        """
+        Check the distribution of the events by realization index
+        """
+        n_events = numpy.zeros(self.calc.R, int)
+        dic = general.group_array(self.calc.datastore['events'].value, 'rlz')
+        for rlzi, events in dic.items():
+            n_events[rlzi] = len(events)
+        numpy.testing.assert_equal(n_events, events_by_rlz)
+
     def run(self, result=None):
         res = super().run(result)
         if res is not None:  # for Python 3

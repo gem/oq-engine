@@ -42,9 +42,12 @@ def quote(url_like):
 
 # `oq extract` is tested in the demos
 @sap.Script
-def extract(what, calc_id=-1, server_url=None):
+def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
+    By default use the WebUI, unless server_url is set to 'local', in
+    which case the extraction is done directly bypassing tjhe WebUI and
+    the database.
     """
     logging.basicConfig(level=logging.INFO)
     if calc_id < 0:
@@ -60,13 +63,13 @@ def extract(what, calc_id=-1, server_url=None):
         dstore.parent = datastore.read(parent_id)
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
-        if server_url:
+        if server_url == 'local':
+            print('Emulating call to %s' % urlpath)
+            items = extract_(dstore, what)
+        else:
             print('Calling %s%s' % (server_url, urlpath))
             data = urlopen(server_url.rstrip('/') + urlpath).read()
             items = (item for item in numpy.load(io.BytesIO(data)).items())
-        else:
-            print('Emulating call to %s' % urlpath)
-            items = extract_(dstore, what)
         if not inspect.isgenerator(items):
             items = [(items.__class__.__name__, items)]
         fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
@@ -79,4 +82,4 @@ def extract(what, calc_id=-1, server_url=None):
 
 extract.arg('what', 'string specifying what to export')
 extract.arg('calc_id', 'number of the calculation', type=int)
-extract.opt('server_url', 'URL of the webui', '-u')
+extract.arg('server_url', 'URL of the webui')
