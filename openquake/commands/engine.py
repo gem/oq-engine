@@ -140,7 +140,7 @@ class EBRunner(object):
         exposures = self.oqparam.inputs['exposure']
         for i, exp_file in enumerate(exposures, 1):
             descr = self.oqparam.description + ' [%s %d of %d]' % (
-                os.path.basename(exp_file), i, len(exposures))
+                os.path.basename(exp_file)[:-4], i, len(exposures))
             try:
                 run_job(self.job_ini, self.log_level, self.log_file,
                         self.exports, hazard_calculation_id=self.hc_id,
