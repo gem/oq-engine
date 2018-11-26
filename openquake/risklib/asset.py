@@ -727,7 +727,7 @@ class Exposure(object):
         """
         if len(fnames) > 1:
             tagcol = _minimal_tagcol(fnames)
-            for i, fname in enumerate(fnames):
+            for i, fname in enumerate(fnames, 1):
                 prefix = 'E%02d_' % i
                 if i == 0:  # first exposure
                     exp = Exposure.read(
