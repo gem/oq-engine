@@ -580,7 +580,7 @@ class OqParam(valid.ParamSet):
             if self.poes and self.return_periods:
                 return False  # too much specification
             elif self.return_periods:  # infer the poes
-                self.poes = [round(1 - numpy.exp(-1/t), 5)
+                self.poes = [round(1 - numpy.exp(-1/t), 6)
                              for t in self.return_periods]
             return len(self.poes)
         else:

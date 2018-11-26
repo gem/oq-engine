@@ -6,7 +6,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <uniformHazardSpectra
     gsimTreePath="b12"
     investigationTime="1.0"
-    poE="0.0021"
+    poE="0.002103"
     sourceModelTreePath="b1"
     >
         <periods>
@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                5.8052044E-02 1.2941091E-01 4.3412462E-02
+                5.7992209E-02 1.2929717E-01 4.3368556E-02
             </IMLs>
         </uhs>
         <uhs>
@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                5.7712551E-02 1.2884179E-01 4.3230083E-02
+                5.7653289E-02 1.2872873E-01 4.3186389E-02
             </IMLs>
         </uhs>
         <uhs>
@@ -39,7 +39,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                5.8335815E-02 1.2978229E-01 4.3353360E-02
+                5.8275063E-02 1.2966734E-01 4.3309417E-02
             </IMLs>
         </uhs>
     </uniformHazardSpectra>
