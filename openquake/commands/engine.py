@@ -218,7 +218,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        if len(job_inis) == 1 and not hc_id and job_inis[0].endswith('.ini'):
+        if len(job_inis) == 1 and not hc_id:
             # init logs before calling get_oqparam but without creating a job
             logs.init('nojob', getattr(logging, log_level.upper()))
             # not using logs.handle that logs on the db
