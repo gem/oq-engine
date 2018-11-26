@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
 
 class BindiEtAl2011Low(BindiEtAl2011):
     """
-    Implements the lower term of the ITA18 backbone model.
+    Implements the lower term of the ITA19 backbone model.
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -78,7 +78,7 @@ class BindiEtAl2011Low(BindiEtAl2011):
 
 class BindiEtAl2011Upp(BindiEtAl2011):
     """
-    Implements the upper term of the ITA18 backbone model.
+    Implements the upper term of the ITA19 backbone model.
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
