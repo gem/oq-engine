@@ -119,14 +119,12 @@ class EBRunner(object):
         if job is None:
             # recompute the hazard and store the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+                                 exports, calculation_mode='event_based')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
             self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+                                 exports, calculation_mode='event_based')
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
             # sanity check
