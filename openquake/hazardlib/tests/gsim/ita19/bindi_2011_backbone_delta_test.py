@@ -20,14 +20,14 @@ import numpy as np
 import unittest
 
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.ita19.bindi_2011_backbone import BindiEtAl2011Low
+from openquake.hazardlib.gsim.ita19.bindi_2011_backbone import BindiEtAl2011Ita19Low
 
 
 class GetDeltaTest(unittest.TestCase):
 
     def test_mag5(self):
         m = 5.0
-        gmm = BindiEtAl2011Low()
+        gmm = BindiEtAl2011Ita19Low()
         imts = [PGA(), SA(0.05), SA(0.1), SA(0.15), SA(0.2),
                 SA(0.3), SA(0.4), SA(0.5), SA(0.75), SA(1.00), SA(2.00),
                 SA(3.00), SA(4.00), PGV()]
@@ -41,7 +41,7 @@ class GetDeltaTest(unittest.TestCase):
 
     def test_mag7pt2(self):
         m = 7.2
-        gmm = BindiEtAl2011Low()
+        gmm = BindiEtAl2011Ita19Low()
         imts = [PGA(), SA(0.05), SA(0.1), SA(0.15), SA(0.2),
                 SA(0.3), SA(0.4), SA(0.5), SA(0.75), SA(1.00), SA(2.00),
                 SA(3.00), SA(4.00), PGV()]
