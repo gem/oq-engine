@@ -44,7 +44,7 @@ class BindiEtAl2011Ita19Low(BindiEtAl2011):
 
     def _get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
-        In this method w
+        Original get_mean_and_stddevs method.
         """
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
