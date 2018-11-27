@@ -22,8 +22,7 @@ import numpy
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, source, calc
-from openquake.hazardlib.source.rupture import (
-    EBRupture, get_eids_by_rlz, events_dt)
+from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.calculators import base
 
 
@@ -56,13 +55,12 @@ class ScenarioCalculator(base.HazardCalculator):
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
         rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
-        events = numpy.zeros(E * R, events_dt)
         n_occ = numpy.array([E])
-        for rlz, eids in get_eids_by_rlz(
-                n_occ, rlzs_by_gsim, 1, self.rup.serial).items():
+        ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, n_occ)
+        events = numpy.zeros(E * R, events_dt)
+        for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['eid'] = eids
             events[rlz * E: rlz * E + E]['rlz'] = rlz
-        ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, n_occ)
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
         rupser.save([ebr])
