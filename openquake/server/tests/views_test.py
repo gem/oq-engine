@@ -113,11 +113,6 @@ class EngineServerTestCase(unittest.TestCase):
     def tearDownClass(cls):
         cls.wait()
 
-    def setUp(self):
-        if sys.version_info[0] == 2:
-            # python 2 will die
-            raise unittest.SkipTest('Python 2')
-
     # tests
 
     def test_404(self):
