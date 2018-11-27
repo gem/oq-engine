@@ -32,6 +32,15 @@ from openquake.qa_tests_data.event_based_risk import (
     occupants, case_1g, case_7a)
 
 
+def aae(data, expected):
+    for data_, expected_ in zip(data, expected):
+        for got, exp in zip(data_, expected_):
+            if isinstance(got, str):
+                numpy.testing.assert_equal(got, exp)
+            else:
+                numpy.testing.assert_almost_equal(got, numpy.float32(exp))
+
+
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_attr(self, name, value):
@@ -249,6 +258,35 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('curves_by_tag/occupancy', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
+
+        self.check_multi_tag(self.calc.datastore)
+
+    def check_multi_tag(self, dstore):
+        # multi-tag aggregations
+        url = 'aggregate_by/structural/taxonomy,occupancy/avg_losses-stats'
+        arr = extract(dstore, url)
+        aae(arr.to_table(),
+            [['taxonomy', 'occupancy', 'stat', 'value'],
+             ['tax1', 'Res', 'mean', 3171.398],
+             ['tax1', 'Res', 'quantile-0.15', 101.9909],
+             ['tax1', 'Res', 'quantile-0.5', 1321.7634],
+             ['tax1', 'Res', 'quantile-0.85', 3686.8647],
+             ['tax1', 'Com', 'mean', 418.25348],
+             ['tax1', 'Com', 'quantile-0.5', 557.78845],
+             ['tax1', 'Com', 'quantile-0.85', 694.3236],
+             ['tax2', 'Res', 'mean', 1312.1248],
+             ['tax2', 'Res', 'quantile-0.15', 55.35642],
+             ['tax2', 'Res', 'quantile-0.5', 741.63446],
+             ['tax2', 'Res', 'quantile-0.85', 1601.3218],
+             ['tax3', 'Res', 'mean', 157.39099]])
+
+        url = 'aggregate_by/structural/taxonomy,occupancy/curves-stats'
+        arr = extract(dstore, url)
+        tbl = arr.to_table()
+        self.assertEqual(
+            tbl[0], ['taxonomy', 'occupancy',
+                     'stat', 'return_period', 'value'])
+        self.assertEqual(len(tbl), 35)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
