@@ -92,7 +92,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
 
         # test the rup_loss_table exporter
-        raise unittest.SkipTest('rup_loss_table')
         fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)
         for fname in fnames:
