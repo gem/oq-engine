@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import time
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore
@@ -34,6 +33,19 @@ from openquake.commands.abort import abort
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+
+
+def read(calc_id):
+    """
+    :param calc_id: a calculation ID
+    :returns: the associated DataStore instance
+    """
+    job = logs.dbcmd('get_job', calc_id)
+    if job:
+        return datastore.read(job.ds_calc_dir + '.hdf5')
+    # calc_id can be present in the datastore and not in the database:
+    # this happens if the calculation was run with `oq run`
+    return datastore.read(calc_id)
 
 
 def get_job_id(job_id, username=None):
