@@ -20,13 +20,12 @@ import os
 import logging
 import numpy
 
-from openquake.baselib import sap, config
+from openquake.baselib import sap
 from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.commonlib import logs
-from openquake.engine import engine
+from openquake.commands import engine
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract
