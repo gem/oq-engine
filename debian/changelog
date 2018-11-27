@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Forbidden the case of exposure, site model and region_grid_spacing all
+    set at the same time
   * Implemented multi-exposure functionality in event based risk
   * Changed the event based calculator to store the ruptures incrementally
     without keeping them all in memory
