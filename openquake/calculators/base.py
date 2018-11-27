@@ -559,14 +559,14 @@ class HazardCalculator(BaseCalculator):
         """
         logging.info('Reading the risk model if present')
         self.riskmodel = readinput.get_risk_model(self.oqparam)
-        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
-            raise InvalidFile('No intensity_measure_types specified in %s' %
-                              self.oqparam.inputs['job_ini'])
         if not self.riskmodel:
             parent = self.datastore.parent
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
+        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+            raise InvalidFile('No intensity_measure_types specified in %s' %
+                              self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
 
     def save_riskmodel(self):
