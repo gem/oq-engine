@@ -29,7 +29,6 @@ from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.source.rupture import TWO32
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
@@ -717,8 +716,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
-        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]) +
-            TWO32 * numpy.uint64(ebr.serial))
+        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations

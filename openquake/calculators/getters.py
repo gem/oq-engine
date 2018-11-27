@@ -344,7 +344,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for rlzi in rlzs:
-                    eids = U64(TWO32 * rup.serial) + eids_by_rlz[rlzi]
+                    eids = eids_by_rlz[rlzi]
                     e = len(eids)
                     if not e:
                         continue
