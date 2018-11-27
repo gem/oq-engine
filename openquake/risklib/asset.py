@@ -440,9 +440,9 @@ class AssetCollection(object):
             raise ValueError('The array must have length %d, got %d' %
                              (len(self), A))
         shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
-        acc = numpy.zeros(shape, (F32, shp))
+        acc = numpy.zeros(shape, (F32, shp) if shp else F32)
         for asset, row in zip(self.array, array):
-            idx = numpy.array(list(asset[tagnames]), U16)
+            idx = tuple(asset[tagnames])
             acc[idx] += row
         return acc
 
