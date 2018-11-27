@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import sys
 import unittest
 from nose.plugins.attrib import attr
 from openquake.baselib.general import gettemp
@@ -44,9 +43,8 @@ class UcerfTestCase(CalculatorTestCase):
         # check that we get the expected number of ruptures
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 72)
-        if sys.platform == 'darwin':
-            raise unittest.SkipTest('macOS')
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20,
+                              delta=1E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
@@ -61,7 +59,8 @@ class UcerfTestCase(CalculatorTestCase):
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
                    if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
+                              delta=1E-5)
 
     @attr('qa', 'hazard', 'event_based', 'ucerf')
     def test_event_based_sampling(self):
