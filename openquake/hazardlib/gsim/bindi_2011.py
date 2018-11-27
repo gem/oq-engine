@@ -313,5 +313,5 @@ class BindiEtAl2011Ita19Upp(BindiEtAl2011):
         gmm = BindiEtAl2011Ita19Low()
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        delta = gmm._get_delta(imt, rup.mag)
+        delta = super()._get_delta(imt, rup.mag)
         return mean+delta, stddevs
