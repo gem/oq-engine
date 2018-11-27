@@ -20,7 +20,7 @@ import numpy as np
 import unittest
 
 from openquake.hazardlib.imt import PGA, SA, PGV
-from openquake.hazardlib.gsim.ita19.bindi_2011_backbone import BindiEtAl2011Ita19Low
+from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011Ita19Low
 
 
 class GetDeltaTest(unittest.TestCase):
