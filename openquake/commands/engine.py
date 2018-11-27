@@ -116,17 +116,18 @@ class EBRunner(object):
         checksum = readinput.get_hazard_checksum32(oqparam)
         # retrieve an old calculation with the right checksum, if any
         job = logs.dbcmd('get_job_from_checksum', checksum)
+        kw = dict(calculation_mode='event_based')
+        if (oqparam.sites or 'sites' in oqparam.inputs or
+                'site_model' in oqparam.inputs):
+            # remove exposure from the hazard
+            kw['exposure_file'] = ''
         if job is None:
             # recompute the hazard and store the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
             logs.dbcmd('add_checksum', self.hc_id, checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
             # sanity check
