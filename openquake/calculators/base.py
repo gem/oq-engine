@@ -32,6 +32,7 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
@@ -548,7 +549,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         return min_iml
 
-    def load_riskmodel(self):  # to be called before read_exposure
+    def load_riskmodel(self):
+        # to be called before read_exposure
+        # NB: this is called even if there is no risk model
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
@@ -561,6 +564,9 @@ class HazardCalculator(BaseCalculator):
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
+        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+            raise InvalidFile('No intensity_measure_types specified in %s' %
+                              self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
 
     def save_riskmodel(self):
