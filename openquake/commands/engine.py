@@ -38,6 +38,7 @@ MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 def read(calc_id, username=None):
     """
     :param calc_id: a calculation ID
+    :param username: if given, restrict the search to the user's calculations
     :returns: the associated DataStore instance
     """
     if calc_id == -1 and not username:
