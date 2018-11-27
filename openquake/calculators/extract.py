@@ -411,6 +411,21 @@ def extract_agg_curves(dstore, what):
     return res
 
 
+@extract.add('aggregate_by')
+def extract_aggregate_by(dstore, what):
+    """
+    /extract/aggregate_by/structural/taxonomy,occupancy/curves-stats
+    return an array of shape (T, O, S, P)
+    """
+    loss_type, tagnames, dsetname = what.split('/')
+    tagnames = tagnames.split(',')
+    assetcol = dstore['assetcol']
+    array = dstore[dsetname][loss_type]
+    arr = assetcol.aggregate_by(tagnames, array)
+    return ArrayWrapper(
+        arr, dict(tagnames=[t.encode('utf8') for t in tagnames]))
+
+
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
     loss_dt = dstore['oqparam'].loss_dt()

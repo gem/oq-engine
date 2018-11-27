@@ -426,6 +426,26 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
+    def aggregate_by(self, tagnames, array):
+        """
+        :param tagnames: a list of valid tag names
+        :param array: an array with the same length as the asset collection
+        :returns: an array of aggregate values with the proper shape
+        """
+        missing = set(tagnames) - set(self.tagcol.tagnames)
+        if missing:
+            raise ValueError('Unknown tagname(s) %s', missing)
+        A, *shp = array.shape
+        if A != len(self):
+            raise ValueError('The array must have length %d, got %d' %
+                             (len(self), A))
+        shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
+        acc = numpy.zeros(shape, (F32, shp))
+        for asset, row in zip(self.array, array):
+            idx = numpy.array(list(asset[tagnames]), U16)
+            acc[idx] += row
+        return acc
+
     def reduce(self, sitecol):
         """
         :returns: a reduced AssetCollection on the given sitecol
