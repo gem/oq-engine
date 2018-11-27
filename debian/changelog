@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Added two modified versions of the Bindi et al. (2011) to be used in a
+    backbone approach to compute hazard in Italy
+
   [Michele Simionato]
   * Added an easy way to read the exposure header
   * Added a way to run Python scripts using the engine libraries via `oq shell`
