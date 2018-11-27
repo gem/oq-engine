@@ -439,7 +439,6 @@ def get_ruptures_by_grp(dstore, slc=slice(None)):
             for grp_id, rup_array in rupdict.items()}
 
 
-# FIXME: restore this functionality
 def get_maxloss_rupture(dstore, loss_type):
     """
     :param dstore: a DataStore instance
@@ -450,7 +449,7 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [ebr] = RuptureGetter.from_(dstore, slice(ridx, ridx + 1))
+    [[ebr]] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1)).values()
     return ebr
 
 
