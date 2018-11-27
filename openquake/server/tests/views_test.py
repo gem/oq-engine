@@ -80,7 +80,6 @@ class EngineServerTestCase(unittest.TestCase):
             if not running_calcs:
                 break
             time.sleep(0.5)
-            print(running_calcs)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
