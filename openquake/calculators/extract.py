@@ -29,7 +29,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
-from openquake.baselib.python3compat import encode
+from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
@@ -421,9 +421,13 @@ def extract_aggregate_by(dstore, what):
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
     array = dstore[dsetname][loss_type]
-    arr = assetcol.aggregate_by(tagnames, array)
-    return ArrayWrapper(
-        arr, dict(tagnames=[t.encode('utf8') for t in tagnames]))
+    attrs = dstore[dsetname].attrs
+    aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
+    for tagname in tagnames:
+        setattr(aw, 'tag_' + tagname, getattr(assetcol.tagcol, tagname))
+    aw.tag_stat = attrs['stats']
+    aw.tag_return_period = attrs['return_periods']
+    return aw
 
 
 @extract.add('losses_by_asset')
