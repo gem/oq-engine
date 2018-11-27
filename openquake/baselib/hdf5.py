@@ -498,8 +498,9 @@ class ArrayWrapper(object):
         D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
-        >>> dic = dict(tag_taxonomy=['RC', 'WOOD'],
-        ...            tag_occupancy=['RES', 'IND', 'BUS'])
+        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
         >>> arr = numpy.zeros((2, 3))
         >>> arr[0, 0] = 2000
         >>> arr[0, 1] = 5000
@@ -510,19 +511,17 @@ class ArrayWrapper(object):
          ['RC', 'IND', 5000.0],
          ['WOOD', 'RES', 500.0]]
         """
-        tagdict = {}  # tag_idx -> tag_values
+        tags = []  # tag_idx -> tag_values
         shape = self.array.shape
-        i = 0
-        tagnames = []
-        for key, values in vars(self).items():
-            if key.startswith('tag_'):
-                assert len(values) == shape[i], (len(values), shape[i])
-                tagnames.append(key[4:])
-                tagdict[i] = decode_array(values)
-                i += 1
+        tagnames = decode_array(self.tagnames)
+        assert len(shape) == len(tagnames), (len(shape), len(tagnames))
+        for i, tagname in enumerate(tagnames):
+            values = getattr(self, tagname)
+            assert len(values) == shape[i], (len(values), shape[i])
+            tags.append(decode_array(values))
         tbl = [tagnames + ['value']]
         for idx, value in numpy.ndenumerate(self.array):
-            row = [tagdict[i][j] for i, j in enumerate(idx)] + [value]
+            row = [tags[i][j] for i, j in enumerate(idx)] + [value]
             if value > 0:
                 tbl.append(row)
         return tbl

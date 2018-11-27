@@ -416,17 +416,29 @@ def extract_aggregate_by(dstore, what):
     """
     /extract/aggregate_by/structural/taxonomy,occupancy/curves-stats
     return an array of shape (T, O, S, P)
+
+    /extract/aggregate_by/structural/taxonomy,occupancy/avg_losses-stats
+    return an array of shape (T, O, S)
     """
     loss_type, tagnames, dsetname = what.split('/')
+    assert dsetname in ('avg_losses-stats', 'curves-stats'), dsetname
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
-    array = dstore[dsetname][loss_type]
+    if dsetname == 'curves-stats':
+        array = dstore[dsetname][loss_type]
+    else:
+        lti = dstore['oqparam'].lti
+        array = dstore[dsetname][:, :, lti[loss_type]]
     attrs = dstore[dsetname].attrs
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
-        setattr(aw, 'tag_' + tagname, getattr(assetcol.tagcol, tagname))
-    aw.tag_stat = attrs['stats']
-    aw.tag_return_period = attrs['return_periods']
+        setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
+    aw.stat = attrs['stats']
+    if dsetname == 'curves-stats':
+        aw.return_period = attrs['return_periods']
+        aw.tagnames = encode(tagnames + ['stat', 'return_period'])
+    else:
+        aw.tagnames = encode(tagnames + ['stat'])
     return aw
 
 
