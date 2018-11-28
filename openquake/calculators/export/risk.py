@@ -295,9 +295,9 @@ def export_loss_maps_csv(ekey, dstore):
         oq = dstore['oqparam']
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for tag, values in zip(tags, value.T):
+    for i, tag in enumerate(tags):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
-        writer.save(compose_arrays(assets, values), fname)
+        writer.save(compose_arrays(assets, value[:, i]), fname)
     return writer.getsaved()
 
 
@@ -315,8 +315,8 @@ def export_loss_maps_npz(ekey, dstore):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
-    for tag, values in zip(tags, value.T):
-        dic[tag] = compose_arrays(assets, values)
+    for i, tag in enumerate(tags):
+        dic[tag] = compose_arrays(assets, value[:, i])
     savez(fname, **dic)
     return [fname]
 
@@ -399,6 +399,14 @@ def indices(*sizes):
     return itertools.product(*map(range, sizes))
 
 
+def to_loss_map(array, loss_maps_dt):
+    A, R, C, LI = array.shape
+    lm = numpy.zeros((A, R, C), loss_maps_dt)
+    for li, name in enumerate(loss_maps_dt.names):
+        lm[name] = array[:, :, :, li]
+    return lm
+
+
 def get_loss_maps(dstore, kind):
     """
     :param dstore: a DataStore instance
@@ -407,7 +415,7 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        return dstore[name].value.view(oq.loss_maps_dt())
+        return to_loss_map(dstore[name], oq.loss_maps_dt())
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
