@@ -395,9 +395,12 @@ def get_site_collection(oqparam):
                     sitecol._set(name, 0)  # the default
                 else:
                     sitecol._set(name, params[name])
-    elif mesh is None:
+    elif mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
+    elif mesh is None:
+        # a None sitecol is okay when computing the ruptures only
+        return
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
