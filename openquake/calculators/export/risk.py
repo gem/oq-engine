@@ -401,9 +401,10 @@ def indices(*sizes):
 
 def to_loss_map(array, loss_maps_dt):
     A, R, C, LI = array.shape
-    lm = numpy.zeros((A, R, C), loss_maps_dt)
+    lm = numpy.zeros((A, R), loss_maps_dt)
     for li, name in enumerate(loss_maps_dt.names):
-        lm[name] = array[:, :, :, li]
+        for p, poe in enumerate(loss_maps_dt[name].names):
+            lm[name][poe] = array[:, :, p, li]
     return lm
 
 
@@ -415,7 +416,7 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        return to_loss_map(dstore[name], oq.loss_maps_dt())
+        return to_loss_map(dstore[name].value, oq.loss_maps_dt())
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
