@@ -300,12 +300,17 @@ def get_mesh(oqparam):
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region_grid_spacing:
-        if exposure:
-            poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
-                    else exposure.mesh.get_convex_hull())
-        else:  # site model
+        if oqparam.region:
+            poly = geo.Polygon.from_wkt(oqparam.region)
+        elif 'site_model' in oqparam.inputs:
             sm = get_site_model(oqparam)
             poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
+        elif exposure:
+            poly = exposure.mesh.get_convex_hull()
+        else:
+            raise InvalidFile('There is a grid spacing but not a region, '
+                              'nor a site model, nor an exposure in %s' %
+                              oqparam.inputs['job_ini'])
         try:
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
