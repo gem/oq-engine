@@ -343,7 +343,8 @@ class HazardCalculator(BaseCalculator):
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        minweight = source.MINWEIGHT * (math.sqrt(len(self.sitecol))
+                                        if self.sitecol else 1)
         maxweight = self.csm.get_maxweight(weight, ct, minweight)
         if not hasattr(self, 'logged'):
             if maxweight == minweight:
@@ -360,17 +361,18 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
+        sitecol = self.sitecol.complete if self.sitecol else None
         self.src_filter = SourceFilter(
-            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
+            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(self.sitecol, oq.maximum_distance)
+            return UcerfFilter(sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(self.sitecol.complete,
-                                     oq.maximum_distance, self.hdf5cache)
+            src_filter = RtreeFilter(
+                sitecol, oq.maximum_distance, self.hdf5cache)
         else:
             src_filter = self.src_filter
         return src_filter
@@ -627,7 +629,8 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            logging.info('Read %d hazard sites', len(self.sitecol))
+            if self.sitecol:
+                logging.info('Read %d hazard sites', len(self.sitecol))
 
         if oq_hazard:
             parent = self.datastore.parent
@@ -661,7 +664,7 @@ class HazardCalculator(BaseCalculator):
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
 
-        if hasattr(self, 'sitecol'):
+        if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
