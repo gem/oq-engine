@@ -210,7 +210,8 @@ class EbrCalculator(base.RiskCalculator):
         S = len(stats)
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
-        self.loss_maps_dt = oq.loss_dt((F32, (C,)))
+        LI = self.L * self.I
+        self.loss_maps_dt = (F32, (C, LI))
         if oq.individual_curves or R == 1:
             self.datastore.create_dset(
                 'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
@@ -268,12 +269,9 @@ class EbrCalculator(base.RiskCalculator):
 
     def _save_maps(self, dic, aids):
         for key in ('loss_maps-rlzs', 'loss_maps-stats'):
-            array = dic.get(key)  # shape (A, S)
+            array = dic.get(key)  # shape (A, S, C, LI)
             if array is not None:
-                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
-                for lti, lt in enumerate(self.loss_maps_dt.names):
-                    loss_maps[lt] = array[:, :, :, lti]
-                self.datastore[key][aids, :] = loss_maps
+                self.datastore[key][aids, :] = array
 
     def combine(self, dummy, res):
         """
