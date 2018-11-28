@@ -344,13 +344,15 @@ class EventBasedCalculator(base.HazardCalculator):
         than 4,294,967,296. The limits are due to the numpy dtype used to
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
-        max_ = dict(sites=2**16, events=2**32, imts=2**8)
+        max_ = dict(events=2**32, imts=2**8)
         try:
             events = len(self.datastore['events'])
         except KeyError:
             events = 0
-        num_ = dict(sites=len(self.sitecol), events=events,
-                    imts=len(self.oqparam.imtls))
+        num_ = dict(events=events, imts=len(self.oqparam.imtls))
+        if self.sitecol:
+            max_['sites'] = 2**16
+            num_['sites'] = len(self.sitecol)
         for var in max_:
             if num_[var] > max_[var]:
                 raise ValueError(
@@ -429,6 +431,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         oq = self.oqparam
+        if not oq.ground_motion_fields:
+            return
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
