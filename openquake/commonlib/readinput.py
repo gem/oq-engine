@@ -300,8 +300,12 @@ def get_mesh(oqparam):
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region_grid_spacing:
-        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
-                else exposure.mesh.get_convex_hull())
+        if exposure:
+            poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
+                    else exposure.mesh.get_convex_hull())
+        else:  # site model
+            sm = get_site_model(oqparam)
+            poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
         try:
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
@@ -314,7 +318,7 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-def get_site_model(oqparam, req_site_params):
+def get_site_model(oqparam, req_site_params=None):
     """
     Convert the NRML file into an array of site parameters.
 
@@ -325,6 +329,8 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    if req_site_params is None:
+        req_site_params = get_gsim_lt(oqparam).req_site_params
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
@@ -379,22 +385,22 @@ def get_site_collection(oqparam):
         else:
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            if oqparam.region_grid_spacing:
-                # associate the site parameters to the grid discarding empty
-                # sites silently; notice that there cannot be an exposure
-                sitecol, params, _ = geo.utils.assoc(
-                    sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
-                sitecol.make_complete()
+        if oqparam.region_grid_spacing:
+            # associate the site parameters to the grid discarding empty
+            # sites silently; notice that there cannot be an exposure
+            sitecol, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+            sitecol.make_complete()
+        else:
+            # associate the site parameters to the sites without
+            # discarding any site but warning for far away parameters
+            sc, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+        for name in req_site_params:
+            if name == 'backarc' and name not in params.dtype.names:
+                sitecol._set(name, 0)  # the default
             else:
-                # associate the site parameters to the sites without
-                # discarding any site but warning for far away parameters
-                sc, params, _ = geo.utils.assoc(
-                    sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in req_site_params:
-                if name == 'backarc' and name not in params.dtype.names:
-                    sitecol._set(name, 0)  # the default
-                else:
-                    sitecol._set(name, params[name])
+                sitecol._set(name, params[name])
     elif mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
