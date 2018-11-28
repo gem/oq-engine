@@ -345,6 +345,10 @@ class EventBasedTestCase(CalculatorTestCase):
         [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
+        # a test with grid and site model
+        self.run_calc(case_19.__file__, 'job_grid.ini')
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
         self.run_calc(case_20.__file__, 'job.ini')

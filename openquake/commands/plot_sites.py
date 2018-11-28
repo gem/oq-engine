@@ -52,27 +52,27 @@ def plot_sites(calc_id=-1):
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
-    from matplotlib.patches import Rectangle
+    #from matplotlib.patches import Rectangle
     logging.basicConfig(level=logging.INFO)
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    sources = dstore['source_info'].value
-    source_geom = dstore['source_geom'].value
+    #sources = dstore['source_info'].value
+    #source_geom = dstore['source_geom'].value
     fig, ax = p.subplots()
     ax.grid(True)
-    rects = [get_rectangle(src, source_geom[src['gidx1']:src['gidx2']])
-             for src in sources]
+    #rects = [get_rectangle(src, source_geom[src['gidx1']:src['gidx2']])
+    #         for src in sources]
     lonset = set(lons)
-    for ((lon, lat), width, height) in rects:
-        lonset.add(lon)
-        lonset.add(fix_lon(lon + width))
-    idl = cross_idl(min(lonset), max(lonset))
-    if idl:
-        lons = lons % 360
-    for ((lon, lat), width, height) in rects:
-        lonlat = (lon % 360 if idl else lon, lat)
-        ax.add_patch(Rectangle(lonlat, width, height, fill=False))
+    #for ((lon, lat), width, height) in rects:
+    #    lonset.add(lon)
+    #    lonset.add(fix_lon(lon + width))
+    #idl = cross_idl(min(lonset), max(lonset))
+    #if idl:
+    #    lons = lons % 360
+    #for ((lon, lat), width, height) in rects:
+    #    lonlat = (lon % 360 if idl else lon, lat)
+    #    ax.add_patch(Rectangle(lonlat, width, height, fill=False))
         # NB: the code below could be restored in the future
         # if hasattr(src.__class__, 'polygon'):
         #    xs, ys = fix_polygon(src.polygon, idl)
