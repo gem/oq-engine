@@ -431,7 +431,7 @@ def extract_aggregate_by(dstore, what):
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
     lti = dstore['oqparam'].lti
-    array = dstore[dsetname][:, :, lti[loss_type]]
+    array = dstore[dsetname][..., lti[loss_type]]
     attrs = dstore[dsetname].attrs
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
