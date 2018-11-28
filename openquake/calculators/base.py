@@ -343,7 +343,8 @@ class HazardCalculator(BaseCalculator):
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        minweight = source.MINWEIGHT * (math.sqrt(len(self.sitecol))
+                                        if self.sitecol else 1)
         maxweight = self.csm.get_maxweight(weight, ct, minweight)
         if not hasattr(self, 'logged'):
             if maxweight == minweight:
@@ -628,7 +629,8 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            logging.info('Read %d hazard sites', len(self.sitecol))
+            if self.sitecol:
+                logging.info('Read %d hazard sites', len(self.sitecol))
 
         if oq_hazard:
             parent = self.datastore.parent
