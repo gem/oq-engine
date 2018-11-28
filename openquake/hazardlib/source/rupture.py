@@ -542,30 +542,6 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids_by_rlz(n_occ, rlzs_by_gsim, samples, serial):
-    """
-    :param n_occ: number of occurrences
-    :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-    :param samples: number of samples in current source group
-    :returns: a dictionary rlz index -> eids array
-    """
-    j = 0
-    dic = {}
-    if samples == 1:  # full enumeration or akin to it
-        for rlzs in rlzs_by_gsim.values():
-            for rlz in rlzs:
-                dic[rlz] = numpy.arange(j, j + n_occ, dtype=U32)
-                j += n_occ
-    else:  # associated eids to the realizations
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        assert len(rlzs) == samples
-        histo = general.random_histogram(n_occ, samples, serial)
-        for rlz, n in zip(rlzs, histo):
-            dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-            j += n
-    return dic
-
-
 def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
     """
     :param rup_array: a composite array with fields serial, n_occ and grp_id
@@ -605,14 +581,39 @@ class EBRupture(object):
         """
         return self.rupture.serial
 
+    def get_eids_by_rlz(self, rlzs_by_gsim):
+        """
+        :param n_occ: number of occurrences
+        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param samples: number of samples in current source group
+        :returns: a dictionary rlz index -> eids array
+        """
+        j = 0
+        dic = {}
+        if self.samples == 1:  # full enumeration or akin to it
+            for rlzs in rlzs_by_gsim.values():
+                for rlz in rlzs:
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U64) + (
+                        TWO32 * U64(self.serial))
+                    j += self.n_occ
+        else:  # associated eids to the realizations
+            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
+            histo = general.random_histogram(
+                self.n_occ, self.samples, self.serial)
+            for rlz, n in zip(rlzs, histo):
+                dic[rlz] = numpy.arange(j, j + n, dtype=U64) + (
+                    TWO32 * U64(self.serial))
+                j += n
+        return dic
+
     def get_events(self, rlzs_by_gsim):
         """
         :returns: an array of events with fields eid, rlz
         """
         all_eids, rlzs = [], []
-        for rlz, eids in get_eids_by_rlz(
-                self.n_occ, rlzs_by_gsim, self.samples, self.serial).items():
-            all_eids.extend(TWO32 * U64(self.serial) + eids)
+        for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
+            all_eids.extend(eids)
             rlzs.extend([rlz] * len(eids))
         return numpy.fromiter(zip(all_eids, rlzs), events_dt)
 
