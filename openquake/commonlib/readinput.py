@@ -218,6 +218,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     return oqparam
 
 
+site_model = None  # set as side effect when the user reads the site model
+
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
@@ -300,8 +302,17 @@ def get_mesh(oqparam):
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region_grid_spacing:
-        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
-                else exposure.mesh.get_convex_hull())
+        if oqparam.region:
+            poly = geo.Polygon.from_wkt(oqparam.region)
+        elif 'site_model' in oqparam.inputs:
+            sm = get_site_model(oqparam)
+            poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
+        elif exposure:
+            poly = exposure.mesh.get_convex_hull()
+        else:
+            raise InvalidFile('There is a grid spacing but not a region, '
+                              'nor a site model, nor an exposure in %s' %
+                              oqparam.inputs['job_ini'])
         try:
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
@@ -314,7 +325,7 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-def get_site_model(oqparam, req_site_params):
+def get_site_model(oqparam, req_site_params=None):
     """
     Convert the NRML file into an array of site parameters.
 
@@ -325,6 +336,11 @@ def get_site_model(oqparam, req_site_params):
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    global site_model
+    if site_model is not None:
+        return site_model
+    if req_site_params is None:
+        req_site_params = get_gsim_lt(oqparam).req_site_params
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
@@ -351,7 +367,8 @@ def get_site_model(oqparam, req_site_params):
         sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
                           for param in params], site_model_dt)
         arrays.append(sm)
-    return numpy.concatenate(arrays)
+    site_model = numpy.concatenate(arrays)  # set the global
+    return site_model
 
 
 def get_site_collection(oqparam):
@@ -379,22 +396,21 @@ def get_site_collection(oqparam):
         else:
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            if oqparam.region_grid_spacing:
-                # associate the site parameters to the grid discarding empty
-                # sites silently; notice that there cannot be an exposure
-                sitecol, params, _ = geo.utils.assoc(
-                    sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
-                sitecol.make_complete()
+        if oqparam.region_grid_spacing:
+            # reduce the grid sites to the one close to the site parameters
+            sitecol, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+            sitecol.make_complete()
+        else:
+            # associate the site parameters to the sites without
+            # discarding any site but warning for far away parameters
+            sc, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+        for name in req_site_params:
+            if name == 'backarc' and name not in params.dtype.names:
+                sitecol._set(name, 0)  # the default
             else:
-                # associate the site parameters to the sites without
-                # discarding any site but warning for far away parameters
-                sc, params, _ = geo.utils.assoc(
-                    sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in req_site_params:
-                if name == 'backarc' and name not in params.dtype.names:
-                    sitecol._set(name, 0)  # the default
-                else:
-                    sitecol._set(name, params[name])
+                sitecol._set(name, params[name])
     elif mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
