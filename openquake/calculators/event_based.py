@@ -186,6 +186,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with hdf5.File(hdf5cache, 'r+') as cache:
                 if 'rupgeoms' not in cache:
                     dstore.hdf5.copy('rupgeoms', cache)
+        eid2rlz_mon = self.monitor('associating eid->rlz')
         by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
         for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
@@ -201,6 +202,10 @@ class EventBasedCalculator(base.HazardCalculator):
             rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
                                     self.grp_trt[grp_id], par['samples'],
                                     rlzs_by_gsim)
+            with eid2rlz_mon:
+                eid_rlz = rgetter.get_eid_rlz()
+                idxs = get_idxs(eid_rlz, self.eid2idx)
+                self.rlzi[idxs] = eid_rlz['rlz']
             yield rgetter, self.sitecol, par
             start += nr
         if self.datastore.parent:
@@ -296,7 +301,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     return acc
                 idxs = get_idxs(data, eid2idx)  # this has to be fast
                 data['eid'] = idxs  # replace eid with idx
-                self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
+                #self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
