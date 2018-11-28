@@ -84,10 +84,6 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
                     mean_am09*0.5 + mean_ab15*0.2 +
                     np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
-        #mean_adj = np.log(np.exp(mean_zh06)*0.1*cff['mf'] +
-        #                  np.exp(mean_am09)*0.5 +
-        #                  np.exp(mean_ab15)*0.2 +
-        #                  np.exp(mean_ga14)*0.2*cff['mf'])
         return mean_adj
 
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
