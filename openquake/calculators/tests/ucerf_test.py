@@ -37,9 +37,6 @@ class UcerfTestCase(CalculatorTestCase):
                                 2, 2, 3, 3, 2, 2, 3, 3, 3, 3, 2, 2, 3, 3,
                                 3, 3, 3, 3])
 
-        # NB: there are no 58 events for the first realization, it is a bug,
-        # but it will be fixed in the future
-
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of ruptures
         with open(fname) as f:
@@ -69,8 +66,6 @@ class UcerfTestCase(CalculatorTestCase):
 
         # check the distribution of the events
         self.assertEventsByRlz([29, 25])
-        # NB: there are no 35 events for the first realization, it is a bug,
-        # but it will be fixed in the future
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value

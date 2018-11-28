@@ -170,47 +170,6 @@ class EventBasedCalculator(base.HazardCalculator):
             for grp_id in self.rlzs_by_gsim_grp}
         self.R = len(self.rlzs_assoc.realizations)
 
-    def from_ruptures(self, param):
-        """
-        :yields: the arguments for compute_gmfs_and_curves
-        """
-        oq = self.oqparam
-        concurrent_tasks = oq.concurrent_tasks
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        start = 0
-        with self.monitor('getting ruptures'):
-            rups = dstore.getitem('ruptures').value
-            code2cls = get_code2cls(dstore.get_attrs('ruptures'))
-            hdf5cache = dstore.hdf5cache()
-            with hdf5.File(hdf5cache, 'r+') as cache:
-                if 'rupgeoms' not in cache:
-                    dstore.hdf5.copy('rupgeoms', cache)
-        eid2rlz_mon = self.monitor('associating eid->rlz')
-        by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
-        for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
-            nr = len(block)  # number of ruptures per block
-            grp_id = block[0]['grp_id']
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-            if not rlzs_by_gsim:
-                # this may happen if a source model has no sources, like
-                # in event_based_risk/case_3
-                continue
-            par = param.copy()
-            par['samples'] = self.samples_by_grp[grp_id]
-            rup_array = rups[start: start + nr]
-            rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
-                                    self.grp_trt[grp_id], par['samples'],
-                                    rlzs_by_gsim)
-            with eid2rlz_mon:
-                eid_rlz = rgetter.get_eid_rlz()
-                idxs = get_idxs(eid_rlz, self.eid2idx)
-                self.rlzi[idxs] = eid_rlz['rlz']
-            yield rgetter, self.sitecol, par
-            start += nr
-        if self.datastore.parent:
-            self.datastore.parent.close()
-
     def zerodict(self):
         """
         Initial accumulator, a dictionary (grp_id, gsim) -> curves
@@ -285,6 +244,48 @@ class EventBasedCalculator(base.HazardCalculator):
                      .format(len(sorted_ruptures), n_events))
         return self.from_ruptures(par)
 
+    def from_ruptures(self, param):
+        """
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        oq = self.oqparam
+        concurrent_tasks = oq.concurrent_tasks
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        start = 0
+        logging.info('Reading/sending ruptures')
+        with self.monitor('getting ruptures'):
+            rups = dstore.getitem('ruptures').value
+            code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+            hdf5cache = dstore.hdf5cache()
+            with hdf5.File(hdf5cache, 'r+') as cache:
+                if 'rupgeoms' not in cache:
+                    dstore.hdf5.copy('rupgeoms', cache)
+        eid2rlz_mon = self.monitor('associating eid->rlz')
+        by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
+        for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
+            nr = len(block)  # number of ruptures per block
+            grp_id = block[0]['grp_id']
+            rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
+            if not rlzs_by_gsim:
+                # this may happen if a source model has no sources, like
+                # in event_based_risk/case_3
+                continue
+            par = param.copy()
+            par['samples'] = self.samples_by_grp[grp_id]
+            rup_array = rups[start: start + nr]
+            rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
+                                    self.grp_trt[grp_id], par['samples'],
+                                    rlzs_by_gsim)
+            with eid2rlz_mon:
+                eid_rlz = rgetter.get_eid_rlz()
+                idxs = get_idxs(eid_rlz, self.eid2idx)
+                self.rlzi[idxs] = eid_rlz['rlz']
+            yield rgetter, self.sitecol, par
+            start += nr
+        if self.datastore.parent:
+            self.datastore.parent.close()
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -301,7 +302,6 @@ class EventBasedCalculator(base.HazardCalculator):
                     return acc
                 idxs = get_idxs(data, eid2idx)  # this has to be fast
                 data['eid'] = idxs  # replace eid with idx
-                #self.rlzi[idxs] = data['rlzi']  # store rlz <-> idx assocs
                 self.datastore.extend('gmf_data/data', data)
                 # it is important to save the number of bytes while the
                 # computation is going, to see the progress
@@ -329,12 +329,12 @@ class EventBasedCalculator(base.HazardCalculator):
         :param rup_array: an array of ruptures with fields grp_id
         :returns: the number of saved events
         """
-        with self.monitor('saving events'):
-            eids = rupture.get_eids(
-                rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-            events = numpy.zeros(len(eids), rupture.events_dt)
-            events['eid'] = eids
-            self.datastore['events'] = events
+        # this is very fast compared to saving the ruptures
+        eids = rupture.get_eids(
+            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
+        events = numpy.zeros(len(eids), rupture.events_dt)
+        events['eid'] = eids
+        self.datastore['events'] = events
         return len(eids)
 
     def check_overflow(self):
