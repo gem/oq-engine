@@ -354,11 +354,11 @@ def get_site_model(oqparam, req_site_params=None):
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = req_site_params - set(params[0])
         if 'vs30measured' in missing:  # use a default of False
-            missing.pop('vs30measured')
+            missing -= {'vs30measured'}
             for param in params:
                 param['vs30measured'] = False
         if 'backarc' in missing:  # use a default of False
-            missing.pop('backarc')
+            missing -= {'backarc'}
             for param in params:
                 param['backarc'] = False
         if missing:
