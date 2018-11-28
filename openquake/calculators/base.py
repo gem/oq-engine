@@ -365,14 +365,14 @@ class HazardCalculator(BaseCalculator):
         self.src_filter = SourceFilter(
             sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(self.sitecol, oq.maximum_distance)
+            return UcerfFilter(sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(self.sitecol.complete,
-                                     oq.maximum_distance, self.hdf5cache)
+            src_filter = RtreeFilter(
+                sitecol, oq.maximum_distance, self.hdf5cache)
         else:
             src_filter = self.src_filter
         return src_filter
