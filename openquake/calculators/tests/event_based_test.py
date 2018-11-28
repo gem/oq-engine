@@ -143,6 +143,11 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_1_ruptures(self):
+        self.run_calc(case_1.__file__, 'job_ruptures.ini')
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')

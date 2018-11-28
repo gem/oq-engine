@@ -360,8 +360,9 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
+        sitecol = self.sitecol.complete if self.sitecol else None
         self.src_filter = SourceFilter(
-            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
+            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(self.sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
@@ -661,7 +662,7 @@ class HazardCalculator(BaseCalculator):
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
 
-        if hasattr(self, 'sitecol'):
+        if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
