@@ -295,9 +295,9 @@ def export_loss_maps_csv(ekey, dstore):
         oq = dstore['oqparam']
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for tag, values in zip(tags, value.T):
+    for i, tag in enumerate(tags):
         fname = dstore.build_fname('loss_maps', tag, ekey[1])
-        writer.save(compose_arrays(assets, values), fname)
+        writer.save(compose_arrays(assets, value[:, i]), fname)
     return writer.getsaved()
 
 
@@ -315,8 +315,8 @@ def export_loss_maps_npz(ekey, dstore):
         tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     fname = dstore.export_path('%s.%s' % ekey)
     dic = {}
-    for tag, values in zip(tags, value.T):
-        dic[tag] = compose_arrays(assets, values)
+    for i, tag in enumerate(tags):
+        dic[tag] = compose_arrays(assets, value[:, i])
     savez(fname, **dic)
     return [fname]
 
@@ -399,6 +399,16 @@ def indices(*sizes):
     return itertools.product(*map(range, sizes))
 
 
+def _to_loss_maps(array, loss_maps_dt):
+    # convert a 4D array into a 2D array of dtype loss_maps_dt
+    A, R, C, LI = array.shape
+    lm = numpy.zeros((A, R), loss_maps_dt)
+    for li, name in enumerate(loss_maps_dt.names):
+        for p, poe in enumerate(loss_maps_dt[name].names):
+            lm[name][poe] = array[:, :, p, li]
+    return lm
+
+
 def get_loss_maps(dstore, kind):
     """
     :param dstore: a DataStore instance
@@ -407,9 +417,10 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        return dstore[name].value.view(oq.loss_maps_dt())
+        return _to_loss_maps(dstore[name].value, oq.loss_maps_dt())
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
+        # the loss maps are built on the fly from the loss curves
         loss_curves = dstore[name]
         loss_maps = scientific.broadcast(
             scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
