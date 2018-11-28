@@ -24,6 +24,8 @@
 
 from openquake.hazardlib.gsim.bindi_2011 import BindiEtAl2011
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim.bindi_2011 import \
+    BindiEtAl2011Ita19Low, BindiEtAl2011Ita19Upp
 
 
 class BindiEtAl2011TestCase(BaseGSIMTestCase):
@@ -33,16 +35,36 @@ class BindiEtAl2011TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check('BINDI2011/BINDI2011_MEAN.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_inter(self):
         self.check('BINDI2011/BINDI2011_STD_INTER.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_intra(self):
         self.check('BINDI2011/BINDI2011_STD_INTRA.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
         self.check('BINDI2011/BINDI2011_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
+
+
+class BindiEtAl2011Ita19UppTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = BindiEtAl2011Ita19Upp
+
+    # Tables provided by original authors
+
+    def test_mean(self):
+        self.check('ITA19/BindiEtAl2011BackboneUPP.csv',
+                   max_discrep_percentage=0.1)
+
+
+class BindiEtAl2011Ita19LowTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = BindiEtAl2011Ita19Low
+
+    # Tables provided by original authors
+
+    def test_mean(self):
+        self.check('ITA19/BindiEtAl2011BackboneLOW.csv',
+                   max_discrep_percentage=0.1)
