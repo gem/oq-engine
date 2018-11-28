@@ -511,15 +511,31 @@ class ArrayWrapper(object):
          ['RC', 'IND', 5000.0],
          ['WOOD', 'RES', 500.0]]
         """
+        shape = self.array.shape
+        self.tagnames = decode_array(self.tagnames)
+        if len(shape) == len(self.tagnames):
+            return [self.tagnames + ['value']] + self._to_table()
+        elif len(shape) == len(self.tagnames) + 1:
+            tbl = [self.tagnames + [self.extra[0], 'value']]
+            return tbl + self._to_table(self.extra[1:])
+        else:
+            raise TypeError(
+                'There are %d dimensions but only %d tagnames' %
+                (len(shape), len(self.tagnames)))
+
+    def _to_table(self, extra=()):
         tags = []  # tag_idx -> tag_values
         shape = self.array.shape
+        if extra:
+            assert shape[-1] == len(extra), (shape[-1], len(extra))
         tagnames = decode_array(self.tagnames)
-        assert len(shape) == len(tagnames), (len(shape), len(tagnames))
         for i, tagname in enumerate(tagnames):
             values = getattr(self, tagname)
             assert len(values) == shape[i], (len(values), shape[i])
             tags.append(decode_array(values))
-        tbl = [tagnames + ['value']]
+        if extra:
+            tags.append(extra)
+        tbl = []
         for idx, value in numpy.ndenumerate(self.array):
             row = [tags[i][j] for i, j in enumerate(idx)] + [value]
             if value > 0:
