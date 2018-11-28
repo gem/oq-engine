@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Now it is possible to compute the ruptures even without specifying the sites
+  * Now it is possible to compute the ruptures without specifying the sites
   * Added an early check for the case of missing intensity measure types
   * Forbidden the case of exposure, site model and region_grid_spacing all
     set at the same time
