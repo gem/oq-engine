@@ -29,12 +29,11 @@ from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.source.rupture import TWO32
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, RuptureGetter, get_ruptures_by_grp)
+    GmfGetter, PmapGetter, get_ruptures_by_grp)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -42,6 +41,7 @@ F64 = numpy.float64
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -66,14 +66,17 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    rlzs_by_grp = dstore['csm_info'].get_rlzs_by_gsim_grp()
+    num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
-    ruptures_by_grp = {}
-    for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
-        ebrs = []
-        for ebr in ruptures:
-            events = dstore['events'][ebr.eidx1:ebr.eidx2]
-            ebrs.append(ebr.export(mesh, events))
-        ruptures_by_grp[grp_id] = ebrs
+    ruptures_by_grp = get_ruptures_by_grp(dstore)
+    for grp_id, ruptures in list(ruptures_by_grp.items()):
+        ebrs = [ebr.export(mesh, rlzs_by_grp[ebr.grp_id], num_ses)
+                for ebr in ruptures]
+        if ebrs:
+            ruptures_by_grp[grp_id] = ebrs
+        else:  # empty group
+            del ruptures_by_grp[grp_id]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -564,8 +567,12 @@ def export_gmf(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    sitecol = dstore['sitecol']
     oq = dstore['oqparam']
+    if not oq.calculation_mode.startswith('scenario'):
+        logging.warn('The GMF exporter in .xml format has been removed, '
+                     'use the one in .csv format')
+        return []
+    sitecol = dstore['sitecol']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
@@ -575,28 +582,26 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    ruptures_by_rlz = collections.defaultdict(list)
+    events_by_rlz = collections.defaultdict(list)
     data = gmf_data['data'].value
-    events = dstore['events'].value
+    ses_idx = 1  # for scenario only
     for rlzi, gmf_arr in group_array(data, 'rlzi').items():
-        ruptures = ruptures_by_rlz[rlzi]
-        for idx, gmfa in group_array(gmf_arr, 'eid').items():
-            ses_idx = events[idx]['ses']
-            eid = events[idx]['eid']
-            rup = Rup(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
-            ruptures.append(rup)
+        events = events_by_rlz[rlzi]
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
+            rup = Event(eid, ses_idx, sorted(set(gmfa['sid'])), gmfa)
+            events.append(rup)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    for rlzi in sorted(ruptures_by_rlz):
-        ruptures_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
+    for rlzi in sorted(events_by_rlz):
+        events_by_rlz[rlzi].sort(key=operator.attrgetter('eid'))
         fname = dstore.build_fname('gmf', rlzi, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlzi],
+            ('gmf', fmt), fname, sitecol, oq.imtls, events_by_rlz[rlzi],
             rlzs[rlzi], investigation_time)
     return fnames
 
 
-Rup = collections.namedtuple('Rup', ['eid', 'ses_idx', 'indices', 'gmfa'])
+Event = collections.namedtuple('Event', ['eid', 'ses_idx', 'indices', 'gmfa'])
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
@@ -695,7 +700,6 @@ def export_gmf_scenario_csv(ekey, dstore):
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    samples = csm_info.get_samples_by_grp()
     num_ruptures = len(dstore['ruptures'])
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
@@ -704,17 +708,15 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
-    ruptures = list(RuptureGetter(dstore, slice(ridx, ridx + 1)))
-    [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
-    samples = samples[ebr.grp_id]
+    # for scenario there is an unique grp_id=0
+    [ebr] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1))[0]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml, samples)
+    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
-        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]) +
-            TWO32 * numpy.uint64(ebr.serial))
+        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations

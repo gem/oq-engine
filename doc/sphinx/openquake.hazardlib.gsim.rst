@@ -628,6 +628,22 @@ nga_east
     :undoc-members:
     :show-inheritance:
 
+nrcan15_site_term
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nrcan15_site_term_linear
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term_linear
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nshmp_2014
 ------------------------------------------
 

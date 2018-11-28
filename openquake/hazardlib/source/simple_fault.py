@@ -304,8 +304,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
 
     def __iter__(self):
-        mag_rates = [(mag, rate) for (mag, rate) in
-                     self.mfd.get_annual_occurrence_rates() if rate]
+        mag_rates = self.get_annual_occurrence_rates()
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
