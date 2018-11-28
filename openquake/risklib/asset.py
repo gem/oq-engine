@@ -434,7 +434,7 @@ class AssetCollection(object):
         """
         missing = set(tagnames) - set(self.tagcol.tagnames)
         if missing:
-            raise ValueError('Unknown tagname(s) %s', missing)
+            raise ValueError('Unknown tagname(s) %s' % missing)
         A, *shp = array.shape
         if A != len(self):
             raise ValueError('The array must have length %d, got %d' %

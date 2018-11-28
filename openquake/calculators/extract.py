@@ -29,7 +29,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
-from openquake.baselib.python3compat import encode
+from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
@@ -420,29 +420,38 @@ def extract_agg_curves(dstore, what):
 @extract.add('aggregate_by')
 def extract_aggregate_by(dstore, what):
     """
-    /extract/aggregate_by/structural/taxonomy,occupancy/curves-stats
+    /extract/aggregate_by/taxonomy,occupancy/curves-stats/structural
     return an array of shape (T, O, S, P)
 
-    /extract/aggregate_by/structural/taxonomy,occupancy/avg_losses-stats
+    /extract/aggregate_by/taxonomy,occupancy/avg_losses-stats/structural
     return an array of shape (T, O, S)
     """
-    loss_type, tagnames, dsetname = what.split('/')
+    try:
+        tagnames, dsetname, loss_type = what.split('/')
+    except ValueError:  # missing '/' at the end
+        tagnames, dsetname = what.split('/')
+        loss_type = ''
     assert dsetname in ('avg_losses-stats', 'curves-stats'), dsetname
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
-    lti = dstore['oqparam'].lti
-    array = dstore[dsetname][..., lti[loss_type]]
+    oq = dstore['oqparam']
     attrs = dstore[dsetname].attrs
-    aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
-    for tagname in tagnames:
-        setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
-    aw.stat = attrs['stats']
-    if dsetname == 'curves-stats':
-        aw.return_period = attrs['return_periods']
-        aw.tagnames = encode(tagnames + ['stat', 'return_period'])
-    else:
-        aw.tagnames = encode(tagnames + ['stat'])
-    return aw
+    for s, stat in enumerate(attrs['stats']):
+        if loss_type:
+            array = dstore[dsetname][:, s, oq.lti[loss_type]]
+        else:
+            array = dstore[dsetname][:, s]
+        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
+        for tagname in tagnames:
+            setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
+        if not loss_type:
+            aw.extra = ('loss_type',) + oq.loss_dt().names
+        if dsetname == 'curves-stats':
+            aw.return_period = attrs['return_periods']
+            aw.tagnames = encode(tagnames + ['return_period'])
+        else:
+            aw.tagnames = encode(tagnames)
+        yield decode(stat), aw
 
 
 @extract.add('losses_by_asset')
