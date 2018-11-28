@@ -121,14 +121,14 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_gmfs(rupgetter, sitecol, rlzs_by_gsim, param, monitor):
+def compute_gmfs(rupgetter, sitecol, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     with monitor('getting ruptures'):
         ebruptures = list(rupgetter)
     getter = GmfGetter(
-        rlzs_by_gsim, ebruptures, sitecol,
+        rupgetter.rlzs_by_gsim, ebruptures, sitecol,
         param['oqparam'], param['min_iml'])
     return getter.compute_gmfs_curves(monitor)
 
@@ -198,11 +198,11 @@ class EventBasedCalculator(base.HazardCalculator):
             par = param.copy()
             par['samples'] = self.samples_by_grp[grp_id]
             rup_array = rups[start: start + nr]
-            ruptures = RuptureGetter(hdf5cache, code2cls, rup_array,
-                                     self.grp_trt[grp_id], par['samples'])
-            if ruptures:
-                yield ruptures, self.sitecol, rlzs_by_gsim, par
-                start += nr
+            rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
+                                    self.grp_trt[grp_id], par['samples'],
+                                    rlzs_by_gsim)
+            yield rgetter, self.sitecol, par
+            start += nr
         if self.datastore.parent:
             self.datastore.parent.close()
 
