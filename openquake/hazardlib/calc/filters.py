@@ -371,10 +371,11 @@ class RtreeFilter(SourceFilter):
     def __init__(self, sitecol, integration_distance, hdf5path=None):
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
-        lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
+        if sitecol:
+            lonlats = zip(sitecol.lons, sitecol.lats)
+            for i, (lon, lat) in enumerate(lonlats):
+                index.insert(i, (lon, lat, lon, lat))
         index.close()
 
     def filter(self, sources):
@@ -382,6 +383,9 @@ class RtreeFilter(SourceFilter):
         :param sources: a sequence of sources
         :yields: rtree-filtered sources
         """
+        if self.sitecol is None:  # do not filter
+            yield from sources
+            return
         index = rtree.index.Index(self.indexpath)
         try:
             for src in sources:
