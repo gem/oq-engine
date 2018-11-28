@@ -256,18 +256,21 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, hdf5path=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
+        elif sitecol is None:
+            integration_distance = {}
         self.hdf5path = hdf5path
-        if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
-                h5['sitecol'] = sitecol
-        else:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
+        if hdf5path and (
+                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.directory.shared_dir):  # store the sitecol
+            with hdf5.File(hdf5path, 'w') as h5:
+                if sitecol is not None:
+                    h5['sitecol'] = sitecol
+        else:  # keep the sitecol in memory
+            self.__dict__['sitecol'] = sitecol
 
     @property
     def sitecol(self):
@@ -277,7 +280,7 @@ class SourceFilter(object):
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
         with hdf5.File(self.hdf5path, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5['sitecol']
+            self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
@@ -368,10 +371,11 @@ class RtreeFilter(SourceFilter):
     def __init__(self, sitecol, integration_distance, hdf5path=None):
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
-        lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
+        if sitecol:
+            lonlats = zip(sitecol.lons, sitecol.lats)
+            for i, (lon, lat) in enumerate(lonlats):
+                index.insert(i, (lon, lat, lon, lat))
         index.close()
 
     def filter(self, sources):
@@ -379,6 +383,9 @@ class RtreeFilter(SourceFilter):
         :param sources: a sequence of sources
         :yields: rtree-filtered sources
         """
+        if self.sitecol is None:  # do not filter
+            yield from sources
+            return
         index = rtree.index.Index(self.indexpath)
         try:
             for src in sources:
