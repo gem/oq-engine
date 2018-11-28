@@ -29,7 +29,7 @@ else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
 from openquake.baselib.general import group_array
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.python3compat import encode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
@@ -430,11 +430,8 @@ def extract_aggregate_by(dstore, what):
     assert dsetname in ('avg_losses-stats', 'curves-stats'), dsetname
     tagnames = tagnames.split(',')
     assetcol = dstore['assetcol']
-    if dsetname == 'curves-stats':
-        array = dstore[dsetname][loss_type]
-    else:
-        lti = dstore['oqparam'].lti
-        array = dstore[dsetname][:, :, lti[loss_type]]
+    lti = dstore['oqparam'].lti
+    array = dstore[dsetname][:, :, lti[loss_type]]
     attrs = dstore[dsetname].attrs
     aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
     for tagname in tagnames:
