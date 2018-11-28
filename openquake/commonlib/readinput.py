@@ -353,10 +353,15 @@ def get_site_model(oqparam, req_site_params=None):
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = req_site_params - set(params[0])
-        if missing == set(['backarc']):  # use a default of False
+        if 'vs30measured' in missing:  # use a default of False
+            missing -= {'vs30measured'}
+            for param in params:
+                param['vs30measured'] = False
+        if 'backarc' in missing:  # use a default of False
+            missing -= {'backarc'}
             for param in params:
                 param['backarc'] = False
-        elif missing:
+        if missing:
             raise InvalidFile('%s: missing parameter %s' %
                               (oqparam.inputs['site_model'],
                                ', '.join(missing)))
@@ -407,7 +412,8 @@ def get_site_collection(oqparam):
             sc, params, _ = geo.utils.assoc(
                 sm, sitecol, oqparam.max_site_model_distance, 'warn')
         for name in req_site_params:
-            if name == 'backarc' and name not in params.dtype.names:
+            if name in ('vs30measured', 'backarc') \
+                   and name not in params.dtype.names:
                 sitecol._set(name, 0)  # the default
             else:
                 sitecol._set(name, params[name])
