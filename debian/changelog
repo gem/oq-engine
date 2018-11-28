@@ -3,6 +3,29 @@
     backbone approach to compute hazard in Italy
 
   [Michele Simionato]
+  * Added an early check for the case of missing intensity measure types
+  * Forbidden the case of exposure, site model and region_grid_spacing all
+    set at the same time
+  * Implemented multi-exposure functionality in event based risk
+  * Changed the event based calculator to store the ruptures incrementally
+    without keeping them all in memory
+  * Refactored the UCERF event based calculator to work as much as possible
+    the regular calculator
+  * Optimized the management and storage of the aggregate losses in the event
+    based risk calculation; also, reduced the memory consumption
+  * Changed the default for `individual_curves` to "false", which is the right
+    default for large calculations
+  * Optimized the saving of the events
+  * Removed the `save_ruptures` flag in the job.ini since ruptures must be saved
+    always
+  * Optimized the rupture generation in case of sampling and changed the
+    algorithm and seeds
+  * Fixed a bug with the IMT `SA(1)` considered different from `SA(1.0)`
+  * Removed the long-time deprecated GMF exporter in XML format for event_based
+  * Added a re-use hazard feature in event_based_risk in single-file mode
+  * Made the event ID unique also in scenario calculations with
+    multiple realizations
+  * Removed the annoying hidden .zip archives littering the export directory
   * Added an easy way to read the exposure header
   * Added a way to run Python scripts using the engine libraries via `oq shell`
   * Improved the minimum_magnitude feature

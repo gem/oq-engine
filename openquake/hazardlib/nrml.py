@@ -72,7 +72,6 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 import io
-import os
 import re
 import sys
 import decimal
@@ -197,7 +196,8 @@ def get_source_model_04(node, fname, converter=default):
         source_ids.add(src.source_id)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    src_groups = sorted(sourceconverter.SourceGroup(trt, srcs)
+    src_groups = sorted(sourceconverter.SourceGroup(
+        trt, srcs, min_mag=converter.minimum_magnitude)
                         for trt, srcs in groups.items())
     return SourceModel(src_groups, node.get('name', ''))
 
@@ -306,7 +306,7 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter,  monitor):
+def read_source_models(fnames, converter, monitor):
     """
     :param fnames:
         list of source model files
@@ -314,12 +314,9 @@ def read_source_models(fnames, converter,  monitor):
         a SourceConverter instance
     :param monitor:
         a :class:`openquake.performance.Monitor` instance
-    :returns:
-        a dictionary fname -> SourceModel instance
+    :yields:
+        SourceModel instances
     """
-    fname2sm = {}
-    prefix = os.path.commonprefix([os.path.dirname(f) for f in fnames])
-    P = len(prefix) + 1
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
             sm = to_python(fname, converter)
@@ -327,9 +324,8 @@ def read_source_models(fnames, converter,  monitor):
             sm = sourceconverter.to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        sm.relpath = fname[P:]
-        fname2sm[fname] = sm
-    return fname2sm
+        sm.fname = fname
+        yield sm
 
 
 def read(source, chatty=True, stop=None):

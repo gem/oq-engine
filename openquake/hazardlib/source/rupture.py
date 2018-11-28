@@ -24,6 +24,7 @@ import abc
 import numpy
 import math
 import itertools
+import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -35,10 +36,13 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+U16 = numpy.uint16
 U32 = numpy.uint32
-TWO16 = numpy.uint64(2 ** 16)
-TWO32 = numpy.uint64(2 ** 32)
+U64 = numpy.uint64
+TWO16 = U64(2 ** 16)
+TWO32 = U64(2 ** 32)
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
+events_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
 
 
@@ -538,11 +542,21 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def fix_shape(occur, num_rlzs):
-    n_occ = numpy.zeros(num_rlzs, numpy.uint16)
-    for nr in range(num_rlzs):
-        n_occ[nr] = occur
-    return n_occ
+def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
+    """
+    :param rup_array: a composite array with fields serial, n_occ and grp_id
+    :param samples_by_grp: a dictionary grp_id -> samples
+    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
+    """
+    all_eids = []
+    for rup in rup_array:
+        grp_id = rup['grp_id']
+        samples = samples_by_grp[grp_id]
+        num_rlzs = num_rlzs_by_grp[grp_id]
+        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
+        eids = TWO32 * U64(rup['serial']) + numpy.arange(num_events, dtype=U64)
+        all_eids.append(eids)
+    return numpy.concatenate(all_eids)
 
 
 class EBRupture(object):
@@ -551,18 +565,14 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, mult=1):
+    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, samples=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
         self.sids = sids
         self.n_occ = n_occ
-
-    def multiplicity(self, nr):
-        if len(self.n_occ) != nr:  # full enumeration
-            return self.n_occ.sum() * nr
-        return self.n_occ.sum()
+        self.samples = samples
 
     @property
     def serial(self):
@@ -571,40 +581,77 @@ class EBRupture(object):
         """
         return self.rupture.serial
 
-    @property
-    def weight(self):
-        """
-        Weight of the EBRupture
-        """
-        return len(self.sids) * len(self.events)
-
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
+        :param n_occ: number of occurrences
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :returns: a dictionay rlz index -> eids array
+        :param samples: number of samples in current source group
+        :returns: a dictionary rlz index -> eids array
         """
-        i = 0
         j = 0
         dic = {}
-        nr = sum(len(rlzs) for rlzs in rlzs_by_gsim.values())
-        if len(self.n_occ) != nr:  # full enumeration
-            self.n_occ = fix_shape(self.n_occ, nr)
-        for rlzs in rlzs_by_gsim.values():
-            for rlz in rlzs:
-                n = self.n_occ[i]
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-                i += 1
+        if self.samples == 1:  # full enumeration or akin to it
+            for rlzs in rlzs_by_gsim.values():
+                for rlz in rlzs:
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U64) + (
+                        TWO32 * U64(self.serial))
+                    j += self.n_occ
+        else:  # associated eids to the realizations
+            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
+            histo = general.random_histogram(
+                self.n_occ, self.samples, self.serial)
+            for rlz, n in zip(rlzs, histo):
+                dic[rlz] = numpy.arange(j, j + n, dtype=U64) + (
+                    TWO32 * U64(self.serial))
                 j += n
         return dic
 
-    def export(self, mesh, events):
+    def get_events(self, rlzs_by_gsim):
+        """
+        :returns: an array of events with fields eid, rlz
+        """
+        all_eids, rlzs = [], []
+        for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
+            all_eids.extend(eids)
+            rlzs.extend([rlz] * len(eids))
+        return numpy.fromiter(zip(all_eids, rlzs), events_dt)
+
+    def get_eids(self, num_rlzs):
+        """
+        :param num_rlzs: the number of realizations for the given group
+        :returns: an array of event IDs
+        """
+        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
+        return TWO32 * U64(self.serial) + numpy.arange(num_events, dtype=U64)
+
+    def get_events_by_ses(self, events, num_ses):
+        """
+        :returns: a dictionary ses index -> events array
+        """
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        events_by_ses = collections.defaultdict(list)
+        for ses, event in zip(sess, events):
+            events_by_ses[ses].append(event)
+        for ses in events_by_ses:
+            events_by_ses[ses] = numpy.array(events_by_ses[ses])
+        return events_by_ses
+
+    def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
+        events = self.get_events(rlzs_by_gsim)
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        return dict(zip(events['eid'], sess))
+
+    def export(self, mesh, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events['eid'] += TWO32 * self.serial
-        events_by_ses = general.group_array(events, 'ses')
+        events = self.get_events(rlzs_by_gsim)
+        events_by_ses = self.get_events_by_ses(events, num_ses)
         new = ExportedRupture(self.serial, events_by_ses, self.sids)
         new.mesh = mesh[self.sids]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
@@ -645,4 +692,4 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.serial, self.n_occ.sum())
+            self.__class__.__name__, self.serial, self.n_occ)

@@ -19,7 +19,7 @@ import os
 import logging
 
 from openquake.baselib import general, performance, sap
-from openquake.engine import engine
+from openquake.commands import engine
 from openquake.calculators.export import export as export_
 
 

@@ -67,58 +67,6 @@ export_dir = %s
             readinput.get_params([job_config])
         self.assertIn('is an absolute path', str(ctx.exception))
 
-    def test_get_oqparam_with_files(self):
-        temp_dir = tempfile.mkdtemp()
-        source_model_input = general.gettemp(dir=temp_dir)
-        site_model_input = general.gettemp(dir=temp_dir, content="foo")
-        job_config = general.gettemp(dir=temp_dir, content="""
-[general]
-calculation_mode = event_based
-[site]
-source_model_file = %s
-site_model_file = %s
-maximum_distance=1
-truncation_level=0
-random_seed=0
-intensity_measure_types = PGA
-investigation_time = 50
-export_dir = %s
-        """ % (os.path.basename(source_model_input),
-               os.path.basename(site_model_input), TMP))
-
-        try:
-            exp_base_path = os.path.dirname(job_config)
-
-            expected_params = {
-                'export_dir': TMP,
-                'base_path': exp_base_path,
-                'calculation_mode': 'event_based',
-                'truncation_level': 0.0,
-                'random_seed': 0,
-                'maximum_distance': {'default': 1},
-                'inputs': {'job_ini': job_config,
-                           'site_model': [site_model_input],
-                           'source': [source_model_input],
-                           'source_model': source_model_input},
-                'hazard_imtls': {'PGA': None},
-                'investigation_time': 50.0,
-                'risk_investigation_time': 50.0,
-            }
-
-            params = getparams(readinput.get_oqparam(job_config))
-            for key in expected_params:
-                self.assertEqual(expected_params[key], params[key])
-            items = sorted(params['inputs'].items())
-            keys, values = zip(*items)
-            self.assertEqual(('job_ini', 'site_model', 'source',
-                              'source_model'), keys)
-            self.assertEqual((job_config, [site_model_input],
-                              [source_model_input], source_model_input),
-                             values)
-
-        finally:
-            shutil.rmtree(temp_dir)
-
     def test_get_oqparam_with_sites_csv(self):
         sites_csv = general.gettemp('1.0,2.1\n3.0,4.1\n5.0,6.1')
         try:
@@ -396,7 +344,7 @@ class ExposureTestCase(unittest.TestCase):
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['occupants']
-        oqparam.inputs = {'exposure': self.exposure}
+        oqparam.inputs = {'exposure': [self.exposure]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
@@ -412,7 +360,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
-        oqparam.inputs = {'exposure': self.exposure0}
+        oqparam.inputs = {'exposure': [self.exposure0]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
@@ -429,7 +377,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.inputs = {'exposure': self.exposure1}
+        oqparam.inputs = {'exposure': [self.exposure1]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
@@ -445,7 +393,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
-        oqparam.inputs = {'exposure': self.exposure,
+        oqparam.inputs = {'exposure': [self.exposure],
                           'structural_vulnerability': None}
         oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
@@ -464,7 +412,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.ignore_missing_costs = []
         oqparam.region = '''\
 POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
-        oqparam.inputs = {'exposure': self.exposure2,
+        oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -477,7 +425,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
-        oqparam.inputs = {'exposure': self.exposure3}
+        oqparam.inputs = {'exposure': [self.exposure3]}
         oqparam.region = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None

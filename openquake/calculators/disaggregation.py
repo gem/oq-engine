@@ -243,10 +243,9 @@ producing too small PoEs.'''
         self.trts = trts
 
         # build mag_edges
-        min_mag = min(sg.min_mag for smodel in csm.source_models
-                      for sg in smodel.src_groups)
-        max_mag = max(sg.max_mag for smodel in csm.source_models
-                      for sg in smodel.src_groups)
+        mmm = numpy.array([src.get_min_max_mag() for src in csm.get_sources()])
+        min_mag = mmm[:, 0].min()
+        max_mag = mmm[:, 1].max()
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / oq.mag_bin_width)),
             int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
