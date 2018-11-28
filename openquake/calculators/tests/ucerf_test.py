@@ -32,12 +32,10 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
         # check the distribution of the events
-        self.assertEventsByRlz([58, 1, 1, 1, 3, 4, 1, 1, 2, 2, 4, 3, 2, 2, 3,
-                                3, 3, 3, 1, 1, 1, 1, 3, 3, 1, 1, 1, 1, 1, 1,
-                                1, 1, 2, 2, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 3,
-                                3, 2, 2])
-        # NB: there are no 58 events for the first realization, it is a bug,
-        # but it will be fixed in the future
+        self.assertEventsByRlz([2, 2, 2, 2, 6, 6, 2, 2, 2, 2, 6, 6, 2, 2, 3,
+                                3, 6, 6, 1, 1, 1, 1, 6, 6, 2, 2, 3, 3, 2, 2,
+                                2, 2, 3, 3, 2, 2, 3, 3, 3, 3, 2, 2, 3, 3,
+                                3, 3, 3, 3])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of ruptures
@@ -67,9 +65,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([35, 19])
-        # NB: there are no 35 events for the first realization, it is a bug,
-        # but it will be fixed in the future
+        self.assertEventsByRlz([29, 25])
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
