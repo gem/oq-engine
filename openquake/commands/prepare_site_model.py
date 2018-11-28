@@ -74,7 +74,7 @@ def read_vs30(fnames):
 @sap.Script
 def prepare_site_model(exposure_xml, vs30_csv,
                        z1pt0, z2pt5, vs30measured, grid_spacing=0,
-                       site_param_distance=5, output='sites.csv'):
+                       site_param_distance=5, output='site_model.csv'):
     """
     Prepare a sites.csv file from an exposure xml file, a vs30 csv file
     and a grid spacing which can be 0 (meaning no grid). For each asset site
