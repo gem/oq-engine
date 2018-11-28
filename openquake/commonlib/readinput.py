@@ -354,17 +354,6 @@ def get_site_model(oqparam, req_site_params):
     return numpy.concatenate(arrays)
 
 
-class FakeSitecol(object):
-    def __init__(self):
-        self.complete = self
-
-    def __len__(self):
-        return 0
-
-    def __bool__(self):
-        return False
-
-
 def get_site_collection(oqparam):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -410,8 +399,8 @@ def get_site_collection(oqparam):
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
                           % oqparam.inputs['job_ini'])
     elif mesh is None:
-        # an empty sitecol is okay when computing the ruptures only
-        return FakeSitecol()
+        # a None sitecol is okay when computing the ruptures only
+        return
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
