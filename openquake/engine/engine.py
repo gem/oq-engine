@@ -221,7 +221,7 @@ except ValueError:
     pass
 
 
-def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
+def zip_job(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
@@ -251,8 +251,8 @@ def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
                     files.add(table)
 
     # collect exposure.csv, if any
-    exposure_xml = oq.inputs.get('exposure')
-    if exposure_xml:
+    exposures_xml = oq.inputs.get('exposure', [])
+    for exposure_xml in exposures_xml:
         dname = os.path.dirname(exposure_xml)
         expo = nrml.read(exposure_xml, stop='asset')[0]
         if not expo.assets:
@@ -282,28 +282,43 @@ def zip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
     general.zipfiles(files, archive_zip, log=log)
 
 
-def job_from_file(cfg_file, username, **kw):
+def job_from_file(job_ini, job_id, username, **kw):
     """
     Create a full job profile from a job config file.
 
-    :param str cfg_file:
-        Path to a job.ini file.
-    :param str username:
+    :param job_ini:
+        Path to a job.ini file
+    :param job_id:
+        ID of the created job
+    :param username:
         The user who will own this job profile and all results
-    :param str datadir:
-        Data directory of the user
-    :param hazard_calculation_id:
-        ID of a previous calculation or None
+    :param kw:
+         Extra parameters including `calculation_mode` and `exposure_file`
     :returns:
-        a pair (job_id, oqparam)
+        an oqparam instance
     """
     hc_id = kw.get('hazard_calculation_id')
-    oq = readinput.get_oqparam(cfg_file, hc_id=hc_id)
+    try:
+        oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
+    except Exception:
+        logs.dbcmd('finish', job_id, 'failed')
+        raise
     if 'calculation_mode' in kw:
         oq.calculation_mode = kw.pop('calculation_mode')
-    job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, datastore.get_datadir(), hc_id)
-    return job_id, oq
+    if 'description' in kw:
+        oq.description = kw.pop('description')
+    if 'exposure_file' in kw:  # hack used in commands.engine
+        fnames = kw.pop('exposure_file').split()
+        if fnames:
+            oq.inputs['exposure'] = fnames
+        elif 'exposure' in oq.inputs:
+            del oq.inputs['exposure']
+    logs.dbcmd('update_job', job_id,
+               dict(calculation_mode=oq.calculation_mode,
+                    description=oq.description,
+                    user_name=username,
+                    hazard_calculation_id=hc_id))
+    return oq
 
 
 def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
@@ -330,18 +345,22 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     if OQ_DISTRIBUTE.startswith(('celery', 'zmq')):
         set_concurrent_tasks_default(job_id)
     calc.from_engine = True
-    input_zip = oqparam.inputs.get('input_zip')
     tb = 'None\n'
     try:
-        if input_zip:  # the input was zipped from the beginning
-            data = open(input_zip, 'rb').read()
-        else:  # zip the input
-            logs.LOG.info('zipping the input files')
-            bio = io.BytesIO()
-            zip(oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
-            data = bio.getvalue()
-        calc.datastore['input/zip'] = numpy.array(data)
-        calc.datastore.set_attrs('input/zip', nbytes=len(data))
+        if not oqparam.hazard_calculation_id:
+            if 'input_zip' in oqparam.inputs:  # starting from an archive
+                with open(oqparam.inputs['input_zip'], 'rb') as arch:
+                    data = numpy.array(arch.read())
+            else:
+                logs.LOG.info('zipping the input files')
+                bio = io.BytesIO()
+                zip_job(
+                    oqparam.inputs['job_ini'], bio, (), oqparam, logging.debug)
+                data = numpy.array(bio.getvalue())
+                del bio
+            calc.datastore['input/zip'] = data
+            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
+            del data  # save memory
 
         logs.dbcmd('update_job', job_id, {'status': 'executing',
                                           'pid': _PID})
@@ -422,19 +441,3 @@ def check_obsolete_version(calculation_mode='WebUI'):
                 'still using version %s' % (tag_name, __version__))
     else:
         return ''
-
-# define engine.read(calc_id)
-if config.dbserver.multi_user:
-    def read(calc_id):
-        """
-        :param calc_id: a calculation ID
-        :returns: the associated DataStore instance
-        """
-        job = logs.dbcmd('get_job', calc_id)
-        if job:
-            return datastore.read(job.ds_calc_dir + '.hdf5')
-        # calc_id can be present in the datastore and not in the database:
-        # this happens if the calculation was run with `oq run`
-        return datastore.read(calc_id)
-else:  # get the datastore of the current user
-    read = datastore.read

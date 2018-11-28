@@ -32,6 +32,8 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib import InvalidFile
+from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
 from openquake.baselib.parallel import Starmap
@@ -413,7 +415,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs and oq.hazard_calculation_id is None:
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(),
-                split_all=oq.prefilter_sources != 'no',
+                split_all=oq.split_sources,
                 srcfilter=self.get_filter())
         self.init()  # do this at the end of pre-execute
 
@@ -547,7 +549,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         return min_iml
 
-    def load_riskmodel(self):  # to be called before read_exposure
+    def load_riskmodel(self):
+        # to be called before read_exposure
+        # NB: this is called even if there is no risk model
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
@@ -560,6 +564,9 @@ class HazardCalculator(BaseCalculator):
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
+        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+            raise InvalidFile('No intensity_measure_types specified in %s' %
+                              self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
 
     def save_riskmodel(self):
@@ -758,7 +765,7 @@ class RiskCalculator(HazardCalculator):
                 oq.site_effects, oq.truncation_level, E, oq.random_seed,
                 oq.imtls)
             save_gmf_data(self.datastore, sitecol, gmfs, imts)
-            events = numpy.zeros(E, readinput.stored_event_dt)
+            events = numpy.zeros(E, rupture.events_dt)
             events['eid'] = numpy.arange(E, dtype=U64)
             self.datastore['events'] = events
         return sitecol, assetcol
@@ -931,7 +938,7 @@ def save_gmf_data(dstore, sitecol, gmfs, imts, eids=()):
     dstore['gmf_data/indices'] = numpy.array(lst, U32)
     dstore.set_attrs('gmf_data', num_gmfs=len(gmfs))
     if len(eids):  # store the events
-        events = numpy.zeros(len(eids), readinput.stored_event_dt)
+        events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
         dstore['events'] = events
 
@@ -954,7 +961,7 @@ def import_gmfs(dstore, fname, sids):
     # store the events
     eids = numpy.unique(array['eid'])
     eids.sort()
-    events = numpy.zeros(len(eids), readinput.stored_event_dt)
+    events = numpy.zeros(len(eids), rupture.events_dt)
     events['eid'] = eids
     dstore['events'] = events
     # store the GMFs

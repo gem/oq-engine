@@ -15,11 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import os
 import unittest
-from decorator import decorator
 from nose.plugins.attrib import attr
-from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
@@ -27,39 +24,25 @@ from openquake.calculators import ucerf_base
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
 
-celery = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'celery'
-NO_SHARED_DIR = celery and not config.directory.shared_dir
-
-
-@decorator
-def manage_shared_dir_error(func, self):
-    """
-    When the shared_dir is not configured, expect an error, unless
-    the distribution mechanism is set to processpool.
-    """
-    if NO_SHARED_DIR:
-        with self.assertRaises(ValueError) as ctx:
-            func(self)
-        self.assertIn('You must configure the shared_dir in openquake.cfg',
-                      str(ctx.exception))
-    else:
-        func(self)
-
 
 class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based', 'ucerf')
-    @manage_shared_dir_error
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
+        # check the distribution of the events
+        self.assertEventsByRlz([2, 2, 2, 2, 6, 6, 2, 2, 2, 2, 6, 6, 2, 2, 3,
+                                3, 6, 6, 1, 1, 1, 1, 6, 6, 2, 2, 3, 3, 2, 2,
+                                2, 2, 3, 3, 2, 2, 3, 3, 3, 3, 2, 2, 3, 3,
+                                3, 3, 3, 3])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # check that we get the expected number of events
+        # check that we get the expected number of ruptures
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 72)
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20)
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=20,
+                              delta=1E-5)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
@@ -74,12 +57,15 @@ class UcerfTestCase(CalculatorTestCase):
         # check the mean hazard map
         [fname] = [f for f in export(('hmaps', 'csv'), self.calc.datastore)
                    if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
+                              delta=1E-5)
 
     @attr('qa', 'hazard', 'event_based', 'ucerf')
-    @manage_shared_dir_error
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
+
+        # check the distribution of the events
+        self.assertEventsByRlz([29, 25])
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
@@ -91,7 +77,6 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
-    @manage_shared_dir_error
     def test_classical(self):
         ucerf_base.RUPTURES_PER_BLOCK = 50  # check splitting
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini', exports='csv')
@@ -106,7 +91,6 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
-    @manage_shared_dir_error
     def test_classical_time_dep(self):
         ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
@@ -120,7 +104,6 @@ class UcerfTestCase(CalculatorTestCase):
         view('fullreport', self.calc.datastore)
 
     @attr('qa', 'hazard', 'ucerf_td')
-    @manage_shared_dir_error
     def test_classical_time_dep_sampling(self):
         ucerf_base.RUPTURES_PER_BLOCK = 10  # check splitting
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
@@ -132,7 +115,6 @@ class UcerfTestCase(CalculatorTestCase):
                               delta=1E-6)
 
     @attr('qa', 'risk', 'event_based_risk', 'ucerf')
-    @manage_shared_dir_error
     def test_event_based_risk(self):
         # the fast calculator ucerf_risk
         raise unittest.SkipTest('ucerf_risk has been removed')
@@ -146,7 +128,6 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/losses_by_period-mean.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk', 'ucerf')
-    @manage_shared_dir_error
     def test_event_based_risk_sampling(self):
         # the fast calculator ucerf_risk
         raise unittest.SkipTest('ucerf_risk has been removed')

@@ -250,21 +250,23 @@ algorithm.
 
 ```bash
 $ oq help prepare_site_model
-usage: oq prepare_site_model [-h] [-g 0] [-s 5] [-o sites.csv]
-                             exposure_xml vs30_csv [vs30_csv ...]
+usage: oq prepare_site_model [-h] [-e EXPOSURE_XML [EXPOSURE_XML ...]] [-1]
+                             [-2] [-3] [-g 0] [-s 5] [-o site_model.csv]
+                             vs30_csv [vs30_csv ...]
 
-Prepare a sites.csv file from an exposure xml file, a vs30 csv file and a
-grid spacing which can be 0 (meaning no grid). For each asset site or grid
-site the closest vs30 parameter is used. The command can also generate
-(on demand) the additional fields z1pt0, z2pt5 and vs30measured which may
-be needed by your hazard model, depending on the required GSIMs.
+Prepare a site_model.csv file from an exposure xml file, a vs30 csv file and a
+grid spacing which can be 0 (meaning no grid). For each asset site or grid site
+the closest vs30 parameter is used. The command can also generate (on demand)
+the additional fields z1pt0, z2pt5 and vs30measured which may be needed by your
+hazard model, depending on the required GSIMs.
 
 positional arguments:
-  exposure_xml          exposure in XML format
   vs30_csv              files with lon,lat,vs30 and no header
 
 optional arguments:
   -h, --help            show this help message and exit
+  -e EXPOSURE_XML [EXPOSURE_XML ...], --exposure-xml EXPOSURE_XML [EXPOSURE_XML ...]
+                        exposure(s) in XML format
   -1, --z1pt0           build the z1pt0
   -2, --z2pt5           build the z2pt5
   -3, --vs30measured    build the vs30measured
@@ -272,7 +274,7 @@ optional arguments:
                         grid spacing in km (the default 0 means no grid)
   -s 5, --site-param-distance 5
                         sites over this distance are discarded
-  -o sites.csv, --output sites.csv
+  -o site_model.csv, --output site_model.csv
                         output file
 ```
 

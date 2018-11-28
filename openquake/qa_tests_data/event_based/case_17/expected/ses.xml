@@ -16,14 +16,14 @@ xmlns:gml="http://www.opengis.net/gml"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
-                    >
-                        1279900254209
-                    </SES>
-                    <SES
                     id="2"
                     >
-                        1279900254208 1279900254210 1279900254211
+                        639950127104 639950127106 639950127107
+                    </SES>
+                    <SES
+                    id="1"
+                    >
+                        639950127105
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -54,17 +54,17 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        1288490188800 1288490188803
-                    </SES>
-                    <SES
-                    id="2"
-                    >
-                        1288490188802
+                        644245094400 644245094403
                     </SES>
                     <SES
                     id="3"
                     >
-                        1288490188801 1288490188804
+                        644245094401 644245094404
+                    </SES>
+                    <SES
+                    id="2"
+                    >
+                        644245094402
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -95,17 +95,17 @@ xmlns:gml="http://www.opengis.net/gml"
                     <SES
                     id="1"
                     >
-                        1297080123392
-                    </SES>
-                    <SES
-                    id="2"
-                    >
-                        1297080123394 1297080123395
+                        648540061696
                     </SES>
                     <SES
                     id="3"
                     >
-                        1297080123393
+                        648540061697
+                    </SES>
+                    <SES
+                    id="2"
+                    >
+                        648540061698 648540061699
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

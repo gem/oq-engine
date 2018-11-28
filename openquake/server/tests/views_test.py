@@ -113,11 +113,6 @@ class EngineServerTestCase(unittest.TestCase):
     def tearDownClass(cls):
         cls.wait()
 
-    def setUp(self):
-        if sys.version_info[0] == 2:
-            # python 2 will die
-            raise unittest.SkipTest('Python 2')
-
     # tests
 
     def test_404(self):
@@ -134,6 +129,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(results), 0)
         for res in results:
             for etype in res['outtypes']:  # test all export types
+                if etype == 'xml' and res['type'] == 'gmf_data':
+                    continue  # do not export GMFs in XML for event based
                 text = self.get_text(
                     'result/%s' % res['id'], export_type=etype)
                 print('downloading result/%s' % res['id'], res['type'], etype)
