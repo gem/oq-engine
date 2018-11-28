@@ -399,7 +399,7 @@ def indices(*sizes):
     return itertools.product(*map(range, sizes))
 
 
-def _to_loss_map(array, loss_maps_dt):
+def _to_loss_maps(array, loss_maps_dt):
     # convert a 4D array into a 2D array of dtype loss_maps_dt
     A, R, C, LI = array.shape
     lm = numpy.zeros((A, R), loss_maps_dt)
@@ -417,7 +417,7 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        return _to_loss_map(dstore[name].value, oq.loss_maps_dt())
+        return _to_loss_maps(dstore[name].value, oq.loss_maps_dt())
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         # the loss maps are built on the fly from the loss curves
