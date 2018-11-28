@@ -397,8 +397,7 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
         if oqparam.region_grid_spacing:
-            # associate the site parameters to the grid discarding empty
-            # sites silently; notice that there cannot be an exposure
+            # reduce the grid sites to the one close to the site parameters
             sitecol, params, _ = geo.utils.assoc(
                 sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
             sitecol.make_complete()
