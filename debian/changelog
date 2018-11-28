@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the way loss curves and loss maps are stored in order to unify
+    the aggregation logic with the one used for the average losses
   * Added an early check for the case of missing intensity measure types
   * Forbidden the case of exposure, site model and region_grid_spacing all
     set at the same time
