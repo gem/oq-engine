@@ -212,18 +212,15 @@ class EbrCalculator(base.RiskCalculator):
         C = len(self.oqparam.conditional_loss_poes)
         LI = self.L * self.I
         self.loss_maps_dt = (F32, (C, LI))
-        self.loss_dt = (F32, (LI,))
         if oq.individual_curves or R == 1:
-            self.datastore.create_dset(
-                'curves-rlzs', self.loss_dt, (A, R, P), fillvalue=None)
+            self.datastore.create_dset('curves-rlzs', F32, (A, R, P, LI))
             self.datastore.set_attrs(
                 'curves-rlzs', return_periods=builder.return_periods)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
         if R > 1:
-            self.datastore.create_dset(
-                'curves-stats', self.loss_dt, (A, S, P), fillvalue=None)
+            self.datastore.create_dset('curves-stats', F32, (A, S, P, LI))
             self.datastore.set_attrs(
                 'curves-stats', return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats])
