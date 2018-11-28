@@ -256,18 +256,21 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, hdf5path=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
+        elif sitecol is None:
+            integration_distance = {}
         self.hdf5path = hdf5path
-        if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
-                h5['sitecol'] = sitecol
-        else:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
+        if hdf5path and (
+                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.directory.shared_dir):  # store the sitecol
+            with hdf5.File(hdf5path, 'w') as h5:
+                if sitecol is not None:
+                    h5['sitecol'] = sitecol
+        else:  # keep the sitecol in memory
+            self.__dict__['sitecol'] = sitecol
 
     @property
     def sitecol(self):
@@ -277,7 +280,7 @@ class SourceFilter(object):
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
         with hdf5.File(self.hdf5path, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5['sitecol']
+            self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
