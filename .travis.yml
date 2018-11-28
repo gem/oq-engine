@@ -5,11 +5,10 @@ language: python
 python:
  - "3.6"
 
-# FIXME temporarily disable cache
-# cache:
-#   pip: true
-#   directories:
-#   - wheels  
+cache:
+  pip: true
+  directories:
+  - wheels  
 
 jobs:
   include:
@@ -65,7 +64,7 @@ install:
   # to download the wheels first, put the folder in cache and then install the wheels from there.
   # A second run of 'pip download' will download only the missing wheels.
   - if echo "$TRAVIS_COMMIT_MESSAGE" | grep -vq '\[skip wheels\]'; then
-      pip -q download -r requirements-py36-linux64.txt -d wheels &&
+      pip download -r requirements-py36-linux64.txt -d wheels &&
       pip -q install wheels/* ;
     fi
   - pip -q install -e .

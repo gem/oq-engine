@@ -357,7 +357,7 @@ def extract_agg_losses(dstore, what):
         stats = dstore['avg_losses-stats'].attrs['stats']
         losses = dstore['avg_losses-stats'][:, :, l]
     elif 'avg_losses-rlzs' in dstore:  # event_based_risk, classical_risk
-        stats = None
+        stats = [b'mean']
         losses = dstore['avg_losses-rlzs'][:, :, l]
     else:
         raise KeyError('No losses found in %s' % dstore)

@@ -42,7 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, gettemp
+from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -504,8 +504,9 @@ def submit_job(job_ini, username, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(
-        job_ini, username, hazard_calculation_id=hazard_job_id)
+    job_id = logs.init('job')
+    oq = engine.job_from_file(
+        job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
                           username=username)
@@ -626,21 +627,23 @@ def get_result(request, result_id):
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
-    if exported is None:
+    if not exported:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for %s' % (export_type, ds_key))
+            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
+    elif len(exported) > 1:
+        # Building an archive so that there can be a single file download
+        archname = ds_key + '-' + export_type + '.zip'
+        zipfiles(exported, os.path.join(tmpdir, archname))
+        exported = os.path.join(tmpdir, archname)
+    else:  # single file
+        exported = exported[0]
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
 
-    bname = os.path.basename(exported)
-    if bname.startswith('.'):
-        # the "." is added by `export_from_db`, strip it
-        bname = bname[1:]
-    fname = 'output-%s-%s' % (result_id, bname)
-    # 'b' is needed when running the WebUI on Windows
-    stream = FileWrapper(open(exported, 'rb'))
+    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(tmpdir))
     response = FileResponse(stream, content_type=content_type)

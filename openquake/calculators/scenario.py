@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, source, calc
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.calculators import base
 
 
@@ -47,18 +47,23 @@ class ScenarioCalculator(base.HazardCalculator):
             return
         self.rup = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
+        R = len(self.gsims)
         self.cmaker = ContextMaker(self.gsims, oq.maximum_distance,
                                    {'filter_distance': oq.filter_distance})
         super().pre_execute()
         self.datastore['oqparam'] = oq
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
+        rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
-        events = numpy.zeros(E, readinput.stored_event_dt)
-        events['eid'] = numpy.arange(E)
-        ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, numpy.array([E]))
+        n_occ = numpy.array([E])
+        ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, n_occ)
+        events = numpy.zeros(E * R, events_dt)
+        for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+            events[rlz * E: rlz * E + E]['eid'] = eids
+            events[rlz * E: rlz * E + E]['rlz'] = rlz
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save([ebr], len(self.gsims))
+        rupser.save([ebr])
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
