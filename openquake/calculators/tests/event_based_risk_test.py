@@ -262,30 +262,25 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
-        url = 'aggregate_by/structural/taxonomy,occupancy/avg_losses-stats'
-        arr = extract(dstore, url)
+        url = 'aggregate_by/taxonomy,occupancy/avg_losses-stats/structural'
+        arr = dict(extract(dstore, url))['quantile-0.5']
         aae(arr.to_table(),
-            [['taxonomy', 'occupancy', 'stat', 'value'],
-             ['tax1', 'Res', 'mean', 3171.398],
-             ['tax1', 'Res', 'quantile-0.15', 101.9909],
-             ['tax1', 'Res', 'quantile-0.5', 1321.7634],
-             ['tax1', 'Res', 'quantile-0.85', 3686.8647],
-             ['tax1', 'Com', 'mean', 418.25348],
-             ['tax1', 'Com', 'quantile-0.5', 557.78845],
-             ['tax1', 'Com', 'quantile-0.85', 694.3236],
-             ['tax2', 'Res', 'mean', 1312.1248],
-             ['tax2', 'Res', 'quantile-0.15', 55.35642],
-             ['tax2', 'Res', 'quantile-0.5', 741.63446],
-             ['tax2', 'Res', 'quantile-0.85', 1601.3218],
-             ['tax3', 'Res', 'mean', 157.39099]])
+            [['taxonomy', 'occupancy', 'value'],
+             ['tax1', 'Res', 1321.7634],
+             ['tax1', 'Com', 557.78845],
+             ['tax2', 'Res', 741.63446]])
 
-        url = 'aggregate_by/structural/taxonomy,occupancy/curves-stats'
-        arr = extract(dstore, url)
-        tbl = arr.to_table()
-        self.assertEqual(
-            tbl[0], ['taxonomy', 'occupancy',
-                     'stat', 'return_period', 'value'])
-        self.assertEqual(len(tbl), 35)
+        # aggregate by all loss types
+        fnames = export(
+            ('aggregate_by/taxonomy,occupancy/avg_losses-stats', 'csv'),
+            dstore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        fnames = export(
+            ('aggregate_by/taxonomy,occupancy/curves-stats', 'csv'),
+            dstore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
