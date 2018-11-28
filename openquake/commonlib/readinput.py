@@ -218,6 +218,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     return oqparam
 
 
+site_model = None  # set as side effect when the user reads the site model
+
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
@@ -334,6 +336,9 @@ def get_site_model(oqparam, req_site_params=None):
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    global site_model
+    if site_model is not None:
+        return site_model
     if req_site_params is None:
         req_site_params = get_gsim_lt(oqparam).req_site_params
     arrays = []
@@ -362,7 +367,8 @@ def get_site_model(oqparam, req_site_params=None):
         sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
                           for param in params], site_model_dt)
         arrays.append(sm)
-    return numpy.concatenate(arrays)
+    site_model = numpy.concatenate(arrays)  # set the global
+    return site_model
 
 
 def get_site_collection(oqparam):

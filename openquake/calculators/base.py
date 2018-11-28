@@ -218,6 +218,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
+                readinput.site_model = None
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
@@ -666,6 +667,8 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
+        if readinput.site_model is not None:
+            self.datastore['site_model'] = readinput.site_model
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
 
