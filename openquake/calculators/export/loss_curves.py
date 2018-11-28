@@ -112,9 +112,9 @@ class LossCurveExporter(object):
         for key in sorted(curves_dict):
             recs = curves_dict[key]
             data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
-            for loss_type in self.loss_types:
+            for li, loss_type in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
-                    array = recs[loss_type]  # shape (A, P) loss_dt
+                    array = recs[:, :, li]  # shape (A, P, LI)
                     periods = self.builder.return_periods
                     for aref, losses in zip(asset_refs, array):
                         for period, loss in zip(periods, losses):
