@@ -256,3 +256,62 @@ class BindiEtAl2011(GMPE):
     1.75    2.584    -1.0060    0.2050     4.505    0.000427     0.5740    -0.03710    0.0    0.2520    0.357    0.593    0.220    0.00154    0.0370    -0.0385    0.0    0.219    0.305     0.376
     2.00    2.537    -1.0090    0.1930     4.373    0.000164     0.5970    -0.03670    0.0    0.2450    0.352    0.540    0.226    0.00512    0.0350    -0.0401    0.0    0.211    0.308     0.373
     """)
+
+
+class BindiEtAl2011Ita19Low(BindiEtAl2011):
+    """
+    Implements the lower term of the ITA19 backbone model.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                     stddev_types)
+        delta = self._get_delta(imt, rup.mag)
+        return mean-delta, stddevs
+
+    def _get_delta(self, imt, mag):
+        # Get the coefficients needed to compute the delta used for scaling
+        coeffs = self.DELTACOEFF[imt]
+        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
+        return tmp
+
+    DELTACOEFF = CoeffsTable(sa_damping=5, table="""
+    imt   a      b     c
+    pga   0.101 -1.136 3.555
+    pgv   0.066 -0.741 2.400
+    0.05  0.105 -1.190 3.691
+    0.1   0.112 -1.284 4.001
+    0.15  0.094 -1.033 3.177
+    0.2   0.085 -0.907 2.831
+    0.3   0.086 -0.927 2.869
+    0.4   0.088 -0.974 3.076
+    0.5   0.083 -0.916 2.933
+    0.75  0.073 -0.808 2.628
+    1.00  0.066 -0.736 2.420
+    2.00  0.041 -0.512 1.888
+    3.00  0.050 -0.616 2.193
+    4.00  0.076 -0.906 3.046
+        """)
+
+
+class BindiEtAl2011Ita19Upp(BindiEtAl2011):
+    """
+    Implements the upper term of the ITA19 backbone model.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        gmm = BindiEtAl2011Ita19Low()
+        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
+                                                     stddev_types)
+        delta = gmm._get_delta(imt, rup.mag)
+        return mean+delta, stddevs
