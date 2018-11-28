@@ -32,12 +32,12 @@ def plot_sites(calc_id=-1):
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
     lons, lats = sitecol.lons, sitecol.lats
-    if cross_idl(*lons):
+    if len(lons) > 1 and cross_idl(*lons):
         lons %= 360
     if 'site_model' in dstore:
         sm = dstore['site_model']
         sm_lons, sm_lats = sm['lon'], sm['lat']
-        if cross_idl(*sm_lons):
+        if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
     fig, ax = p.subplots()
     ax.grid(True)
