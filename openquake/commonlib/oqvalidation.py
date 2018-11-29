@@ -302,9 +302,9 @@ class OqParam(valid.ParamSet):
         # check grid + sites
         if (self.region_grid_spacing and 'site_model' in self.inputs
                 and 'exposure' in self.inputs):
-            raise ValueError(
-                'You cannot specify a grid, a site model and an exposure at '
-                'the same time: use oq prepare_site_model instead')
+            logging.warn(
+                'You are specifying a grid, a site model and an exposure at '
+                'the same time: consider using `oq prepare_site_model`')
 
     def check_gsims(self, gsims):
         """
