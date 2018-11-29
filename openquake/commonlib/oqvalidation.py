@@ -300,10 +300,11 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if self.region_grid_spacing and (
-                'sites' in self.inputs or 'site_model' in self.inputs):
-            logging.warn('Using a grid together with specifying explicitly '
-                         'the sites is deprecated')
+        if (self.region_grid_spacing and 'site_model' in self.inputs
+                and 'exposure' in self.inputs):
+            logging.warn(
+                'You are specifying a grid, a site model and an exposure at '
+                'the same time: consider using `oq prepare_site_model`')
 
     def check_gsims(self, gsims):
         """
@@ -553,6 +554,9 @@ class OqParam(valid.ParamSet):
         """
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
+        if not has_sites and not self.ground_motion_fields:
+            # when generating only the ruptures you do not need the sites
+            return True
         if ('gmfs' in self.inputs and not has_sites and
                 not self.inputs['gmfs'].endswith('.xml')):
             raise ValueError('Missing sites or sites_csv in the .ini file')
