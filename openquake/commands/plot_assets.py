@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import shapely.wkt
 from openquake.baselib import sap, datastore
+from openquake.hazardlib.geo.utils import cross_idl
 
 
 @sap.Script
@@ -43,6 +44,12 @@ def plot_assets(calc_id=-1):
         pp = PolygonPatch(shapely.wkt.loads(region), alpha=0.1)
         ax.add_patch(pp)
     ax.grid(True)
+    if 'site_model' in dstore:
+        sm = dstore['site_model']
+        sm_lons, sm_lats = sm['lon'], sm['lat']
+        if len(sm_lons) > 1 and cross_idl(*sm_lons):
+            sm_lons %= 360
+        p.scatter(sm_lons, sm_lats, marker='.', color='orange')
     p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
               color='gray')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')

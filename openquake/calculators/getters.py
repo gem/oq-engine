@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import itertools
+import mock
 import numpy
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.general import AccumDict, group_array
@@ -24,7 +25,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, EBRupture, classes, TWO32, get_eids_by_rlz)
+    BaseRupture, EBRupture, classes, TWO32)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -329,8 +330,7 @@ class GmfGetter(object):
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
-            eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
-                                          rup.samples, rup.serial)
+            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
@@ -345,7 +345,7 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for rlzi in rlzs:
-                    eids = U64(TWO32 * rup.serial) + eids_by_rlz[rlzi]
+                    eids = eids_by_rlz[rlzi]
                     e = len(eids)
                     if not e:
                         continue
@@ -433,14 +433,15 @@ def get_ruptures_by_grp(dstore, slc=slice(None)):
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
+    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
     rupdict = group_array(dstore['ruptures'][slc], 'grp_id')
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
     return {grp_id: RuptureGetter(
-        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id], samples[grp_id])
+        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id],
+        samples[grp_id], rlzs_by_gsim[grp_id])
             for grp_id, rup_array in rupdict.items()}
 
 
-# FIXME: restore this functionality
 def get_maxloss_rupture(dstore, loss_type):
     """
     :param dstore: a DataStore instance
@@ -451,7 +452,7 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [ebr] = RuptureGetter.from_(dstore, slice(ridx, ridx + 1))
+    [[ebr]] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1)).values()
     return ebr
 
 
@@ -472,13 +473,28 @@ class RuptureGetter(object):
     :param rup_array:
         an array of rupture parameters with homogeneous grp_id
     """
-    def __init__(self, hdf5path, code2cls, rup_array, trt, samples):
+    def __init__(self, hdf5path, code2cls, rup_array, trt, samples,
+                 rlzs_by_gsim):
         self.hdf5path = hdf5path
         self.code2cls = code2cls
         self.rup_array = rup_array
         self.trt = trt
         self.samples = samples
+        self.rlzs_by_gsim = rlzs_by_gsim
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
+
+    def get_eid_rlz(self):
+        """
+        :returns: a composite array with the associations eid->rlz
+        """
+        eid_rlz = []
+        for rup in self.rup_array:
+            ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
+                            self.grp_id, (), rup['n_occ'], self.samples)
+            for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid, rlz))
+        return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
     def __iter__(self):
         with datastore.read(self.hdf5path) as dstore:
