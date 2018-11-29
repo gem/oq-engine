@@ -28,6 +28,7 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+from openquake.calculators.export import export
 from openquake.commands.abort import abort
 
 
@@ -154,8 +155,17 @@ class EBRunner(object):
             logging.info('Reusing job #%d', job.id)
 
     def run_risk(self):
-        run_job(self.job_ini, self.log_level, self.log_file,
-                self.exports, hazard_calculation_id=self.hc_id)
+        job_id = run_job(self.job_ini, self.log_level, self.log_file,
+                         self.exports, hazard_calculation_id=self.hc_id)
+        if self.oqparam.aggregate_by:
+            logging.info('Exporting aggregated data')
+            dstore = datastore.read(job_id)
+            aggby = 'aggregate_by/%s/' % ','.join(self.oqparam.aggregate_by)
+            fnames = []
+            fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
+            fnames.extend(export((aggby + 'curves', 'csv'), dstore))
+            for fname in fnames:
+                logging.info('Exported %s', fname)
 
 
 @sap.Script

@@ -26,6 +26,7 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.risklib import countries
 
 
 class CostCalculator(object):
@@ -305,8 +306,8 @@ class TagCollection(object):
         # fill missing tagvalues with "?", raise an error for unknown tagnames
         idxs = []
         for tagname in self.tagnames:
-            if tagname == 'exposure':
-                idxs.append(self.add('exposure', prefix))
+            if tagname in ('exposure', 'country'):
+                idxs.append(self.add(tagname, prefix))
                 continue
             try:
                 tagvalue = dic.pop(tagname)
@@ -667,6 +668,9 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         tagNames = Node('tagNames', text='')
     tagnames = ~tagNames or []
+    if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
+        raise InvalidFile('taxonomy, exposure and country are reserved names '
+                          'you cannot use it in <tagNames>: %s' % fname)
     tagnames.insert(0, 'taxonomy')
 
     # read the cost types and make some check
@@ -714,7 +718,7 @@ def _get_exposure(fname, stop=None):
     return exp, exposure.assets
 
 
-def _minimal_tagcol(fnames):
+def _minimal_tagcol(fnames, by_country):
     tagnames = None
     for fname in fnames:
         exp = Exposure.read_header(fname)
@@ -723,7 +727,8 @@ def _minimal_tagcol(fnames):
         else:
             tagnames &= set(exp.tagcol.tagnames)
     tagnames -= set(['taxonomy'])
-    return TagCollection(['taxonomy'] + list(tagnames) + ['exposure'])
+    return TagCollection(['taxonomy'] + list(tagnames) +
+                         ['country' if by_country else 'exposure'])
 
 
 class Exposure(object):
@@ -739,22 +744,27 @@ class Exposure(object):
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
-             asset_prefix='', tagcol=None):
+             asset_prefix='', tagcol=None, by_country=False):
         """
         Call `Exposure.read(fname)` to get an :class:`Exposure` instance
         keeping all the assets in memory or
         `Exposure.read(fname, asset_nodes=True)` to get an iterator over
         Node objects (one Node for each asset).
         """
+        if by_country:
+            prefix2cc = countries.from_exposures(  # E??_ -> countrycode
+                os.path.basename(f) for f in fnames)
         if len(fnames) > 1:
-            tagcol = _minimal_tagcol(fnames)
+            tagcol = _minimal_tagcol(fnames, by_country)
             for i, fname in enumerate(fnames, 1):
                 prefix = 'E%02d_' % i
+                if by_country:  # use the 3 letter ISO country code as prefix
+                    prefix = prefix2cc[prefix]
                 if i == 1:  # first exposure
                     exp = Exposure.read(
                         [fname], calculation_mode, region_constraint,
                         ignore_missing_costs, asset_nodes, check_dupl,
-                        prefix, tagcol)
+                        prefix, tagcol, by_country)
                     exp.description = 'Composite exposure[%d]' % len(fnames)
                 else:
                     logging.info('Reading %s', fname)
@@ -770,6 +780,8 @@ class Exposure(object):
                         assets.text, os.path.dirname(fname))
                     exp.param['asset_prefix'] = prefix
                     exp._populate_from(nodes, exp.param, check_dupl)
+            exp.exposures = [os.path.splitext(os.path.basename(f))[0]
+                             for f in fnames]
             return exp
         [fname] = fnames
         logging.info('Reading %s', fname)
@@ -846,7 +858,7 @@ class Exposure(object):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
-                elif expected_header - header - {'exposure'}:
+                elif expected_header - header - {'exposure', 'country'}:
                     raise InvalidFile(
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
@@ -875,7 +887,8 @@ class Exposure(object):
                             occupancies.append(Node('occupancy', a))
                         tags = Node('tags')
                         for tagname in self.tagcol.tagnames:
-                            if tagname not in ('taxonomy', 'exposure'):
+                            if tagname not in (
+                                    'taxonomy', 'exposure', 'country'):
                                 tags.attrib[tagname] = dic[tagname]
                         asset.nodes.extend([loc, costs, occupancies, tags])
                         if i % 100000 == 0:

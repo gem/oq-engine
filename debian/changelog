@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Implemented aggregation by multiple tags, plus a special case for the
+    country code in event based risk
+
   [Marco Pagani]
   * Added two modified versions of the Bindi et al. (2011) to be used in a
     backbone approach to compute hazard in Italy
