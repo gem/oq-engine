@@ -305,6 +305,9 @@ class TagCollection(object):
         # fill missing tagvalues with "?", raise an error for unknown tagnames
         idxs = []
         for tagname in self.tagnames:
+            if tagname == 'exposure':
+                idxs.append(self.add('exposure', prefix))
+                continue
             try:
                 tagvalue = dic.pop(tagname)
             except KeyError:
@@ -314,8 +317,6 @@ class TagCollection(object):
                     raise ValueError(
                         'Invalid tagvalue="%s"' % tagvalue)
             idxs.append(self.add(tagname, tagvalue))
-        if prefix:
-            idxs.append(self.add('exposure', prefix))
         if dic:
             raise ValueError(
                 'Unknown tagname %s or <tagNames> not '
