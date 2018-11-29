@@ -1,5 +1,4 @@
-import sys
-import os.path
+import re
 
 COUNTRY_CODE = """\
 Afghanistan,AFG
@@ -238,3 +237,29 @@ Zimbabwe,ZWE
 
 country2code = dict(line.split(',') for line in COUNTRY_CODE.splitlines())
 code2country = {v: k for k, v in country2code.items()}
+
+COUNTRIES = list(country2code)
+REGEX = '|'.join('(%s)' % country for country in country2code)
+
+
+def get_country_code(longname):
+    mo = re.search(REGEX, longname, re.I)
+    if mo is None:
+        raise ValueError('Could not find a valid country in %s' % longname)
+    return country2code[COUNTRIES[mo.lastindex - 2]]
+
+
+def from_exposures(expnames):
+    """
+    :returns: a dictionary E??_ -> country
+    """
+    dic = {}
+    for i, expname in enumerate(expnames, 1):
+        cc = get_country_code(expname)
+        dic['E%02d_' % i] = cc
+    return dic
+
+
+if __name__ == '__main__':
+    import sys
+    print(from_exposures(sys.argv[1:]))
