@@ -29,8 +29,9 @@ import numpy
 from scipy.spatial import cKDTree
 import shapely.geometry
 
-from openquake.hazardlib.geo import geodetic
+from openquake.baselib.hdf5 import vstr
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -130,7 +131,7 @@ class _GeographicObjects(object):
                 numpy.array([dic[sid] for sid in sorted(dic)]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -138,11 +139,12 @@ class _GeographicObjects(object):
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
+        :param asset_ref: ID of the assets are a list of strings
         :returns: (filtered site collection, filtered assets by site)
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
-        site_dt = numpy.dtype([('lon', F32), ('lat', F32)])
+        asset_dt = numpy.dtype([('asset', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         for assets in assets_by_site:
@@ -165,12 +167,13 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        discarded = numpy.array(
-            sorted(set(asset.location for asset in discarded)), site_dt)
+        data = [(asset_refs[asset.ordinal],) + asset.location
+                for asset in discarded]
+        discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
 
-def assoc(objects, sitecol, assoc_dist, mode):
+def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     """
     Associate geographic objects to a site collection.
 
@@ -188,7 +191,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
         # objects is a geo array with lon, lat fields or a mesh-like instance
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
+        return _GeographicObjects(sitecol).assoc2(
+            objects, assoc_dist, mode, asset_refs)
 
 
 def clean_points(points):
