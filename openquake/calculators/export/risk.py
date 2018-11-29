@@ -503,6 +503,7 @@ def get_loss_ratios(lrgetter, monitor):
     return list(zip(lrgetter.aids, loss_ratios))
 
 
+@depr('This exporter will be removed soon')
 @export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
 def export_by_tag_csv(ekey, dstore):
     """

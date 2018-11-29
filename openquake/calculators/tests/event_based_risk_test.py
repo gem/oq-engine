@@ -148,12 +148,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test losses_by_tag with a single realization
         [fname] = export(
-            ('losses_by_tag/taxonomy', 'csv'), self.calc.datastore)
+            ('aggregate_by/taxonomy/avg_losses', 'csv'),
+            self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
         # test curves_by_tag with a single realization
         [fname] = export(
-            ('curves_by_tag/taxonomy', 'csv'), self.calc.datastore)
+            ('aggregate_by/taxonomy/curves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_tag.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -249,12 +250,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check losses_by_tag
-        fnames = export(('losses_by_tag/occupancy', 'csv'),
+        fnames = export(('aggregate_by/occupancy/avg_losses', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
         # check curves_by_tag
-        fnames = export(('curves_by_tag/occupancy', 'csv'),
+        fnames = export(('aggregate_by/occupancy/curves', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
 
@@ -262,7 +263,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
-        url = 'aggregate_by/taxonomy,occupancy/avg_losses-stats/structural'
+        url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
         arr = dict(extract(dstore, url))['quantile-0.5']
         aae(arr.to_table(),
             [['taxonomy', 'occupancy', 'value'],
@@ -271,14 +272,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
              ['tax2', 'Res', 741.63446]])
 
         # aggregate by all loss types
-        fnames = export(
-            ('aggregate_by/taxonomy,occupancy/avg_losses-stats', 'csv'),
-            dstore)
+        fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
+                        dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-        fnames = export(
-            ('aggregate_by/taxonomy,occupancy/curves-stats', 'csv'),
-            dstore)
+        fnames = export(('aggregate_by/taxonomy,occupancy/curves', 'csv'),
+                        dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
