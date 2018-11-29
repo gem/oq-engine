@@ -1006,9 +1006,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
-        logging.info('Reducing the sites to the exposure within the '
-                     'asset_hazard_distance of %d km',
-                     oqparam.asset_hazard_distance)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
             oqparam.asset_hazard_distance, 'filter')

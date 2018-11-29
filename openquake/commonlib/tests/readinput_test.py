@@ -594,6 +594,10 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
@@ -601,6 +605,11 @@ class GetCompositeRiskModelTestCase(unittest.TestCase):
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam(
             'job.ini', case_16, region_grid_spacing='15')
@@ -623,7 +632,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
-        
+
     def test_site_model_sites(self):
         # you cannot set them at the same time
         with self.assertRaises(ValueError):
