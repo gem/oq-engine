@@ -180,7 +180,8 @@ def get_params(job_inis, **kw):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
+                **kw):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -195,6 +196,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         Not None only when called from a post calculation
     :param validate:
         Flag. By default it is true and the parameters are validated
+    :param kw:
+        String-valued keyword arguments used to override the job.ini parameters
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -212,6 +215,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         job_ini = get_params([os.path.join(basedir, job_ini)])
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
+    job_ini.update(kw)
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
@@ -402,7 +406,8 @@ def get_site_collection(oqparam):
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
         if oqparam.region_grid_spacing:
-            # reduce the grid sites to the one close to the site parameters
+            logging.info('Reducing the grid sites to the site '
+                         'parameters within the grid spacing')
             sitecol, params, _ = geo.utils.assoc(
                 sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
             sitecol.make_complete()
@@ -983,7 +988,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
     :param cost_types: the expected cost types
-    :returns: (site collection, asset collection) instances
+    :returns: (site collection, asset collection, discarded)
     """
     global exposure
     if exposure is None:
@@ -1009,6 +1014,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != exposure.mesh:
         # associate the assets to the hazard sites
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
+        logging.info('Reducing the sites to the exposure within the '
+                     'asset_hazard_distance of %d km',
+                     oqparam.asset_hazard_distance)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
             oqparam.asset_hazard_distance, 'filter')
