@@ -529,7 +529,7 @@ class HazardCalculator(BaseCalculator):
                     self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(msg)
-            readinput.exposure = None  # reset the global
+
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
                          if taxo != '?')
@@ -537,6 +537,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reducing risk model from %d to %d taxonomies',
                          len(self.riskmodel.taxonomies), len(taxonomies))
             self.riskmodel = self.riskmodel.reduce(taxonomies)
+        return readinput.exposure
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -605,8 +606,11 @@ class HazardCalculator(BaseCalculator):
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
-            self.read_exposure(haz_sitecol)
+            exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            if hasattr(readinput.exposure, 'exposures'):
+                self.datastore['assetcol/exposures'] = (
+                    numpy.array(exposure.exposures, hdf5.vstr))
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
