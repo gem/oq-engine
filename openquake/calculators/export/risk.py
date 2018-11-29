@@ -24,7 +24,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import group_array,  deprecated as depr
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific
+from openquake.risklib import scientific, countries
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, _get)
 from openquake.calculators.export import export, loss_curves
@@ -523,6 +523,23 @@ def export_by_tag_csv(ekey, dstore):
     return fnames
 
 
+def exposures_to_countries(exposures):
+    if exposures:
+        dic = countries.from_exposures(exposures)
+        dic['exposure'] = 'countrycode'
+
+        def convert(rows):
+            for row in rows:
+                for i, col in enumerate(row):
+                    try:
+                        row[i] = dic[col]
+                    except KeyError:
+                        pass
+            return rows
+        return convert
+    return lambda rows: rows
+
+
 @export.add(('aggregate_by', 'csv'))
 def export_aggregate_by_csv(ekey, dstore):
     """
@@ -533,10 +550,15 @@ def export_aggregate_by_csv(ekey, dstore):
     data = extract(dstore, token + '/' + what)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    try:
+        exposures = dstore['assetcol/exposures']
+    except KeyError:
+        exposures = ()
+    convert = exposures_to_countries(exposures)
     for stat, arr in data:
         tup = (ekey[0].replace('/', '-').replace('-stats', ''), stat, ekey[1])
         path = '%s-%s.%s' % tup
         fname = dstore.export_path(path)
-        writer.save(arr.to_table(), fname)
+        writer.save(convert(arr.to_table()), fname)
         fnames.append(fname)
     return fnames

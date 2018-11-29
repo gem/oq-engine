@@ -770,6 +770,8 @@ class Exposure(object):
                         assets.text, os.path.dirname(fname))
                     exp.param['asset_prefix'] = prefix
                     exp._populate_from(nodes, exp.param, check_dupl)
+            exp.exposures = [os.path.splitext(os.path.basename(f))[0]
+                             for f in fnames]
             return exp
         [fname] = fnames
         logging.info('Reading %s', fname)
