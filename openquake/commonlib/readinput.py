@@ -380,9 +380,9 @@ def get_site_collection(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     mesh = get_mesh(oqparam)
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
-        req_site_params = set(sm.dtype.names) - {'lon', 'lat'}
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
@@ -420,7 +420,6 @@ def get_site_collection(oqparam):
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
-        req_site_params = get_gsim_lt(oqparam).req_site_params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
