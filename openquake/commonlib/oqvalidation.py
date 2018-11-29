@@ -47,6 +47,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         siteclass='reference_siteclass',
         backarc='reference_backarc')
+    aggregate_by = valid.Param(valid.namelist, [])
     asset_loss_table = valid.Param(valid.boolean, False)  # used in scenario
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
