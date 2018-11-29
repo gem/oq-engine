@@ -222,8 +222,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
     return oqparam
 
 
-site_model = None  # set as side effect when the user reads the site model
-
 pmap = None  # set as side effect when the user reads hazard_curves from a file
 # the hazard curves format does not split the site locations from the data (an
 # unhappy legacy design choice that I fixed in the GMFs CSV format only) thus
@@ -329,22 +327,16 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-def get_site_model(oqparam, req_site_params=None):
+def get_site_model(oqparam):
     """
     Convert the NRML file into an array of site parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param req_site_params:
-        required site parameters
     :returns:
         an array with fields lon, lat, vs30, ...
     """
-    global site_model
-    if site_model is not None:
-        return site_model
-    if req_site_params is None:
-        req_site_params = get_gsim_lt(oqparam).req_site_params
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
@@ -376,8 +368,7 @@ def get_site_model(oqparam, req_site_params=None):
         sm = numpy.array([tuple(param[name] for name in site_model_dt.names)
                           for param in params], site_model_dt)
         arrays.append(sm)
-    site_model = numpy.concatenate(arrays)  # set the global
-    return site_model
+    return numpy.concatenate(arrays)
 
 
 def get_site_collection(oqparam):
@@ -389,9 +380,9 @@ def get_site_collection(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     mesh = get_mesh(oqparam)
-    req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam, req_site_params)
+        sm = get_site_model(oqparam)
+        req_site_params = set(sm.dtype.names)
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
@@ -429,6 +420,7 @@ def get_site_collection(oqparam):
         # a None sitecol is okay when computing the ruptures only
         return
     else:  # use the default site params
+        req_site_params = get_gsim_lt(oqparam).req_site_params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -990,7 +982,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param cost_types: the expected cost types
     :returns: (site collection, asset collection, discarded)
     """
-    global exposure
+    global exposure, site_model
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
@@ -1048,6 +1040,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
+    site_model = None  # cleanup the global
     return sitecol, assetcol, discarded
 
 
