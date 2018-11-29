@@ -317,8 +317,6 @@ class TagCollection(object):
                     raise ValueError(
                         'Invalid tagvalue="%s"' % tagvalue)
             idxs.append(self.add(tagname, tagvalue))
-        if prefix:
-            idxs.append(self.add('exposure', prefix))
         if dic:
             raise ValueError(
                 'Unknown tagname %s or <tagNames> not '
