@@ -3,6 +3,8 @@
     backbone approach to compute hazard in Italy
 
   [Michele Simionato]
+  * Changed the way loss curves and loss maps are stored in order to unify
+    the aggregation logic with the one used for the average losses
   * Now it is possible to compute the ruptures without specifying the sites
   * Added an early check for the case of missing intensity measure types
   * Forbidden the case of exposure, site model and region_grid_spacing all

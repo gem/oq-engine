@@ -503,6 +503,7 @@ def get_loss_ratios(lrgetter, monitor):
     return list(zip(lrgetter.aids, loss_ratios))
 
 
+@depr('This exporter will be removed soon')
 @export.add(('losses_by_tag', 'csv'), ('curves_by_tag', 'csv'))
 def export_by_tag_csv(ekey, dstore):
     """
@@ -518,5 +519,24 @@ def export_by_tag_csv(ekey, dstore):
         path = '%s-%s.%s' % tup
         fname = dstore.export_path(path)
         writer.save(arr, fname)
+        fnames.append(fname)
+    return fnames
+
+
+@export.add(('aggregate_by', 'csv'))
+def export_aggregate_by_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    token, what = ekey[0].split('/', 1)
+    data = extract(dstore, token + '/' + what)
+    fnames = []
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for stat, arr in data:
+        tup = (ekey[0].replace('/', '-').replace('-stats', ''), stat, ekey[1])
+        path = '%s-%s.%s' % tup
+        fname = dstore.export_path(path)
+        writer.save(arr.to_table(), fname)
         fnames.append(fname)
     return fnames

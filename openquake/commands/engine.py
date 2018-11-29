@@ -42,14 +42,15 @@ def read(calc_id, username=None):
     :returns: the associated DataStore instance
     """
     if calc_id == -1 and not username:
-        # make sure you get the last calculation of the current user
-        username = getpass.getuser()
+        # get the last calculation in the datastore of the current user
+        return datastore.read(calc_id)
     job = logs.dbcmd('get_job', calc_id, username)
     if job:
         return datastore.read(job.ds_calc_dir + '.hdf5')
-    # calc_id can be present in the datastore and not in the database:
-    # this happens if the calculation was run with `oq run`
-    return datastore.read(calc_id)
+    else:
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 
 
 def get_job_id(job_id, username=None):
