@@ -158,6 +158,7 @@ class EBRunner(object):
         job_id = run_job(self.job_ini, self.log_level, self.log_file,
                          self.exports, hazard_calculation_id=self.hc_id)
         if self.oqparam.aggregate_by:
+            logging.info('Exporting aggregated data')
             dstore = datastore.read(job_id)
             aggby = 'aggregate_by/%s/' % ','.join(self.oqparam.aggregate_by)
             fnames = []
