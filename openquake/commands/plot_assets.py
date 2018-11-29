@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import numpy
 import shapely.wkt
 from openquake.baselib import sap, datastore
 from openquake.hazardlib.geo.utils import cross_idl
@@ -55,7 +56,7 @@ def plot_assets(calc_id=-1):
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green')
     p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black')
     if 'discarded' in dstore:
-        disc = dstore['discarded']
+        disc = numpy.unique(dstore['discarded'].value[['lon', 'lat']])
         p.scatter(disc['lon'], disc['lat'], marker='x', color='red')
     p.show()
 
