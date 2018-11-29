@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import time
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore
@@ -34,6 +33,24 @@ from openquake.commands.abort import abort
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+
+
+def read(calc_id, username=None):
+    """
+    :param calc_id: a calculation ID
+    :param username: if given, restrict the search to the user's calculations
+    :returns: the associated DataStore instance
+    """
+    if calc_id == -1 and not username:
+        # get the last calculation in the datastore of the current user
+        return datastore.read(calc_id)
+    job = logs.dbcmd('get_job', calc_id, username)
+    if job:
+        return datastore.read(job.ds_calc_dir + '.hdf5')
+    else:
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 
 
 def get_job_id(job_id, username=None):
@@ -116,16 +133,19 @@ class EBRunner(object):
         checksum = readinput.get_hazard_checksum32(oqparam)
         # retrieve an old calculation with the right checksum, if any
         job = logs.dbcmd('get_job_from_checksum', checksum)
+        kw = dict(calculation_mode='event_based')
+        if (oqparam.sites or 'sites' in oqparam.inputs or
+                'site_model' in oqparam.inputs):
+            # remove exposure from the hazard
+            kw['exposure_file'] = ''
         if job is None:
             # recompute the hazard and store the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
                                  exposure_file='')
             logs.dbcmd('add_checksum', self.hc_id, checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
                                  exposure_file='')
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:

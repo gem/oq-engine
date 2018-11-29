@@ -32,6 +32,7 @@ from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
 from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
 
@@ -167,12 +168,6 @@ def sitemodel():
 
 
 class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_site_model(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.inputs = dict(site_model=sitemodel())
-        self.assertEqual(len(readinput.get_site_model(oqparam, set())), 3)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
@@ -599,7 +594,46 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
     def test_missing_vulnerability_function(self):
         oq = readinput.get_oqparam('job.ini', case_caracas)
         with self.assertRaises(ValidationError):
             readinput.get_risk_model(oq)
+
+
+class SitecolAssetcolTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        # cleanup evil global
+        readinput.exposure = None
+
+    def test_grid_site_model_exposure(self):
+        oq = readinput.get_oqparam(
+            'job.ini', case_16, region_grid_spacing='15')
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
+        self.assertEqual(len(assetcol), 151)
+        self.assertEqual(len(discarded), 0)  # no assets were discarded
+
+    def test_site_model_exposure(self):
+        oq = readinput.get_oqparam('job.ini', case_16)
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        self.assertEqual(len(sitecol), 148)
+        self.assertEqual(len(assetcol), 151)
+        self.assertEqual(len(discarded), 0)
+
+    def test_exposure_only(self):
+        oq = readinput.get_oqparam('job.ini', case_16)
+        del oq.inputs['site_model']
+        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        self.assertEqual(len(sitecol), 148)
+        self.assertEqual(len(assetcol), 151)
+        self.assertEqual(len(discarded), 0)
+
+    def test_site_model_sites(self):
+        # you cannot set them at the same time
+        with self.assertRaises(ValueError):
+            readinput.get_oqparam('job.ini', case_16, sites='0 0')
