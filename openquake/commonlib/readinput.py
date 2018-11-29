@@ -982,7 +982,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param cost_types: the expected cost types
     :returns: (site collection, asset collection, discarded)
     """
-    global exposure, site_model
+    global exposure
     if exposure is None:
         # haz_sitecol not extracted from the exposure
         exposure = get_exposure(oqparam)
@@ -1037,7 +1037,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
         assetcol = assetcol.reduce_also(sitecol)
-    site_model = None  # cleanup the global
     return sitecol, assetcol, discarded
 
 
