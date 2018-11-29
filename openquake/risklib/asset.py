@@ -752,14 +752,14 @@ class Exposure(object):
         Node objects (one Node for each asset).
         """
         if by_country:
-            dic = countries.from_exposures(  # E??_ -> countrycode
+            prefix2cc = countries.from_exposures(  # E??_ -> countrycode
                 os.path.basename(f) for f in fnames)
-        else:
-            dic = {}
         if len(fnames) > 1:
             tagcol = _minimal_tagcol(fnames, by_country)
             for i, fname in enumerate(fnames, 1):
-                prefix = dic.get('E%02d_' % i, 'E%02d_' % i)
+                prefix = 'E%02d_' % i
+                if by_country:  # use the 3 letter ISO country code as prefix
+                    prefix = prefix2cc[prefix]
                 if i == 1:  # first exposure
                     exp = Exposure.read(
                         [fname], calculation_mode, region_constraint,
