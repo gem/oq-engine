@@ -218,7 +218,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     else:
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.pmap = None
-                readinput.site_model = None
                 readinput.exposure = None
                 readinput.gmfs = None
                 readinput.eids = None
@@ -600,6 +599,9 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol, self.rup)
                 haz_sitecol.make_complete()
 
+            if 'site_model' in oq.inputs:
+                self.datastore['site_model'] = readinput.get_site_model(oq)
+
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
@@ -608,7 +610,7 @@ class HazardCalculator(BaseCalculator):
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
-                region = wkt.loads(self.oqparam.region)
+                region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs:
                 self.sitecol, self.assetcol = self.read_shakemap(
@@ -645,7 +647,7 @@ class HazardCalculator(BaseCalculator):
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
 
-        if self.oqparam.job_type == 'risk':
+        if oq.job_type == 'risk':
             taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
                              if taxo != '?')
 
@@ -657,7 +659,7 @@ class HazardCalculator(BaseCalculator):
 
             # same check for the consequence models, if any
             consequence_models = riskmodels.get_risk_models(
-                self.oqparam, 'consequence')
+                oq, 'consequence')
             for lt, cm in consequence_models.items():
                 missing = taxonomies - set(cm)
                 if missing:
@@ -667,8 +669,6 @@ class HazardCalculator(BaseCalculator):
 
         if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
-        if readinput.site_model is not None:
-            self.datastore['site_model'] = readinput.site_model
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
 
