@@ -382,7 +382,7 @@ def get_site_collection(oqparam):
     mesh = get_mesh(oqparam)
     if oqparam.inputs.get('site_model'):
         sm = get_site_model(oqparam)
-        req_site_params = set(sm.dtype.names)
+        req_site_params = set(sm.dtype.names) - {'lon', 'lat'}
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
