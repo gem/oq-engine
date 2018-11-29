@@ -28,8 +28,8 @@ except ImportError:
 else:
     memoized = lru_cache(100)
 from openquake.baselib.hdf5 import ArrayWrapper, vstr
-from openquake.baselib.general import group_array
-from openquake.baselib.python3compat import encode
+from openquake.baselib.general import group_array, deprecated
+from openquake.baselib.python3compat import encode, decode
 from openquake.calculators import getters
 from openquake.calculators.export.loss_curves import get_loss_builder
 from openquake.commonlib import calc, util
@@ -383,6 +383,11 @@ def extract_agg_damages(dstore, what):
     return _filter_agg(dstore['assetcol'], losses, tags)
 
 
+def _get_curves(curves, li):
+    shp = curves.shape + curves.dtype.shape
+    return curves.value.view(F32).reshape(shp)[:, :, :, li]
+
+
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
@@ -394,12 +399,13 @@ def extract_agg_curves(dstore, what):
         array of shape (S, P), being P the number of return periods
         and S the number of statistics
     """
+    oq = dstore['oqparam']
     loss_type, tags = get_loss_type_tags(what)
     if 'curves-stats' in dstore:  # event_based_risk
-        losses = dstore['curves-stats'][loss_type]
+        losses = _get_curves(dstore['curves-stats'], oq.lti[loss_type])
         stats = dstore['curves-stats'].attrs['stats']
     elif 'curves-rlzs' in dstore:  # event_based_risk, 1 rlz
-        losses = dstore['curves-rlzs'][loss_type]
+        losses = _get_curves(dstore['curves-rlzs'], oq.lti[loss_type])
         assert losses.shape[1] == 1, 'There must be a single realization'
         stats = [b'mean']  # suitable to be stored as hdf5 attribute
     else:
@@ -409,6 +415,43 @@ def extract_agg_curves(dstore, what):
     res.units = cc.get_units(loss_types=[loss_type])
     res.return_periods = get_loss_builder(dstore).return_periods
     return res
+
+
+@extract.add('aggregate_by')
+def extract_aggregate_by(dstore, what):
+    """
+    /extract/aggregate_by/taxonomy,occupancy/curves/structural
+    yield pairs (<stat>, <array of shape (T, O, S, P)>)
+
+    /extract/aggregate_by/taxonomy,occupancy/avg_losses/structural
+    yield pairs (<stat>, <array of shape (T, O, S)>)
+    """
+    try:
+        tagnames, name, loss_type = what.split('/')
+    except ValueError:  # missing '/' at the end
+        tagnames, name = what.split('/')
+        loss_type = ''
+    assert name in ('avg_losses', 'curves'), name
+    tagnames = tagnames.split(',')
+    assetcol = dstore['assetcol']
+    oq = dstore['oqparam']
+    dset, stats = _get(dstore, name)
+    for s, stat in enumerate(stats):
+        if loss_type:
+            array = dset[:, s, oq.lti[loss_type]]
+        else:
+            array = dset[:, s]
+        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {})
+        for tagname in tagnames:
+            setattr(aw, tagname, getattr(assetcol.tagcol, tagname))
+        if not loss_type:
+            aw.extra = ('loss_type',) + oq.loss_dt().names
+        if name == 'curves':
+            aw.return_period = dset.attrs['return_periods']
+            aw.tagnames = encode(tagnames + ['return_period'])
+        else:
+            aw.tagnames = encode(tagnames)
+        yield decode(stat), aw
 
 
 @extract.add('losses_by_asset')
@@ -573,6 +616,7 @@ def _get(dstore, name):
         return dstore[name + '-rlzs'], ['mean']
 
 
+@deprecated('This feature will be removed soon')
 @extract.add('losses_by_tag')
 def losses_by_tag(dstore, tag):
     """
@@ -596,6 +640,7 @@ def losses_by_tag(dstore, tag):
         yield stat, out
 
 
+@deprecated('This feature will be removed soon')
 @extract.add('curves_by_tag')
 def curves_by_tag(dstore, tag):
     """
@@ -609,7 +654,7 @@ def curves_by_tag(dstore, tag):
     dset, stats = _get(dstore, 'curves')
     periods = dset.attrs['return_periods']
     arr = dset.value
-    P = arr.shape[-1]  # shape (A, S, P)
+    P = arr.shape[2]  # shape (A, S, P, LI)
     tagvalues = dstore['assetcol/tagcol/' + tag][1:]  # except tagvalue="?"
     for s, stat in enumerate(stats):
         out = numpy.zeros(len(tagvalues) * P, dt)
@@ -619,7 +664,7 @@ def curves_by_tag(dstore, tag):
                 for p, period in enumerate(periods):
                     out[n][tag] = tagvalue
                     out[n]['return_period'] = period
-                    counts = arr[aids == i + 1, s, p][lt].sum()
+                    counts = arr[aids == i + 1, s, p, li].sum()
                     if counts:
                         out[n][lt] = counts
                     n += 1
