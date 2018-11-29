@@ -1008,7 +1008,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
-            oqparam.asset_hazard_distance, 'filter')
+            oqparam.asset_hazard_distance, 'filter', exposure.asset_refs)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
