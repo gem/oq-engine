@@ -34,16 +34,16 @@ def plot_sites(calc_id=-1):
     lons, lats = sitecol.lons, sitecol.lats
     if len(lons) > 1 and cross_idl(*lons):
         lons %= 360
+
+    fig, ax = p.subplots()
+    ax.grid(True)
     if 'site_model' in dstore:
         sm = dstore['site_model']
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
-    fig, ax = p.subplots()
-    ax.grid(True)
+        p.scatter(sm_lons, sm_lats, marker='.', color='orange')
     p.scatter(lons, lats, marker='+')
-    if 'site_model' in dstore:
-        p.scatter(sm_lons, sm_lats, marker='.')
     p.show()
 
 
