@@ -144,7 +144,8 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
-        asset_dt = numpy.dtype([('asset', vstr), ('lon', F32), ('lat', F32)])
+        asset_dt = numpy.dtype(
+            [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         for assets in assets_by_site:
