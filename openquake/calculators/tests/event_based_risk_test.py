@@ -32,6 +32,15 @@ from openquake.qa_tests_data.event_based_risk import (
     occupants, case_1g, case_7a)
 
 
+def aae(data, expected):
+    for data_, expected_ in zip(data, expected):
+        for got, exp in zip(data_, expected_):
+            if isinstance(got, str):
+                numpy.testing.assert_equal(got, exp)
+            else:
+                numpy.testing.assert_almost_equal(got, numpy.float32(exp))
+
+
 class EventBasedRiskTestCase(CalculatorTestCase):
 
     def check_attr(self, name, value):
@@ -92,7 +101,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
 
         # test the rup_loss_table exporter
-        raise unittest.SkipTest('rup_loss_table')
         fnames = export(('rup_loss_table', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)
         for fname in fnames:
@@ -140,12 +148,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # test losses_by_tag with a single realization
         [fname] = export(
-            ('losses_by_tag/taxonomy', 'csv'), self.calc.datastore)
+            ('aggregate_by/taxonomy/avg_losses', 'csv'),
+            self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_tag.csv', fname)
 
         # test curves_by_tag with a single realization
         [fname] = export(
-            ('curves_by_tag/taxonomy', 'csv'), self.calc.datastore)
+            ('aggregate_by/taxonomy/curves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_tag.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -241,14 +250,36 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
         # check losses_by_tag
-        fnames = export(('losses_by_tag/occupancy', 'csv'),
+        fnames = export(('aggregate_by/occupancy/avg_losses', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0])
 
         # check curves_by_tag
-        fnames = export(('curves_by_tag/occupancy', 'csv'),
+        fnames = export(('aggregate_by/occupancy/curves', 'csv'),
                         self.calc.datastore)
         self.assertEqualFiles('expected/curves_by_occupancy.csv', fnames[0])
+
+        self.check_multi_tag(self.calc.datastore)
+
+    def check_multi_tag(self, dstore):
+        # multi-tag aggregations
+        url = 'aggregate_by/taxonomy,occupancy/avg_losses/structural'
+        arr = dict(extract(dstore, url))['quantile-0.5']
+        aae(arr.to_table(),
+            [['taxonomy', 'occupancy', 'value'],
+             ['tax1', 'Res', 1321.7634],
+             ['tax1', 'Com', 557.78845],
+             ['tax2', 'Res', 741.63446]])
+
+        # aggregate by all loss types
+        fnames = export(('aggregate_by/taxonomy,occupancy/avg_losses', 'csv'),
+                        dstore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        fnames = export(('aggregate_by/taxonomy,occupancy/curves', 'csv'),
+                        dstore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):

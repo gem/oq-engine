@@ -305,6 +305,9 @@ class TagCollection(object):
         # fill missing tagvalues with "?", raise an error for unknown tagnames
         idxs = []
         for tagname in self.tagnames:
+            if tagname == 'exposure':
+                idxs.append(self.add('exposure', prefix))
+                continue
             try:
                 tagvalue = dic.pop(tagname)
             except KeyError:
@@ -425,6 +428,26 @@ class AssetCollection(object):
         for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
+
+    def aggregate_by(self, tagnames, array):
+        """
+        :param tagnames: a list of valid tag names
+        :param array: an array with the same length as the asset collection
+        :returns: an array of aggregate values with the proper shape
+        """
+        missing = set(tagnames) - set(self.tagcol.tagnames)
+        if missing:
+            raise ValueError('Unknown tagname(s) %s' % missing)
+        A, *shp = array.shape
+        if A != len(self):
+            raise ValueError('The array must have length %d, got %d' %
+                             (len(self), A))
+        shape = [len(getattr(self.tagcol, tagname)) for tagname in tagnames]
+        acc = numpy.zeros(shape, (F32, shp) if shp else F32)
+        for asset, row in zip(self.array, array):
+            idx = tuple(asset[tagnames])
+            acc[idx] += row
+        return acc
 
     def reduce(self, sitecol):
         """
@@ -729,7 +752,7 @@ class Exposure(object):
             tagcol = _minimal_tagcol(fnames)
             for i, fname in enumerate(fnames, 1):
                 prefix = 'E%02d_' % i
-                if i == 0:  # first exposure
+                if i == 1:  # first exposure
                     exp = Exposure.read(
                         [fname], calculation_mode, region_constraint,
                         ignore_missing_costs, asset_nodes, check_dupl,
