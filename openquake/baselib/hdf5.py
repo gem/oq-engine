@@ -512,16 +512,17 @@ class ArrayWrapper(object):
          ['WOOD', 'RES', 500.0]]
         """
         shape = self.array.shape
-        self.tagnames = decode_array(self.tagnames)
-        if len(shape) == len(self.tagnames):
-            return [self.tagnames + ['value']] + self._to_table()
-        elif len(shape) == len(self.tagnames) + 1:
-            tbl = [self.tagnames + [self.extra[0], 'value']]
+        # the tagnames are bytestrings so they must be decoded
+        tagnames = decode_array(self.tagnames)
+        if len(shape) == len(tagnames):
+            return [tagnames + ['value']] + self._to_table()
+        elif len(shape) == len(tagnames) + 1:
+            tbl = [tagnames + [self.extra[0], 'value']]
             return tbl + self._to_table(self.extra[1:])
         else:
             raise TypeError(
                 'There are %d dimensions but only %d tagnames' %
-                (len(shape), len(self.tagnames)))
+                (len(shape), len(tagnames)))
 
     def _to_table(self, extra=()):
         tags = []  # tag_idx -> tag_values
