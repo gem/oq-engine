@@ -233,7 +233,6 @@ class GmfDataGetter(collections.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 1, F32))
         self.E = len(self.dstore['events'])
 
     def get_hazard(self, gsim=None):
@@ -318,13 +317,11 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-        # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
 
     def gen_gmv(self):
         """
-        Compute the GMFs for the given realization and populate the .gmdata
-        array. Yields tuples of the form (sid, eid, imti, gmv).
+        Compute the GMFs for the given realization and
+        yields tuples of the form (sid, eid, imti, gmv).
         """
         for computer in self.computers:
             rup = computer.rupture
@@ -348,15 +345,11 @@ class GmfGetter(object):
                     e = len(eids)
                     if not e:
                         continue
-                    gmdata = self.gmdata[rlzi]
-                    gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
                         if not tot.sum():
                             continue
-                        for i, val in enumerate(tot):
-                            gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
@@ -380,7 +373,7 @@ class GmfGetter(object):
 
     def compute_gmfs_curves(self, monitor):
         """
-        :returns: a dict with keys gmdata, gmfdata, indices, hcurves
+        :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
         dt = oq.gmf_data_dt()
@@ -417,7 +410,7 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=self.gmdata,
+        res = dict(gmfdata=gmfdata, hcurves=hcurves,
                    indices=numpy.array(indices, (U32, 3)))
         return res
 
