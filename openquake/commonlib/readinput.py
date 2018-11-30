@@ -180,7 +180,8 @@ def get_params(job_inis, **kw):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
+                **kw):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -195,6 +196,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         Not None only when called from a post calculation
     :param validate:
         Flag. By default it is true and the parameters are validated
+    :param kw:
+        String-valued keyword arguments used to override the job.ini parameters
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -212,6 +215,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         job_ini = get_params([os.path.join(basedir, job_ini)])
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
+    job_ini.update(kw)
     oqparam = OqParam(**job_ini)
     if validate:
         oqparam.validate()
@@ -300,8 +304,17 @@ def get_mesh(oqparam):
         eids, gmfs = _get_gmfs(oqparam)  # sets oqparam.sites
         return geo.Mesh.from_coords(oqparam.sites)
     elif oqparam.region_grid_spacing:
-        poly = (geo.Polygon.from_wkt(oqparam.region) if oqparam.region
-                else exposure.mesh.get_convex_hull())
+        if oqparam.region:
+            poly = geo.Polygon.from_wkt(oqparam.region)
+        elif 'site_model' in oqparam.inputs:
+            sm = get_site_model(oqparam)
+            poly = geo.Mesh(sm['lon'], sm['lat']).get_convex_hull()
+        elif exposure:
+            poly = exposure.mesh.get_convex_hull()
+        else:
+            raise InvalidFile('There is a grid spacing but not a region, '
+                              'nor a site model, nor an exposure in %s' %
+                              oqparam.inputs['job_ini'])
         try:
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
@@ -314,17 +327,16 @@ def get_mesh(oqparam):
         return exposure.mesh
 
 
-def get_site_model(oqparam, req_site_params):
+def get_site_model(oqparam):
     """
     Convert the NRML file into an array of site parameters.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param req_site_params:
-        required site parameters
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    req_site_params = get_gsim_lt(oqparam).req_site_params
     arrays = []
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and fname.endswith('.csv'):
@@ -337,10 +349,15 @@ def get_site_model(oqparam, req_site_params):
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = req_site_params - set(params[0])
-        if missing == set(['backarc']):  # use a default of False
+        if 'vs30measured' in missing:  # use a default of False
+            missing -= {'vs30measured'}
+            for param in params:
+                param['vs30measured'] = False
+        if 'backarc' in missing:  # use a default of False
+            missing -= {'backarc'}
             for param in params:
                 param['backarc'] = False
-        elif missing:
+        if missing:
             raise InvalidFile('%s: missing parameter %s' %
                               (oqparam.inputs['site_model'],
                                ', '.join(missing)))
@@ -365,7 +382,7 @@ def get_site_collection(oqparam):
     mesh = get_mesh(oqparam)
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if oqparam.inputs.get('site_model'):
-        sm = get_site_model(oqparam, req_site_params)
+        sm = get_site_model(oqparam)
         try:
             # in the future we could have elevation in the site model
             depth = sm['depth']
@@ -379,23 +396,29 @@ def get_site_collection(oqparam):
         else:
             sitecol = site.SiteCollection.from_points(
                 mesh.lons, mesh.lats, mesh.depths, None, req_site_params)
-            if oqparam.region_grid_spacing:
-                # associate the site parameters to the grid assuming they
-                # have been prepared correctly, i.e. they are on the location
-                # of the assets; discard empty sites silently
-                sitecol, params, discarded = geo.utils.assoc(
-                    sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
-                sitecol.make_complete()
+        if oqparam.region_grid_spacing:
+            logging.info('Reducing the grid sites to the site '
+                         'parameters within the grid spacing')
+            sitecol, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.region_grid_spacing * 1.414, 'filter')
+            sitecol.make_complete()
+        else:
+            # associate the site parameters to the sites without
+            # discarding any site but warning for far away parameters
+            sc, params, _ = geo.utils.assoc(
+                sm, sitecol, oqparam.max_site_model_distance, 'warn')
+        for name in req_site_params:
+            if name in ('vs30measured', 'backarc') \
+                   and name not in params.dtype.names:
+                sitecol._set(name, 0)  # the default
             else:
-                # associate the site parameters to the sites without
-                # discarding any site but warning for far away parameters
-                sc, params, discarded = geo.utils.assoc(
-                    sm, sitecol, oqparam.max_site_model_distance, 'warn')
-            for name in req_site_params:
-                if name == 'backarc' and name not in params.dtype.names:
-                    sitecol._set(name, 0)  # the default
-                else:
-                    sitecol._set(name, params[name])
+                sitecol._set(name, params[name])
+    elif mesh is None and oqparam.ground_motion_fields:
+        raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
+                          % oqparam.inputs['job_ini'])
+    elif mesh is None:
+        # a None sitecol is okay when computing the ruptures only
+        return
     else:  # use the default site params
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
@@ -455,7 +478,7 @@ def get_rlzs_by_gsim(oqparam):
     """
     cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
     ra = cinfo.get_rlzs_assoc()
-    dic = collections.OrderedDict()
+    dic = {}
     for rlzi, gsim_by_trt in enumerate(ra.gsim_by_trt):
         dic[gsim_by_trt['*']] = [rlzi]
     return dic
@@ -652,6 +675,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         dic = {sm.fname: sm for sm in smap}
 
     # consider only the effective realizations
+    nr = 0
     idx = 0
     grp_id = 0
     if monitor.hdf5:
@@ -684,6 +708,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:
+                    nr += sum(src.num_ruptures for src in sg)
                     # sample a source for each group
                     if os.environ.get('OQ_SAMPLE_SOURCES'):
                         sg.sources = random_filtered_sources(
@@ -720,6 +745,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
+
+    logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
     dupl = 0
@@ -825,9 +852,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                     % (sm, dupl))
     if not in_memory:
         return csm
-
-    nr = sum(src.num_ruptures for src in csm.get_sources())
-    logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
@@ -944,12 +968,10 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    fnames = oqparam.inputs['exposure']
-    if len(fnames) > 1:
-        raise NotImplementedError('Multifile exposure')
     exposure = asset.Exposure.read(
-        fnames[0], oqparam.calculation_mode,
-        oqparam.region, oqparam.ignore_missing_costs)
+        oqparam.inputs['exposure'], oqparam.calculation_mode,
+        oqparam.region, oqparam.ignore_missing_costs,
+        by_country='country' in oqparam.aggregate_by)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
 
@@ -959,7 +981,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
     :param cost_types: the expected cost types
-    :returns: (site collection, asset collection) instances
+    :returns: (site collection, asset collection, discarded)
     """
     global exposure
     if exposure is None:
@@ -987,9 +1009,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         tot_assets = sum(len(assets) for assets in exposure.assets_by_site)
         sitecol, assets_by, discarded = geo.utils.assoc(
             exposure.assets_by_site, haz_sitecol,
-            oqparam.asset_hazard_distance, 'filter')
-        if oqparam.region_grid_spacing:  # it is normal to discard sites
-            discarded = []
+            oqparam.asset_hazard_distance, 'filter', exposure.asset_refs)
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -1006,7 +1026,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         sitecol = haz_sitecol
         assets_by_site = exposure.assets_by_site
         discarded = []
-        logging.info('Read %d sites from the exposure', len(sitecol))
+        logging.info('Read %d sites and %d assets from the exposure',
+                     len(sitecol), sum(len(a) for a in assets_by_site))
 
     asset_refs = numpy.array(
         [exposure.asset_refs[asset.ordinal]
@@ -1122,7 +1143,7 @@ def get_pmap_from_nrml(oqparam, fname):
         site mesh, curve array
     """
     hcurves_by_imt = {}
-    oqparam.hazard_imtls = imtls = collections.OrderedDict()
+    oqparam.hazard_imtls = imtls = {}
     for hcurves in nrml.read(fname):
         imt = hcurves['IMT']
         oqparam.investigation_time = hcurves['investigationTime']
@@ -1333,7 +1354,7 @@ def get_hazard_checksum32(oqparam):
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'ses_seed', 'truncation_level',
                    'maximum_distance', 'investigation_time',
-                   'number_of_logic_tree_samples', 'ses_per_logic_tre_path',
+                   'number_of_logic_tree_samples', 'ses_per_logic_tree_path',
                    'minimum_magnitude', 'prefilter_sources', 'sites',
                    'pointsource_distance', 'filter_distance'):
             hazard_params.append('%s = %s' % (key, val))

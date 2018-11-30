@@ -29,12 +29,11 @@ from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.source.rupture import TWO32, get_eids_by_rlz
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, RuptureGetter, get_ruptures_by_grp)
+    GmfGetter, PmapGetter, get_ruptures_by_grp)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -70,11 +69,14 @@ def export_ruptures_xml(ekey, dstore):
     rlzs_by_grp = dstore['csm_info'].get_rlzs_by_gsim_grp()
     num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
-    ruptures_by_grp = {}
-    for grp_id, ruptures in get_ruptures_by_grp(dstore).items():
+    ruptures_by_grp = get_ruptures_by_grp(dstore)
+    for grp_id, ruptures in list(ruptures_by_grp.items()):
         ebrs = [ebr.export(mesh, rlzs_by_grp[ebr.grp_id], num_ses)
                 for ebr in ruptures]
-        ruptures_by_grp[grp_id] = ebrs
+        if ebrs:
+            ruptures_by_grp[grp_id] = ebrs
+        else:  # empty group
+            del ruptures_by_grp[grp_id]
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -698,7 +700,6 @@ def export_gmf_scenario_csv(ekey, dstore):
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     rlzs_assoc = csm_info.get_rlzs_assoc()
-    samples = csm_info.get_samples_by_grp()
     num_ruptures = len(dstore['ruptures'])
     imts = list(oq.imtls)
     mo = re.match('rup-(\d+)$', what[1])
@@ -707,19 +708,15 @@ def export_gmf_scenario_csv(ekey, dstore):
             "Invalid format: %r does not match 'rup-(\d+)$'" % what[1])
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
-    ruptures = list(RuptureGetter(
-        dstore.hdf5path, csm_info, slice(ridx, ridx + 1)))
-    [ebr] = ruptures
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(ebr.grp_id)
-    samples = samples[ebr.grp_id]
+    # for scenario there is an unique grp_id=0
+    [ebr] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1))[0]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
-    getter = GmfGetter(rlzs_by_gsim, ruptures, sitecol, oq, min_iml)
+    getter = GmfGetter(rlzs_by_gsim, [ebr], sitecol, oq, min_iml)
     getter.init()
     eids = (numpy.concatenate([
-        eids for eids in get_eids_by_rlz(
-            ebr.n_occ, rlzs_by_gsim, ebr.samples, ebr.serial).values()]) +
-            TWO32 * numpy.uint64(ebr.serial))
+        eids for eids in ebr.get_eids_by_rlz(rlzs_by_gsim).values()]))
     sids = getter.computers[0].sids
     hazardr = getter.get_hazard()
     rlzs = rlzs_assoc.realizations
@@ -851,7 +848,7 @@ def export_disagg_csv(ekey, dstore):
             poes = attrs['poe_agg']
         imt = from_string(attrs['imt'])
         lon, lat = attrs['location']
-        metadata = collections.OrderedDict()
+        metadata = {}
         # Loads "disaggMatrices" nodes
         if hasattr(rlz, 'sm_lt_path'):
             metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)

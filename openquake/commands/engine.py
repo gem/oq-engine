@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
-import time
 import getpass
 import logging
 from openquake.baselib import sap, config, datastore
@@ -29,11 +28,30 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+from openquake.calculators.export import export
 from openquake.commands.abort import abort
 
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+
+
+def read(calc_id, username=None):
+    """
+    :param calc_id: a calculation ID
+    :param username: if given, restrict the search to the user's calculations
+    :returns: the associated DataStore instance
+    """
+    if calc_id < 0 and not username:
+        # get the last calculation in the datastore of the current user
+        return datastore.read(calc_id)
+    job = logs.dbcmd('get_job', calc_id, username)
+    if job:
+        return datastore.read(job.ds_calc_dir + '.hdf5')
+    else:
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
 
 
 def get_job_id(job_id, username=None):
@@ -116,17 +134,18 @@ class EBRunner(object):
         checksum = readinput.get_hazard_checksum32(oqparam)
         # retrieve an old calculation with the right checksum, if any
         job = logs.dbcmd('get_job_from_checksum', checksum)
+        kw = dict(calculation_mode='event_based')
+        if (oqparam.sites or 'sites' in oqparam.inputs or
+                'site_model' in oqparam.inputs):
+            # remove exposure from the hazard
+            kw['exposure_file'] = ''
         if job is None:
             # recompute the hazard and store the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
             logs.dbcmd('add_checksum', self.hc_id, checksum)
         elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
             # recompute and update the job associated to the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file,
-                                 exports, calculation_mode='event_based',
-                                 exposure_file='')
+            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
             logs.dbcmd('update_job_checksum', self.hc_id, checksum)
         else:
             # sanity check
@@ -136,17 +155,17 @@ class EBRunner(object):
             logging.info('Reusing job #%d', job.id)
 
     def run_risk(self):
-        t0 = time.time()
-        for exp_file in self.oqparam.inputs['exposure']:
-            try:
-                run_job(self.job_ini, self.log_level, self.log_file,
-                        self.exports, hazard_calculation_id=self.hc_id,
-                        exposure_file=exp_file)
-            except Exception:  # skip failed computations
-                logging.error(exp_file, exc_info=True)
-        dt = time.time() - t0
-        logging.info('Ran %d risk calculations in %.1f minutes',
-                     len(self.oqparam.inputs['exposure']), dt / 60)
+        job_id = run_job(self.job_ini, self.log_level, self.log_file,
+                         self.exports, hazard_calculation_id=self.hc_id)
+        if self.oqparam.aggregate_by:
+            logging.info('Exporting aggregated data')
+            dstore = datastore.read(job_id)
+            aggby = 'aggregate_by/%s/' % ','.join(self.oqparam.aggregate_by)
+            fnames = []
+            fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
+            fnames.extend(export((aggby + 'curves', 'csv'), dstore))
+            for fname in fnames:
+                logging.info('Exported %s', fname)
 
 
 @sap.Script

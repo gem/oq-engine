@@ -544,7 +544,7 @@ def calc_results(request, calc_id):
 
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
-    # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
+    # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
     results = logs.dbcmd('get_outputs', calc_id)

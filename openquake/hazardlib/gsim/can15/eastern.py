@@ -139,9 +139,8 @@ class EasternCan15Mid(PezeshkEtAl2011):
         mean3, stds3 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         # Computing adjusted mean and stds
-        mean_adj = np.log(np.exp(mean1)*0.2 + np.exp(mean2)*0.2 +
-                          np.exp(mean3)*0.2 + np.exp(mean4)*0.2 +
-                          np.exp(mean5)*0.2)
+        mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2
+
         # Note that in this case we do not apply a triangular smoothing on
         # distance as explained at page 996 of Atkinson and Adams (2013)
         # for the calculation of the standard deviation

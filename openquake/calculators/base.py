@@ -32,6 +32,7 @@ from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, source, calc, writers
@@ -342,7 +343,8 @@ class HazardCalculator(BaseCalculator):
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
-        minweight = source.MINWEIGHT * math.sqrt(len(self.sitecol))
+        minweight = source.MINWEIGHT * (math.sqrt(len(self.sitecol))
+                                        if self.sitecol else 1)
         maxweight = self.csm.get_maxweight(weight, ct, minweight)
         if not hasattr(self, 'logged'):
             if maxweight == minweight:
@@ -359,17 +361,18 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
+        sitecol = self.sitecol.complete if self.sitecol else None
         self.src_filter = SourceFilter(
-            self.sitecol.complete, oq.maximum_distance, self.hdf5cache)
+            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(self.sitecol, oq.maximum_distance)
+            return UcerfFilter(sitecol, oq.maximum_distance)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(self.sitecol.complete,
-                                     oq.maximum_distance, self.hdf5cache)
+            src_filter = RtreeFilter(
+                sitecol, oq.maximum_distance, self.hdf5cache)
         else:
             src_filter = self.src_filter
         return src_filter
@@ -516,17 +519,20 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, haz_sitecol, self.riskmodel.loss_types))
             if len(discarded):
                 self.datastore['discarded'] = discarded
-                msg = ('%d sites with assets were discarded; use '
-                       '`oq plot_assets` to see them' % len(discarded))
-                if hasattr(self, 'rup') or self.oqparam.discard_assets:
-                    # just log a warning in case of scenario from rupture
-                    # or when discard_assets is set to True
-                    logging.warn(msg)
-                else:  # raise an error
+                if hasattr(self, 'rup'):
+                    # this is normal for the case of scenario from rupture
+                    logging.info('%d assets were discarded because too far '
+                                 'from the rupture; use `oq show discarded` '
+                                 'to show them and `oq plot_assets` to plot '
+                                 'them' % len(discarded))
+                elif not self.oqparam.discard_assets:  # raise an error
                     self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
-                    raise RuntimeError(msg)
-            readinput.exposure = None  # reset the global
+                    raise RuntimeError(
+                        '%d assets were discarded; use `oq show discarded` to'
+                        'show them and `oq plot_assets` to plot them' %
+                        len(discarded))
+
         # reduce the riskmodel to the relevant taxonomies
         taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
                          if taxo != '?')
@@ -534,6 +540,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reducing risk model from %d to %d taxonomies',
                          len(self.riskmodel.taxonomies), len(taxonomies))
             self.riskmodel = self.riskmodel.reduce(taxonomies)
+        return readinput.exposure
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -548,7 +555,9 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         return min_iml
 
-    def load_riskmodel(self):  # to be called before read_exposure
+    def load_riskmodel(self):
+        # to be called before read_exposure
+        # NB: this is called even if there is no risk model
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
@@ -561,6 +570,9 @@ class HazardCalculator(BaseCalculator):
             if 'fragility' in parent or 'vulnerability' in parent:
                 self.riskmodel = riskinput.read_composite_risk_model(parent)
             return
+        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+            raise InvalidFile('No intensity_measure_types specified in %s' %
+                              self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
 
     def save_riskmodel(self):
@@ -591,15 +603,21 @@ class HazardCalculator(BaseCalculator):
                     haz_sitecol, self.rup)
                 haz_sitecol.make_complete()
 
+            if 'site_model' in oq.inputs:
+                self.datastore['site_model'] = readinput.get_site_model(oq)
+
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
-            self.read_exposure(haz_sitecol)
+            exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
+            if hasattr(readinput.exposure, 'exposures'):
+                self.datastore['assetcol/exposures'] = (
+                    numpy.array(exposure.exposures, hdf5.vstr))
         elif 'assetcol' in self.datastore.parent:
             assetcol = self.datastore.parent['assetcol']
             if oq.region:
-                region = wkt.loads(self.oqparam.region)
+                region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs:
                 self.sitecol, self.assetcol = self.read_shakemap(
@@ -621,7 +639,8 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            logging.info('Read %d hazard sites', len(self.sitecol))
+            if self.sitecol:
+                logging.info('Read %d hazard sites', len(self.sitecol))
 
         if oq_hazard:
             parent = self.datastore.parent
@@ -635,7 +654,7 @@ class HazardCalculator(BaseCalculator):
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
 
-        if self.oqparam.job_type == 'risk':
+        if oq.job_type == 'risk':
             taxonomies = set(taxo for taxo in self.assetcol.tagcol.taxonomy
                              if taxo != '?')
 
@@ -647,7 +666,7 @@ class HazardCalculator(BaseCalculator):
 
             # same check for the consequence models, if any
             consequence_models = riskmodels.get_risk_models(
-                self.oqparam, 'consequence')
+                oq, 'consequence')
             for lt, cm in consequence_models.items():
                 missing = taxonomies - set(cm)
                 if missing:
@@ -655,7 +674,7 @@ class HazardCalculator(BaseCalculator):
                         'Missing consequenceFunctions for %s' %
                         ' '.join(missing))
 
-        if hasattr(self, 'sitecol'):
+        if hasattr(self, 'sitecol') and self.sitecol:
             self.datastore['sitecol'] = self.sitecol.complete
         # used in the risk calculators
         self.param = dict(individual_curves=oq.individual_curves)
@@ -860,24 +879,6 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def save_gmdata(calc, n_rlzs):
-    """
-    Save a composite array `gmdata` in the datastore.
-
-    :param calc: a calculator with a dictionary .gmdata {rlz: data}
-    :param n_rlzs: the total number of realizations
-    """
-    n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] + [('events', U32)])
-    array = numpy.zeros(n_rlzs, dtlist)
-    for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events)
-        events = data[-1]
-        gmv = data[:-1] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events,)
-    calc.datastore['gmdata'] = array
-
-
 def save_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
@@ -888,9 +889,8 @@ def save_gmfs(calculator):
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
         # TODO: check if import_gmfs can be removed
-        eids, num_rlzs, calculator.gmdata = import_gmfs(
+        eids, num_rlzs = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
-        save_gmdata(calculator, calculator.R)
     else:  # XML
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
@@ -974,13 +974,4 @@ def import_gmfs(dstore, fname, sids):
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
     num_rlzs = array['rlzi'].max() + 1
-
-    # compute gmdata
-    dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
-    gmdata = {r: numpy.zeros(n_imts + 1, F32) for r in range(num_rlzs)}
-    for r in dic:
-        gmv = dic[r]['gmv']
-        rec = gmdata[r]  # (imt1, ..., imtM, nevents)
-        rec[:-1] += gmv.sum(axis=0)
-        rec[-1] += len(gmv)
-    return eids, num_rlzs, gmdata
+    return eids, num_rlzs

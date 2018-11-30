@@ -51,7 +51,6 @@ Module :mod: openquake.hmtk.seismicity.smoothing.smoothed_seismicity implements 
 a general class for implementing seismicity smoothing algorithms
 '''
 import csv
-import collections
 
 from math import fabs, log
 import numpy as np
@@ -63,7 +62,7 @@ from openquake.hmtk.seismicity.smoothing.kernels.isotropic_gaussian import \
 from openquake.hmtk.registry import CatalogueFunctionRegistry
 
 
-class Grid(collections.OrderedDict):
+class Grid(dict):
     @classmethod
     def make_from_list(cls, grid_limits):
         new = cls()
