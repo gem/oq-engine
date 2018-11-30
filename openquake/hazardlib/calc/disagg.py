@@ -24,7 +24,6 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import sys
 import warnings
 import operator
-import collections
 import numpy
 import scipy.stats
 
@@ -499,7 +498,7 @@ def mag_lon_lat_pmf(matrix):
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
-pmf_map = collections.OrderedDict([
+pmf_map = dict([
     ('Mag', mag_pmf),
     ('Dist', dist_pmf),
     ('TRT', trt_pmf),

@@ -361,7 +361,7 @@ class OqParam(valid.ParamSet):
     @property
     def imtls(self):
         """
-        Returns an OrderedDict with the risk intensity measure types and
+        Returns a DictArray with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls

@@ -67,7 +67,7 @@ def extract_(dstore, dspath):
         return obj
 
 
-class Extract(collections.OrderedDict):
+class Extract(dict):
     """
     A callable dictionary of functions with a single instance called
     `extract`. Then `extract(dstore, fullkey)` dispatches to the function
