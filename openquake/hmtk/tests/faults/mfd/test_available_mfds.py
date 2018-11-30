@@ -46,14 +46,13 @@
 # liability for use of the software.
 
 import unittest
-from collections import OrderedDict
 from openquake.hmtk.faults import mfd
 
 
 class TestAvailableMFDs(unittest.TestCase):
     '''
     Simple test of the module openquake.hmtk.faults.get_available_mfds(), which should
-    return an OrderedDict containing instances of all the available mfd classes
+    return a dict containing instances of all the available mfd classes
     '''
 
     def setUp(self):
@@ -71,7 +70,7 @@ class TestAvailableMFDs(unittest.TestCase):
         Characteristic
         '''
         self.mfds = mfd.get_available_mfds()
-        expected_dict = OrderedDict(
+        expected_dict = dict(
             [('AndersonLucoArbitrary',
               mfd.anderson_luco_arbitrary.AndersonLucoArbitrary),
              ('AndersonLucoAreaMmax',
