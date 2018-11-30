@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import collections
 import logging
 import numpy
 
@@ -76,7 +75,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs and return a dictionary gsim -> array(N, E, I)
         """
-        self.gmfa = collections.OrderedDict()
+        self.gmfa = {}
         if 'rupture_model' not in self.oqparam.inputs:
             return self.gmfa
         with self.monitor('computing gmfs'):

@@ -848,7 +848,7 @@ def export_disagg_csv(ekey, dstore):
             poes = attrs['poe_agg']
         imt = from_string(attrs['imt'])
         lon, lat = attrs['location']
-        metadata = collections.OrderedDict()
+        metadata = {}
         # Loads "disaggMatrices" nodes
         if hasattr(rlz, 'sm_lt_path'):
             metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)

@@ -18,7 +18,6 @@
 
 import os
 import sys
-import collections
 import configparser
 from openquake.baselib.general import git_suffix
 
@@ -27,7 +26,7 @@ __version__ = '3.3.0'
 __version__ += git_suffix(__file__)
 
 
-class DotDict(collections.OrderedDict):
+class DotDict(dict):
     """
     A string-valued dictionary that can be accessed with the "." notation
     """
