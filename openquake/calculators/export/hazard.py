@@ -33,7 +33,7 @@ from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh
 from openquake.calculators.export import export
 from openquake.calculators.getters import (
-    GmfGetter, PmapGetter, get_ruptures_by_grp)
+    GmfGetter, PmapGetter, get_rupture_getters)
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -66,17 +66,14 @@ def export_ruptures_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    rlzs_by_grp = dstore['csm_info'].get_rlzs_by_gsim_grp()
     num_ses = oq.ses_per_logic_tree_path
     mesh = get_mesh(dstore['sitecol'])
-    ruptures_by_grp = get_ruptures_by_grp(dstore)
-    for grp_id, ruptures in list(ruptures_by_grp.items()):
-        ebrs = [ebr.export(mesh, rlzs_by_grp[ebr.grp_id], num_ses)
-                for ebr in ruptures]
+    ruptures_by_grp = {}
+    for rgetter in get_rupture_getters(dstore):
+        ebrs = [ebr.export(mesh, rgetter.rlzs_by_gsim, num_ses)
+                for ebr in rgetter]
         if ebrs:
-            ruptures_by_grp[grp_id] = ebrs
-        else:  # empty group
-            del ruptures_by_grp[grp_id]
+            ruptures_by_grp[rgetter.grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -95,18 +92,15 @@ def export_ruptures_csv(ekey, dstore):
     dest = dstore.export_path('ruptures.csv')
     header = ('rupid multiplicity mag centroid_lon centroid_lat '
               'centroid_depth trt strike dip rake boundary').split()
-    csm_info = dstore['csm_info']
-    grp_trt = csm_info.grp_by("trt")
     rows = []
-    ruptures_by_grp = get_ruptures_by_grp(dstore)
-    for grp_id, trt in sorted(grp_trt.items()):
-        rups = ruptures_by_grp.get(grp_id, [])
-        rup_data = calc.RuptureData(trt, csm_info.get_gsims(grp_id))
+    for rgetter in get_rupture_getters(dstore):
+        rups = list(rgetter)
+        rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(rups):
             rows.append(
                 (r['rup_id'], r['multiplicity'], r['mag'],
                  r['lon'], r['lat'], r['depth'],
-                 trt, r['strike'], r['dip'], r['rake'],
+                 rgetter.trt, r['strike'], r['dip'], r['rake'],
                  r['boundary']))
     rows.sort()  # by rupture serial
     comment = 'investigation_time=%s, ses_per_logic_tree_path=%s' % (
@@ -709,7 +703,7 @@ def export_gmf_scenario_csv(ekey, dstore):
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
     # for scenario there is an unique grp_id=0
-    [ebr] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1))[0]
+    [[ebr]] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete

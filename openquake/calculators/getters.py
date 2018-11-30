@@ -17,10 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import itertools
+import operator
 import mock
 import numpy
-from openquake.baselib import hdf5, datastore
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -252,7 +252,7 @@ class GmfDataGetter(collections.Mapping):
         data = [dset[start:stop] for start, stop in idxs]
         if len(data) == 0:  # site ID with no data
             return {}
-        return group_array(numpy.concatenate(data), 'rlzi')
+        return general.group_array(numpy.concatenate(data), 'rlzi')
 
     def __iter__(self):
         return iter(self.sids)
@@ -415,23 +415,28 @@ class GmfGetter(object):
         return res
 
 
-def get_ruptures_by_grp(dstore, slc=slice(None)):
+def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None):
     """
-    Extracts the ruptures corresponding to the given slice. If missing,
-    extract all ruptures.
-
-    :returns: a dictionary grp_id -> list of EBRuptures
+    :returns: a list of RuptureGetters
     """
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_by("trt")
     samples = csm_info.get_samples_by_grp()
     rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
-    rupdict = group_array(dstore['ruptures'][slc], 'grp_id')
+    rup_array = dstore['ruptures'][slc]
     code2cls = get_code2cls(dstore.get_attrs('ruptures'))
-    return {grp_id: RuptureGetter(
-        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id],
-        samples[grp_id], rlzs_by_gsim[grp_id])
-            for grp_id, rup_array in rupdict.items()}
+    rgetters = []
+    for grp_id, rups in general.group_array(rup_array, 'grp_id').items():
+        if not rlzs_by_gsim[grp_id]:
+            # this may happen if a source model has no sources, like
+            # in event_based_risk/case_3
+            continue
+        for slc in general.split_in_slices(len(rups), split or 1):
+            rgetter = RuptureGetter(hdf5cache or dstore.hdf5path,
+                                    code2cls, rups[slc], grp_trt[grp_id],
+                                    samples[grp_id], rlzs_by_gsim[grp_id])
+            rgetters.append(rgetter)
+    return rgetters
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -444,7 +449,7 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [[ebr]] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1)).values()
+    [[ebr]] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
     return ebr
 
 
@@ -534,3 +539,7 @@ class RuptureGetter(object):
 
     def __len__(self):
         return len(self.rup_array)
+
+    def __repr__(self):
+        return '<%s grp_id=%d, %d rupture(s)>' % (
+            self.__class__.__name__, self.grp_id, len(self))
