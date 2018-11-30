@@ -675,6 +675,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         dic = {sm.fname: sm for sm in smap}
 
     # consider only the effective realizations
+    nr = 0
     idx = 0
     grp_id = 0
     if monitor.hdf5:
@@ -707,6 +708,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 newsm = make_sm(fname, dic[fname], apply_unc,
                                 oqparam.investigation_time)
                 for sg in newsm:
+                    nr += sum(src.num_ruptures for src in sg)
                     # sample a source for each group
                     if os.environ.get('OQ_SAMPLE_SOURCES'):
                         sg.sources = random_filtered_sources(
@@ -743,6 +745,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
+
+    logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     # log if some source file is being used more than once
     dupl = 0
@@ -848,9 +852,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
                                     % (sm, dupl))
     if not in_memory:
         return csm
-
-    nr = sum(src.num_ruptures for src in csm.get_sources())
-    logging.info('The composite source model has {:,d} ruptures'.format(nr))
 
     if 'event_based' in oqparam.calculation_mode:
         # initialize the rupture serial numbers before splitting/filtering; in
