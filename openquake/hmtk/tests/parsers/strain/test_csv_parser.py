@@ -46,14 +46,13 @@
 # liability for use of the software.
 
 '''
-Test suite for openquake.hmtk.parsers.strain.strain_csv_parser - the reader and writer of
-the strain model in csv format
+Test suite for openquake.hmtk.parsers.strain.strain_csv_parser -
+the reader and writer of the strain model in csv format
 '''
 import os
 import csv
 import unittest
 import numpy as np
-from collections import OrderedDict
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
 from openquake.hmtk.parsers.strain.strain_csv_parser import (ReadStrainCsv,
                                                              WriteStrainCsv)
@@ -147,7 +146,7 @@ class TestStrainCsvWriter(unittest.TestCase):
         '''
         self.writer = None
         self.model = GeodeticStrain()
-        self.model.data = OrderedDict([
+        self.model.data = dict([
             ('longitude', np.array([30., 30., 30.])),
             ('latitude', np.array([30., 30., 30.])),
             ('exx', np.array([1., 2., 3.])),
