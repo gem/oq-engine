@@ -63,6 +63,7 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
     elif cmd in commands:
         rundjango(cmd)
 
+
 webui.arg('cmd', 'webui command', choices=commands)
 webui.arg('hostport', 'a string of the form <hostname:port>')
 webui.flg('skip_browser', 'do not automatically open the browser')

@@ -47,10 +47,10 @@ from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_5, case_16
+from openquake.qa_tests_data.event_based import case_2, case_5, case_16
 from openquake.qa_tests_data.event_based_risk import case_master
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
-from openquake.server import manage, dbapi
+from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -402,11 +402,9 @@ class DbTestCase(unittest.TestCase):
 
 
 class EngineRunJobTestCase(unittest.TestCase):
-    """
-    Test a single case of `run_job`, but it is the most complex one,
-    event based risk with post processing
-    """
     def test_ebr(self):
+        # test a single case of `run_job`, but it is the most complex one,
+        # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
@@ -419,6 +417,21 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
+
+    def test_oqdata(self):
+        # the that the environment variable OQ_DATADIR is honored
+        job_ini = os.path.join(os.path.dirname(case_2.__file__), 'job_2.ini')
+        tempdir = tempfile.mkdtemp()
+        dbserver.ensure_on()
+        with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
+            job_id = run_job(job_ini, log_level='error')
+            job = commonlib.logs.dbcmd('get_job', job_id)
+            self.assertTrue(job.ds_calc_dir.startswith(tempdir),
+                            job.ds_calc_dir)
+        with Print.patch() as p:
+            export.func('ruptures', job_id, 'csv', tempdir)
+        self.assertIn('Exported', str(p))
+        shutil.rmtree(tempdir)
 
 
 class CheckInputTestCase(unittest.TestCase):
@@ -439,10 +452,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         inputdir = os.path.dirname(case_16.__file__)
         output = gettemp(suffix='.csv')
         grid_spacing = 50
-        exposure_csv = os.path.join(inputdir, 'exposure.xml')
+        exposure_xml = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model.func(
-            exposure_csv, [vs30_csv], True, True, True,
+            [exposure_xml], [vs30_csv], True, True, True,
             grid_spacing, 5, output)
         sm = read_csv(output)
         self.assertEqual(sm['vs30measured'].sum(), 0)
@@ -450,6 +463,6 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model.func(exposure_csv, [vs30_csv],
+        sc = prepare_site_model.func([exposure_xml], [vs30_csv],
                                      True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params

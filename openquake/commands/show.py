@@ -25,7 +25,7 @@ from openquake.hazardlib import stats
 from openquake.baselib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.engine import engine
+from openquake.commands import engine
 from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract

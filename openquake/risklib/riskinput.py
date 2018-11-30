@@ -245,9 +245,6 @@ class CompositeRiskModel(collections.Mapping):
                     (sid, group[taxonomy], riskinput.epsilon_getter))
         yield from self._gen_outputs(hazard_getter, hazard, dic)
 
-        if hasattr(hazard_getter, 'gmdata'):  # for event based risk
-            riskinput.gmdata = hazard_getter.gmdata
-
     def _gen_outputs(self, hazard_getter, hazard, dic):
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         mon = self.monitor('computing risk', measuremem=False)
