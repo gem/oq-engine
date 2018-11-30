@@ -854,6 +854,17 @@ def group_array(array, *kfields):
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
 
 
+def count(groupiter):
+    return sum(1 for row in groupiter)
+
+
+def countby(array, *kfields):
+    """
+    :returns: a dict kfields -> number of records with that key
+    """
+    return groupby(array, operator.itemgetter(*kfields), count)
+
+
 def get_array(array, **kw):
     """
     Extract a subarray by filtering on the given keyword arguments

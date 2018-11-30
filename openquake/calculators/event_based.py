@@ -294,25 +294,23 @@ class EventBasedCalculator(base.HazardCalculator):
         eid2idx = self.eid2idx
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        if 'gmdata' in result:
-            self.gmdata += result['gmdata']
-            with sav_mon:
-                data = result.pop('gmfdata')
-                if len(data) == 0:
-                    return acc
-                idxs = get_idxs(data, eid2idx)  # this has to be fast
-                data['eid'] = idxs  # replace eid with idx
-                self.datastore.extend('gmf_data/data', data)
-                # it is important to save the number of bytes while the
-                # computation is going, to see the progress
-                update_nbytes(self.datastore, 'gmf_data/data', data)
-                for sid, start, stop in result['indices']:
-                    self.indices[sid, 0].append(start + self.offset)
-                    self.indices[sid, 1].append(stop + self.offset)
-                self.offset += len(data)
-                if self.offset >= TWO32:
-                    raise RuntimeError(
-                        'The gmf_data table has more than %d rows' % TWO32)
+        with sav_mon:
+            data = result.pop('gmfdata')
+            if len(data) == 0:
+                return acc
+            idxs = get_idxs(data, eid2idx)  # this has to be fast
+            data['eid'] = idxs  # replace eid with idx
+            self.datastore.extend('gmf_data/data', data)
+            # it is important to save the number of bytes while the
+            # computation is going, to see the progress
+            update_nbytes(self.datastore, 'gmf_data/data', data)
+            for sid, start, stop in result['indices']:
+                self.indices[sid, 0].append(start + self.offset)
+                self.indices[sid, 1].append(stop + self.offset)
+            self.offset += len(data)
+            if self.offset >= TWO32:
+                raise RuntimeError(
+                    'The gmf_data table has more than %d rows' % TWO32)
         imtls = self.oqparam.imtls
         with agg_mon:
             for key, poes in result.get('hcurves', {}).items():
@@ -361,7 +359,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        self.gmdata = {}
         self.offset = 0
         self.indices = collections.defaultdict(list)  # sid, idx -> indices
         self.min_iml = self.get_min_iml(oq)
@@ -390,7 +387,6 @@ class EventBasedCalculator(base.HazardCalculator):
         # storing events['rlz']
         if not self.datastore.parent:
             self.datastore['events']['rlz'] = self.rlzi
-        base.save_gmdata(self, self.R)
         if self.indices:
             N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')

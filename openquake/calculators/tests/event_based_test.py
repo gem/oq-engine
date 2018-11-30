@@ -216,10 +216,6 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        # test for the mean gmv
-        got = gettemp(rst_table(self.calc.datastore['gmdata'].value))
-        self.assertEqualFiles('expected/gmdata.csv', got)
-
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
         # 2 models x 3 GMPEs, 10 samples * 40 SES
