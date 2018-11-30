@@ -43,12 +43,11 @@
 # liability for use of the software.
 
 import sys
-import collections
 import functools
 from decorator import decorator
 
 
-class CatalogueFunctionRegistry(collections.OrderedDict):
+class CatalogueFunctionRegistry(dict):
     """
     A collection of methods/functions working on catalogues.
 
