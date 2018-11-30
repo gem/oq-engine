@@ -67,11 +67,6 @@ class UcerfTestCase(CalculatorTestCase):
         # check the distribution of the events
         self.assertEventsByRlz([29, 25])
 
-        # check the GMFs
-        gmdata = self.calc.datastore['gmdata'].value
-        got = gettemp(rst_table(gmdata, fmt='%.6f'))
-        self.assertEqualFiles('expected/gmdata.csv', got)
-
         # check the mean hazard map
         got = gettemp(view('hmap', self.calc.datastore))
         self.assertEqualFiles('expected/hmap.rst', got)

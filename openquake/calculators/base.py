@@ -877,24 +877,6 @@ def get_gmv_data(sids, gmfs):
     return numpy.fromiter(it, gmv_data_dt)
 
 
-def save_gmdata(calc, n_rlzs):
-    """
-    Save a composite array `gmdata` in the datastore.
-
-    :param calc: a calculator with a dictionary .gmdata {rlz: data}
-    :param n_rlzs: the total number of realizations
-    """
-    n_sites = len(calc.sitecol)
-    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] + [('events', U32)])
-    array = numpy.zeros(n_rlzs, dtlist)
-    for rlzi in sorted(calc.gmdata):
-        data = calc.gmdata[rlzi]  # (imts, events)
-        events = data[-1]
-        gmv = data[:-1] / events / n_sites
-        array[rlzi] = tuple(gmv) + (events,)
-    calc.datastore['gmdata'] = array
-
-
 def save_gmfs(calculator):
     """
     :param calculator: a scenario_risk/damage or event_based_risk calculator
@@ -905,9 +887,8 @@ def save_gmfs(calculator):
     logging.info('Reading gmfs from file')
     if oq.inputs['gmfs'].endswith('.csv'):
         # TODO: check if import_gmfs can be removed
-        eids, num_rlzs, calculator.gmdata = import_gmfs(
+        eids, num_rlzs = import_gmfs(
             dstore, oq.inputs['gmfs'], calculator.sitecol.complete.sids)
-        save_gmdata(calculator, calculator.R)
     else:  # XML
         eids, gmfs = readinput.eids, readinput.gmfs
     E = len(eids)
@@ -991,13 +972,4 @@ def import_gmfs(dstore, fname, sids):
     # FIXME: if there is no data for the maximum realization
     # the inferred number of realizations will be wrong
     num_rlzs = array['rlzi'].max() + 1
-
-    # compute gmdata
-    dic = general.group_array(array.view(gmf_data_dt), 'rlzi')
-    gmdata = {r: numpy.zeros(n_imts + 1, F32) for r in range(num_rlzs)}
-    for r in dic:
-        gmv = dic[r]['gmv']
-        rec = gmdata[r]  # (imt1, ..., imtM, nevents)
-        rec[:-1] += gmv.sum(axis=0)
-        rec[-1] += len(gmv)
-    return eids, num_rlzs, gmdata
+    return eids, num_rlzs
