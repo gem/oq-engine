@@ -140,7 +140,6 @@ def event_based_risk(riskinputs, riskmodel, param, monitor):
                     del result['loss_maps-rlzs']
 
         # store info about the GMFs, must be done at the end
-        result['gmdata'] = ri.gmdata
         result['agglosses'] = (numpy.array(list(acc)),
                                numpy.array(list(acc.values())))
         yield result
