@@ -286,9 +286,13 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     if isinstance(sequence, int):
         return split_in_slices(sequence, hint)
-
-    if hint == 0:  # do not split
+    elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
+    elif hint in (0, 1):  # split by key
+        blocks = []
+        for k, group in groupby(sequence, key).items():
+            blocks.append(group)
+        return blocks
     items = list(sequence) if key is nokey else sorted(sequence, key=key)
     assert hint > 0, hint
     assert len(items) > 0, len(items)

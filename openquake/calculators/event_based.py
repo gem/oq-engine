@@ -18,14 +18,12 @@
 
 import os.path
 import logging
-import operator
 import collections
 import numpy
 
 from openquake.baselib import hdf5, datastore
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import (
-    AccumDict, split_in_blocks, cached_property)
+from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -35,7 +33,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, get_code2cls)
+    GmfGetter, RuptureGetter, get_rupture_getters)
 from openquake.calculators.classical import ClassicalCalculator
 
 U8 = numpy.uint8
@@ -177,7 +175,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         self.E = len(self.datastore['events'])
-        self.rlzi = numpy.zeros(self.E, U16)
         return zd
 
     def from_sources(self, par):
@@ -227,7 +224,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_csm_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
-        logging.info('Storing source_info')
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
 
@@ -238,51 +234,44 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        n_events = self.save_events(sorted_ruptures)
+        E = self.save_events(sorted_ruptures)
         self.check_overflow()  # check the number of events
-        logging.info('Stored {:,d} ruptures and {:,d} events'
-                     .format(len(sorted_ruptures), n_events))
-        return self.from_ruptures(par)
+        rgetters = self.get_rupture_getters()
+        eid2rlz_mon = self.monitor('saving eid->rlz')
+        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                monitor=self.monitor('get_eid_rlz'),
+                                progress=logging.debug)
+        for rgetter in rgetters:
+            smap.submit(rgetter)
+        self.rlzi = numpy.zeros(E, U16)
+        for eid_rlz in smap:
+            with eid2rlz_mon:
+                idxs = numpy.fromiter(
+                    (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
+                self.rlzi[idxs] = eid_rlz['rlz']
 
-    def from_ruptures(self, param):
+        return self.from_ruptures(par, rgetters)
+
+    def get_rupture_getters(self):
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
+        hdf5cache = dstore.hdf5cache()
+        logging.info('Found {:,d} ruptures and {:,d} events'
+                     .format(len(dstore['ruptures']), len(dstore['events'])))
+        with hdf5.File(hdf5cache, 'r+') as cache:
+            if 'rupgeoms' not in cache:
+                dstore.hdf5.copy('rupgeoms', cache)
+        rgetters = get_rupture_getters(
+            dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
+        return rgetters
+
+    def from_ruptures(self, param, rgetters=None):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
-        oq = self.oqparam
-        concurrent_tasks = oq.concurrent_tasks
-        dstore = (self.datastore.parent if self.datastore.parent
-                  else self.datastore)
-        start = 0
-        logging.info('Reading/sending ruptures')
-        with self.monitor('getting ruptures'):
-            rups = dstore.getitem('ruptures').value
-            code2cls = get_code2cls(dstore.get_attrs('ruptures'))
-            hdf5cache = dstore.hdf5cache()
-            with hdf5.File(hdf5cache, 'r+') as cache:
-                if 'rupgeoms' not in cache:
-                    dstore.hdf5.copy('rupgeoms', cache)
-        eid2rlz_mon = self.monitor('associating eid->rlz')
-        by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
-        for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
-            nr = len(block)  # number of ruptures per block
-            grp_id = block[0]['grp_id']
-            rlzs_by_gsim = self.rlzs_by_gsim_grp[grp_id]
-            if not rlzs_by_gsim:
-                # this may happen if a source model has no sources, like
-                # in event_based_risk/case_3
-                continue
-            par = param.copy()
-            par['samples'] = self.samples_by_grp[grp_id]
-            rup_array = rups[start: start + nr]
-            rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
-                                    self.grp_trt[grp_id], par['samples'],
-                                    rlzs_by_gsim)
-            with eid2rlz_mon:
-                eid_rlz = rgetter.get_eid_rlz()
-                idxs = get_idxs(eid_rlz, self.eid2idx)
-                self.rlzi[idxs] = eid_rlz['rlz']
-            yield rgetter, self.sitecol, par
-            start += nr
+        rgetters = rgetters or self.get_rupture_getters()
+        for rgetter in rgetters:
+            yield rgetter, self.sitecol, param
         if self.datastore.parent:
             self.datastore.parent.close()
 
