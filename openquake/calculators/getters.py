@@ -24,8 +24,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import (
-    BaseRupture, EBRupture, classes, TWO32)
+from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -77,7 +76,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = oq.poes
-        self.data = collections.OrderedDict()
+        self.data = {}
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
         except IndexError:  # no data
@@ -115,7 +114,7 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 
@@ -226,7 +225,7 @@ class GmfDataGetter(collections.Mapping):
             self.imts = self.dstore['gmf_data/imts'].value.split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.data = collections.OrderedDict()
+        self.data = {}
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
@@ -240,7 +239,7 @@ class GmfDataGetter(collections.Mapping):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 

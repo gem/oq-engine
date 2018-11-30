@@ -1447,7 +1447,7 @@ class GsimLogicTree(object):
                     uncertainty = branch.uncertaintyModel
                     if uncertainty.text is None:  # expect MultiGMPE
                         with context(self.fname, uncertainty):
-                            gsimdict = collections.OrderedDict()
+                            gsimdict = {}
                             imts = []
                             for nod in uncertainty.getnodes('gsimByImt'):
                                 kw = nod.attrib.copy()
