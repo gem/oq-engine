@@ -19,7 +19,6 @@
 import os
 import inspect
 import importlib
-from collections import OrderedDict
 from openquake.hmtk.faults.mfd.base import BaseMFDfromSlip
 
 
@@ -37,4 +36,4 @@ def get_available_mfds():
             for cls in mod.__dict__.values():
                 if inspect.isclass(cls) and issubclass(cls, BaseMFDfromSlip):
                     mfds[cls.__name__] = cls
-    return OrderedDict((k, mfds[k]) for k in sorted(mfds))
+    return dict((k, mfds[k]) for k in sorted(mfds))

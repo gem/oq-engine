@@ -17,16 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import collections
 import itertools
-import operator
-import logging
+import mock
 import numpy
 from openquake.baselib import hdf5, datastore
-from openquake.baselib.general import AccumDict, groupby, group_array
+from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import (
-    BaseRupture, EBRupture, classes, TWO32, get_eids_by_rlz)
+from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -78,7 +76,7 @@ class PmapGetter(object):
         oq = self.dstore['oqparam']
         self.imtls = oq.imtls
         self.poes = oq.poes
-        self.data = collections.OrderedDict()
+        self.data = {}
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
         except IndexError:  # no data
@@ -116,7 +114,7 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 
@@ -227,7 +225,7 @@ class GmfDataGetter(collections.Mapping):
             self.imts = self.dstore['gmf_data/imts'].value.split()
         except KeyError:  # engine < 3.3
             self.imts = list(self.dstore['oqparam'].imtls)
-        self.data = collections.OrderedDict()
+        self.data = {}
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
@@ -235,13 +233,12 @@ class GmfDataGetter(collections.Mapping):
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 1, F32))
         self.E = len(self.dstore['events'])
 
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 
@@ -320,19 +317,16 @@ class GmfGetter(object):
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-        # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
 
     def gen_gmv(self):
         """
-        Compute the GMFs for the given realization and populate the .gmdata
-        array. Yields tuples of the form (sid, eid, imti, gmv).
+        Compute the GMFs for the given realization and
+        yields tuples of the form (sid, eid, imti, gmv).
         """
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sids
-            eids_by_rlz = get_eids_by_rlz(rup.n_occ, self.rlzs_by_gsim,
-                                          rup.samples, rup.serial)
+            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
             for gs, rlzs in self.rlzs_by_gsim.items():
                 num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
                 if num_events == 0:
@@ -347,19 +341,15 @@ class GmfGetter(object):
                     arr[arr < miniml] = 0
                 n = 0
                 for rlzi in rlzs:
-                    eids = U64(TWO32 * rup.serial) + eids_by_rlz[rlzi]
+                    eids = eids_by_rlz[rlzi]
                     e = len(eids)
                     if not e:
                         continue
-                    gmdata = self.gmdata[rlzi]
-                    gmdata[-1] += e  # increase number of events
                     for ei, eid in enumerate(eids):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
                         if not tot.sum():
                             continue
-                        for i, val in enumerate(tot):
-                            gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
@@ -383,7 +373,7 @@ class GmfGetter(object):
 
     def compute_gmfs_curves(self, monitor):
         """
-        :returns: a dict with keys gmdata, gmfdata, indices, hcurves
+        :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
         dt = oq.gmf_data_dt()
@@ -420,23 +410,28 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=self.gmdata,
+        res = dict(gmfdata=gmfdata, hcurves=hcurves,
                    indices=numpy.array(indices, (U32, 3)))
         return res
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None)):
+def get_ruptures_by_grp(dstore, slc=slice(None)):
     """
     Extracts the ruptures corresponding to the given slice. If missing,
     extract all ruptures.
 
     :returns: a dictionary grp_id -> list of EBRuptures
     """
-    if slice_.stop is None:
-        n = len(dstore['ruptures']) - (slice_.start or 0)
-        logging.info('Reading %d ruptures from the datastore', n)
-    rgetter = RuptureGetter.from_(dstore, slice_)
-    return groupby(rgetter, operator.attrgetter('grp_id'))
+    csm_info = dstore['csm_info']
+    grp_trt = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    rupdict = group_array(dstore['ruptures'][slc], 'grp_id')
+    code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+    return {grp_id: RuptureGetter(
+        dstore.hdf5path, code2cls, rup_array, grp_trt[grp_id],
+        samples[grp_id], rlzs_by_gsim[grp_id])
+            for grp_id, rup_array in rupdict.items()}
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -449,8 +444,16 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [ebr] = RuptureGetter.from_(dstore, slice(ridx, ridx + 1))
+    [[ebr]] = get_ruptures_by_grp(dstore, slice(ridx, ridx + 1)).values()
     return ebr
+
+
+def get_code2cls(ruptures_attrs):
+    code2cls = {}  # code -> rupture_cls, surface_cls
+    for key, val in ruptures_attrs.items():
+        if key.startswith('code_'):
+            code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+    return code2cls
 
 
 class RuptureGetter(object):
@@ -459,46 +462,43 @@ class RuptureGetter(object):
 
     :param hdf5path:
         path to an HDF5 file with a dataset names `ruptures`
-    :param mask:
-        which ruptures to read; it can be:
-        - None: read all ruptures
-        - a slice
-        - a boolean mask
-        - a list of integers
-    :param grp_id:
-        the group ID of the ruptures, if they are homogeneous, or None
+    :param rup_array:
+        an array of rupture parameters with homogeneous grp_id
     """
-    @classmethod
-    def from_(cls, dstore, slice_):
-        return cls(dstore.hdf5path, dstore['csm_info'], slice_)
-
-    def __init__(self, hdf5path, csm_info, mask=None, grp_id=None):
+    def __init__(self, hdf5path, code2cls, rup_array, trt, samples,
+                 rlzs_by_gsim):
         self.hdf5path = hdf5path
-        self.mask = slice(None) if mask is None else mask
-        self.grp_id = grp_id
-        self.grp_trt = csm_info.grp_by("trt")
-        self.samples = csm_info.get_samples_by_grp()
+        self.code2cls = code2cls
+        self.rup_array = rup_array
+        self.trt = trt
+        self.samples = samples
+        self.rlzs_by_gsim = rlzs_by_gsim
+        [self.grp_id] = numpy.unique(rup_array['grp_id'])
+
+    def get_eid_rlz(self):
+        """
+        :returns: a composite array with the associations eid->rlz
+        """
+        eid_rlz = []
+        for rup in self.rup_array:
+            ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
+                            self.grp_id, (), rup['n_occ'], self.samples)
+            for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid, rlz))
+        return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
     def __iter__(self):
         with datastore.read(self.hdf5path) as dstore:
-            attrs = dstore.get_attrs('ruptures')
-            code2cls = {}  # code -> rupture_cls, surface_cls
-            for key, val in attrs.items():
-                if key.startswith('code_'):
-                    code2cls[int(key[5:])] = [classes[v] for v in val.split()]
             rupgeoms = dstore['rupgeoms']
-            ruptures = dstore['ruptures'][self.mask]
-            for rec in ruptures:
-                if self.grp_id is not None:  # ruptures must have same grp_id
-                    assert self.grp_id == rec['grp_id'], (
-                        self.grp_id, rec['grp_id'])
+            for rec in self.rup_array:
                 mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
                 geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
                     rec['sy'], rec['sz'])
                 mesh[0] = geom['lon']
                 mesh[1] = geom['lat']
                 mesh[2] = geom['depth']
-                rupture_cls, surface_cls = code2cls[rec['code']]
+                rupture_cls, surface_cls = self.code2cls[rec['code']]
                 rupture = object.__new__(rupture_cls)
                 rupture.serial = rec['serial']
                 rupture.surface = object.__new__(surface_cls)
@@ -506,10 +506,10 @@ class RuptureGetter(object):
                 rupture.rake = rec['rake']
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
-                rupture.tectonic_region_type = self.grp_trt[rec['grp_id']]
+                rupture.tectonic_region_type = self.trt
                 pmfx = rec['pmfx']
                 if pmfx != -1:
-                    rupture.pmf = hdf5['pmfs'][pmfx]
+                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])
@@ -528,19 +528,9 @@ class RuptureGetter(object):
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
                 ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
-                                rec['n_occ'], self.samples[grp_id])
+                                rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 yield ebr
 
     def __len__(self):
-        if hasattr(self.mask, 'start'):  # is a slice
-            if self.mask.start is None and self.mask.stop is None:
-                with datastore.read(self.hdf5path) as dstore:
-                    return len(dstore['ruptures'])
-            else:
-                return self.mask.stop - self.mask.start
-        elif isinstance(self.mask, list):
-            # NB: h5py wants lists, not arrays of indices
-            return len(self.mask)
-        else:  # is a boolean mask
-            return self.mask.sum()
+        return len(self.rup_array)

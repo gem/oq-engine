@@ -500,7 +500,7 @@ def search_module(module, syspath=sys.path):
     return filepath
 
 
-class CallableDict(collections.OrderedDict):
+class CallableDict(dict):
     r"""
     A callable object built on top of a dictionary of functions, used
     as a smart registry or as a poor man generic function dispatching
@@ -805,15 +805,14 @@ def groupby(objects, key, reducegroup=list):
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
     :param reducegroup: the function to apply to each group
-    :returns: an OrderedDict {key value: map(reducegroup, group)}
+    :returns: a dict {key value: map(reducegroup, group)}
 
     >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
     ...         lambda group: ''.join(x[1] for x in group))
-    OrderedDict([('A', '12'), ('B', '123')])
+    {'A': '12', 'B': '123'}
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return collections.OrderedDict((k, reducegroup(group))
-                                   for k, group in kgroups)
+    return {k: reducegroup(group) for k, group in kgroups}
 
 
 def groupby2(records, kfield, vfield):
@@ -850,9 +849,20 @@ def _reducerecords(group):
 
 def group_array(array, *kfields):
     """
-    Convert an array into an OrderedDict kfields -> array
+    Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def count(groupiter):
+    return sum(1 for row in groupiter)
+
+
+def countby(array, *kfields):
+    """
+    :returns: a dict kfields -> number of records with that key
+    """
+    return groupby(array, operator.itemgetter(*kfields), count)
 
 
 def get_array(array, **kw):

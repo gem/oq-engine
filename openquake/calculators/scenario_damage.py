@@ -104,7 +104,6 @@ def scenario_damage(riskinputs, riskmodel, param, monitor):
                         # TODO: consequences for the occupants
                     result['d_asset'].append(
                         (l, r, asset.ordinal, scientific.mean_std(damages)))
-    result['gmdata'] = ri.gmdata
     return result
 
 
@@ -168,8 +167,3 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 ((eid, rlzi, F32(result['c_event'][eid, rlzi]))
                  for rlzi in range(R) for eid in range(E)), dtlist)
 
-        # save gmdata
-        self.gmdata = result['gmdata']
-        for arr in self.gmdata.values():
-            arr[-2] = self.oqparam.number_of_ground_motion_fields  # events
-        base.save_gmdata(self, R)
