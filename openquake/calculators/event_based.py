@@ -227,7 +227,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_csm_info(eff_ruptures)
         store_rlzs_by_grp(self.datastore)
         self.init_logic_tree(self.csm.info)
-        logging.info('Storing source_info')
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
 
@@ -238,10 +237,8 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        n_events = self.save_events(sorted_ruptures)
+        self.save_events(sorted_ruptures)
         self.check_overflow()  # check the number of events
-        logging.info('Stored {:,d} ruptures and {:,d} events'
-                     .format(len(sorted_ruptures), n_events))
         return self.from_ruptures(par)
 
     def from_ruptures(self, param):
@@ -253,7 +250,6 @@ class EventBasedCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         start = 0
-        logging.info('Reading/sending ruptures')
         with self.monitor('getting ruptures'):
             rups = dstore.getitem('ruptures').value
             code2cls = get_code2cls(dstore.get_attrs('ruptures'))
@@ -261,9 +257,13 @@ class EventBasedCalculator(base.HazardCalculator):
             with hdf5.File(hdf5cache, 'r+') as cache:
                 if 'rupgeoms' not in cache:
                     dstore.hdf5.copy('rupgeoms', cache)
-        eid2rlz_mon = self.monitor('associating eid->rlz')
+        eid2rlz_mon = self.monitor('saving eid->rlz')
         by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
-        smap = parallel.Starmap(RuptureGetter.get_eid_rlz)
+        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                monitor=self.monitor('get_eid_rlz'),
+                                progress=logging.debug)
+        logging.info('Found {:,d} ruptures and {:,d} events'
+                     .format(len(rups), len(self.rlzi)))
         for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
             grp_id = block[0]['grp_id']
@@ -278,12 +278,14 @@ class EventBasedCalculator(base.HazardCalculator):
             rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
                                     self.grp_trt[grp_id], par['samples'],
                                     rlzs_by_gsim)
+            logging.info('Sending %d ruptures', nr)
             smap.submit(rgetter)
             yield rgetter, self.sitecol, par
             start += nr
-        with eid2rlz_mon:
-            for eid_rlz in smap:
-                idxs = get_idxs(eid_rlz, self.eid2idx)
+        for eid_rlz in smap:
+            with eid2rlz_mon:
+                idxs = numpy.array(
+                    [self.eid2idx[eid] for eid in eid_rlz['eid']])
                 self.rlzi[idxs] = eid_rlz['rlz']
 
         if self.datastore.parent:
