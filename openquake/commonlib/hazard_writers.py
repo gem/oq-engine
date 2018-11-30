@@ -20,8 +20,6 @@
 Classes for serializing various NRML XML artifacts.
 """
 import operator
-from collections import OrderedDict
-
 
 import numpy
 
@@ -36,7 +34,7 @@ SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
 #: Maps XML writer constructor keywords to XML attribute names
-_ATTR_MAP = OrderedDict([
+_ATTR_MAP = dict([
     ('statistics', 'statistics'),
     ('quantile_value', 'quantileValue'),
     ('smlt_path', 'sourceModelTreePath'),
@@ -615,9 +613,7 @@ class DisaggXMLWriter(object):
 
     #: Maps metadata keywords to XML attribute names for bin edge information
     #: passed to the constructor.
-    #: The dict here is an `OrderedDict` so as to give consistent ordering of
-    #: result attributes.
-    BIN_EDGE_ATTR_MAP = OrderedDict([
+    BIN_EDGE_ATTR_MAP = dict([
         ('mag_bin_edges', 'magBinEdges'),
         ('dist_bin_edges', 'distBinEdges'),
         ('lon_bin_edges', 'lonBinEdges'),

@@ -23,7 +23,6 @@ import os
 import numpy
 import operator
 import shapefile
-from collections import OrderedDict
 from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
@@ -113,7 +112,7 @@ def expand_src_param(values, shp_params):
         return dict([(key, None) for key, _ in shp_params])
     else:
         num_values = len(values)
-        return OrderedDict(
+        return dict(
             [(key, float(values[i]) if i < num_values else None)
                 for i, (key, _) in enumerate(shp_params)])
 
@@ -141,7 +140,7 @@ def extract_source_params(src):
                 data.append((param, None))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def parse_area_geometry(node):
@@ -264,7 +263,7 @@ def get_attrs_dict(attrs, params):
             data.append((param, attrs[key]))
         else:
             data.append((param, None))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def extract_geometry_params(src):
@@ -315,11 +314,9 @@ def extract_geometry_params(src):
         if dip and counter:
             dip /= counter
 
-        return OrderedDict([("usd", upper_depth),
-                            ("lsd", lower_depth),
-                            ("dip", dip)])
+        return dict([("usd", upper_depth), ("lsd", lower_depth), ("dip", dip)])
     else:
-        return OrderedDict()
+        return {}
 
 
 def extract_mfd_params(src):
@@ -351,15 +348,15 @@ def extract_mfd_params(src):
         if n_r > MAX_RATES:
             raise ValueError("Number of rates in source %s too large "
                              "to be placed into shapefile" % src.tag)
-        rate_dict = OrderedDict([(key, rates[i] if i < n_r else None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+        rate_dict = dict([(key, rates[i] if i < n_r else None)
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
     elif "YoungsCoppersmithMFD" in mfd_node.tag:
-        rate_dict = OrderedDict([(key, mfd_node.attrib['characteristicRate'])
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
+        rate_dict = dict([(key, mfd_node.attrib['characteristicRate'])
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
     else:
-        rate_dict = OrderedDict([(key, None)
-                                 for i, (key, _) in enumerate(RATE_PARAMS)])
-    return OrderedDict(data), rate_dict
+        rate_dict = dict([(key, None)
+                          for i, (key, _) in enumerate(RATE_PARAMS)])
+    return dict(data), rate_dict
 
 
 def extract_source_nodal_planes(src):
@@ -617,7 +614,7 @@ def record_to_dict(record, fields):
         value = attr.strip()
         if value:
             data.append((name, value))
-    return OrderedDict(data)
+    return dict(data)
 
 
 def area_geometry_from_shp(shape, record):

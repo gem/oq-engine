@@ -52,7 +52,6 @@ and earthquake catalogue
 '''
 
 import numpy as np
-from collections import OrderedDict
 from datetime import datetime
 from copy import deepcopy
 from openquake.hazardlib.geo.point import Point
@@ -426,7 +425,7 @@ class CatalogueSelector(object):
             cluster_cat = deepcopy(self.catalogue)
             cluster_cat.select_catalogue_events(idx)
             cluster_set.append((clid, cluster_cat))
-        return OrderedDict(cluster_set)
+        return dict(cluster_set)
 
     def within_bounding_box(self, limits):
         """
@@ -444,6 +443,7 @@ class CatalogueSelector(object):
         is_valid = np.logical_and(
             self.catalogue.data['longitude'] >= limits[0],
             np.logical_and(self.catalogue.data['longitude'] <= limits[2],
-                           np.logical_and(self.catalogue.data['latitude'] >= limits[1],
-                                          self.catalogue.data['latitude'] <= limits[3])))
+                           np.logical_and(
+                               self.catalogue.data['latitude'] >= limits[1],
+                               self.catalogue.data['latitude'] <= limits[3])))
         return self.select_catalogue(is_valid)

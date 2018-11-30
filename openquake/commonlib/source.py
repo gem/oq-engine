@@ -344,7 +344,7 @@ class CompositionInfo(object):
         return rlzs
 
     def __repr__(self):
-        info_by_model = collections.OrderedDict()
+        info_by_model = {}
         for sm in self.source_models:
             info_by_model[sm.path] = (
                 '_'.join(map(decode, sm.path)),
