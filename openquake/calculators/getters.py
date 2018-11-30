@@ -475,7 +475,7 @@ class RuptureGetter(object):
         self.rlzs_by_gsim = rlzs_by_gsim
         [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
-    def get_eid_rlz(self):
+    def get_eid_rlz(self, monitor=None):
         """
         :returns: a composite array with the associations eid->rlz
         """
