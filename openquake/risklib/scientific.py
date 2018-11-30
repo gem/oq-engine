@@ -1280,27 +1280,34 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, num_events, eff_time):
+def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events (must be more than the losses)
+    :param num_events: the number of events (>= to the number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
-    where min_time = eff_time /len(losses). Outside the interval they
+    where min_time = eff_time /num_events. Outside the interval they
     have NaN values. Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
-    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20, 100)
+    >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
     array([ nan,  nan,  0. ,  3.5,  8. , 13. , 23. ])
+
+    If num_events is not passed, it is inferred from the number of losses;
+    if eff_time is not passed, it is inferred from the longest return period.
     """
-    if num_events < len(losses):
+    if num_events is None:
+        num_events = len(losses)
+    elif num_events < len(losses):
         raise ValueError(
             'There are not enough events to compute the loss curves: %d'
             % num_events)
+    if eff_time is None:
+        eff_time = return_periods[-1]
     losses = numpy.sort(losses)
     num_zeros = num_events - len(losses)
     if num_zeros:

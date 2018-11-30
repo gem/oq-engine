@@ -143,6 +143,11 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_1_ruptures(self):
+        self.run_calc(case_1.__file__, 'job_ruptures.ini')
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
@@ -210,10 +215,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
-
-        # test for the mean gmv
-        got = gettemp(rst_table(self.calc.datastore['gmdata'].value))
-        self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
@@ -298,12 +299,8 @@ class EventBasedTestCase(CalculatorTestCase):
                       ground_motion_fields='false')
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
-        self.assertEqual(view('global_gmfs', self.calc.datastore), '''\
-======= ======= =======
-PGA     SA(0.3) SA(0.6)
-======= ======= =======
-0.00460 0.00214 0.00175
-======= ======= =======''')
+        tmp = gettemp(view('global_gmfs', self.calc.datastore))
+        self.assertEqualFiles('expected/global_gmfs.txt', tmp)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling and save_ruptures
@@ -343,6 +340,10 @@ PGA     SA(0.3) SA(0.6)
         self.run_calc(case_19.__file__, 'job.ini')
         [gmf, site] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
+
+        # a test with grid and site model
+        self.run_calc(case_19.__file__, 'job_grid.ini')
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm

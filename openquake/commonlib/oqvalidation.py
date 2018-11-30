@@ -47,6 +47,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         siteclass='reference_siteclass',
         backarc='reference_backarc')
+    aggregate_by = valid.Param(valid.namelist, [])
     asset_loss_table = valid.Param(valid.boolean, False)  # used in scenario
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -300,10 +301,11 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if self.region_grid_spacing and (
-                'sites' in self.inputs or 'site_model' in self.inputs):
-            logging.warn('Using a grid together with specifying explicitly '
-                         'the sites is deprecated')
+        if (self.region_grid_spacing and 'site_model' in self.inputs
+                and 'exposure' in self.inputs):
+            logging.warn(
+                'You are specifying a grid, a site model and an exposure at '
+                'the same time: consider using `oq prepare_site_model`')
 
     def check_gsims(self, gsims):
         """
@@ -359,7 +361,7 @@ class OqParam(valid.ParamSet):
     @property
     def imtls(self):
         """
-        Returns an OrderedDict with the risk intensity measure types and
+        Returns a DictArray with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
@@ -553,6 +555,9 @@ class OqParam(valid.ParamSet):
         """
         has_sites = (self.sites is not None or 'sites' in self.inputs
                      or 'site_model' in self.inputs)
+        if not has_sites and not self.ground_motion_fields:
+            # when generating only the ruptures you do not need the sites
+            return True
         if ('gmfs' in self.inputs and not has_sites and
                 not self.inputs['gmfs'].endswith('.xml')):
             raise ValueError('Missing sites or sites_csv in the .ini file')

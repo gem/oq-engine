@@ -306,8 +306,11 @@ class File(h5py.File):
         if items:
             a = super().__getitem__(path).attrs
             for k, v in sorted(items):
-                assert v is not None, k  # sanity check
-                a[k] = v
+                try:
+                    a[k] = v
+                except Exception as exc:
+                    raise TypeError(
+                        'Could not store attribute %s=%s: %s' % (k, v, exc))
 
     def __setitem__(self, path, obj):
         cls = obj.__class__
@@ -486,3 +489,69 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape
+
+    def to_table(self):
+        """
+        Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
+        T1, ..., TN which are list of tags of lenghts D1, ... DN into
+        a table with rows (tag1, ... tagN, value) of maximum length
+        D1 * ... * DN. Zero values are discarded.
+
+        >>> from pprint import pprint
+        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
+        >>> arr = numpy.zeros((2, 3))
+        >>> arr[0, 0] = 2000
+        >>> arr[0, 1] = 5000
+        >>> arr[1, 0] = 500
+        >>> pprint(ArrayWrapper(arr, dic).to_table())
+        [['taxonomy', 'occupancy', 'value'],
+         ['RC', 'RES', 2000.0],
+         ['RC', 'IND', 5000.0],
+         ['WOOD', 'RES', 500.0]]
+        """
+        shape = self.array.shape
+        # the tagnames are bytestrings so they must be decoded
+        tagnames = decode_array(self.tagnames)
+        if len(shape) == len(tagnames):
+            return [tagnames + ['value']] + self._to_table()
+        elif len(shape) == len(tagnames) + 1:
+            tbl = [tagnames + [self.extra[0], 'value']]
+            return tbl + self._to_table(self.extra[1:])
+        else:
+            raise TypeError(
+                'There are %d dimensions but only %d tagnames' %
+                (len(shape), len(tagnames)))
+
+    def _to_table(self, extra=()):
+        tags = []  # tag_idx -> tag_values
+        shape = self.array.shape
+        if extra:
+            assert shape[-1] == len(extra), (shape[-1], len(extra))
+        tagnames = decode_array(self.tagnames)
+        for i, tagname in enumerate(tagnames):
+            values = getattr(self, tagname)
+            assert len(values) == shape[i], (len(values), shape[i])
+            tags.append(decode_array(values))
+        if extra:
+            tags.append(extra)
+        tbl = []
+        for idx, value in numpy.ndenumerate(self.array):
+            row = [tags[i][j] for i, j in enumerate(idx)] + [value]
+            if value > 0:
+                tbl.append(row)
+        return tbl
+
+
+def decode_array(values):
+    """
+    Decode the values which are bytestrings.
+    """
+    out = []
+    for val in values:
+        try:
+            out.append(val.decode('utf8'))
+        except AttributeError:
+            out.append(val)
+    return out

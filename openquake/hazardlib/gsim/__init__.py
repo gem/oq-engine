@@ -21,7 +21,6 @@ Package :mod:`openquake.hazardlib.gsim` contains base and specific
 implementations of ground shaking intensity models. See
 :mod:`openquake.hazardlib.gsim.base`.
 """
-from collections import OrderedDict
 from openquake.baselib.general import import_all
 from openquake.hazardlib.gsim.base import registry
 
@@ -33,4 +32,4 @@ def get_available_gsims():
     Return an ordered dictionary with the available GSIM classes, keyed
     by class name.
     '''
-    return OrderedDict(sorted(registry.items()))
+    return dict(sorted(registry.items()))
