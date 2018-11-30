@@ -263,6 +263,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     dstore.hdf5.copy('rupgeoms', cache)
         eid2rlz_mon = self.monitor('associating eid->rlz')
         by_grp = operator.itemgetter(2)  # fields serial, srcidx, grp_id, ...
+        smap = parallel.Starmap(RuptureGetter.get_eid_rlz)
         for block in split_in_blocks(rups, concurrent_tasks or 1, key=by_grp):
             nr = len(block)  # number of ruptures per block
             grp_id = block[0]['grp_id']
@@ -277,12 +278,14 @@ class EventBasedCalculator(base.HazardCalculator):
             rgetter = RuptureGetter(hdf5cache, code2cls, rup_array,
                                     self.grp_trt[grp_id], par['samples'],
                                     rlzs_by_gsim)
-            with eid2rlz_mon:
-                eid_rlz = rgetter.get_eid_rlz()
-                idxs = get_idxs(eid_rlz, self.eid2idx)
-                self.rlzi[idxs] = eid_rlz['rlz']
+            smap.submit(rgetter)
             yield rgetter, self.sitecol, par
             start += nr
+        with eid2rlz_mon:
+            for eid_rlz in smap:
+                idxs = get_idxs(eid_rlz, self.eid2idx)
+                self.rlzi[idxs] = eid_rlz['rlz']
+
         if self.datastore.parent:
             self.datastore.parent.close()
 
