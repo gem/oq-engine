@@ -478,7 +478,7 @@ def get_rlzs_by_gsim(oqparam):
     """
     cinfo = source.CompositionInfo.fake(get_gsim_lt(oqparam))
     ra = cinfo.get_rlzs_assoc()
-    dic = collections.OrderedDict()
+    dic = {}
     for rlzi, gsim_by_trt in enumerate(ra.gsim_by_trt):
         dic[gsim_by_trt['*']] = [rlzi]
     return dic
@@ -1141,7 +1141,7 @@ def get_pmap_from_nrml(oqparam, fname):
         site mesh, curve array
     """
     hcurves_by_imt = {}
-    oqparam.hazard_imtls = imtls = collections.OrderedDict()
+    oqparam.hazard_imtls = imtls = {}
     for hcurves in nrml.read(fname):
         imt = hcurves['IMT']
         oqparam.investigation_time = hcurves['investigationTime']
