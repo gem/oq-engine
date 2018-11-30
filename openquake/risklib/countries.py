@@ -1,5 +1,8 @@
 import re
 
+# nearly lexicographic order, but with longest names first, to avoid fake
+# matches in the regular expression below; Guinea_Bissau must go before
+# Guinea, Dominican_Republic before Dominica and Nigeria before Niger
 COUNTRY_CODE = """\
 Afghanistan,AFG
 Albania,ALB
@@ -58,8 +61,8 @@ Czechia,CZE
 Democratic_Republic_of_the_Congo,COD
 Denmark,DNK
 Djibouti,DJI
-Dominica,DMA
 Dominican_Republic,DOM
+Dominica,DMA
 Ecuador,ECU
 Egypt,EGY
 El_Salvador,SLV
@@ -86,8 +89,8 @@ Grenada,GRD
 Guadeloupe,GLP
 Guam,GUM
 Guatemala,GTM
-Guinea,GIN
 Guinea_Bissau,GNB
+Guinea,GIN
 Guyana,GUY
 Haiti,HTI
 Holy_See,VAT
@@ -151,8 +154,8 @@ Netherlands,NLD
 New_Caledonia,NCL
 New_Zealand,NZL
 Nicaragua,NIC
-Niger,NER
 Nigeria,NGA
+Niger,NER
 Niue,NIU
 North_Korea,PRK
 Northern_Mariana_Islands,MNP
@@ -239,14 +242,21 @@ country2code = dict(line.split(',') for line in COUNTRY_CODE.splitlines())
 code2country = {v: k for k, v in country2code.items()}
 
 COUNTRIES = list(country2code)
-REGEX = '|'.join('(%s)' % country for country in country2code)
+REGEX = '|'.join('(%s)' % country.replace('(', '\(').replace(')', '\)')
+                 for country in country2code)
 
 
 def get_country_code(longname):
+    """
+    :returns: the code of the country contained in `longname`, or a ValuError
+
+    >>> for country, code in country2code.items():
+    ...     assert get_country_code('Exp_' + country) == code, (country, code)
+    """
     mo = re.search(REGEX, longname, re.I)
     if mo is None:
         raise ValueError('Could not find a valid country in %s' % longname)
-    return country2code[COUNTRIES[mo.lastindex - 2]]
+    return country2code[COUNTRIES[mo.lastindex - 1]]
 
 
 def from_exposures(expnames):
