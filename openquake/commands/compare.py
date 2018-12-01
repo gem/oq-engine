@@ -70,7 +70,7 @@ def reduce(array, rtol):
 
 
 @sap.Script
-def compare(what, imt, calc_ids, files, samples=100, percent=1):
+def compare(what, imt, calc_ids, files, samples=100, percent=5):
     """
     Compare the hazard curves or maps of two or more calculations
     """
