@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Parallelized the associations event ID -> realization ID
   * Improved the message when assets are discarded in scenario calculations
   * Implemented aggregation by multiple tags, plus a special case for the
     country code in event based risk
