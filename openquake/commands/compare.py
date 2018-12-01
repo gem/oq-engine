@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+import collections
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.calculators import views
@@ -53,10 +54,25 @@ def getdata(what, calc_ids, samples):
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
-@sap.Script
-def compare(what, imt, calc_ids, samples=10):
+def reduce(array, rtol):
     """
-    Compare the hazard curves of two or more calculations
+    Given an array with (C, N, L) values, being the first the reference value,
+    compute the relative differences and discard the one below the rtol
+    """
+    C, N, L = array.shape
+    ref = numpy.copy(array[0])
+    diff_idxs = []  # indices of the sites with differences
+    for c in range(1, C):
+        for n in range(N):
+            if not numpy.allclose(array[c, n], ref[n], rtol, atol=1E-5):
+                diff_idxs.append(n)
+    return numpy.array(diff_idxs)
+
+
+@sap.Script
+def compare(what, imt, calc_ids, files, samples=100, percent=1):
+    """
+    Compare the hazard curves or maps of two or more calculations
     """
     sids, imtls, poes, arrays = getdata(what, calc_ids, samples)
     try:
@@ -69,22 +85,40 @@ def compare(what, imt, calc_ids, samples=10):
     for imti, imt_ in enumerate(imtls):
         if imt_ == imt:
             hm_slice = slice(imti * P, imti * P + P)
+    head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        header = ['site_id', 'calc_id'] + ['%.5f' % lvl for lvl in levels]
+        header = head + ['%.5f' % lvl for lvl in levels]
     else:
-        header = ['site_id', 'calc_id'] + [str(poe) for poe in poes]
-    rows = []
-    for sid, array in zip(sids, arrays.transpose(1, 0, 2)):  # shape (N, C, L)
+        header = head + [str(poe) for poe in poes]
+    rows = collections.defaultdict(list)
+    diff_idxs = reduce(arrays, percent / 100.)
+    if len(diff_idxs) == 0:
+        print('There are no differences within the tolerance')
+        return
+    arrays = arrays.transpose(1, 0, 2)[diff_idxs]  # shape (N, C, L)
+    for sid, array in zip(sids[diff_idxs], arrays):
         for calc_id, arr in zip(calc_ids, array):
             if what == 'hcurves':
                 cols = arr[hc_slice]
             else:
                 cols = arr[hm_slice]
-            rows.append([sid, calc_id] + list(cols))
-    print(views.rst_table(rows, header))
+            if files:
+                rows[calc_id].append([sid] + list(cols))
+            else:
+                rows['all'].append([sid, calc_id] + list(cols))
+    if files:
+        fdict = {calc_id: open('%s.txt' % calc_id, 'w')
+                 for calc_id in calc_ids}
+        for calc_id, f in fdict.items():
+            f.write(views.rst_table(rows[calc_id], header))
+            print('Generated %s' % f.name)
+    else:
+        print(views.rst_table(rows['all'], header))
 
 
 compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
 compare.arg('imt', 'Intensity Measure Type to compare')
 compare.arg('calc_ids', 'Calculation IDs', type=int, nargs='+')
-compare.opt('samples', 'number of sites to sample', type=int, nargs='*')
+compare.flg('files', 'Write the results in multiple files')
+compare.opt('samples', 'number of sites to sample', type=int)
+compare.opt('percent', 'acceptable percent difference', type=float)
