@@ -19,30 +19,28 @@ import sys
 import numpy
 from openquake.baselib import sap, datastore
 from openquake.calculators import views
-NSITES = 10
 
 
 def get(dstore, what, imtls, sids):
     if what == 'hcurves':
-        return dstore['hcurves/mean'].value[sids]
+        return dstore['hcurves/mean'].value[sids]  # shape (N, L)
     elif what == 'hmaps':
         return dstore['hmaps/mean'].value[sids]  # shape (N, P * I)
     else:
         raise ValueError(what)
 
 
-def getdata(what, calc_ids, sids):
+def getdata(what, calc_ids, samples):
     dstores = [datastore.read(calc_id) for calc_id in calc_ids]
     dstore = dstores[0]
     sitecol = dstore['sitecol']
     oq = dstore['oqparam']
     imtls = oq.imtls
     poes = oq.poes
-    if not sids:
-        if len(sitecol) > NSITES:  # sample at most NSITES
-            sids = numpy.random.choice(len(sitecol), NSITES, replace=False)
-        else:  # keep all sites
-            sids = sitecol.sids
+    if len(sitecol) > samples:
+        sids = numpy.random.choice(len(sitecol), samples, replace=False)
+    else:  # keep all sites
+        sids = sitecol.sids
     arrays = [get(dstore, what, imtls, sids)]
     dstore.close()
     for dstore in dstores[1:]:
@@ -52,32 +50,36 @@ def getdata(what, calc_ids, sids):
         numpy.testing.assert_equal(oq.poes, poes)
         arrays.append(get(dstore, what, imtls, sids))
         dstore.close()
-    return sids, imtls, poes, arrays
+    return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
 @sap.Script
-def compare(what, imt, calc_ids, site_ids):
+def compare(what, imt, calc_ids, samples=10):
     """
     Compare the hazard curves of two or more calculations
     """
-    sids, imtls, poes, arrays = getdata(what, calc_ids, site_ids)
+    sids, imtls, poes, arrays = getdata(what, calc_ids, samples)
     try:
         levels = imtls[imt]
     except KeyError:
         sys.exit(
             '%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    imti = {imt: i for i, imt in enumerate(imtls)}
+    hc_slice = imtls(imt)
+    P = len(poes)
+    for imti, imt_ in enumerate(imtls):
+        if imt_ == imt:
+            hm_slice = slice(imti * P, imti * P + P)
     if what == 'hcurves':
-        header = ['site_id', 'calc_id'] + [str(lvl) for lvl in levels]
+        header = ['site_id', 'calc_id'] + ['%.5f' % lvl for lvl in levels]
     else:
         header = ['site_id', 'calc_id'] + [str(poe) for poe in poes]
     rows = []
-    for sid, array in zip(sids, arrays):
-        for calc_id, pmap in zip(calc_ids, arrays):
+    for sid, array in zip(sids, arrays.transpose(1, 0, 2)):  # shape (N, C, L)
+        for calc_id, arr in zip(calc_ids, array):
             if what == 'hcurves':
-                cols = array[imtls(imt)]
+                cols = arr[hc_slice]
             else:
-                cols = array[imti[imt]]
+                cols = arr[hm_slice]
             rows.append([sid, calc_id] + list(cols))
     print(views.rst_table(rows, header))
 
@@ -85,4 +87,4 @@ def compare(what, imt, calc_ids, site_ids):
 compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
 compare.arg('imt', 'Intensity Measure Type to compare')
 compare.arg('calc_ids', 'Calculation IDs', type=int, nargs='+')
-compare.opt('site_ids', 'site IDs to compare', type=int, nargs='*')
+compare.opt('samples', 'number of sites to sample', type=int, nargs='*')
