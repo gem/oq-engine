@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a command `oq compare` to compare hazard curves and maps within
+    calculations
   * Parallelized the associations event ID -> realization ID
   * Improved the message when assets are discarded in scenario calculations
   * Implemented aggregation by multiple tags, plus a special case for the
