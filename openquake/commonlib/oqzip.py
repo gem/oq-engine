@@ -29,12 +29,15 @@ def zip_all(directory):
     """
     Zip source models and exposures recursively
     """
+    zips = []
     for cwd, dirs, files in os.walk(directory):
         if 'ssmLT.xml' in files:
-            zip_source_model(os.path.join(cwd, 'ssmLT.xml'))
+            zips.append(zip_source_model(os.path.join(cwd, 'ssmLT.xml')))
         for f in files:
             if f.endswith('.xml') and 'exposure' in f.lower():
-                zip_exposure(os.path.join(cwd, f))
+                zips.append(zip_exposure(os.path.join(cwd, f)))
+    total = sum(os.path.getsize(z) for z in zips)
+    logging.info('Generated %s of zipped data', general.humansize(total))
 
 
 def zip_source_model(ssmLT, archive_zip='', log=logging.info):
@@ -46,7 +49,7 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
     files = [os.path.abspath(ssmLT)] + logictree.collect_info(ssmLT).smpaths
-    general.zipfiles(files, archive_zip, log=log)
+    return general.zipfiles(files, archive_zip, log=log)
 
 
 def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
@@ -57,7 +60,8 @@ def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
     [exp] = Exposure.read_headers([exposure_xml])
-    general.zipfiles([exposure_xml] + exp.datafiles, archive_zip, log=log)
+    return general.zipfiles(
+        [exposure_xml] + exp.datafiles, archive_zip, log=log)
 
 
 def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
@@ -119,4 +123,4 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
                 files.add(os.path.normpath(f))
         else:
             files.add(os.path.normpath(fname))
-    general.zipfiles(files, archive_zip, log=log)
+    return general.zipfiles(files, archive_zip, log=log)
