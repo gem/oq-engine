@@ -21,6 +21,7 @@ import os.path
 import logging
 from openquake.baselib import general
 from openquake.hazardlib import nrml
+from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logictree
 
 
@@ -40,7 +41,11 @@ def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
     """
     Zip an exposure.xml file with all its .csv subfiles (if any)
     """
-    pass
+    archive_zip = archive_zip or exposure_xml[:-4] + '.zip'
+    if os.path.exists(archive_zip):
+        sys.exit('%s exists already' % archive_zip)
+    [exp] = Exposure.read_headers([exposure_xml])
+    general.zipfiles([exposure_xml] + exp.datafiles, archive_zip, log=log)
 
 
 def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
@@ -103,4 +108,3 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
         else:
             files.add(os.path.normpath(fname))
     general.zipfiles(files, archive_zip, log=log)
-    logging.info('Generated %s', archive_zip)
