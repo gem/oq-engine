@@ -25,6 +25,18 @@ from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logictree
 
 
+def zip_all(directory):
+    """
+    Zip source models and exposures recursively
+    """
+    for cwd, dirs, files in os.walk(directory):
+        if 'ssmLT.xml' in files:
+            zip_source_model(os.path.join(cwd, 'ssmLT.xml'))
+        for f in files:
+            if f.endswith('.xml') and 'exposure' in f.lower():
+                zip_exposure(os.path.join(cwd, f))
+
+
 def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     """
     Zip the source model files starting from the smmLT.xml file
