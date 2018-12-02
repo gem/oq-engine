@@ -21,16 +21,29 @@ import os.path
 import logging
 from openquake.baselib import general
 from openquake.hazardlib import nrml
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logictree
 
 
-def oqzip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
+def zip_source_model(ssmLT, archive_zip='', log=logging.info):
+    """
+    Zip the source model files starting from the smmLT.xml file
+    """
+    basedir = os.path.dirname(ssmLT)
+    archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
+    if os.path.exists(archive_zip):
+        sys.exit('%s exists already' % archive_zip)
+    files = [os.path.abspath(ssmLT)] + logictree.collect_info(ssmLT).smpaths
+    general.zipfiles(files, archive_zip, log=log)
+
+
+def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
     related files.
     """
     if not os.path.exists(job_ini):
         sys.exit('%s does not exist' % job_ini)
+    archive_zip = archive_zip or 'job.zip'
     if isinstance(archive_zip, str):  # actually it should be path-like
         if not archive_zip.endswith('.zip'):
             sys.exit('%s does not end with .zip' % archive_zip)
@@ -83,3 +96,4 @@ def oqzip(job_ini, archive_zip, risk_ini, oq=None, log=logging.info):
         else:
             files.add(os.path.normpath(fname))
     general.zipfiles(files, archive_zip, log=log)
+    logging.info('Generated %s', archive_zip)
