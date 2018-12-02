@@ -715,13 +715,19 @@ def _get_exposure(fname, stop=None):
         description.text, cost_types, occupancy_periods,
         insurance_limit_is_absolute, deductible_is_absolute, retrofitted,
         area.attrib, assets, asset_refs, cc, TagCollection(tagnames))
+    assets_text = exposure.assets.text.strip()
+    if assets_text:
+        # the <assets> tag contains a list of file names
+        dirname = os.path.dirname(fname)
+        exp.files = [os.path.join(dirname, f) for f in assets_text.split()]
+    else:
+        exp.files = []
     return exp, exposure.assets
 
 
 def _minimal_tagcol(fnames, by_country):
     tagnames = None
-    for fname in fnames:
-        exp = Exposure.read_header(fname)
+    for exp in Exposure.read_headers(fnames):
         if tagnames is None:
             tagnames = set(exp.tagcol.tagnames)
         else:
@@ -768,7 +774,7 @@ class Exposure(object):
                     exp.description = 'Composite exposure[%d]' % len(fnames)
                 else:
                     logging.info('Reading %s', fname)
-                    exposure, assets = _get_exposure(fname)
+                    exposure, assetnodes = _get_exposure(fname)
                     assert exposure.cost_types == exp.cost_types
                     assert exposure.occupancy_periods == exp.occupancy_periods
                     assert (exposure.insurance_limit_is_absolute ==
@@ -776,8 +782,7 @@ class Exposure(object):
                     assert exposure.retrofitted == exp.retrofitted
                     assert exposure.area == exp.area
                     exposure.tagcol = exp.tagcol
-                    nodes = assets if assets else exposure._read_csv(
-                        assets.text, os.path.dirname(fname))
+                    nodes = assetnodes if assetnodes else exposure._read_csv()
                     exp.param['asset_prefix'] = prefix
                     exp._populate_from(nodes, exp.param, check_dupl)
             exp.exposures = [os.path.splitext(os.path.basename(f))[0]
@@ -794,13 +799,12 @@ class Exposure(object):
             param['region'] = None
         param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
-        exposure, assets = _get_exposure(param['fname'])
+        exposure, assetnodes = _get_exposure(param['fname'])
         if tagcol:
             exposure.tagcol = tagcol
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
             ['occupants'])
-        nodes = assets if assets else exposure._read_csv(
-            assets.text, os.path.dirname(param['fname']))
+        nodes = assetnodes if assetnodes else exposure._read_csv()
         if asset_nodes:  # this is useful for the GED4ALL import script
             return nodes
         exposure._populate_from(nodes, param, check_dupl)
@@ -816,12 +820,12 @@ class Exposure(object):
         return exposure
 
     @staticmethod
-    def read_header(fname):
+    def read_headers(fnames):
         """
         :param fname: path to an exposure file in XML format
         :returns: an Exposure object without assets
         """
-        return _get_exposure(fname, stop='asset')[0]
+        return [_get_exposure(fname, stop='asset')[0] for fname in fnames]
 
     def __init__(self, *values):
         assert len(values) == len(self.fields)
@@ -842,15 +846,12 @@ class Exposure(object):
         fields.extend(self.tagcol.tagnames)
         return set(fields)
 
-    def _read_csv(self, csvnames, dirname):
+    def _read_csv(self):
         """
-        :param csvnames: names of csv files, space separated
-        :param dirname: the directory where the csv files are
         :yields: asset nodes
         """
         expected_header = self._csv_header()
-        fnames = [os.path.join(dirname, f) for f in csvnames.split()]
-        for fname in fnames:
+        for fname in self.files:
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
@@ -863,7 +864,7 @@ class Exposure(object):
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
         occupancy_periods = self.occupancy_periods.split()
-        for fname in fnames:
+        for fname in self.files:
             with open(fname, encoding='utf-8') as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
                     asset = Node('asset', lineno=i)
