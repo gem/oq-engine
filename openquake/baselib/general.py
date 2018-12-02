@@ -1048,7 +1048,7 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
         for f in fnames:
             log('Archiving %s' % f)
             z.write(f, f[prefix:])
-    log('Generated %s', archive)
+    log('Generated %s' % archive)
 
 
 def detach_process():
