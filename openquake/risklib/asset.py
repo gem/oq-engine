@@ -719,9 +719,9 @@ def _get_exposure(fname, stop=None):
     if assets_text:
         # the <assets> tag contains a list of file names
         dirname = os.path.dirname(fname)
-        exp.files = [os.path.join(dirname, f) for f in assets_text.split()]
+        exp.datafiles = [os.path.join(dirname, f) for f in assets_text.split()]
     else:
-        exp.files = []
+        exp.datafiles = []
     return exp, exposure.assets
 
 
@@ -851,7 +851,7 @@ class Exposure(object):
         :yields: asset nodes
         """
         expected_header = self._csv_header()
-        for fname in self.files:
+        for fname in self.datafiles:
             with open(fname, encoding='utf-8') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
@@ -864,7 +864,7 @@ class Exposure(object):
                         'Unexpected header in %s\nExpected: %s\nGot: %s' %
                         (fname, sorted(expected_header), sorted(header)))
         occupancy_periods = self.occupancy_periods.split()
-        for fname in self.files:
+        for fname in self.datafiles:
             with open(fname, encoding='utf-8') as f:
                 for i, dic in enumerate(csv.DictReader(f), 1):
                     asset = Node('asset', lineno=i)
