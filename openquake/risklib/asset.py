@@ -821,7 +821,7 @@ class Exposure(object):
         :param fname: path to an exposure file in XML format
         :returns: an Exposure object without assets
         """
-        return _get_exposure(fname, stop='assets')[0]
+        return _get_exposure(fname, stop='asset')[0]
 
     def __init__(self, *values):
         assert len(values) == len(self.fields)

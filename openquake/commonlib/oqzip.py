@@ -36,6 +36,13 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     general.zipfiles(files, archive_zip, log=log)
 
 
+def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
+    """
+    Zip an exposure.xml file with all its .csv subfiles (if any)
+    """
+    pass
+
+
 def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     """
     Zip the given job.ini file into the given archive, together with all
