@@ -27,6 +27,8 @@ def zip(what, archive_zip='', risk_ini=''):
     logging.basicConfig(level=logging.INFO)
     if os.path.basename(what) == 'ssmLT.xml':
         oqzip.zip_source_model(what, archive_zip)
+    elif what.endswith('.xml'):  # assume exposure
+        oqzip.zip_exposure(what, archive_zip)
     elif what.endswith('.ini'):  # a job.ini
         oqzip.zip_job(what, archive_zip, risk_ini)
     else:
