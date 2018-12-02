@@ -23,18 +23,20 @@ from openquake.commonlib import oqzip
 
 
 @sap.Script
-def zip(what, archive_zip='', risk_ini=''):
+def zip(what, archive_zip='', risk_file=''):
     logging.basicConfig(level=logging.INFO)
-    if os.path.basename(what) == 'ssmLT.xml':
+    if os.path.isdir(what):
+        oqzip.zip_all(what)
+    elif os.path.basename(what) == 'ssmLT.xml':
         oqzip.zip_source_model(what, archive_zip)
     elif what.endswith('.xml'):  # assume exposure
         oqzip.zip_exposure(what, archive_zip)
     elif what.endswith('.ini'):  # a job.ini
-        oqzip.zip_job(what, archive_zip, risk_ini)
+        oqzip.zip_job(what, archive_zip, risk_file)
     else:
         sys.exit('Cannot zip %s' % what)
 
 
 zip.arg('what', 'path to a job.ini or a ssmLT.xml file')
 zip.arg('archive_zip', 'path to a non-existing .zip file')
-zip.opt('risk_ini', 'optional .ini file for risk')
+zip.opt('risk_file', 'optional file for risk')
