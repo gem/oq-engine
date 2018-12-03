@@ -1,3 +1,3 @@
-# mean, investigation_time=1.0, imt="SA(0.1)"
+# mean, investigation_time=1.0, imt="SA(0.1)", checksum=1641445592
 lon,lat,depth,poe-0.1,poe-0.4,poe-0.6
 0.00000,0.00000,-0.10000,6.074420E-01,3.254916E-01,1.964219E-01
