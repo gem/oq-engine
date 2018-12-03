@@ -107,15 +107,15 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
-        elif (key in ('source_model_logic_tree_file', 'exposure_file') and
+        val = os.path.normpath(os.path.join(base_path, val))
+        if (key in ('source_model_logic_tree_file', 'exposure_file') and
                 not os.path.exists(val)):
             zpath = val[:-4] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('File not found: %s and %s' % (val, zpath))
             with zipfile.ZipFile(zpath) as archive:
-                base = os.path.join(base_path, os.path.dirname(zpath))
-                archive.extractall(base)
-        filenames.append(os.path.normpath(os.path.join(base_path, val)))
+                archive.extractall(os.path.dirname(zpath))
+        filenames.append(val)
     return input_type, filenames
 
 
