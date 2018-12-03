@@ -106,7 +106,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
-        self.assertEqual(len(lines), 10)
+        self.assertEqual(len(lines), 9)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
