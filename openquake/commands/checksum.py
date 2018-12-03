@@ -19,7 +19,7 @@ import sys
 import mock
 import os.path
 from openquake.baselib import sap, datastore
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput
 
 
 @sap.Script
@@ -42,7 +42,7 @@ def checksum(thing):
         dstore = datastore.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
     elif job_file.endswith('.xml'):  # assume it is a smlt file
-        inputs = {p: p for p in logictree.collect_info(job_file).smpaths}
+        inputs = {'source_model_logic_tree': job_file}
         checksum = readinput.get_checksum32(mock.Mock(inputs=inputs))
     else:
         oq = readinput.get_oqparam(job_file)
