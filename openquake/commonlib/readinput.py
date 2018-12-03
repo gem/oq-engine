@@ -107,7 +107,15 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
-        filenames.append(os.path.normpath(os.path.join(base_path, val)))
+        val = os.path.normpath(os.path.join(base_path, val))
+        if (key in ('source_model_logic_tree_file', 'exposure_file') and
+                not os.path.exists(val)):
+            zpath = val[:-4] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('No such file: %s or %s' % (val, zpath))
+            with zipfile.ZipFile(zpath) as archive:
+                archive.extractall(os.path.dirname(zpath))
+        filenames.append(val)
     return input_type, filenames
 
 
@@ -169,12 +177,7 @@ def get_params(job_inis, **kw):
         _update(params, cp.items(sect), base_path)
     _update(params, kw.items(), base_path)  # override on demand
 
-    # populate the 'source' list
-    inputs = params['inputs']
-    smlt = inputs.get('source_model_logic_tree')
-    if smlt:
-        inputs['source'] = logictree.collect_info(smlt).smpaths
-    if inputs.get('reqv'):
+    if params['inputs'].get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
     return params
@@ -1322,55 +1325,87 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def get_checksum32(inputs, extra=''):
+# used in oq zip and oq checksum
+def get_input_files(oqparam, hazard=False):
+    """
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: input path names in a specific order
+    """
+    fnames = []  # files entering in the checksum
+    for key in oqparam.inputs:
+        fname = oqparam.inputs[key]
+        if hazard and key not in ('site_model', 'source_model_logic_tree',
+                                  'gsim_logic_tree', 'source'):
+            continue
+
+        # collect .hdf5 tables for the GSIMs, if any
+        if key == 'gsim_logic_tree':
+            gsim_lt = get_gsim_lt(oqparam)
+            for gsims in gsim_lt.values.values():
+                for gsim in gsims:
+                    table = getattr(gsim, 'GMPE_TABLE', None)
+                    if table:
+                        fnames.append(table)
+
+        elif key == 'source_model':  # UCERF
+            f = oqparam.inputs['source_model']
+            fnames.append(f)
+            fname = nrml.read(f).sourceModel.UCERFSource['filename']
+            fnames.append(os.path.join(os.path.dirname(f), fname))
+
+        elif isinstance(fname, dict):
+            fnames.extend(fname.values())
+        elif isinstance(fname, list):
+            fnames.extend(fname)
+        elif key == 'source_model_logic_tree':
+            fnames.extend(logictree.collect_info(fname).smpaths)
+            fnames.append(fname)
+        elif key == 'exposure':
+            [exp] = asset.Exposure.read_headers([fname])
+            fnames.extend(exp.datafiles)
+            fnames.append(fname)
+        else:
+            fnames.append(fname)
+    return sorted(fnames)
+
+
+def _checksum(fname, checksum):
+    if not os.path.exists(fname):
+        zpath = os.path.splitext(fname)[0] + '.zip'
+        if not os.path.exists(zpath):
+            raise OSError('No such file: %s or %s' % (fname, zpath))
+        data = open(zpath, 'rb').read()
+    else:
+        data = open(fname, 'rb').read()
+    return zlib.adler32(data, checksum) & 0xffffffff
+
+
+def get_checksum32(oqparam, hazard=False):
     """
     Build an unsigned 32 bit integer from the input files of a calculation.
 
-    :param inputs: a dictionary key -> pathname
-    :param extra: an extra string to refine the checksum (optional)
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: the checkume
     """
-    fnames = []  # files entering in the checksum
-    for key in sorted(inputs):
-        fname = inputs[key]
-        if isinstance(fname, dict):
-            for f in fname.values():
-                fnames.append(f)
-        elif isinstance(fname, list):
-            for f in fname:
-                fnames.append(f)
-        elif os.path.exists(fname):
-            fnames.append(fname)
-        else:
-            raise ValueError('%s does not exist or is not a file' % fname)
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for fname in fnames:
-        data = open(fname, 'rb').read()
+    for fname in get_input_files(oqparam, hazard):
+        checksum = _checksum(fname, checksum)
+    if hazard:
+        hazard_params = []
+        for key, val in vars(oqparam).items():
+            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                       'width_of_mfd_bin', 'area_source_discretization',
+                       'random_seed', 'ses_seed', 'truncation_level',
+                       'maximum_distance', 'investigation_time',
+                       'number_of_logic_tree_samples',
+                       'ses_per_logic_tree_path', 'minimum_magnitude',
+                       'prefilter_sources', 'sites',
+                       'pointsource_distance', 'filter_distance'):
+                hazard_params.append('%s = %s' % (key, val))
+        data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum) & 0xffffffff
-    if extra:
-        checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
-
-
-def get_hazard_checksum32(oqparam):
-    """
-    Extract the checksum from the hazard part of a computation, i.e.
-    ignoring risk functions, exposure and risk parameters.
-    """
-    hazard_inputs = {}
-    for key, val in oqparam.inputs.items():
-        if key in ('site_model', 'source_model_logic_tree',
-                   'gsim_logic_tree', 'source'):
-            hazard_inputs[key] = val
-    hazard_params = []
-    for key, val in vars(oqparam).items():
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'ses_seed', 'truncation_level',
-                   'maximum_distance', 'investigation_time',
-                   'number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-                   'minimum_magnitude', 'prefilter_sources', 'sites',
-                   'pointsource_distance', 'filter_distance'):
-            hazard_params.append('%s = %s' % (key, val))
-    return get_checksum32(hazard_inputs, '\n'.join(hazard_params))

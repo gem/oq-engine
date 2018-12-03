@@ -173,7 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
@@ -414,7 +414,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self._read_risk_data()
         self.check_overflow()  # check if self.sitecol is too large
-        if 'source' in oq.inputs and oq.hazard_calculation_id is None:
+        if ('source_model_logic_tree' in oq.inputs and
+                oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(),
                 split_all=oq.split_sources,
