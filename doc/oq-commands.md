@@ -191,24 +191,30 @@ to a computation from a machine to another is `oq zip`:
 
 ```bash
 $ oq help zip
-usage: oq zip [-h] [-r RISK_INI] job_ini archive_zip
-
-Zip the given job.ini file into the given archive, together with all related
-files.
+usage: oq zip [-h] [-r] what [archive_zip]
 
 positional arguments:
-  job_ini               path to a job.ini file
-  archive_zip           path to a non-existing .zip file
+  what               path to a job.ini, a ssmLT.xml file, or an exposure.xml
+  archive_zip        path to a non-existing .zip file [default: '']
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -r RISK_INI, --risk-ini RISK_INI
-                        optional .ini file for risk
+  -h, --help         show this help message and exit
+  -r , --risk-file   optional file for risk
 ```
-
-A typical example of usage for a risk calculation would be
+For instance, if you have two configuration files `job_hazard.ini` and
+`job_risk.ini`, you can zip all the files they refer to with the command
 ```bash
-$ oq zip job_hazard.ini job.zip -r job_risk.ini
+$ oq zip job_hazard.ini -r job_risk.ini
+```
+`oq zip` is actually more powerful than that; other than job.ini files,
+it can also zip source models
+```bash
+$ oq zip ssmLT.xml
+```
+and exposures
+
+```bash
+$ oq zip my_exposure.xml
 ```
 
 plotting commands

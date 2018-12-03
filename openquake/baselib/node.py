@@ -674,7 +674,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
         if not str(fname) in msg:
@@ -760,7 +760,7 @@ def context(fname, node):
     """
     try:
         yield node
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)
