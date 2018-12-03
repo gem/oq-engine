@@ -1329,23 +1329,23 @@ def get_checksum32(inputs, extra=''):
     :param inputs: a dictionary key -> pathname
     :param extra: an extra string to refine the checksum (optional)
     """
-    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
-    # which is the same between Python 2 and Python 3
-    checksum = 0
+    fnames = []  # files entering in the checksum
     for key in sorted(inputs):
         fname = inputs[key]
         if isinstance(fname, dict):
-            for f in fname.values():
-                checksum = _checksum(f, checksum)
+            fnames.extend(fname.values())
         elif isinstance(fname, list):
-            for f in fname:
-                checksum = _checksum(f, checksum)
+            fnames.extend(fname)
         elif key == 'source_model_logic_tree':
-            checksum = _checksum(fname, checksum)
-            for smpath in logictree.collect_info(fname).smpaths:
-                checksum = _checksum(smpath, checksum)
+            fnames.extend(logictree.collect_info(fname).smpaths)
         else:
-            checksum = _checksum(fname, checksum)
+            fnames.append(fname)
+    print(fnames)
+    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
+    # which is the same between Python 2 and Python 3
+    checksum = 0
+    for fname in fnames:
+        checksum = _checksum(fname, checksum)
     if extra:
         checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
