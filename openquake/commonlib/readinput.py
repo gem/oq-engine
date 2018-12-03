@@ -1315,24 +1315,25 @@ def get_checksum32(inputs, extra=''):
     :param inputs: a dictionary key -> pathname
     :param extra: an extra string to refine the checksum (optional)
     """
-    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
-    # which is the same between Python 2 and Python 3
-    checksum = 0
+    fnames = []  # files entering in the checksum
     for key in sorted(inputs):
         fname = inputs[key]
         if isinstance(fname, dict):
             for f in fname.values():
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
+                fnames.append(f)
         elif isinstance(fname, list):
             for f in fname:
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
+                fnames.append(f)
         elif os.path.exists(fname):
-            data = open(fname, 'rb').read()
-            checksum = zlib.adler32(data, checksum) & 0xffffffff
+            fnames.append(fname)
         else:
             raise ValueError('%s does not exist or is not a file' % fname)
+    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
+    # which is the same between Python 2 and Python 3
+    checksum = 0
+    for fname in fnames:
+        data = open(fname, 'rb').read()
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
     if extra:
         checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
