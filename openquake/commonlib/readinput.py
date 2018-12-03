@@ -1338,9 +1338,13 @@ def get_checksum32(inputs, extra=''):
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
             fnames.extend(logictree.collect_info(fname).smpaths)
+            fnames.append(fname)
+        elif key == 'exposure':
+            [exp] = asset.Exposure.read_headers([fname])
+            fnames.extend(exp.datafiles)
+            fnames.append(fname)
         else:
             fnames.append(fname)
-    print(fnames)
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
