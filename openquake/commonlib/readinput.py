@@ -1340,6 +1340,10 @@ def get_checksum32(inputs, extra=''):
         elif isinstance(fname, list):
             for f in fname:
                 checksum = _checksum(f, checksum)
+        elif key == 'source_model_logic_tree':
+            checksum = _checksum(fname, checksum)
+            for smpath in logictree.collect_info(fname).smpaths:
+                checksum = _checksum(smpath, checksum)
         else:
             checksum = _checksum(fname, checksum)
     if extra:
