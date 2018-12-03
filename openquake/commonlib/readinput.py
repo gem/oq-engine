@@ -696,6 +696,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
                 if oqparam.number_of_logic_tree_samples:
@@ -727,7 +728,10 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 if monitor.hdf5:
                     store_sm(newsm, hdf5path, monitor)
             else:  # just collect the TRT models
-                src_groups.extend(logictree.read_source_groups(fname))
+                groups = logictree.read_source_groups(fname)
+                for group in groups:
+                    source_ids.update(src['id'] for src in group)
+                src_groups.extend(groups)
 
         if grp_id >= TWO16:
             # the limit is really needed only for event based calculations
