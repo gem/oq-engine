@@ -1325,27 +1325,34 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def _checksum(fname, checksum):
-    if not os.path.exists(fname):
-        zpath = fname[:-4] + '.zip'
-        if not os.path.exists(zpath):
-            raise OSError('No such file: %s or %s' % (fname, zpath))
-        data = open(zpath, 'rb').read()
-    else:
-        data = open(fname, 'rb').read()
-    return zlib.adler32(data, checksum) & 0xffffffff
-
-
-def get_checksum32(inputs, extra=''):
+def get_input_files(oqparam, hazard=False):
     """
-    Build an unsigned 32 bit integer from the input files of a calculation.
-
-    :param inputs: a dictionary key -> pathname
-    :param extra: an extra string to refine the checksum (optional)
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: input path names in a specific order
     """
     fnames = []  # files entering in the checksum
-    for key in sorted(inputs):
-        fname = inputs[key]
+    for key in sorted(oqparam.inputs):
+        fname = oqparam.inputs[key]
+        if hazard and key not in ('site_model', 'source_model_logic_tree',
+                                  'gsim_logic_tree', 'source'):
+            continue
+
+        # collect .hdf5 tables for the GSIMs, if any
+        if key == 'gsim_logic_tree':
+            gsim_lt = get_gsim_lt(oqparam)
+            for gsims in gsim_lt.values.values():
+                for gsim in gsims:
+                    table = getattr(gsim, 'GMPE_TABLE', None)
+                    if table:
+                        fnames.append(table)
+
+        elif key == 'source_model':  # UCERF
+            f = oqparam.inputs['source_model']
+            fnames.append(f)
+            fname = nrml.read(f).sourceModel.UCERFSource['filename']
+            fnames.append(fname)
+
         if isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
@@ -1359,34 +1366,45 @@ def get_checksum32(inputs, extra=''):
             fnames.append(fname)
         else:
             fnames.append(fname)
+    return fnames
+
+
+def _checksum(fname, checksum):
+    if not os.path.exists(fname):
+        zpath = fname[:-4] + '.zip'
+        if not os.path.exists(zpath):
+            raise OSError('No such file: %s or %s' % (fname, zpath))
+        data = open(zpath, 'rb').read()
+    else:
+        data = open(fname, 'rb').read()
+    return zlib.adler32(data, checksum) & 0xffffffff
+
+
+def get_checksum32(oqparam, hazard=False):
+    """
+    Build an unsigned 32 bit integer from the input files of a calculation.
+
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: the checkume
+    """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for fname in fnames:
+    for fname in get_input_files(oqparam, hazard):
         checksum = _checksum(fname, checksum)
-    if extra:
-        checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
+    if hazard:
+        hazard_params = []
+        for key, val in vars(oqparam).items():
+            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                       'width_of_mfd_bin', 'area_source_discretization',
+                       'random_seed', 'ses_seed', 'truncation_level',
+                       'maximum_distance', 'investigation_time',
+                       'number_of_logic_tree_samples',
+                       'ses_per_logic_tree_path', 'minimum_magnitude',
+                       'prefilter_sources', 'sites',
+                       'pointsource_distance', 'filter_distance'):
+                hazard_params.append('%s = %s' % (key, val))
+        data = '\n'.join(hazard_params).encode('utf8')
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
     return checksum
-
-
-def get_hazard_checksum32(oqparam):
-    """
-    Extract the checksum from the hazard part of a computation, i.e.
-    ignoring risk functions, exposure and risk parameters.
-    """
-    hazard_inputs = {}
-    for key, val in oqparam.inputs.items():
-        if key in ('site_model', 'source_model_logic_tree',
-                   'gsim_logic_tree', 'source'):
-            hazard_inputs[key] = val
-    hazard_params = []
-    for key, val in vars(oqparam).items():
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'ses_seed', 'truncation_level',
-                   'maximum_distance', 'investigation_time',
-                   'number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-                   'minimum_magnitude', 'prefilter_sources', 'sites',
-                   'pointsource_distance', 'filter_distance'):
-            hazard_params.append('%s = %s' % (key, val))
-    return get_checksum32(hazard_inputs, '\n'.join(hazard_params))
