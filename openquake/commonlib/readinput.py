@@ -112,7 +112,7 @@ def normalize(key, fnames, base_path):
                 not os.path.exists(val)):
             zpath = val[:-4] + '.zip'
             if not os.path.exists(zpath):
-                raise OSError('File not found: %s and %s' % (val, zpath))
+                raise OSError('No such file: %s or %s' % (val, zpath))
             with zipfile.ZipFile(zpath) as archive:
                 archive.extractall(os.path.dirname(zpath))
         filenames.append(val)
@@ -1315,7 +1315,7 @@ def _checksum(fname, checksum):
     if not os.path.exists(fname):
         zpath = fname[:-4] + '.zip'
         if not os.path.exists(zpath):
-            raise OSError('File not found: %s and %s' % (fname, zpath))
+            raise OSError('No such file: %s or %s' % (fname, zpath))
         data = open(zpath, 'rb').read()
     else:
         data = open(fname, 'rb').read()
