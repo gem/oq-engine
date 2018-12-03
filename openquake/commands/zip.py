@@ -27,9 +27,11 @@ def zip(what, archive_zip='', risk_file=''):
     logging.basicConfig(level=logging.INFO)
     if os.path.isdir(what):
         oqzip.zip_all(what)
-    elif os.path.basename(what) == 'ssmLT.xml':
+    elif what.endswith('.xml') and '<logicTree' in open(what).read(512):
+        # hack to see if the NRML file is of kind logicTree
         oqzip.zip_source_model(what, archive_zip)
-    elif what.endswith('.xml'):  # assume exposure
+    elif what.endswith('.xml') and '<exposureModel' in open(what).read(512):
+        # hack to see if the NRML file is of kind exposureModel
         oqzip.zip_exposure(what, archive_zip)
     elif what.endswith('.ini'):  # a job.ini
         oqzip.zip_job(what, archive_zip, risk_file)
