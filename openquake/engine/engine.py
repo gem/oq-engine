@@ -292,8 +292,8 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
             else:
                 logs.LOG.info('zipping the input files')
                 bio = io.BytesIO()
-                oqzip.oqzip(oqparam.inputs['job_ini'], bio, (), oqparam,
-                            logging.debug)
+                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
+                              logging.debug)
                 data = numpy.array(bio.getvalue())
                 del bio
             calc.datastore['input/zip'] = data
