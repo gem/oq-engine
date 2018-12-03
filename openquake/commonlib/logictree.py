@@ -393,13 +393,11 @@ class BranchSet(object):
         :param source:
             The opensha source data object.
         :return:
-            ``None``, all changes are applied to MFD in place. Therefore
-            all sources have to be reinstantiated after processing is done
-            in order to sample the tree once again.
+            0 if the source was not changed, 1 otherwise
         """
         if not self.filter_source(source):
             # source didn't pass the filter
-            return
+            return 0
         if self.uncertainty_type in MFD_UNCERTAINTY_TYPES:
             self._apply_uncertainty_to_mfd(source.mfd, value)
         elif self.uncertainty_type in GEOMETRY_UNCERTAINTY_TYPES:
@@ -407,6 +405,7 @@ class BranchSet(object):
         else:
             raise AssertionError("unknown uncertainty type '%s'"
                                  % self.uncertainty_type)
+        return 1
 
     def _apply_uncertainty_to_geometry(self, source, value):
         """
@@ -1255,11 +1254,14 @@ class SourceModelLogicTree(object):
 
         sg = copy.deepcopy(source_group)
         sg.applied_uncertainties = []
+        sg.changed = numpy.zeros(len(sg.sources), int)
         for branchset, value in branchsets_and_uncertainties:
-            for source in sg.sources:
-                branchset.apply_uncertainty(value, source)
-                sg.applied_uncertainties.append(
-                    (branchset.uncertainty_type, value))
+            for s, source in enumerate(sg.sources):
+                changed = branchset.apply_uncertainty(value, source)
+                if changed:
+                    sg.changed[s] += changed
+                    sg.applied_uncertainties.append(
+                        (branchset.uncertainty_type, value))
         return sg  # something changed
 
     def samples_by_lt_path(self):
