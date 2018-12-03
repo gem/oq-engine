@@ -1325,6 +1325,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
+# used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance
@@ -1332,7 +1333,7 @@ def get_input_files(oqparam, hazard=False):
     :returns: input path names in a specific order
     """
     fnames = []  # files entering in the checksum
-    for key in sorted(oqparam.inputs):
+    for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('site_model', 'source_model_logic_tree',
                                   'gsim_logic_tree', 'source'):
@@ -1366,7 +1367,7 @@ def get_input_files(oqparam, hazard=False):
             fnames.append(fname)
         else:
             fnames.append(fname)
-    return fnames
+    return sorted(fnames)
 
 
 def _checksum(fname, checksum):
