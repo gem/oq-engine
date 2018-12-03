@@ -279,7 +279,7 @@ def add_imt(fname, imt):
 
 
 def export_hcurves_by_imt_csv(
-        key, kind, rlzs_assoc, fname, sitecol, array, oq):
+        key, kind, rlzs_assoc, fname, sitecol, array, oq, checksum):
     """
     Export the curves of the given realization into CSV.
 
@@ -308,8 +308,9 @@ def export_hcurves_by_imt_csv(
                 poes = array[sid, slc]
             hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ', imt="%s"' % imt,
-                                        header=[name for (name, dt) in lst]))
+            rlzs_assoc, kind, oq.investigation_time) + (
+                ', imt="%s", checksum=%d' % (imt, checksum)
+            ), header=[name for (name, dt) in lst]))
     return fnames
 
 
@@ -382,6 +383,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     if oq.poes:
         pdic = DictArray({imt: oq.poes for imt in oq.imtls})
+    checksum = dstore.get_attr('/', 'checksum32')
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
@@ -390,16 +392,18 @@ def export_hcurves_csv(ekey, dstore):
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
-                comment=comment)
+                comment=comment + ', checksum=%d' % checksum)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
             hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic, comment))
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic,
+                                 comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
+                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves,
+                    oq, checksum))
     return sorted(fnames)
 
 
