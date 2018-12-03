@@ -1035,7 +1035,7 @@ def _get_free_port():
     raise RuntimeError('No free ports in the range 1920:2000')
 
 
-def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     """
     Build a zip archive from the given file names.
 
@@ -1048,6 +1048,8 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
         for f in fnames:
             log('Archiving %s' % f)
             z.write(f, f[prefix:])
+            if cleanup:  # remove the zipped file
+                os.remove(f)
     log('Generated %s' % archive)
     return archive
 
