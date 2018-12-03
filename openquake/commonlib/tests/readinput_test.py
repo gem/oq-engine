@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import shutil
 import tempfile
 import mock
 import unittest
@@ -31,7 +30,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.risklib import asset
 from openquake.risklib.riskinput import ValidationError
 from openquake.commonlib import readinput, writers, oqvalidation
-from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.qa_tests_data.classical import case_1, case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_caracas
 
@@ -327,7 +326,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''', suffix='.xml')
 
     def test_get_metadata(self):
-        exp = asset.Exposure.read_header(self.exposure)
+        [exp] = asset.Exposure.read_headers([self.exposure])
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertIsNone(exp.insurance_limit_is_absolute)
         self.assertIsNone(exp.deductible_is_absolute)
@@ -597,6 +596,14 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             readinput.get_composite_source_model(oq, in_memory=False)
         self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
+
+    def test_applyToSources(self):
+        oq = readinput.get_oqparam('job.ini', case_21)
+        with mock.patch('logging.info') as info:
+            readinput.get_composite_source_model(oq)
+        self.assertEqual(
+            info.call_args[0],
+            ('Applied %d changes to the composite source model', 81))
 
 
 class GetCompositeRiskModelTestCase(unittest.TestCase):

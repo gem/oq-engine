@@ -1,6 +1,9 @@
   [Michele Simionato]
   * Added a command `oq compare` to compare hazard curves and maps within
     calculations
+  * Extended the engine to read transparently zipped source models and exposures
+  * Restored the check for invalid source IDs in applyToSources
+  * Extended the command `oq zip` to zip source models and exposures
   * Parallelized the associations event ID -> realization ID
   * Improved the message when assets are discarded in scenario calculations
   * Implemented aggregation by multiple tags, plus a special case for the
