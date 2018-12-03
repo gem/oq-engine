@@ -373,7 +373,7 @@ def rupture_to_element(rup, parent=None):
             assert len(rup.lons) % 4 == 0
             assert len(rup.lons) == len(rup.lats) == len(rup.depths)
 
-            for offset in range(len(rup.lons) / 4):
+            for offset in range(len(rup.lons) // 4):
                 # looping on the coordinates of the sub surfaces, one
                 # planar surface at the time
                 start = offset * 4
