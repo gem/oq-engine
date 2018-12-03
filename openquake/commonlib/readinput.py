@@ -550,7 +550,7 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
 class SourceModelFactory(object):
     def __init__(self):
         self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
+        self.changes = 0
 
     def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
@@ -571,10 +571,12 @@ class SourceModelFactory(object):
         for group in sm:
             newgroup = apply_uncertainties(group)
             newsm.src_groups.append(newgroup)
-            if getattr(newgroup, 'applied_uncertainties', []):
-                self.changed_sources += len(newgroup)
-                for src in newgroup:  # redoing count_ruptures can be slow
-                    src.num_ruptures = src.count_ruptures()
+            if hasattr(newgroup, 'changed') and newgroup.changed.any():
+                self.changes += newgroup.changed.sum()
+                for src, changed in zip(newgroup, newgroup.changed):
+                    # redoing count_ruptures can be slow
+                    if changed:
+                        src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
         return newsm
 
@@ -683,6 +685,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
         hdf5path = (getattr(srcfilter, 'hdf5path', None)
                     if oqparam.prefilter_sources == 'no' else None)
+    source_ids = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -693,6 +696,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
                 if oqparam.number_of_logic_tree_samples:
@@ -714,6 +718,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         sg.sources = random_filtered_sources(
                             sg.sources, srcfilter, sg.id + oqparam.random_seed)
                     for src in sg:
+                        source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
                         idx += 1
@@ -723,12 +728,21 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 if monitor.hdf5:
                     store_sm(newsm, hdf5path, monitor)
             else:  # just collect the TRT models
-                src_groups.extend(logictree.read_source_groups(fname))
+                groups = logictree.read_source_groups(fname)
+                for group in groups:
+                    source_ids.update(src['id'] for src in group)
+                src_groups.extend(groups)
 
         if grp_id >= TWO16:
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
+        for srcid in source_model_lt.info.applytosources:
+            if srcid not in source_ids:
+                raise ValueError(
+                    'The source %s is not in the source model, please fix '
+                    'applyToSources in %s or the source model' %
+                    (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -753,16 +767,16 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not make_sm.changed_sources:
+            if not make_sm.changes:
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
-    if make_sm.changed_sources:
-        logging.info('Modified %d sources in the composite source model',
-                     make_sm.changed_sources)
+    if make_sm.changes:
+        logging.info('Applied %d changes to the composite source model',
+                     make_sm.changes)
 
 
 def getid(src):
