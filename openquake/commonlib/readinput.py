@@ -113,6 +113,13 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
+        if (key in ('source_model_logic_tree', 'exposure') and
+                not os.path.exists(value)):
+            zpath = value[:-4] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('File not found: %s and %s' % (value, zpath))
+            with zipfile.ZipFile(zpath) as archive:
+                archive.extractall(base_path)
         if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
@@ -169,12 +176,7 @@ def get_params(job_inis, **kw):
         _update(params, cp.items(sect), base_path)
     _update(params, kw.items(), base_path)  # override on demand
 
-    # populate the 'source' list
-    inputs = params['inputs']
-    smlt = inputs.get('source_model_logic_tree')
-    if smlt:
-        inputs['source'] = logictree.collect_info(smlt).smpaths
-    if inputs.get('reqv'):
+    if params['inputs'].get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
     return params

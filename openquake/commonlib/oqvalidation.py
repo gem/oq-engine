@@ -758,7 +758,8 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 self.calculation_mode.startswith('scenario')):
             return
-        if 'source' not in self.inputs and not self.hazard_calculation_id:
+        if ('source_model_logic_tree' not in self.inputs and
+                not self.hazard_calculation_id):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
