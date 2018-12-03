@@ -1351,9 +1351,9 @@ def get_input_files(oqparam, hazard=False):
             f = oqparam.inputs['source_model']
             fnames.append(f)
             fname = nrml.read(f).sourceModel.UCERFSource['filename']
-            fnames.append(fname)
+            fnames.append(os.path.join(os.path.dirname(f), fname))
 
-        if isinstance(fname, dict):
+        elif isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
             fnames.extend(fname)
@@ -1371,7 +1371,7 @@ def get_input_files(oqparam, hazard=False):
 
 def _checksum(fname, checksum):
     if not os.path.exists(fname):
-        zpath = fname[:-4] + '.zip'
+        zpath = os.path.splitext(fname)[0] + '.zip'
         if not os.path.exists(zpath):
             raise OSError('No such file: %s or %s' % (fname, zpath))
         data = open(zpath, 'rb').read()
