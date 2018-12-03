@@ -131,7 +131,7 @@ class EBRunner(object):
         self.log_level = log_level
         self.log_file = log_file
         self.exports = exports
-        checksum = readinput.get_hazard_checksum32(oqparam)
+        checksum = readinput.get_checksum32(oqparam, hazard=True)
         # retrieve an old calculation with the right checksum, if any
         job = logs.dbcmd('get_job_from_checksum', checksum)
         kw = dict(calculation_mode='event_based')

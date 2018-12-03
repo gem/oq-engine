@@ -106,7 +106,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
-        self.assertEqual(len(lines), 10)
+        self.assertEqual(len(lines), 9)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
@@ -432,7 +432,7 @@ hazard_uhs-mean.csv
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 865392691)
+        self.assertEqual(checksum, 3447020452)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_24(self):  # UHS
