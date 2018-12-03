@@ -550,7 +550,7 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
 class SourceModelFactory(object):
     def __init__(self):
         self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
+        self.changes = 0
 
     def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
@@ -572,7 +572,7 @@ class SourceModelFactory(object):
             newgroup = apply_uncertainties(group)
             newsm.src_groups.append(newgroup)
             if hasattr(newgroup, 'changed') and newgroup.changed.any():
-                self.changed_sources += newgroup.changed.sum()
+                self.changes += newgroup.changed.sum()
                 for src, changed in zip(newgroup, newgroup.changed):
                     # redoing count_ruptures can be slow
                     if changed:
@@ -763,16 +763,16 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not make_sm.changed_sources:
+            if not make_sm.changes:
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
-    if make_sm.changed_sources:
-        logging.info('Modified %d sources in the composite source model',
-                     make_sm.changed_sources)
+    if make_sm.changes:
+        logging.info('Applied %d changes to the composite source model',
+                     make_sm.changes)
 
 
 def getid(src):
