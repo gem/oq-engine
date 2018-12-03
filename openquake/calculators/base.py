@@ -173,7 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
-            attrs['checksum32'] = readinput.get_checksum32(self.oqparam.inputs)
+            attrs['checksum32'] = readinput.get_checksum32(self.oqparam)
         self.datastore.flush()
 
     def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
