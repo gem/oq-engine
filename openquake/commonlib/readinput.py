@@ -1338,22 +1338,20 @@ def get_input_files(oqparam, hazard=False):
         if hazard and key not in ('site_model', 'source_model_logic_tree',
                                   'gsim_logic_tree', 'source'):
             continue
-
         # collect .hdf5 tables for the GSIMs, if any
-        if key == 'gsim_logic_tree':
+        elif key == 'gsim_logic_tree':
             gsim_lt = get_gsim_lt(oqparam)
             for gsims in gsim_lt.values.values():
                 for gsim in gsims:
                     table = getattr(gsim, 'GMPE_TABLE', None)
                     if table:
                         fnames.append(table)
-
+            fnames.append(fname)
         elif key == 'source_model':  # UCERF
             f = oqparam.inputs['source_model']
             fnames.append(f)
             fname = nrml.read(f).sourceModel.UCERFSource['filename']
             fnames.append(os.path.join(os.path.dirname(f), fname))
-
         elif isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
