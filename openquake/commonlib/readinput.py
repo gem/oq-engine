@@ -107,19 +107,20 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
+        elif (key in ('source_model_logic_tree_file', 'exposure_file') and
+                not os.path.exists(val)):
+            zpath = val[:-4] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('File not found: %s and %s' % (val, zpath))
+            with zipfile.ZipFile(zpath) as archive:
+                base = os.path.join(base_path, os.path.dirname(zpath))
+                archive.extractall(base)
         filenames.append(os.path.normpath(os.path.join(base_path, val)))
     return input_type, filenames
 
 
 def _update(params, items, base_path):
     for key, value in items:
-        if (key in ('source_model_logic_tree', 'exposure') and
-                not os.path.exists(value)):
-            zpath = value[:-4] + '.zip'
-            if not os.path.exists(zpath):
-                raise OSError('File not found: %s and %s' % (value, zpath))
-            with zipfile.ZipFile(zpath) as archive:
-                archive.extractall(base_path)
         if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
@@ -1310,6 +1311,17 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
+def _checksum(fname, checksum):
+    if not os.path.exists(fname):
+        zpath = fname[:-4] + '.zip'
+        if not os.path.exists(zpath):
+            raise OSError('File not found: %s and %s' % (fname, zpath))
+        data = open(zpath, 'rb').read()
+    else:
+        data = open(fname, 'rb').read()
+    return zlib.adler32(data, checksum) & 0xffffffff
+
+
 def get_checksum32(inputs, extra=''):
     """
     Build an unsigned 32 bit integer from the input files of a calculation.
@@ -1324,17 +1336,12 @@ def get_checksum32(inputs, extra=''):
         fname = inputs[key]
         if isinstance(fname, dict):
             for f in fname.values():
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
+                checksum = _checksum(f, checksum)
         elif isinstance(fname, list):
             for f in fname:
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
-        elif os.path.exists(fname):
-            data = open(fname, 'rb').read()
-            checksum = zlib.adler32(data, checksum) & 0xffffffff
+                checksum = _checksum(f, checksum)
         else:
-            raise ValueError('%s does not exist or is not a file' % fname)
+            checksum = _checksum(fname, checksum)
     if extra:
         checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
     return checksum
