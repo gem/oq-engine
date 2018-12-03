@@ -117,8 +117,8 @@ def compare(what, imt, calc_ids, files, samples=100, percent=5):
 
 
 compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
-compare.arg('imt', 'Intensity Measure Type to compare')
-compare.arg('calc_ids', 'Calculation IDs', type=int, nargs='+')
-compare.flg('files', 'Write the results in multiple files')
+compare.arg('imt', 'intensity measure type to compare')
+compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
+compare.flg('files', 'write the results in multiple files')
 compare.opt('samples', 'number of sites to sample', type=int)
 compare.opt('percent', 'acceptable percent difference', type=float)
