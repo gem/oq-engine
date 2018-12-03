@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Restored the check for invalid source IDs in applyToSources
   * Extended the command `oq zip` to zip source models and exposures
   * Parallelized the associations event ID -> realization ID
   * Improved the message when assets are discarded in scenario calculations
