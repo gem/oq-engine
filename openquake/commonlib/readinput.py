@@ -685,6 +685,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
         hdf5path = (getattr(srcfilter, 'hdf5path', None)
                     if oqparam.prefilter_sources == 'no' else None)
+    source_ids = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -716,6 +717,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         sg.sources = random_filtered_sources(
                             sg.sources, srcfilter, sg.id + oqparam.random_seed)
                     for src in sg:
+                        source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
                         idx += 1
@@ -731,6 +733,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
+        for srcid in source_model_lt.info.applytosources:
+            if srcid not in source_ids:
+                raise ValueError(
+                    'The source %s is not in the source model, please fix '
+                    'applyToSources in %s or the source model' %
+                    source_model_lt.filename)
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
