@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the engine to read transparently zipped source models and exposures
   * Restored the check for invalid source IDs in applyToSources
   * Extended the command `oq zip` to zip source models and exposures
   * Parallelized the associations event ID -> realization ID
