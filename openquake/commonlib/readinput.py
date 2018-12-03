@@ -738,7 +738,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 raise ValueError(
                     'The source %s is not in the source model, please fix '
                     'applyToSources in %s or the source model' %
-                    source_model_lt.filename)
+                    (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
