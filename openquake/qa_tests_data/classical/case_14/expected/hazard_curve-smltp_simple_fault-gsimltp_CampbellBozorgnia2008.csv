@@ -1,4 +1,4 @@
-# source_model_tree_path=('simple', 'fault'), gsim_tree_path=('CampbellBozorgnia2008',), investigation_time=50.0, imt="PGA"
+# source_model_tree_path=('simple', 'fault'), gsim_tree_path=('CampbellBozorgnia2008',), investigation_time=50.0, imt="PGA", checksum=891055717
 lon,lat,depth,poe-0.005,poe-0.007,poe-0.0098,poe-0.0137,poe-0.0192,poe-0.0269,poe-0.0376,poe-0.0527,poe-0.0738,poe-0.103,poe-0.145,poe-0.203,poe-0.284
 -122.50000,38.10000,0.00000,8.689556E-01,8.670120E-01,8.588920E-01,8.344702E-01,7.749009E-01,6.559570E-01,4.717068E-01,2.646108E-01,1.097316E-01,3.264088E-02,6.277794E-03,6.261397E-04,1.754082E-06
 -122.39000,38.10000,0.00000,8.691723E-01,8.688579E-01,8.664631E-01,8.569579E-01,8.287676E-01,7.617918E-01,6.323116E-01,4.365762E-01,2.316772E-01,9.032902E-02,2.368941E-02,4.054461E-03,2.943100E-04

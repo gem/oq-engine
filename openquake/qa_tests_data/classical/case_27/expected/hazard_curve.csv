@@ -1,3 +1,3 @@
-# mean, investigation_time=50.0, imt="PGV"
+# mean, investigation_time=50.0, imt="PGV", checksum=3403305238
 lon,lat,depth,poe-20.0,poe-30.0,poe-40.0,poe-60.0,poe-80.0,poe-100.0
 135.67999,35.68000,0.00000,1.064405E-01,1.887571E-02,3.946426E-03,2.779133E-04,3.096158E-05,4.670615E-06
