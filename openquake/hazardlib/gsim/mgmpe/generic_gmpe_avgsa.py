@@ -82,7 +82,7 @@ class GenericGmpeAvgSA(GMPE):
             for i2 in range(self.tnum):
                 rho = baker_jayaram_correlation(self.avg_periods[i1],
                                                 self.avg_periods[i2])
-                stddvs_avgsa += stddvs_list[i1] * stddvs_list[i2]
+                stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
 
         mean_avgsa *= (1./self.tnum)
         stddvs_avgsa *= (1./self.tnum)**2
