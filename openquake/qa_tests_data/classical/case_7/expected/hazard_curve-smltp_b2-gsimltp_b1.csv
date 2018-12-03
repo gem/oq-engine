@@ -1,3 +1,3 @@
-# source_model_tree_path=('b2',), gsim_tree_path=('b1',), investigation_time=1.0, imt="PGA"
+# source_model_tree_path=('b2',), gsim_tree_path=('b1',), investigation_time=1.0, imt="PGA", checksum=359954679
 lon,lat,depth,poe-0.1,poe-0.12,poe-0.2
 0.00000,0.00000,0.00000,6.321205E-01,6.070473E-01,2.567355E-01
