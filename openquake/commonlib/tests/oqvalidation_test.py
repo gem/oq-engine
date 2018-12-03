@@ -39,15 +39,14 @@ GST = {'gsim_logic_tree': gettemp('''\
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
-</nrml>'''),
-       'source': 'fake', "job_ini": "job.ini"}
+</nrml>'''), "job_ini": "job.ini"}
 
 # hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
     'event_based', 'event_based_risk', 'classical_risk')
 
-fakeinputs = {"source": "fake", "job_ini": "job.ini"}
+fakeinputs = {"job_ini": "job.ini"}
 
 
 class OqParamTestCase(unittest.TestCase):
