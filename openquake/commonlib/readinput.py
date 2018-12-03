@@ -107,7 +107,15 @@ def normalize(key, fnames, base_path):
     for val in fnames:
         if os.path.isabs(val):
             raise ValueError('%s=%s is an absolute path' % (key, val))
-        filenames.append(os.path.normpath(os.path.join(base_path, val)))
+        val = os.path.normpath(os.path.join(base_path, val))
+        if (key in ('source_model_logic_tree_file', 'exposure_file') and
+                not os.path.exists(val)):
+            zpath = val[:-4] + '.zip'
+            if not os.path.exists(zpath):
+                raise OSError('No such file: %s or %s' % (val, zpath))
+            with zipfile.ZipFile(zpath) as archive:
+                archive.extractall(os.path.dirname(zpath))
+        filenames.append(val)
     return input_type, filenames
 
 
@@ -169,12 +177,7 @@ def get_params(job_inis, **kw):
         _update(params, cp.items(sect), base_path)
     _update(params, kw.items(), base_path)  # override on demand
 
-    # populate the 'source' list
-    inputs = params['inputs']
-    smlt = inputs.get('source_model_logic_tree')
-    if smlt:
-        inputs['source'] = logictree.collect_info(smlt).smpaths
-    if inputs.get('reqv'):
+    if params['inputs'].get('reqv'):
         # using pointsource_distance=0 because of the reqv approximation
         params['pointsource_distance'] = '0'
     return params
@@ -550,7 +553,7 @@ def check_nonparametric_sources(fname, smodel, investigation_time):
 class SourceModelFactory(object):
     def __init__(self):
         self.fname_hits = collections.Counter()  # fname -> number of calls
-        self.changed_sources = 0
+        self.changes = 0
 
     def __call__(self, fname, sm, apply_uncertainties, investigation_time):
         """
@@ -571,10 +574,12 @@ class SourceModelFactory(object):
         for group in sm:
             newgroup = apply_uncertainties(group)
             newsm.src_groups.append(newgroup)
-            if getattr(newgroup, 'applied_uncertainties', []):
-                self.changed_sources += len(newgroup)
-                for src in newgroup:  # redoing count_ruptures can be slow
-                    src.num_ruptures = src.count_ruptures()
+            if hasattr(newgroup, 'changed') and newgroup.changed.any():
+                self.changes += newgroup.changed.sum()
+                for src, changed in zip(newgroup, newgroup.changed):
+                    # redoing count_ruptures can be slow
+                    if changed:
+                        src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
         return newsm
 
@@ -683,6 +688,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         hdf5.create(monitor.hdf5, 'source_geom', point3d)
         hdf5path = (getattr(srcfilter, 'hdf5path', None)
                     if oqparam.prefilter_sources == 'no' else None)
+    source_ids = set()
     for sm in source_model_lt.gen_source_models(gsim_lt):
         apply_unc = functools.partial(
             source_model_lt.apply_uncertainties, sm.path)
@@ -693,6 +699,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 sg = copy.copy(grp)
                 sg.id = grp_id
                 src = sg[0].new(sm.ordinal, sm.names)  # one source
+                source_ids.add(src.source_id)
                 src.src_group_id = grp_id
                 src.id = idx
                 if oqparam.number_of_logic_tree_samples:
@@ -714,6 +721,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                         sg.sources = random_filtered_sources(
                             sg.sources, srcfilter, sg.id + oqparam.random_seed)
                     for src in sg:
+                        source_ids.add(src.source_id)
                         src.src_group_id = grp_id
                         src.id = idx
                         idx += 1
@@ -723,12 +731,21 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
                 if monitor.hdf5:
                     store_sm(newsm, hdf5path, monitor)
             else:  # just collect the TRT models
-                src_groups.extend(logictree.read_source_groups(fname))
+                groups = logictree.read_source_groups(fname)
+                for group in groups:
+                    source_ids.update(src['id'] for src in group)
+                src_groups.extend(groups)
 
         if grp_id >= TWO16:
             # the limit is really needed only for event based calculations
             raise ValueError('There is a limit of %d src groups!' % TWO16)
 
+        for srcid in source_model_lt.info.applytosources:
+            if srcid not in source_ids:
+                raise ValueError(
+                    'The source %s is not in the source model, please fix '
+                    'applyToSources in %s or the source model' %
+                    (srcid, source_model_lt.filename))
         num_sources = sum(len(sg.sources) for sg in src_groups)
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
@@ -753,16 +770,16 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
     for fname, hits in make_sm.fname_hits.items():
         if hits > 1:
             logging.info('%s has been considered %d times', fname, hits)
-            if not make_sm.changed_sources:
+            if not make_sm.changes:
                 dupl += hits
     if (dupl and not oqparam.optimize_same_id_sources and
             'event_based' not in oqparam.calculation_mode):
         logging.warn('You are doing redundant calculations: please make sure '
                      'that different sources have different IDs and set '
                      'optimize_same_id_sources=true in your .ini file')
-    if make_sm.changed_sources:
-        logging.info('Modified %d sources in the composite source model',
-                     make_sm.changed_sources)
+    if make_sm.changes:
+        logging.info('Applied %d changes to the composite source model',
+                     make_sm.changes)
 
 
 def getid(src):
@@ -1308,54 +1325,85 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
 
 
-def get_checksum32(inputs, extra=''):
+# used in oq zip and oq checksum
+def get_input_files(oqparam, hazard=False):
+    """
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: input path names in a specific order
+    """
+    fnames = []  # files entering in the checksum
+    for key in oqparam.inputs:
+        fname = oqparam.inputs[key]
+        if hazard and key not in ('site_model', 'source_model_logic_tree',
+                                  'gsim_logic_tree', 'source'):
+            continue
+        # collect .hdf5 tables for the GSIMs, if any
+        elif key == 'gsim_logic_tree':
+            gsim_lt = get_gsim_lt(oqparam)
+            for gsims in gsim_lt.values.values():
+                for gsim in gsims:
+                    table = getattr(gsim, 'GMPE_TABLE', None)
+                    if table:
+                        fnames.append(table)
+            fnames.append(fname)
+        elif key == 'source_model':  # UCERF
+            f = oqparam.inputs['source_model']
+            fnames.append(f)
+            fname = nrml.read(f).sourceModel.UCERFSource['filename']
+            fnames.append(os.path.join(os.path.dirname(f), fname))
+        elif isinstance(fname, dict):
+            fnames.extend(fname.values())
+        elif isinstance(fname, list):
+            fnames.extend(fname)
+        elif key == 'source_model_logic_tree':
+            fnames.extend(logictree.collect_info(fname).smpaths)
+            fnames.append(fname)
+        elif key == 'exposure':
+            [exp] = asset.Exposure.read_headers([fname])
+            fnames.extend(exp.datafiles)
+            fnames.append(fname)
+        else:
+            fnames.append(fname)
+    return sorted(fnames)
+
+
+def _checksum(fname, checksum):
+    if not os.path.exists(fname):
+        zpath = os.path.splitext(fname)[0] + '.zip'
+        if not os.path.exists(zpath):
+            raise OSError('No such file: %s or %s' % (fname, zpath))
+        data = open(zpath, 'rb').read()
+    else:
+        data = open(fname, 'rb').read()
+    return zlib.adler32(data, checksum) & 0xffffffff
+
+
+def get_checksum32(oqparam, hazard=False):
     """
     Build an unsigned 32 bit integer from the input files of a calculation.
 
-    :param inputs: a dictionary key -> pathname
-    :param extra: an extra string to refine the checksum (optional)
+    :param oqparam: an OqParam instance
+    :param hazard: if True, consider only the hazard files
+    :returns: the checkume
     """
     # NB: using adler32 & 0xffffffff is the documented way to get a checksum
     # which is the same between Python 2 and Python 3
     checksum = 0
-    for key in sorted(inputs):
-        fname = inputs[key]
-        if isinstance(fname, dict):
-            for f in fname.values():
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
-        elif isinstance(fname, list):
-            for f in fname:
-                data = open(f, 'rb').read()
-                checksum = zlib.adler32(data, checksum) & 0xffffffff
-        elif os.path.exists(fname):
-            data = open(fname, 'rb').read()
-            checksum = zlib.adler32(data, checksum) & 0xffffffff
-        else:
-            raise ValueError('%s does not exist or is not a file' % fname)
-    if extra:
-        checksum = zlib.adler32(extra.encode('utf8'), checksum) & 0xffffffff
+    for fname in get_input_files(oqparam, hazard):
+        checksum = _checksum(fname, checksum)
+    if hazard:
+        hazard_params = []
+        for key, val in vars(oqparam).items():
+            if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
+                       'width_of_mfd_bin', 'area_source_discretization',
+                       'random_seed', 'ses_seed', 'truncation_level',
+                       'maximum_distance', 'investigation_time',
+                       'number_of_logic_tree_samples',
+                       'ses_per_logic_tree_path', 'minimum_magnitude',
+                       'prefilter_sources', 'sites',
+                       'pointsource_distance', 'filter_distance'):
+                hazard_params.append('%s = %s' % (key, val))
+        data = '\n'.join(hazard_params).encode('utf8')
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
     return checksum
-
-
-def get_hazard_checksum32(oqparam):
-    """
-    Extract the checksum from the hazard part of a computation, i.e.
-    ignoring risk functions, exposure and risk parameters.
-    """
-    hazard_inputs = {}
-    for key, val in oqparam.inputs.items():
-        if key in ('site_model', 'source_model_logic_tree',
-                   'gsim_logic_tree', 'source'):
-            hazard_inputs[key] = val
-    hazard_params = []
-    for key, val in vars(oqparam).items():
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'ses_seed', 'truncation_level',
-                   'maximum_distance', 'investigation_time',
-                   'number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-                   'minimum_magnitude', 'prefilter_sources', 'sites',
-                   'pointsource_distance', 'filter_distance'):
-            hazard_params.append('%s = %s' % (key, val))
-    return get_checksum32(hazard_inputs, '\n'.join(hazard_params))
