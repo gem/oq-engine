@@ -61,9 +61,7 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
         f.write(str(checksum))
     files = logictree.collect_info(ssmLT).smpaths + [
         os.path.abspath(ssmLT), os.path.abspath(checkfile)]
-    general.zipfiles(files, archive_zip, log=log)
-    for f in files:
-        os.remove(f)
+    general.zipfiles(files, archive_zip, log=log, cleanup=True)
     return archive_zip
 
 
@@ -76,9 +74,7 @@ def zip_exposure(exposure_xml, archive_zip='', log=logging.info):
         sys.exit('%s exists already' % archive_zip)
     [exp] = Exposure.read_headers([exposure_xml])
     files = [exposure_xml] + exp.datafiles
-    general.zipfiles(files, archive_zip, log=log)
-    for f in files:
-        os.remove(f)
+    general.zipfiles(files, archive_zip, log=log, cleanup=True)
     return archive_zip
 
 
