@@ -305,15 +305,8 @@ def build_links(items):
 
 @view.add('inputs')
 def view_inputs(token, dstore):
-    inputs = dstore['oqparam'].inputs.copy()
-    try:
-        source_models = [('source', fname) for fname in inputs['source']]
-        del inputs['source']
-    except KeyError:  # there is no 'source' in scenario calculations
-        source_models = []
-    return rst_table(
-        build_links(list(inputs.items()) + source_models),
-        header=['Name', 'File'])
+    inputs = dstore['oqparam'].inputs.items()
+    return rst_table(build_links(inputs), ['Name', 'File'])
 
 
 def _humansize(literal):
