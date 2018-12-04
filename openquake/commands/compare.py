@@ -31,15 +31,16 @@ def get(dstore, what, imtls, sids):
         raise ValueError(what)
 
 
-def getdata(what, calc_ids, samples):
+def getdata(what, calc_ids, samplesites):
     dstores = [datastore.read(calc_id) for calc_id in calc_ids]
     dstore = dstores[0]
     sitecol = dstore['sitecol']
     oq = dstore['oqparam']
     imtls = oq.imtls
     poes = oq.poes
-    if len(sitecol) > samples:
-        sids = numpy.random.choice(len(sitecol), samples, replace=False)
+    if len(sitecol) > samplesites:
+        numpy.random.seed(samplesites)
+        sids = numpy.random.choice(len(sitecol), samplesites, replace=False)
     else:  # keep all sites
         sids = sitecol.sids
     arrays = [get(dstore, what, imtls, sids)]
@@ -70,38 +71,35 @@ def reduce(array, rtol):
 
 
 @sap.Script
-def compare(what, imt, calc_ids, files, samples=100, percent=5):
+def compare(what, imt, calc_ids, files, samplesites=100, percent=5):
     """
     Compare the hazard curves or maps of two or more calculations
     """
-    sids, imtls, poes, arrays = getdata(what, calc_ids, samples)
+    sids, imtls, poes, arrays = getdata(what, calc_ids, samplesites)
     try:
         levels = imtls[imt]
     except KeyError:
         sys.exit(
             '%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    hc_slice = imtls(imt)
     P = len(poes)
-    for imti, imt_ in enumerate(imtls):
-        if imt_ == imt:
-            hm_slice = slice(imti * P, imti * P + P)
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
+        array_imt = arrays[:, :, imtls(imt)]
         header = head + ['%.5f' % lvl for lvl in levels]
-    else:
+    else:  # hmaps
+        for imti, imt_ in enumerate(imtls):
+            if imt_ == imt:
+                slc = slice(imti * P, imti * P + P)
+        array_imt = arrays[:, :, slc]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
-    diff_idxs = reduce(arrays, percent / 100.)
+    diff_idxs = reduce(array_imt, percent / 100.)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerance')
         return
     arrays = arrays.transpose(1, 0, 2)[diff_idxs]  # shape (N, C, L)
-    for sid, array in zip(sids[diff_idxs], arrays):
-        for calc_id, arr in zip(calc_ids, array):
-            if what == 'hcurves':
-                cols = arr[hc_slice]
-            else:
-                cols = arr[hm_slice]
+    for sid, array in zip(sids[diff_idxs], array_imt):
+        for calc_id, cols in zip(calc_ids, array):
             if files:
                 rows[calc_id].append([sid] + list(cols))
             else:
@@ -120,5 +118,5 @@ compare.arg('what', 'hmaps or hcurves', choices={'hmaps', 'hcurves'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
-compare.opt('samples', 'number of sites to sample', type=int)
+compare.opt('samplesites', 'number of sites to sample', type=int)
 compare.opt('percent', 'acceptable percent difference', type=float)
