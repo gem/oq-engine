@@ -246,7 +246,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
-        rgetters = rgetters or self.get_rupture_getters()
+        rgetters = rgetters or self.get_rupture_getters(self.E)
         for rgetter in rgetters:
             yield rgetter, self.sitecol, param
         if self.datastore.parent:
