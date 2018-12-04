@@ -251,8 +251,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         logging.info('Found {:,d} ruptures and {:,d} events'
                      .format(len(self.datastore['ruptures']), self.E))
-        rgetters = rgetters or self.get_rupture_getters()
-        for rgetter in rgetters:
+        for rgetter in rgetters or self.get_rupture_getters():
             yield rgetter, self.sitecol, param
 
     def agg_dicts(self, acc, result):
@@ -303,18 +302,19 @@ class EventBasedCalculator(base.HazardCalculator):
         self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
-        self.eid2idx = dict(zip(events['eid'], range(self.E)))
+        self.eid2idx = eid2idx = dict(zip(events['eid'], range(self.E)))
         rgetters = self.get_rupture_getters()
-        eid2rlz_mon = self.monitor('saving eid->rlz')
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
-                                monitor=self.monitor('get_eid_rlz'),
+                                self.monitor('get_eid_rlz'),
                                 progress=logging.debug)
+        eid2rlz_mon = self.monitor('saving eid->rlz')
         for eid_rlz in smap:
+            # NB: the monitor must be inside, otherwise we would measure the
+            # time to get the eid_rlz arrays, not the time to save them
             with eid2rlz_mon:
-                idxs = numpy.fromiter(
-                    (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
-                events['rlz'][idxs] = eid_rlz['rlz']
+                for eid, rlz in eid_rlz:
+                    events[eid2idx[eid]]['rlz'] = rlz
 
         self.datastore['events'] = events
         return rgetters
