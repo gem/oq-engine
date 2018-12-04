@@ -66,7 +66,7 @@ def reduce(array, rtol):
         for n in range(N):
             if not numpy.allclose(array[c, n], array[0, n], rtol, atol=1E-5):
                 diff_idxs.add(n)
-    return numpy.array(sorted(diff_idxs))
+    return numpy.fromiter(diff_idxs, int)
 
 
 @sap.Script
@@ -96,8 +96,8 @@ def compare(what, imt, calc_ids, files, samplesites=100, percent=5):
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerance')
         return
-    arr = array_imt.transpose(1, 0, 2)[diff_idxs]  # shape (N, C, L)
-    for sid, array in zip(sids[diff_idxs], arr):
+    arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
+    for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
         for calc_id, cols in zip(calc_ids, array):
             if files:
                 rows[calc_id].append([sid] + list(cols))
