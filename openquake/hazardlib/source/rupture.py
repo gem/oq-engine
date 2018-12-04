@@ -559,26 +559,6 @@ def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
     return numpy.concatenate(all_eids)
 
 
-def get_eids2(rup_array, samples_by_grp, num_rlzs_by_grp):
-    """
-    :param rup_array: a composite array with fields serial, n_occ and grp_id
-    :param samples_by_grp: a dictionary grp_id -> samples
-    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
-    """
-    all_eids = []
-    for rup in rup_array:
-        grp_id = rup['grp_id']
-        num_rlzs = num_rlzs_by_grp[grp_id]
-        j = 0
-        eids = []
-        for _ in range(num_rlzs):
-            eids.extend(numpy.arange(j, j + rup['n_occ'], dtype=U64) + (
-                TWO32 * rup['serial']))
-            j += rup['n_occ']
-        all_eids.append(numpy.array(eids, U64))
-    return numpy.concatenate(all_eids)
-
-
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
