@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.calculators import getters
 from openquake.commonlib import calc
+from openquake.commands import engine
 
 
 def make_figure(sitecol, imtls, poes, hmaps):
