@@ -83,6 +83,8 @@ def build_ruptures(srcs, srcfilter, param, monitor):
     mon = monitor('making contexts', measuremem=False)
     for src in srcs:
         dic = sample_ruptures([src], param, srcfilter, mon)
+        if not dic['calc_times']:  # the source was filtered out
+            continue
         vars(src).update(dic)
         acc.append(src)
         n += len(dic['eb_ruptures'])
