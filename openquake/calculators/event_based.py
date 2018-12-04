@@ -241,8 +241,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
             dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
+        num_events = self.E if hasattr(self, 'E') else len(dstore['events'])
+        num_ruptures = len(dstore['ruptures'])
         logging.info('Found {:,d} ruptures and {:,d} events'
-                     .format(len(self.datastore['ruptures']), self.E))
+                     .format(num_ruptures, num_events))
         if self.datastore.parent:
             self.datastore.parent.close()
         return rgetters
