@@ -303,19 +303,17 @@ class EventBasedCalculator(base.HazardCalculator):
         events['eid'] = eids
         self.eid2idx = eid2idx = dict(zip(events['eid'], range(self.E)))
         rgetters = self.get_rupture_getters()
+
+        # build the associations eid -> rlz in parallel
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
                                 self.monitor('get_eid_rlz'),
                                 progress=logging.debug)
-        eid2rlz_mon = self.monitor('saving eid->rlz')
         for eid_rlz in smap:
-            # NB: the monitor must be inside, otherwise we would measure the
-            # time to get the eid_rlz arrays, not the time to save them
-            with eid2rlz_mon:
-                for eid, rlz in eid_rlz:
-                    events[eid2idx[eid]]['rlz'] = rlz
-
-        self.datastore['events'] = events
+            # fast: 30 million of events associated in 1 minute
+            for eid, rlz in eid_rlz:
+                events[eid2idx[eid]]['rlz'] = rlz
+        self.datastore['events'] = events  # fast too
         return rgetters
 
     def check_overflow(self):
