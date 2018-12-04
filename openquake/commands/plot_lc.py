@@ -42,7 +42,7 @@ def plot_lc(calc_id, aid=None):
     Plot loss curves given a calculation id and an asset ordinal.
     """
     # read the hazard data
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     dset = dstore['agg_curves-rlzs']
     if aid is None:  # plot the global curves
         plt = make_figure(dset.attrs['return_periods'], dset.value)
