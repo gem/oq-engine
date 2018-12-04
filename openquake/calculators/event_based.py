@@ -238,18 +238,18 @@ class EventBasedCalculator(base.HazardCalculator):
         self.check_overflow()  # check the number of events
         rgetters = self.get_rupture_getters()
         eid2rlz_mon = self.monitor('saving eid->rlz')
+        rlzi = numpy.zeros(E, U16)
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                ((rgetter,) for rgetter in rgetters),
                                 monitor=self.monitor('get_eid_rlz'),
                                 progress=logging.debug)
-        for rgetter in rgetters:
-            smap.submit(rgetter)
-        self.rlzi = numpy.zeros(E, U16)
         for eid_rlz in smap:
             with eid2rlz_mon:
                 idxs = numpy.fromiter(
                     (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
-                self.rlzi[idxs] = eid_rlz['rlz']
+                rlzi[idxs] = eid_rlz['rlz']
 
+        self.datastore['events']['rlz'] = rlzi
         return self.from_ruptures(par, rgetters)
 
     def get_rupture_getters(self):
@@ -373,9 +373,6 @@ class EventBasedCalculator(base.HazardCalculator):
             self.core_task.__func__, iterargs, self.monitor()
         ).reduce(self.agg_dicts, self.zerodict())
 
-        # storing events['rlz']
-        if not self.datastore.parent:
-            self.datastore['events']['rlz'] = self.rlzi
         if self.indices:
             N = len(self.sitecol.complete)
             logging.info('Saving gmf_data/indices')
@@ -411,7 +408,7 @@ class EventBasedCalculator(base.HazardCalculator):
     @cached_property
     def eid2idx(self):
         eids = self.datastore['events']['eid']
-        eid2idx = dict(zip(eids, numpy.arange(len(eids), dtype=U32)))
+        eid2idx = dict(zip(eids, range(len(eids))))
         return eid2idx
 
     def post_execute(self, result):
