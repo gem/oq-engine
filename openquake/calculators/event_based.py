@@ -259,7 +259,11 @@ class EventBasedCalculator(base.HazardCalculator):
         :param acc: accumulator dictionary
         :param result: an AccumDict with events, ruptures, gmfs and hcurves
         """
-        eid2idx = self.eid2idx
+        try:
+            eid2idx = self.eid2idx
+        except AttributeError:  # first call
+            eid2idx = self.eid2idx = dict(
+                zip(self.datastore['events']['eid'], range(self.E)))
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         with sav_mon:
