@@ -227,7 +227,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
         rgetters = self.save_events(sorted_ruptures)
-        return self.from_ruptures(par, rgetters)
+        return ((rgetter, self.sitecol, par) for rgetter in rgetters)
 
     def get_rupture_getters(self):
         """
@@ -241,18 +241,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
             dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
+        logging.info('Found {:,d} ruptures and {:,d} events'
+                     .format(len(self.datastore['ruptures']), self.E))
         if self.datastore.parent:
             self.datastore.parent.close()
         return rgetters
-
-    def from_ruptures(self, param, rgetters=None):
-        """
-        :yields: the arguments for compute_gmfs_and_curves
-        """
-        logging.info('Found {:,d} ruptures and {:,d} events'
-                     .format(len(self.datastore['ruptures']), self.E))
-        for rgetter in rgetters or self.get_rupture_getters():
-            yield rgetter, self.sitecol, param
 
     def agg_dicts(self, acc, result):
         """
@@ -359,7 +352,8 @@ class EventBasedCalculator(base.HazardCalculator):
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            iterargs = self.from_ruptures(param)
+            iterargs = ((rgetter, self.sitecol, param)
+                        for rgetter in self.get_rupture_getters())
         else:  # from sources
             iterargs = self.from_sources(param)
             if oq.ground_motion_fields is False:
