@@ -234,11 +234,11 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        E = self.save_events(sorted_ruptures)
+        events = self.save_events(sorted_ruptures)
         self.check_overflow()  # check the number of events
-        rgetters = self.get_rupture_getters()
+        self.eid2idx = dict(zip(events['eid'], range(len(events))))
+        rgetters = self.get_rupture_getters(len(events))
         eid2rlz_mon = self.monitor('saving eid->rlz')
-        rlzi = numpy.zeros(E, U16)
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
                                 monitor=self.monitor('get_eid_rlz'),
@@ -247,17 +247,17 @@ class EventBasedCalculator(base.HazardCalculator):
             with eid2rlz_mon:
                 idxs = numpy.fromiter(
                     (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
-                rlzi[idxs] = eid_rlz['rlz']
+                events['rlz'][idxs] = eid_rlz['rlz']
 
-        self.datastore['events']['rlz'] = rlzi
+        self.datastore['events'] = events
         return self.from_ruptures(par, rgetters)
 
-    def get_rupture_getters(self):
+    def get_rupture_getters(self, num_events):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         hdf5cache = dstore.hdf5cache()
         logging.info('Found {:,d} ruptures and {:,d} events'
-                     .format(len(dstore['ruptures']), len(dstore['events'])))
+                     .format(len(dstore['ruptures']), num_events))
         with hdf5.File(hdf5cache, 'r+') as cache:
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
@@ -321,8 +321,7 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
         events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
-        self.datastore['events'] = events
-        return len(eids)
+        return events
 
     def check_overflow(self):
         """
@@ -404,12 +403,6 @@ class EventBasedCalculator(base.HazardCalculator):
         for sm_id in ds['gmf_data']:
             ds.set_nbytes('gmf_data/' + sm_id)
         ds.set_nbytes('gmf_data')
-
-    @cached_property
-    def eid2idx(self):
-        eids = self.datastore['events']['eid']
-        eid2idx = dict(zip(eids, range(len(eids))))
-        return eid2idx
 
     def post_execute(self, result):
         oq = self.oqparam
