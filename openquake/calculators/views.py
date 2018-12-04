@@ -126,6 +126,9 @@ def rst_table(data, header=None, fmt=None):
         tup = tuple(fmt(c) for c in row)
         for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
+        if len(tup) != len(col_sizes):
+            raise ValueError('The header has %d fields but the row %d fields!'
+                             % (len(col_sizes), len(tup)))
         body.append(tup)
 
     sepline = ' '.join(('=' * size for size in col_sizes))
