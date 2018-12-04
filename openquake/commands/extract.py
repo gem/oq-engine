@@ -26,6 +26,7 @@ from openquake.baselib import performance, sap, hdf5, datastore
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators.extract import extract as extract_
 from openquake.server import dbserver
+from openquake.commands import engine
 
 
 def quote(url_like):

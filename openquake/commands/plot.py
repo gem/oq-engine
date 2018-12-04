@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.hazardlib.stats import mean_curve, compute_pmap_stats
 from openquake.calculators import getters
+from openquake.commands import engine
 
 
 def make_figure(indices, n, imtls, spec_curves, curves=(), label=''):
