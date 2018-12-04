@@ -56,7 +56,7 @@ def show(what='contents', calc_id=-1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = datastore.read(calc_id)
+                ds = engine.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:

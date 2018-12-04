@@ -57,10 +57,10 @@ def extract(what, calc_id=-1, server_url='http://127.0.0.1:8800'):
         job = dbcmd('get_job', calc_id)
         if job is not None:
             hdf5path = job.ds_calc_dir + '.hdf5'
-    dstore = datastore.read(hdf5path or calc_id)
+    dstore = engine.read(hdf5path or calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = datastore.read(parent_id)
+        dstore.parent = engine.read(parent_id)
     urlpath = '/v1/calc/%d/extract/%s' % (calc_id, quote(what))
     with performance.Monitor('extract', measuremem=True) as mon, dstore:
         if server_url == 'local':
