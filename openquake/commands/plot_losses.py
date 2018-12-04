@@ -51,7 +51,7 @@ def plot_losses(calc_id, bins=7):
     losses_by_event plotter
     """
     # read the hazard data
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     losses_by_rlzi = dict(extract(dstore, 'losses_by_event'))
     oq = dstore['oqparam']
     plt = make_figure(losses_by_rlzi, oq.loss_dt().names, bins)
