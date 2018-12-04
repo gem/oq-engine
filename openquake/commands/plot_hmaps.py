@@ -47,7 +47,7 @@ def plot_hmaps(calc_id):
     """
     Mean hazard maps plotter.
     """
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     mean = getters.PmapGetter(dstore, rlzs_assoc).get_mean()

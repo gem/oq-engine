@@ -18,8 +18,9 @@
 import sys
 import mock
 import os.path
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.commonlib import readinput
+from openquake.commands import engine
 
 
 @sap.Script
@@ -39,7 +40,7 @@ def checksum(thing):
         if not os.path.exists(job_file):
             sys.exit('%s does not correspond to an existing file' % job_file)
     if job_id:
-        dstore = datastore.read(job_id)
+        dstore = engine.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
     elif job_file.endswith('.xml'):  # assume it is a smlt file
         inputs = {'source_model_logic_tree': job_file}
