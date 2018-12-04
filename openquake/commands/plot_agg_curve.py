@@ -43,7 +43,7 @@ def plot_ac(calc_id):
     Aggregate loss curves plotter.
     """
     # read the hazard data
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     agg_curve = dstore['agg_curve-rlzs']
     plt = make_figure(agg_curve)
     plt.show()
