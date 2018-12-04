@@ -94,14 +94,6 @@ def build_ruptures(srcs, srcfilter, param, monitor):
         yield acc
 
 
-def get_events(ebruptures, rlzs_by_gsim):
-    ebrs = list(ebruptures)  # iterate on the rupture getter
-    if not ebrs:
-        return ()
-    return numpy.concatenate(
-        [ebr.get_events(rlzs_by_gsim) for ebr in ebrs])
-
-
 # ######################## GMF calculator ############################ #
 
 def update_nbytes(dstore, key, array):
@@ -234,22 +226,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sorted_ruptures.sort(order='serial')
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
-        events = self.save_events(sorted_ruptures)
-        self.check_overflow()  # check the number of events
-        self.eid2idx = dict(zip(events['eid'], range(len(events))))
-        rgetters = self.get_rupture_getters(len(events))
-        eid2rlz_mon = self.monitor('saving eid->rlz')
-        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                ((rgetter,) for rgetter in rgetters),
-                                monitor=self.monitor('get_eid_rlz'),
-                                progress=logging.debug)
-        for eid_rlz in smap:
-            with eid2rlz_mon:
-                idxs = numpy.fromiter(
-                    (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
-                events['rlz'][idxs] = eid_rlz['rlz']
-
-        self.datastore['events'] = events
+        rgetters = self.save_events(sorted_ruptures)
         return self.from_ruptures(par, rgetters)
 
     def get_rupture_getters(self, num_events):
@@ -314,14 +291,30 @@ class EventBasedCalculator(base.HazardCalculator):
     def save_events(self, rup_array):
         """
         :param rup_array: an array of ruptures with fields grp_id
-        :returns: the number of saved events
+        :returns: a list of RuptureGetters
         """
         # this is very fast compared to saving the ruptures
         eids = rupture.get_eids(
             rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
+        self.E = len(eids)
+        self.check_overflow()  # check the number of events
         events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
-        return events
+        self.eid2idx = dict(zip(events['eid'], range(self.E)))
+        rgetters = self.get_rupture_getters(self.E)
+        eid2rlz_mon = self.monitor('saving eid->rlz')
+        smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
+                                ((rgetter,) for rgetter in rgetters),
+                                monitor=self.monitor('get_eid_rlz'),
+                                progress=logging.debug)
+        for eid_rlz in smap:
+            with eid2rlz_mon:
+                idxs = numpy.fromiter(
+                    (self.eid2idx[eid] for eid in eid_rlz['eid']), U16)
+                events['rlz'][idxs] = eid_rlz['rlz']
+
+        self.datastore['events'] = events
+        return rgetters
 
     def check_overflow(self):
         """
@@ -331,11 +324,8 @@ class EventBasedCalculator(base.HazardCalculator):
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
         max_ = dict(events=2**32, imts=2**8)
-        try:
-            events = len(self.datastore['events'])
-        except KeyError:
-            events = 0
-        num_ = dict(events=events, imts=len(self.oqparam.imtls))
+        E = getattr(self, 'E', 0)  # 0 for non event based
+        num_ = dict(events=E, imts=len(self.oqparam.imtls))
         if self.sitecol:
             max_['sites'] = 2**16
             num_['sites'] = len(self.sitecol)
