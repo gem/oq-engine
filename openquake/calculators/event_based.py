@@ -219,7 +219,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(calc_times)
 
-        logging.info('Reordering the ruptures and the events')
+        logging.info('Reordering the ruptures and storing the events')
         attrs = self.datastore.getitem('ruptures').attrs
         sorted_ruptures = self.datastore.getitem('ruptures').value
         # order the ruptures by serial
@@ -229,28 +229,31 @@ class EventBasedCalculator(base.HazardCalculator):
         rgetters = self.save_events(sorted_ruptures)
         return self.from_ruptures(par, rgetters)
 
-    def get_rupture_getters(self, num_events):
+    def get_rupture_getters(self):
+        """
+        :returns: a list of RuptureGetters
+        """
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         hdf5cache = dstore.hdf5cache()
-        logging.info('Found {:,d} ruptures and {:,d} events'
-                     .format(len(dstore['ruptures']), num_events))
         with hdf5.File(hdf5cache, 'r+') as cache:
             if 'rupgeoms' not in cache:
                 dstore.hdf5.copy('rupgeoms', cache)
         rgetters = get_rupture_getters(
             dstore, split=self.oqparam.concurrent_tasks, hdf5cache=hdf5cache)
+        if self.datastore.parent:
+            self.datastore.parent.close()
         return rgetters
 
     def from_ruptures(self, param, rgetters=None):
         """
         :yields: the arguments for compute_gmfs_and_curves
         """
-        rgetters = rgetters or self.get_rupture_getters(self.E)
+        logging.info('Found {:,d} ruptures and {:,d} events'
+                     .format(len(self.datastore['ruptures']), self.E))
+        rgetters = rgetters or self.get_rupture_getters()
         for rgetter in rgetters:
             yield rgetter, self.sitecol, param
-        if self.datastore.parent:
-            self.datastore.parent.close()
 
     def agg_dicts(self, acc, result):
         """
@@ -301,7 +304,7 @@ class EventBasedCalculator(base.HazardCalculator):
         events = numpy.zeros(len(eids), rupture.events_dt)
         events['eid'] = eids
         self.eid2idx = dict(zip(events['eid'], range(self.E)))
-        rgetters = self.get_rupture_getters(self.E)
+        rgetters = self.get_rupture_getters()
         eid2rlz_mon = self.monitor('saving eid->rlz')
         smap = parallel.Starmap(RuptureGetter.get_eid_rlz,
                                 ((rgetter,) for rgetter in rgetters),
