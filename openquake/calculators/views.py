@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    humansize, groupby, AccumDict, CallableDict)
+    humansize, groupby, countby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.general import get_array
 from openquake.baselib.python3compat import decode
@@ -478,10 +478,12 @@ def view_exposure_info(token, dstore):
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
+    events_by_rlz = countby(dstore['events'].value, 'rlz')
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
-           ('Rupture multiplicity', mult)]
+           ('Rupture multiplicity', mult),
+           ('Events by rlz', events_by_rlz.values())]
     return rst_table(lst)
 
 
