@@ -839,7 +839,7 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if oqparam.number_of_logic_tree_samples:
         logging.info('Considering {:,d} logic tree paths out of {:,d}'.format(
             oqparam.number_of_logic_tree_samples, p))
-    else:
+    else:  # full enumeration
         logging.info('Potential number of logic tree paths = {:,d}'.format(p))
 
     if source_model_lt.on_each_source:
