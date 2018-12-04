@@ -42,7 +42,7 @@ def plot_memory(calc_id=-1):
     """
     Plot the memory occupation
     """
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     plots = []
     for task_name in dstore['task_info']:
         mem = dstore['task_info/' + task_name]['mem_gb']

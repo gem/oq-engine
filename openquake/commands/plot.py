@@ -70,8 +70,8 @@ def plot(calc_id, other_id=None, sites='0'):
     Hazard curves plotter.
     """
     # read the hazard data
-    haz = datastore.read(calc_id)
-    other = datastore.read(other_id) if other_id else None
+    haz = engine.read(calc_id)
+    other = engine.read(other_id) if other_id else None
     oq = haz['oqparam']
     indices = numpy.array(list(map(int, sites.split(','))))
     n_sites = len(haz['sitecol'])

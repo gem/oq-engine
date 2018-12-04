@@ -1355,16 +1355,16 @@ def get_input_files(oqparam, hazard=False):
             fnames.append(f)
             fname = nrml.read(f).sourceModel.UCERFSource['filename']
             fnames.append(os.path.join(os.path.dirname(f), fname))
+        elif key == 'exposure':  # fname is a list
+            for exp in asset.Exposure.read_headers(fname):
+                fnames.extend(exp.datafiles)
+            fnames.extend(fname)
         elif isinstance(fname, dict):
             fnames.extend(fname.values())
         elif isinstance(fname, list):
             fnames.extend(fname)
         elif key == 'source_model_logic_tree':
             fnames.extend(logictree.collect_info(fname).smpaths)
-            fnames.append(fname)
-        elif key == 'exposure':
-            [exp] = asset.Exposure.read_headers([fname])
-            fnames.extend(exp.datafiles)
             fnames.append(fname)
         else:
             fnames.append(fname)

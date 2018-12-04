@@ -58,7 +58,7 @@ def plot_uhs(calc_id, sites='0'):
     UHS plotter.
     """
     # read the hazard data
-    dstore = datastore.read(calc_id)
+    dstore = engine.read(calc_id)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
