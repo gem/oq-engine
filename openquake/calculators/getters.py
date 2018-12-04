@@ -201,7 +201,7 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        else:  # multiple realizations, assume hcurves/mean is there
+        else:  # multiple realizations
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
             return self.rlzs_assoc.compute_pmap_stats(
