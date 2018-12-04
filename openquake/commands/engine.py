@@ -42,7 +42,7 @@ def read(calc_id, username=None):
     :param username: if given, restrict the search to the user's calculations
     :returns: the associated DataStore instance
     """
-    if calc_id < 0 and not username:
+    if isinstance(calc_id, str) or calc_id < 0 and not username:
         # get the last calculation in the datastore of the current user
         return datastore.read(calc_id)
     job = logs.dbcmd('get_job', calc_id, username)
