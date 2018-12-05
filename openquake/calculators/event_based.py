@@ -73,29 +73,6 @@ def store_rlzs_by_grp(dstore):
     dstore['csm_info/rlzs_by_grp'] = numpy.array(lst, rlzs_by_grp_dt)
 
 
-def build_ruptures(srcs, srcfilter, param, monitor):
-    """
-    A small wrapper around :func:
-    `openquake.hazardlib.calc.stochastic.sample_ruptures`
-    """
-    acc = []  # a list of sources with an attribute eb_ruptures
-    n = 0
-    mon = monitor('making contexts', measuremem=False)
-    for src in srcs:
-        dic = sample_ruptures([src], param, srcfilter, mon)
-        if not dic['calc_times']:  # the source was filtered out
-            continue
-        vars(src).update(dic)
-        acc.append(src)
-        n += len(dic['eb_ruptures'])
-        if n > param['ruptures_per_block']:
-            yield acc
-            n = 0
-            acc.clear()
-    if acc:
-        yield acc
-
-
 # ######################## GMF calculator ############################ #
 
 def update_nbytes(dstore, key, array):
@@ -134,7 +111,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = compute_gmfs
     is_stochastic = True
-    build_ruptures = build_ruptures
+    build_ruptures = sample_ruptures
 
     @cached_property
     def csm_info(self):
@@ -200,18 +177,15 @@ class EventBasedCalculator(base.HazardCalculator):
                             smap.submit(block, self.src_filter, par)
                             ses_idx += 1
                     else:
-                        smap.submit(block, self.src_filter, par)
+                        smap.submit(block, par, self.src_filter)
         mon = self.monitor('saving ruptures')
-        for srcs in smap:
-            eb_ruptures = []
-            for src in srcs:
-                eb_ruptures.extend(src.eb_ruptures)
-                eff_ruptures[src.src_group_id] += src.num_ruptures
+        for dic in smap:
+            eb_ruptures = dic['eb_ruptures']
+            calc_times += dic['calc_times']
+            eff_ruptures += dic['eff_ruptures']
             if eb_ruptures:
                 with mon:
                     self.rupser.save(eb_ruptures)
-            for src in srcs:
-                calc_times += src.calc_times
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
