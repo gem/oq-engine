@@ -342,7 +342,7 @@ class RuptureData(object):
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
             data.append(
-                (ebr.serial, ebr.srcidx, ebr.n_occ.sum(), rate,
+                (ebr.serial, ebr.srcidx, ebr.n_occ, rate,
                  rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
                  rup.surface.get_dip(), rup.rake,
                  'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
