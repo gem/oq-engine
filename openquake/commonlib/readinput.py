@@ -751,7 +751,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, monitor,
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
         logging.info(
-            'Processed source model %d with %d potential gsim path(s) and %d '
+            'Processed source model %d with %d gsim path(s) and %d '
             'sources', sm.ordinal + 1, sm.num_gsim_paths, num_sources)
 
         gsim_file = oqparam.inputs.get('gsim_logic_tree')
