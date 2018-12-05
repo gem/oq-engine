@@ -110,14 +110,18 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
                           src_filter.integration_distance,
                           param, monitor)
     num_ses = param['ses_per_logic_tree_path']
+    eff_ruptures = 0
+    grp_id = sources[0].src_group_id
     for src, sites in src_filter(sources):
         t0 = time.time()
         ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
         n_occ = sum(ebr.n_occ for ebr in ebrs)
         eb_ruptures.extend(ebrs)
+        eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times)
+    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times,
+               eff_ruptures={grp_id: eff_ruptures})
     return dic
 
 
