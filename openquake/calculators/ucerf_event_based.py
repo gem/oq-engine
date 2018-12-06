@@ -170,12 +170,13 @@ def build_ruptures(sources, src_filter, param, monitor):
                 for rup, occ in zip(rups, occs):
                     n_occ[rup] += occ
     tot_occ = sum(n_occ.values())
+    dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     with filt_mon:
-        src.eb_ruptures = stochastic.build_eb_ruptures(
+        dic['eb_ruptures'] = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
     dt = time.time() - t0
-    src.calc_times = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
-    return [src]
+    dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
+    return dic
 
 
 @base.calculators.add('ucerf_hazard')
