@@ -303,7 +303,7 @@ class EventBasedCalculator(base.HazardCalculator):
         E = getattr(self, 'E', 0)  # 0 for non event based
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
         if self.sitecol:
-            max_['sites'] = 2**16
+            max_['sites'] = 2**32
             num_['sites'] = len(self.sitecol)
         for var in max_:
             if num_[var] > max_[var]:
