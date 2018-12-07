@@ -351,19 +351,19 @@ class RuptureData(object):
 
 rupture_dt = numpy.dtype([
     ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-    ('n_occ', U16),
-    ('gidx1', U32), ('gidx2', U32),
+    ('n_occ', U16), ('gidx1', U32), ('gidx2', U32),
     ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
     ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
 
-def get_rup_array(ebruptures, offset):
+def get_rup_array(ebruptures):
     """
     Convert a list of EBRuptures into a numpy composite array
     """
     lst = []
     geoms = []
     nbytes = 0
+    offset = 0
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
         mesh = surface_to_array(rup.surface)
@@ -376,8 +376,7 @@ def get_rup_array(ebruptures, offset):
         points = mesh.reshape(3, -1).T   # shape (n, 3)
         n = len(points)
         tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-               rup.code, ebrupture.n_occ,
-               offset, offset + n, getattr(ebrupture, 'pmfx', -1),
+               rup.code, ebrupture.n_occ, offset, offset + n, -1,
                rup.mag, rup.rake, rate, hypo, sy, sz)
         offset += n
         lst.append(tup)
@@ -407,7 +406,9 @@ class RuptureSerializer(object):
         """
         self.nruptures += len(ebruptures)
         offset = len(self.datastore['rupgeoms'])
-        rup_array = get_rup_array(ebruptures, offset)
+        rup_array = get_rup_array(ebruptures)
+        rup_array.array['gidx1'] += offset
+        rup_array.array['gidx2'] += offset
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
         self.datastore.extend(
             'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
