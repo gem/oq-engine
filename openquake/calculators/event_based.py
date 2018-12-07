@@ -180,12 +180,13 @@ class EventBasedCalculator(base.HazardCalculator):
                         smap.submit(block, par, self.src_filter)
         mon = self.monitor('saving ruptures')
         for dic in smap:
-            eb_ruptures = dic['eb_ruptures']
-            calc_times += dic['calc_times']
-            eff_ruptures += dic['eff_ruptures']
-            if eb_ruptures:
+            if dic['calc_times']:
+                calc_times += dic['calc_times']
+            if dic['eff_ruptures']:
+                eff_ruptures += dic['eff_ruptures']
+            if dic['eb_ruptures']:
                 with mon:
-                    self.rupser.save(eb_ruptures)
+                    self.rupser.save(dic['eb_ruptures'])
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
