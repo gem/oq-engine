@@ -22,7 +22,6 @@ import numpy
 from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
@@ -349,43 +348,6 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
-rupture_dt = numpy.dtype([
-    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-    ('n_occ', U16), ('gidx1', U32), ('gidx2', U32),
-    ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-    ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
-
-
-def get_rup_array(ebruptures):
-    """
-    Convert a list of EBRuptures into a numpy composite array
-    """
-    lst = []
-    geoms = []
-    nbytes = 0
-    offset = 0
-    for ebrupture in ebruptures:
-        rup = ebrupture.rupture
-        mesh = surface_to_array(rup.surface)
-        sy, sz = mesh.shape[1:]
-        # sanity checks
-        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-        assert sz < TWO16, 'The rupture mesh spacing is too small'
-        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        points = mesh.reshape(3, -1).T   # shape (n, 3)
-        n = len(points)
-        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-               rup.code, ebrupture.n_occ, offset, offset + n, -1,
-               rup.mag, rup.rake, rate, hypo, sy, sz)
-        offset += n
-        lst.append(tup)
-        geoms.append(numpy.array([tuple(p) for p in points], point3d))
-        nbytes += rupture_dt.itemsize + mesh.nbytes
-    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
-    return hdf5.ArrayWrapper(numpy.array(lst, rupture_dt), dic)
-
-
 class RuptureSerializer(object):
     """
     Serialize event based ruptures on an HDF5 files. Populate the datasets
@@ -395,18 +357,16 @@ class RuptureSerializer(object):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
-        datastore.create_dset('ruptures', rupture_dt, attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', point3d)
+        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
+                              attrs={'nbytes': 0})
+        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
 
-    def save(self, ebruptures):
+    def save(self, rup_array):
         """
-        Populate a dictionary of site IDs tuples and save the ruptures.
-
-        :param ebruptures: a list of EBRupture objects to save
+         Store the ruptures in array format.
         """
-        self.nruptures += len(ebruptures)
+        self.nruptures += len(rup_array)
         offset = len(self.datastore['rupgeoms'])
-        rup_array = get_rup_array(ebruptures)
         rup_array.array['gidx1'] += offset
         rup_array.array['gidx2'] += offset
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)

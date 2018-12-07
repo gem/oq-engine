@@ -184,9 +184,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 calc_times += dic['calc_times']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
-            if dic['eb_ruptures']:
+            if dic['rup_array']:
                 with mon:
-                    self.rupser.save(dic['eb_ruptures'])
+                    self.rupser.save(dic['rup_array'])
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
