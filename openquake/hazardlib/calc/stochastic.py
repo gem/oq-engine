@@ -42,8 +42,6 @@ I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 1000
 
-BaseRupture.init()  # initialize rupture codes
-
 
 def source_site_noop_filter(srcs):
     for src in srcs:
@@ -106,6 +104,9 @@ def get_rup_array(ebruptures):
     """
     Convert a list of EBRuptures into a numpy composite array
     """
+    if not BaseRupture._code:
+        BaseRupture.init()  # initialize rupture codes
+
     lst = []
     geoms = []
     nbytes = 0
