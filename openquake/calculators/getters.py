@@ -514,9 +514,6 @@ class RuptureGetter(object):
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
                 rupture.tectonic_region_type = self.trt
-                pmfx = rec['pmfx']
-                if pmfx != -1:
-                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])
