@@ -1295,6 +1295,8 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     """
     Extract sources from the composite source model
     """
+    found = 0
+    to_remove = []
     for path in logictree.collect_info(smlt_file).smpaths:
         root = nrml.read(path)
         model = Node('sourceModel', root[0].attrib)
@@ -1315,6 +1317,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                 src_group['srcs_weights'] = reduced_weigths = []
                 for src_node, weight in zip(src_group, weights):
                     if src_node['id'] in source_ids:
+                        found += 1
                         sg.nodes.append(src_node)
                         reduced_weigths.append(weight)
                 if sg.nodes:
@@ -1325,8 +1328,12 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
                 nrml.write([model], f, xmlns=root['xmlns'])
                 logging.warn('Reduced %s' % path)
         elif remove:  # remove the files completely reduced
+            to_remove.append(path)
+    if found:
+        for path in to_remove:
             os.remove(path)
-
+    else:
+        logging.warn('Sources %s not found', source_ids)
 
 # used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
