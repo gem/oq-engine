@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a parameter `max_num_sites` to increase the number of sites accepted
+    by an event based calculation up to 2 ** 32 (the default is still 2 ** 16)
   * Added a command `oq compare` to compare hazard curves and maps within
     calculations
   * Extended the engine to read transparently zipped source models and exposures
