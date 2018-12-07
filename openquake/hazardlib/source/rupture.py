@@ -652,8 +652,8 @@ class EBRupture(object):
         rupture = self.rupture
         events = self.get_events(rlzs_by_gsim)
         events_by_ses = self.get_events_by_ses(events, num_ses)
-        new = ExportedRupture(self.serial, events_by_ses, self.sids)
-        new.mesh = mesh[self.sids]
+        new = ExportedRupture(self.serial, events_by_ses)
+        new.mesh = mesh[()]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
