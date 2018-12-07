@@ -349,55 +349,61 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+rupture_dt = numpy.dtype([
+    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+    ('n_occ', U16),
+    ('gidx1', U32), ('gidx2', U32),
+    ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
+
+pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
+
+
+def get_rup_array(ebruptures, offset):
+    """
+    Convert a list of EBRuptures into a numpy composite array
+    """
+    lst = []
+    geoms = []
+    pmfs = []
+    nbytes = 0
+    for ebrupture in ebruptures:
+        rup = ebrupture.rupture
+        mesh = surface_to_array(rup.surface)
+        sy, sz = mesh.shape[1:]
+        # sanity checks
+        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
+        assert sz < TWO16, 'The rupture mesh spacing is too small'
+        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        rate = getattr(rup, 'occurrence_rate', numpy.nan)
+        points = mesh.reshape(3, -1).T   # shape (n, 3)
+        n = len(points)
+        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+               rup.code, ebrupture.n_occ,
+               offset, offset + n, getattr(ebrupture, 'pmfx', -1),
+               rup.mag, rup.rake, rate, hypo, sy, sz)
+        offset += n
+        lst.append(tup)
+        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        nbytes += rupture_dt.itemsize + mesh.nbytes
+        if hasattr(ebrupture, 'pmf'):
+            pmfs.append(
+                numpy.array([(ebrupture.serial, ebrupture.pmf)], pmfs_dt))
+    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes,
+               pmfs=numpy.array(pmfs) if pmfs else numpy.zeros(0))
+    return hdf5.ArrayWrapper(numpy.array(lst, rupture_dt), dic)
+
+
 class RuptureSerializer(object):
     """
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
-    rupture_dt = numpy.dtype([
-        ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-        ('n_occ', U16),
-        ('gidx1', U32), ('gidx2', U32),
-        ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
-
-    pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
-
-    @classmethod
-    def get_array_nbytes(cls, ebruptures, offset):
-        """
-        Convert a list of EBRuptures into a numpy composite array
-        """
-        lst = []
-        geoms = []
-        nbytes = 0
-        for ebrupture in ebruptures:
-            rup = ebrupture.rupture
-            mesh = surface_to_array(rup.surface)
-            sy, sz = mesh.shape[1:]
-            # sanity checks
-            assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-            assert sz < TWO16, 'The rupture mesh spacing is too small'
-            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-            rate = getattr(rup, 'occurrence_rate', numpy.nan)
-            points = mesh.reshape(3, -1).T   # shape (n, 3)
-            n = len(points)
-            tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-                   rup.code, ebrupture.n_occ,
-                   offset, offset + n, getattr(ebrupture, 'pmfx', -1),
-                   rup.mag, rup.rake, rate, hypo, sy, sz)
-            offset += n
-            lst.append(tup)
-            geoms.append(numpy.array([tuple(p) for p in points], point3d))
-            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
-        geom = numpy.concatenate(geoms)
-        return numpy.array(lst, cls.rupture_dt), geom, nbytes
-
     def __init__(self, datastore):
         self.datastore = datastore
         self.nbytes = 0
         self.nruptures = 0
-        datastore.create_dset('ruptures', self.rupture_dt, attrs={'nbytes': 0})
+        datastore.create_dset('ruptures', rupture_dt, attrs={'nbytes': 0})
         datastore.create_dset('rupgeoms', point3d)
 
     def save(self, ebruptures):
@@ -408,21 +414,21 @@ class RuptureSerializer(object):
         """
         pmfbytes = 0
         self.nruptures += len(ebruptures)
+        offset = len(self.datastore['rupgeoms'])
+        rup_array = get_rup_array(ebruptures, offset)
+        p = 0
         for ebr in ebruptures:
             rup = ebr.rupture
             if hasattr(rup, 'pmf'):
-                pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
+                pmfs = rup_array.pmfs[p]
+                p += 1
                 dset = self.datastore.extend('pmfs', pmfs)
                 ebr.pmfx = len(dset) - 1
                 pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
-
-        # store the ruptures in a compact format
-        offset = len(self.datastore['rupgeoms'])
-        array, geom, nbytes = self.get_array_nbytes(ebruptures, offset)
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
         dset = self.datastore.extend(
-            'ruptures', array, nbytes=previous + nbytes)
-        self.datastore.extend('rupgeoms', geom)
+            'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
+        self.datastore.extend('rupgeoms', rup_array.geom)
         # save nbytes occupied by the PMFs
         if pmfbytes:
             if 'nbytes' in dset.attrs:
