@@ -65,7 +65,7 @@ def reduce(array, rtol):
     diff_idxs = set()  # indices of the sites with differences
     for c in range(1, C):
         for n in range(N):
-            if not numpy.allclose(array[c, n], array[0, n], rtol, atol=1E-5):
+            if not numpy.allclose(array[c, n], array[0, n], rtol, atol=1E-4):
                 diff_idxs.add(n)
     return numpy.fromiter(diff_idxs, int)
 
