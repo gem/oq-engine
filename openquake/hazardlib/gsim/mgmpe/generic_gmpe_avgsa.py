@@ -85,7 +85,7 @@ class GenericGmpeAvgSA(GMPE):
                 stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
 
         mean_avgsa *= (1./self.tnum)
-        stddvs_avgsa *= (1./self.tnum)**2
+        stddvs_avgsa = (1./self.tnum) * np.sqrt(stddvs_avgsa)
 
         return mean_avgsa, [stddvs_avgsa]
 
