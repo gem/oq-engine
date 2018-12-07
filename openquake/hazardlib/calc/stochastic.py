@@ -23,11 +23,13 @@
 import sys
 import time
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -35,7 +37,12 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+U8 = numpy.uint8
+I32 = numpy.int32
+F32 = numpy.float32
 MAX_RUPTURES = 1000
+
+BaseRupture.init()  # initialize rupture codes
 
 
 def source_site_noop_filter(srcs):
@@ -88,6 +95,44 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 # ######################## rupture calculator ############################ #
 
+rupture_dt = numpy.dtype([
+    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+    ('n_occ', U16), ('gidx1', U32), ('gidx2', U32),
+    ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
+
+
+def get_rup_array(ebruptures):
+    """
+    Convert a list of EBRuptures into a numpy composite array
+    """
+    lst = []
+    geoms = []
+    nbytes = 0
+    offset = 0
+    for ebrupture in ebruptures:
+        rup = ebrupture.rupture
+        mesh = surface_to_array(rup.surface)
+        sy, sz = mesh.shape[1:]
+        # sanity checks
+        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
+        assert sz < TWO16, 'The rupture mesh spacing is too small'
+        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        rate = getattr(rup, 'occurrence_rate', numpy.nan)
+        points = mesh.reshape(3, -1).T   # shape (n, 3)
+        n = len(points)
+        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+               rup.code, ebrupture.n_occ, offset, offset + n, -1,
+               rup.mag, rup.rake, rate, hypo, sy, sz)
+        offset += n
+        lst.append(tup)
+        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        nbytes += rupture_dt.itemsize + mesh.nbytes
+    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
+    # TODO: PMFs for nonparametric ruptures are not converted
+    return hdf5.ArrayWrapper(numpy.array(lst, rupture_dt), dic)
+
+
 def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
                     monitor=Monitor()):
     """
@@ -116,7 +161,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     for src, sites in src_filter(sources):
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            yield AccumDict(eb_ruptures=eb_ruptures,
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
                             calc_times={},
                             eff_ruptures={})
             eb_ruptures.clear()
@@ -126,7 +171,9 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    yield AccumDict(eb_ruptures=eb_ruptures, calc_times=calc_times,
+    yield AccumDict(rup_array=get_rup_array(eb_ruptures)
+                    if eb_ruptures else (),
+                    calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})
 
 
