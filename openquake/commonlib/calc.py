@@ -39,6 +39,8 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
+BaseRupture.init()
+
 # ############## utilities for the classical calculator ############### #
 
 
