@@ -35,6 +35,7 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+MAX_RUPTURES = 1000
 
 
 def source_site_noop_filter(srcs):
@@ -102,7 +103,6 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     :returns:
         a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
     """
-    eb_ruptures = []
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
@@ -112,17 +112,22 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
     grp_id = sources[0].src_group_id
+    eb_ruptures = []
     for src, sites in src_filter(sources):
         t0 = time.time()
+        if len(eb_ruptures) > MAX_RUPTURES:
+            yield AccumDict(eb_ruptures=eb_ruptures,
+                            calc_times={},
+                            eff_ruptures={})
+            eb_ruptures.clear()
         ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
         n_occ = sum(ebr.n_occ for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    dic = dict(eb_ruptures=eb_ruptures, calc_times=calc_times,
-               eff_ruptures={grp_id: eff_ruptures})
-    return dic
+    yield AccumDict(eb_ruptures=eb_ruptures, calc_times=calc_times,
+                    eff_ruptures={grp_id: eff_ruptures})
 
 
 def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
