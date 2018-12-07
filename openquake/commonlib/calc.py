@@ -356,8 +356,6 @@ rupture_dt = numpy.dtype([
     ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
     ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
 
-pmfs_dt = numpy.dtype([('serial', U32), ('pmf', hdf5.vfloat32)])
-
 
 def get_rup_array(ebruptures, offset):
     """
@@ -365,7 +363,6 @@ def get_rup_array(ebruptures, offset):
     """
     lst = []
     geoms = []
-    pmfs = []
     nbytes = 0
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
@@ -386,11 +383,7 @@ def get_rup_array(ebruptures, offset):
         lst.append(tup)
         geoms.append(numpy.array([tuple(p) for p in points], point3d))
         nbytes += rupture_dt.itemsize + mesh.nbytes
-        if hasattr(ebrupture, 'pmf'):
-            pmfs.append(
-                numpy.array([(ebrupture.serial, ebrupture.pmf)], pmfs_dt))
-    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes,
-               pmfs=numpy.array(pmfs) if pmfs else numpy.zeros(0))
+    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
     return hdf5.ArrayWrapper(numpy.array(lst, rupture_dt), dic)
 
 
@@ -412,29 +405,14 @@ class RuptureSerializer(object):
 
         :param ebruptures: a list of EBRupture objects to save
         """
-        pmfbytes = 0
         self.nruptures += len(ebruptures)
         offset = len(self.datastore['rupgeoms'])
         rup_array = get_rup_array(ebruptures, offset)
-        p = 0
-        for ebr in ebruptures:
-            rup = ebr.rupture
-            if hasattr(rup, 'pmf'):
-                pmfs = rup_array.pmfs[p]
-                p += 1
-                dset = self.datastore.extend('pmfs', pmfs)
-                ebr.pmfx = len(dset) - 1
-                pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
         previous = self.datastore.get_attr('ruptures', 'nbytes', 0)
-        dset = self.datastore.extend(
+        self.datastore.extend(
             'ruptures', rup_array, nbytes=previous + rup_array.nbytes)
         self.datastore.extend('rupgeoms', rup_array.geom)
-        # save nbytes occupied by the PMFs
-        if pmfbytes:
-            if 'nbytes' in dset.attrs:
-                dset.attrs['nbytes'] += pmfbytes
-            else:
-                dset.attrs['nbytes'] = pmfbytes
+        # TODO: PMFs for nonparametric ruptures are not stored
         self.datastore.flush()
 
     def close(self):
