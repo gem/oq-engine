@@ -360,6 +360,11 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         sitecol = self.sitecol.complete if self.sitecol else None
+        if oq.prefilter_sources == 'no':
+            self.src_filter = SourceFilter(
+                sitecol, {}, self.hdf5cache)
+            return self.src_filter
+
         self.src_filter = SourceFilter(
             sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
