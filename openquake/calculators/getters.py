@@ -24,7 +24,7 @@ from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.hazardlib.source.rupture import EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -32,8 +32,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-
-BaseRupture.init()  # initialize rupture codes
 
 
 class PmapGetter(object):
@@ -514,9 +512,6 @@ class RuptureGetter(object):
                 rupture.hypocenter = geo.Point(*rec['hypo'])
                 rupture.occurrence_rate = rec['occurrence_rate']
                 rupture.tectonic_region_type = self.trt
-                pmfx = rec['pmfx']
-                if pmfx != -1:
-                    rupture.pmf = dstore['pmfs'][pmfx]
                 if surface_cls is geo.PlanarSurface:
                     rupture.surface = geo.PlanarSurface.from_array(
                         mesh[:, 0, :])

@@ -20,8 +20,9 @@ import numpy
 
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, source, calc
+from openquake.hazardlib.calc.stochastic import get_rup_array
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
+from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base
 
 
@@ -62,7 +63,7 @@ class ScenarioCalculator(base.HazardCalculator):
             events[rlz * E: rlz * E + E]['rlz'] = rlz
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save([ebr])
+        rupser.save(get_rup_array([ebr]))
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
