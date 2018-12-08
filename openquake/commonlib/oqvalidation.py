@@ -32,6 +32,7 @@ from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
+TWO32 = 2 ** 32
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
@@ -294,7 +295,7 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
-            if self.ses_per_logic_tree_path >= TWO16:
+            if self.ses_per_logic_tree_path >= TWO32:
                 raise ValueError('ses_per_logic_tree_path too big: %d' %
                                  self.ses_per_logic_tree_path)
             if self.number_of_logic_tree_samples >= TWO16:
