@@ -27,7 +27,7 @@ from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
@@ -343,7 +343,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 63)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
