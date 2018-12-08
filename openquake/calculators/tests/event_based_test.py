@@ -343,7 +343,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 63)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_20(self):  # test for Vancouver using the NRCan15SiteTerm
