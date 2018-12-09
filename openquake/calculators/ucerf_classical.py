@@ -23,7 +23,6 @@ from openquake.baselib import parallel
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
-from openquake.calculators.ucerf_base import UcerfFilter
 
 
 @base.calculators.add('ucerf_classical')
@@ -34,8 +33,6 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             for src in grp:
