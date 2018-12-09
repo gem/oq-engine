@@ -29,7 +29,7 @@ from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
-    DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
+    DEFAULT_TRT, generate_background_ruptures)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -205,5 +205,3 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)

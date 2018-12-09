@@ -884,8 +884,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
-
-    if (srcfilter and oqparam.prefilter_sources != 'no' and
+    if (srcfilter and oqparam.split_sources and
+            oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
         mon = monitor('split_filter')
         csm = parallel_split_filter(csm, srcfilter, split_all, mon)
