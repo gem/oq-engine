@@ -5,22 +5,22 @@ Since version 3.3 the OpenQuake engine is able to handle continental
 scale (event based) risk calculations, a feat previously impossible due
 to memory limitations. Here I will document the new feature.
 
-First of all, *the recommended way to run large event based risk calculation
+First of all, *the recommended way to run large event based risk calculations
 is to use a single job.ini file*. This is the opposite of the previous
-recommendation of using two job.ini files, one for hazard `job_hazard.ini`
+recommendation of using two files, one for hazard `job_hazard.ini`
 and one for risk `job_risk.ini`. In the past using a single file was
 discourage since a single computation was performed and the engine had to
-transfer the generated ground motion fields causing RabbitMQ to run out
+transfer the generated ground motion fields, thus causing RabbitMQ to run out
 of memory if the calculation was large enough. Instead, with two files
 two separated calculations were performed, and the GMFs could be read
-from the hazard datastore without passing via RabbitMQ, provided the
+from the hazard datastore, provided the
 hazard was stored on a shared file system. In a non-cluster situation
 the data transfer does not use RabbitMQ, however it is still slow,
 inefficient and memory consuming, so the recommendation was to use
 two files even in that situation.
 
-Starting from engine 3.3 the engine automatically splits a single file job.ini
-for an `event_based_risk` calculation in two jobs, one for hazard and one for
+Starting from engine 3.3 the engine automatically splits a single file
+`event_based_risk` calculation in two jobs, one for hazard and one for
 risk. It basically does the splitting of the `job.ini` for you, so that the
 GMFs are never transferred, just read, which is a lot more efficient.
 Having a single `job.ini` is more convenient and less error-prone, so
@@ -32,7 +32,7 @@ per country. Since version 3.3 the OpenQuake engine is able to manage
 multiple exposures, it is enough to list the files in the `exposure_file`
 parameter of the `job.ini`, as in this example for South America, in
 which all the exposures are in a folder called Exposure one level above
-the job.ini file:
+the `job.ini` file:
 ```
 [exposure]
 exposure_file =
@@ -54,7 +54,7 @@ Continental scale calculations also typically use multiple site model files,
 one per country. Since version 3.3 the OpenQuake engine is able to manage
 multiple site models, it is enough to list the files in the `site_model_file`
 parameter, as in this example were all the site models are stored in a folder
-called Vs30 one level above the job.ini file:
+called Vs30 one level above the `job.ini` file:
 ```
 [site_params]
 site_model_file =
@@ -92,7 +92,7 @@ such results if you say so in the `job.ini`, i.e. if you set
 ```
 aggregate_by = country
 ```
-It is also possible to compute what we call multi-tag aggregations;
+It is also possible to compute what we call *multi-tag aggregations*;
 for instance, if you want results aggregated by country, occupancy
 and taxonomy you can just set in the job.ini
 ```
@@ -120,13 +120,15 @@ and will probably become the default in the future.  It is not the
 default yet for reasons of backward compatibility.
 
 The reason for the performance improvement is in the number of calls
-to the random number generator. Suppose there is a large area source
-with 1 million ruptures: with `split_source=true` a million calls to
-the random generator are performed, one for each rupture, while with
-`split_source=false` only one call per source is performed.  Clearly
-the two approaches produce different ruptures, but if your effective
-investigation time is large enough they will produce statically
-convergent results. Be warned that the effective investigation
-time to get convergent results (i.e. independent from the random seed
-choice) can be rather long, depending on the level of precision
-required.
+to the random number generator. Consider a calculation with 25
+realizations and 20,000 stochastic event sets, the parameters we
+actually used for South America; with `split_source=true` a half
+million calls to the random generator are performed for each rupture,
+while with `split_source=false` only one call per rupture is
+performed, at least for time-independent sources.
+Clearly the two approaches produce different ruptures, but
+if your effective investigation time is large enough they will produce
+statically convergent results. Be warned that the effective
+investigation time to get convergent results - independent from
+the random seed choice - can be rather long, depending on the level of
+precision required.
