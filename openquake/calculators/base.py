@@ -19,7 +19,6 @@ import os
 import sys
 import abc
 import pdb
-import math
 import logging
 import operator
 import itertools
@@ -353,32 +352,23 @@ class HazardCalculator(BaseCalculator):
         return general.block_splitter(sources, maxweight, weight,
                                       operator.attrgetter('src_group_id'))
 
-    def get_filter(self):
+    @general.cached_property
+    def src_filter(self):
         """
         :returns: a SourceFilter/RtreeFilter or None
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         sitecol = self.sitecol.complete if self.sitecol else None
-        if oq.prefilter_sources == 'no':
-            self.src_filter = SourceFilter(
-                sitecol, {}, self.hdf5cache)
-            return self.src_filter
-
-        self.src_filter = SourceFilter(
-            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance)
+            return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         elif oq.prefilter_sources == 'rtree':
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
             # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(
-                sitecol, oq.maximum_distance, self.hdf5cache)
-        else:
-            src_filter = self.src_filter
-        return src_filter
+            return RtreeFilter(sitecol, oq.maximum_distance, self.hdf5cache)
+        return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
     def can_read_parent(self):
         """
@@ -422,7 +412,7 @@ class HazardCalculator(BaseCalculator):
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(),
                 split_all=oq.split_sources,
-                srcfilter=self.get_filter())
+                srcfilter=self.src_filter)
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
