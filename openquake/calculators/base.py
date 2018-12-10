@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
@@ -355,19 +355,13 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def src_filter(self):
         """
-        :returns: a SourceFilter/RtreeFilter or None
+        :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         sitecol = self.sitecol.complete if self.sitecol else None
         if 'ucerf' in oq.calculation_mode:
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
-        elif oq.prefilter_sources == 'rtree':
-            # rtree can be used only with processpool, otherwise one gets an
-            # RTreeError: Error in "Index_Create": Spatial Index Error:
-            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-            # Index/Data file cannot be read/writen.
-            return RtreeFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
     def can_read_parent(self):
