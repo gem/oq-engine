@@ -21,8 +21,8 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 
 import copy
 import numpy as np
-from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA
 
 class GenericGmpeAvgSA(GMPE):
@@ -35,12 +35,12 @@ class GenericGmpeAvgSA(GMPE):
     """
 
     # Parameters
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
