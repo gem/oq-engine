@@ -887,7 +887,8 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     if (srcfilter and oqparam.split_sources and
             oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        if oqparam.prefilter_sources == 'rtree':
+        if (oqparam.prefilter_sources == 'rtree' and
+                oqparam.calculation_mode != 'ucerf_classical'):
             # rtree can be used only with processpool, otherwise one gets an
             # RTreeError: Error in "Index_Create": Spatial Index Error:
             # IllegalArgumentException: SpatialIndex::DiskStorageManager:
