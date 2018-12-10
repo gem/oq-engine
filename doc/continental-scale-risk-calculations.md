@@ -127,7 +127,7 @@ South America; with `split_source=true` a half million calls to
 `split_source=false` only one call per rupture is performed, at least
 for time-independent sources.  Clearly the two approaches produce
 different ruptures, but if your effective investigation time is large
-enough they will produce statically convergent results. Be warned that
+enough they will produce statistically convergent results. Be warned that
 the effective investigation time to get convergent results -
 independent from the random seed choice - can be rather long,
 depending on the level of precision required.
