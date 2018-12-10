@@ -305,5 +305,5 @@ The command is able to manage multiple Vs30 files at once. Here is an example
 of usage:
 
 ```bash
-$ oq prepare_site_model Exposure/Exposure_Res_Ecuador.csv,Exposure/Exposure_Res_Bolivia.csv Vs30/Ecuador.csv Vs30/Bolivia.csv --grid-spacing=10
+$ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
 ```
