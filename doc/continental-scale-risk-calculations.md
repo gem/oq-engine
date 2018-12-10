@@ -120,15 +120,14 @@ and will probably become the default in the future.  It is not the
 default yet for reasons of backward compatibility.
 
 The reason for the performance improvement is in the number of calls
-to the random number generator. Consider a calculation with 25
-realizations and 20,000 stochastic event sets, the parameters we
-actually used for South America; with `split_source=true` a half
-million calls to the random generator are performed for each rupture,
-while with `split_source=false` only one call per rupture is
-performed, at least for time-independent sources.
-Clearly the two approaches produce different ruptures, but
-if your effective investigation time is large enough they will produce
-statically convergent results. Be warned that the effective
-investigation time to get convergent results - independent from
-the random seed choice - can be rather long, depending on the level of
-precision required.
+to the random number generator.  Consider a calculation with 25 realizations
+and 20,000 stochastic event sets, the parameters we actually used for
+South America; with `split_source=true` a half million calls to
+`numpy.random.poisson` are performed for each rupture, while with
+`split_source=false` only one call per rupture is performed, at least
+for time-independent sources.  Clearly the two approaches produce
+different ruptures, but if your effective investigation time is large
+enough they will produce statically convergent results. Be warned that
+the effective investigation time to get convergent results -
+independent from the random seed choice - can be rather long,
+depending on the level of precision required.
