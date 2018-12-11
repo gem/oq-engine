@@ -174,7 +174,7 @@ def build_ruptures(sources, src_filter, param, monitor):
     with filt_mon:
         eb_ruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
-        dic['rup_array'] = (stochastic.get_rup_array(eb_ruptures)
+        dic['rup_array'] = (stochastic.get_rup_array(eb_ruptures, src_filter)
                             if eb_ruptures else ())
     dt = time.time() - t0
     dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
