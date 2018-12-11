@@ -305,13 +305,17 @@ class GmfGetter(object):
             return
         self.computers = []
         for ebr in self.ebruptures:
+            if hasattr(ebr, 'sids'):  # filter the site collection
+                sitecol = self.sitecol.filtered(ebr.sids)
+            else:
+                sitecol = self.sitecol
             try:
                 computer = calc.gmf.GmfComputer(
-                    ebr, self.sitecol, self.oqparam.imtls, self.cmaker,
+                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
                     self.oqparam.truncation_level, self.correl_model)
             except FarAwayRupture:
-                # due to numeric errors ruptures within the maximum_distance
-                # when written can be outside when read; I found a case with
+                # due to numeric errors, ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
@@ -449,7 +453,8 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [[ebr]] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [ebr] = rgetter.get_ruptures()
     return ebr
 
 
@@ -461,6 +466,7 @@ def get_code2cls(ruptures_attrs):
     return code2cls
 
 
+# this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
     Iterable over ruptures.
@@ -487,13 +493,17 @@ class RuptureGetter(object):
         eid_rlz = []
         for rup in self.rup_array:
             ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
-                            self.grp_id, (), rup['n_occ'], self.samples)
+                            self.grp_id, rup['n_occ'], self.samples)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rlz))
         return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
-    def __iter__(self):
+    def get_ruptures(self, srcfilter=None):
+        """
+        :returns: a list of EBRuptures filtered by bounding box
+        """
+        ebrs = []
         with datastore.read(self.hdf5path) as dstore:
             rupgeoms = dstore['rupgeoms']
             for rec in self.rup_array:
@@ -529,10 +539,19 @@ class RuptureGetter(object):
                     rupture.surface.strike = rupture.surface.dip = None
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
-                ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
+                ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
-                yield ebr
+                bbox = (rec['minlon'], rec['minlat'],
+                        rec['maxlon'], rec['maxlat'])
+                if srcfilter is None:
+                    ebrs.append(ebr)
+                    continue
+                ebr.sids = srcfilter.get_sids_within(
+                        bbox, rupture.tectonic_region_type, rupture.mag)
+                if len(ebr.sids):
+                    ebrs.append(ebr)
+        return ebrs
 
     def __len__(self):
         return len(self.rup_array)
