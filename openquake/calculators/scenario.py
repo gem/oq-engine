@@ -56,14 +56,20 @@ class ScenarioCalculator(base.HazardCalculator):
         rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
         E = oq.number_of_ground_motion_fields
         n_occ = numpy.array([E])
-        ebr = EBRupture(self.rup, 0, 0, self.sitecol.sids, n_occ)
+        ebr = EBRupture(self.rup, 0, 0, n_occ)
         events = numpy.zeros(E * R, events_dt)
         for rlz, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             events[rlz * E: rlz * E + E]['eid'] = eids
             events[rlz * E: rlz * E + E]['rlz'] = rlz
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save(get_rup_array([ebr]))
+        rup_array = get_rup_array([ebr])
+        if len(rup_array) == 0:
+            maxdist = oq.maximum_distance(
+                self.rup.tectonic_region_type, self.rup.mag)
+            raise RuntimeError('There are no sites within the maximum_distance'
+                               ' of %s km from the rupture' % maxdist)
+        rupser.save(rup_array)
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,

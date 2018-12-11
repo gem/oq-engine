@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the rupture filtering from `sample_ruptures` and optimized it in
+    the `RuptureGetter` by making use of the bounding box
   * Raised the limit on `ses_per_logic_tree_path` from 2**16 to 2**32;
   * Added a parameter `max_num_sites` to increase the number of sites accepted
     by an event based calculation up to 2 ** 32 (the default is still 2 ** 16)

@@ -463,7 +463,7 @@ class RuptureConverter(object):
                 for sesnode in sesnodes:
                     with context(self.fname, sesnode):
                         n += len(sesnode.text.split())
-                ebr = source.rupture.EBRupture(rup, 0, 0, (), numpy.array([n]))
+                ebr = source.rupture.EBRupture(rup, 0, 0, numpy.array([n]))
                 ebrs.append(ebr)
         return coll
 
