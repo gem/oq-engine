@@ -200,14 +200,13 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
         if cmaker.maximum_distance:
             with cmaker.ctx_mon:
                 try:
-                    rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
-                    indices = rup.sctx.sids
+                    cmaker.make_contexts(s_sites, rup)
                 except FarAwayRupture:
                     continue
         else:
             indices = ()
 
-        ebr = EBRupture(rup, src.id, src.src_group_id, indices, n_occ, samples)
+        ebr = EBRupture(rup, src.id, src.src_group_id, n_occ, samples)
         ebrs.append(ebr)
 
     return ebrs
