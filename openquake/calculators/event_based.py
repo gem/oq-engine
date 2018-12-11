@@ -90,14 +90,14 @@ def get_mean_curves(dstore):
 # ########################################################################## #
 
 
-def compute_gmfs(rupgetter, sitecol, param, monitor):
+def compute_gmfs(rupgetter, srcfilter, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     with monitor('getting ruptures'):
-        ebruptures = list(rupgetter)
+        ebruptures = rupgetter.get_ruptures(srcfilter)
     getter = GmfGetter(
-        rupgetter.rlzs_by_gsim, ebruptures, sitecol,
+        rupgetter.rlzs_by_gsim, ebruptures, srcfilter.sitecol,
         param['oqparam'], param['min_iml'])
     return getter.compute_gmfs_curves(monitor)
 
@@ -204,7 +204,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['ruptures'] = sorted_ruptures
         self.datastore.set_attrs('ruptures', **attrs)
         rgetters = self.save_events(sorted_ruptures)
-        return ((rgetter, self.sitecol, par) for rgetter in rgetters)
+        return ((rgetter, self.src_filter, par) for rgetter in rgetters)
 
     def get_rupture_getters(self):
         """
@@ -329,7 +329,7 @@ class EventBasedCalculator(base.HazardCalculator):
             assert oq.ground_motion_fields, 'must be True!'
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             self.init_logic_tree(self.csm_info)
-            iterargs = ((rgetter, self.sitecol, param)
+            iterargs = ((rgetter, self.src_filter, param)
                         for rgetter in self.get_rupture_getters())
         else:  # from sources
             iterargs = self.from_sources(param)
