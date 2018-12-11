@@ -63,7 +63,7 @@ class ScenarioCalculator(base.HazardCalculator):
             events[rlz * E: rlz * E + E]['rlz'] = rlz
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rup_array = get_rup_array([ebr], self.src_filter)
+        rup_array = get_rup_array([ebr])
         if len(rup_array) == 0:
             maxdist = oq.maximum_distance(
                 self.rup.tectonic_region_type, self.rup.mag)
