@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a flag `fast_sampling`, by default False
   * Added an API `/extract/src_loss_table/<loss_type>`
   * Removed the rupture filtering from `sample_ruptures` and optimized it in
     the `RuptureGetter` by making use of the bounding box
