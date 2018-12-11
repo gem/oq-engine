@@ -95,43 +95,54 @@ def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
 
 rupture_dt = numpy.dtype([
     ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
-    ('n_occ', U16), ('gidx1', U32), ('gidx2', U32),
-    ('pmfx', I32), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-    ('hypo', (F32, 3)), ('sy', U16), ('sz', U16)])
+    ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
+    ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
+    ('sy', U16), ('sz', U16)])
 
 
-def get_rup_array(ebruptures):
+def get_rup_array(ebruptures, srcfilter):
     """
-    Convert a list of EBRuptures into a numpy composite array
+    Convert a list of EBRuptures into a numpy composite array, by filtering
+    out the ruptures far away from every site
     """
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
 
-    lst = []
+    rups = []
     geoms = []
     nbytes = 0
     offset = 0
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
         mesh = surface_to_array(rup.surface)
-        sy, sz = mesh.shape[1:]
-        # sanity checks
+        sy, sz = mesh.shape[1:]  # sanity checks
         assert sy < TWO16, 'Too many multisurfaces: %d' % sy
         assert sz < TWO16, 'The rupture mesh spacing is too small'
-        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        rate = getattr(rup, 'occurrence_rate', numpy.nan)
         points = mesh.reshape(3, -1).T   # shape (n, 3)
-        n = len(points)
-        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-               rup.code, ebrupture.n_occ, offset, offset + n, -1,
-               rup.mag, rup.rake, rate, hypo, sy, sz)
-        offset += n
-        lst.append(tup)
-        geoms.append(numpy.array([tuple(p) for p in points], point3d))
-        nbytes += rupture_dt.itemsize + mesh.nbytes
+        minlon = points[:, 0].min()
+        minlat = points[:, 1].min()
+        maxlon = points[:, 0].max()
+        maxlat = points[:, 1].max()
+        okrupture = not srcfilter.integration_distance or len(
+            srcfilter.get_sids_within((minlon, minlat, maxlon, maxlat),
+                                      rup.tectonic_region_type, rup.mag))
+        if okrupture:
+            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+            rate = getattr(rup, 'occurrence_rate', numpy.nan)
+            tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+                   rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
+                   minlon, minlat, maxlon, maxlat,
+                   hypo, offset, offset + len(points), sy, sz)
+            offset += len(points)
+            rups.append(tup)
+            geoms.append(numpy.array([tuple(p) for p in points], point3d))
+            nbytes += rupture_dt.itemsize + mesh.nbytes
+    if not rups:
+        return ()
     dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
     # TODO: PMFs for nonparametric ruptures are not converted
-    return hdf5.ArrayWrapper(numpy.array(lst, rupture_dt), dic)
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
 def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
@@ -146,8 +157,8 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
         a source site filter
     :param monitor:
         monitor instance
-    :returns:
-        a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
+    :yields:
+        dictionaries with keys rup_array, calc_times, eff_ruptures
     """
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -155,6 +166,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     cmaker = ContextMaker(param['gsims'],
                           src_filter.integration_distance,
                           param, monitor)
+    mon = monitor('build rup_array')
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
     grp_id = sources[0].src_group_id
@@ -162,9 +174,10 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     for src, sites in src_filter(sources):
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
-                            calc_times={},
-                            eff_ruptures={})
+            with mon:
+                rup_array = get_rup_array(eb_ruptures, src_filter)
+            yield AccumDict(
+                rup_array=rup_array, calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
         ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
         n_occ = sum(ebr.n_occ for ebr in ebrs)
@@ -172,8 +185,9 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    yield AccumDict(rup_array=get_rup_array(eb_ruptures)
-                    if eb_ruptures else (),
+    with mon:
+        rup_array = get_rup_array(eb_ruptures, src_filter)
+    yield AccumDict(rup_array=rup_array,
                     calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})
 
@@ -187,8 +201,6 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
     :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
     :returns: a list of EBRuptures
     """
-    # NB: s_sites can be None if cmaker.maximum_distance is False, then
-    # the contexts are not computed and the ruptures not filtered
     ebrs = []
     samples = getattr(src, 'samples', 1)
     if rup_n_occ == ():
@@ -197,16 +209,5 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
         # to call sample_ruptures *before* the filtering
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
-        if cmaker.maximum_distance:
-            with cmaker.ctx_mon:
-                try:
-                    cmaker.make_contexts(s_sites, rup)
-                except FarAwayRupture:
-                    continue
-        else:
-            indices = ()
-
-        ebr = EBRupture(rup, src.id, src.src_group_id, n_occ, samples)
-        ebrs.append(ebr)
-
+        ebrs.append(EBRupture(rup, src.id, src.src_group_id, n_occ, samples))
     return ebrs

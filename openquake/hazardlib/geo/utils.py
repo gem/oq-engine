@@ -284,8 +284,8 @@ def get_bounding_box(obj, maxdist):
         if cross_idl(min_lon, max_lon):
             lons %= 360
         bbox = lons.min(), lats.min(), lons.max(), lats.max()
-    a1 = maxdist * KM_TO_DEGREES
-    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    a1 = min(maxdist * KM_TO_DEGREES, 90)
+    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 

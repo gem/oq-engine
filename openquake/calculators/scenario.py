@@ -63,7 +63,13 @@ class ScenarioCalculator(base.HazardCalculator):
             events[rlz * E: rlz * E + E]['rlz'] = rlz
         self.datastore['events'] = events
         rupser = calc.RuptureSerializer(self.datastore)
-        rupser.save(get_rup_array([ebr]))
+        rup_array = get_rup_array([ebr], self.src_filter)
+        if len(rup_array) == 0:
+            maxdist = oq.maximum_distance(
+                self.rup.tectonic_region_type, self.rup.mag)
+            raise RuntimeError('There are no sites within the maximum_distance'
+                               ' of %s km from the rupture' % maxdist)
+        rupser.save(rup_array)
         rupser.close()
         self.computer = GmfComputer(
             ebr, self.sitecol, oq.imtls, self.cmaker, oq.truncation_level,
