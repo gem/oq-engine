@@ -85,9 +85,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         Initialize the class dictionaries `._code` and .`types` encoding the
         bidirectional correspondence between an integer in the range 0..255
-        (the code) and a triplet of classes (rupture_class, surface_class,
-        source_class). This is useful when serializing the rupture to and
-        from HDF5.
+        (the code) and a pair of classes (rupture_class, surface_class).
+        This is useful when serializing the rupture to and from HDF5.
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
