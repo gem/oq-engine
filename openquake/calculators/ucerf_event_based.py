@@ -173,7 +173,7 @@ def build_ruptures(sources, src_filter, param, monitor):
     dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     with filt_mon:
         eb_ruptures = stochastic.build_eb_ruptures(
-            src, num_ses, cmaker, sitecol, n_occ.items())
+            src, num_ses, cmaker, n_occ.items())
         dic['rup_array'] = (stochastic.get_rup_array(eb_ruptures, src_filter)
                             if eb_ruptures else ())
     dt = time.time() - t0
