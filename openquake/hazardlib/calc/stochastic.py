@@ -125,16 +125,20 @@ def get_rup_array(ebruptures, srcfilter):
         minlat = points[:, 1].min()
         maxlon = points[:, 0].max()
         maxlat = points[:, 1].max()
-        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
-               rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat,
-               hypo, offset, offset + len(points), sy, sz)
-        offset += len(points)
-        rups.append(tup)
-        geoms.append(numpy.array([tuple(p) for p in points], point3d))
-        nbytes += rupture_dt.itemsize + mesh.nbytes
+        okrupture = not srcfilter.integration_distance or len(
+            srcfilter.get_sids_within((minlon, minlat, maxlon, maxlat),
+                                      rup.tectonic_region_type, rup.mag))
+        if okrupture:
+            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+            rate = getattr(rup, 'occurrence_rate', numpy.nan)
+            tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+                   rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
+                   minlon, minlat, maxlon, maxlat,
+                   hypo, offset, offset + len(points), sy, sz)
+            offset += len(points)
+            rups.append(tup)
+            geoms.append(numpy.array([tuple(p) for p in points], point3d))
+            nbytes += rupture_dt.itemsize + mesh.nbytes
     if not rups:
         return ()
     dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
@@ -203,11 +207,5 @@ def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
         # to call sample_ruptures *before* the filtering
         rup_n_occ = src.sample_ruptures(samples, num_ses, cmaker.ir_mon)
     for rup, n_occ in rup_n_occ:
-        if cmaker.maximum_distance:
-            with cmaker.ctx_mon:
-                try:
-                    cmaker.filter(s_sites, rup)
-                except FarAwayRupture:
-                    continue
         ebrs.append(EBRupture(rup, src.id, src.src_group_id, n_occ, samples))
     return ebrs
