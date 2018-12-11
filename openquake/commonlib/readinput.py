@@ -36,7 +36,8 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode, zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import split_sources, RtreeFilter
+from openquake.hazardlib.calc.filters import (
+    split_sources, SourceFilter, RtreeFilter)
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -806,7 +807,7 @@ def random_filtered_sources(sources, srcfilter, seed):
 
 
 def get_composite_source_model(oqparam, monitor=None, in_memory=True,
-                               split_all=True, srcfilter=None):
+                               srcfilter=SourceFilter(None, {})):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -816,8 +817,6 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
          a `openquake.baselib.performance.Monitor` instance
     :param in_memory:
         if False, just parse the XML without instantiating the sources
-    :param split_all:
-        if True, split all the sources in the models
     :param srcfilter:
         if not None, use it to prefilter the sources
     """
@@ -884,20 +883,19 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
-    if (srcfilter and oqparam.split_sources and
-            oqparam.prefilter_sources != 'no' and
+    if (oqparam.prefilter_sources == 'rtree' and
+            oqparam.calculation_mode != 'ucerf_classical'):
+        # rtree can be used only with processpool, otherwise one gets an
+        # RTreeError: Error in "Index_Create": Spatial Index Error:
+        # IllegalArgumentException: SpatialIndex::DiskStorageManager:
+        # Index/Data file cannot be read/writen.
+        srcfilter = RtreeFilter(srcfilter.sitecol,
+                                oqparam.maximum_distance,
+                                srcfilter.hdf5path)
+    if (srcfilter and oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        if (oqparam.prefilter_sources == 'rtree' and
-                oqparam.calculation_mode != 'ucerf_classical'):
-            # rtree can be used only with processpool, otherwise one gets an
-            # RTreeError: Error in "Index_Create": Spatial Index Error:
-            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-            # Index/Data file cannot be read/writen.
-            srcfilter = RtreeFilter(srcfilter.sitecol,
-                                    oqparam.maximum_distance,
-                                    srcfilter.hdf5path)
-        csm = parallel_split_filter(
-            csm, srcfilter, split_all, monitor('split_filter'))
+        csm = parallel_split_filter(csm, srcfilter, oqparam.split_sources,
+                                    monitor('split_filter'))
     return csm
 
 
