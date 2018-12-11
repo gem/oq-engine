@@ -404,9 +404,7 @@ class HazardCalculator(BaseCalculator):
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             self.csm = readinput.get_composite_source_model(
-                oq, self.monitor(),
-                split_all=oq.split_sources,
-                srcfilter=self.src_filter)
+                oq, self.monitor(), srcfilter=self.src_filter)
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):
