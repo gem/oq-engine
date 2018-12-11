@@ -174,10 +174,10 @@ class EventBasedCalculator(base.HazardCalculator):
                     if 'ucerf' in oq.calculation_mode:
                         for i in range(oq.ses_per_logic_tree_path):
                             par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
-                            smap.submit(block, self.src_filter, par)
+                            smap.submit(block, par)
                             ses_idx += 1
                     else:
-                        smap.submit(block, par, self.src_filter)
+                        smap.submit(block, par)
         mon = self.monitor('saving ruptures')
         for dic in smap:
             if dic['calc_times']:
