@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds magnitude scaling relation for Germany
+  
   [Michele Simionato]
   * Added a flag `fast_sampling`, by default False
   * Added an API `/extract/src_loss_table/<loss_type>`
