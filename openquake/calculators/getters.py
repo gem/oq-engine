@@ -487,7 +487,7 @@ class RuptureGetter(object):
         eid_rlz = []
         for rup in self.rup_array:
             ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
-                            self.grp_id, (), rup['n_occ'], self.samples)
+                            self.grp_id, rup['n_occ'], self.samples)
             for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rlz))
@@ -529,7 +529,7 @@ class RuptureGetter(object):
                     rupture.surface.strike = rupture.surface.dip = None
                     rupture.surface.__init__(RectangularMesh(*mesh))
                 grp_id = rec['grp_id']
-                ebr = EBRupture(rupture, rec['srcidx'], grp_id, (),
+                ebr = EBRupture(rupture, rec['srcidx'], grp_id,
                                 rec['n_occ'], self.samples)
                 # not implemented: rupture_slip_direction
                 yield ebr
