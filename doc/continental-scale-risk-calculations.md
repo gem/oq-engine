@@ -108,23 +108,20 @@ mandatory in the exposure, but it will require to change all of the exposures
 we have, so it is still undecided.
 
 For the rest, the `job.ini` file is the same as always, except for a
-new parameter `split_sources`, added in version 3.3 of the OpenQuake
-engine.  By default it is `true`, which means that the sources are
-split before performing the sampling of the ruptures. This has been
-the traditional logic used by the engine for several years. However,
-it is possible to set `split_sources=false` and use a different and a
+new parameter `fast_sampling`, added in version 3.3 of the OpenQuake
+engine.  By default it is `false` for compatibility with the past. However,
+it is possible to set `fast_sampling=true` and use a different and a
 lot more efficient logic for the sampling of the ruptures. The
 difference in the case of South America is of more than an order of
 magnitude, so the new logic is to be preferred for large calculations
-and will probably become the default in the future.  It is not the
-default yet for reasons of backward compatibility.
+and will probably become the default in the future.
 
 The reason for the performance improvement is in the number of calls
 to the random number generator.  Consider a calculation with 25 realizations
 and 20,000 stochastic event sets, the parameters we actually used for
-South America; with `split_source=true` a half million calls to
+South America; with `fast_sampling=false` a half million calls to
 `numpy.random.poisson` are performed for each rupture, while with
-`split_source=false` only one call per rupture is performed, at least
+`fast_sampling=true` only one call per rupture is performed, at least
 for time-independent sources.  Clearly the two approaches produce
 different ruptures, but if your effective investigation time is large
 enough they will produce statistically convergent results. Be warned that
