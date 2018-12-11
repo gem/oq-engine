@@ -23,7 +23,7 @@ from nose.plugins.attrib import attr
 
 from openquake.baselib.general import gettemp
 from openquake.calculators import event_based
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -106,6 +106,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname)
+
+        # test the src_loss_table extractor
+        arr = extract(self.calc.datastore, 'src_loss_table/structural')
+        tmp = gettemp(rst_table(arr))
+        self.assertEqualFiles('expected/src_loss_table.txt', tmp)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):
