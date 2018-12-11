@@ -564,12 +564,11 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, srcidx, grp_id, sids, n_occ, samples=1):
+    def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1):
         assert rupture.serial  # sanity check
         self.rupture = rupture
         self.srcidx = srcidx
         self.grp_id = grp_id
-        self.sids = sids
         self.n_occ = n_occ
         self.samples = samples
 
@@ -651,8 +650,8 @@ class EBRupture(object):
         rupture = self.rupture
         events = self.get_events(rlzs_by_gsim)
         events_by_ses = self.get_events_by_ses(events, num_ses)
-        new = ExportedRupture(self.serial, events_by_ses, self.sids)
-        new.mesh = mesh[self.sids]
+        new = ExportedRupture(self.serial, events_by_ses)
+        new.mesh = mesh[()]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
