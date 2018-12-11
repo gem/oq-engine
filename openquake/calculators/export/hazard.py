@@ -71,7 +71,7 @@ def export_ruptures_xml(ekey, dstore):
     ruptures_by_grp = {}
     for rgetter in get_rupture_getters(dstore):
         ebrs = [ebr.export(mesh, rgetter.rlzs_by_gsim, num_ses)
-                for ebr in rgetter]
+                for ebr in rgetter.get_ruptures()]
         if ebrs:
             ruptures_by_grp[rgetter.grp_id] = ebrs
     dest = dstore.export_path('ses.' + fmt)
@@ -94,7 +94,7 @@ def export_ruptures_csv(ekey, dstore):
               'centroid_depth trt strike dip rake boundary').split()
     rows = []
     for rgetter in get_rupture_getters(dstore):
-        rups = list(rgetter)
+        rups = rgetter.get_ruptures()
         rup_data = calc.RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(rups):
             rows.append(
@@ -707,7 +707,8 @@ def export_gmf_scenario_csv(ekey, dstore):
     ridx = int(mo.group(1))
     assert 0 <= ridx < num_ruptures, ridx
     # for scenario there is an unique grp_id=0
-    [[ebr]] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [ebr] = rgetter.get_ruptures()
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(0)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     sitecol = dstore['sitecol'].complete
