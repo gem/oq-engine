@@ -101,6 +101,7 @@ rupture_dt = numpy.dtype([
     ('sy', U16), ('sz', U16)])
 
 
+# this is really fast
 def get_rup_array(ebruptures, srcfilter):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
@@ -162,7 +163,6 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     cmaker = ContextMaker(param['gsims'],
                           src_filter.integration_distance,
                           param, monitor)
-    mon = monitor('build rup_array')
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
     grp_id = sources[0].src_group_id
@@ -170,8 +170,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
     for src, sites in src_filter(sources):
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            with mon:
-                rup_array = get_rup_array(eb_ruptures, src_filter)
+            rup_array = get_rup_array(eb_ruptures, src_filter)
             yield AccumDict(
                 rup_array=rup_array, calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
@@ -181,8 +180,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    with mon:
-        rup_array = get_rup_array(eb_ruptures, src_filter)
+    rup_array = get_rup_array(eb_ruptures, src_filter)
     yield AccumDict(rup_array=rup_array,
                     calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})
