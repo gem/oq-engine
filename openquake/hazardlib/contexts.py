@@ -111,7 +111,6 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
-        self.evs_mon = monitor('building events', measuremem=False)
 
     def filter(self, sites, rupture):
         """

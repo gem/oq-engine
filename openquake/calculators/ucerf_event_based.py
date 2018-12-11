@@ -140,14 +140,14 @@ def sample_background_model(
 
 
 @util.reader
-def build_ruptures(sources, src_filter, param, monitor):
+def build_ruptures(sources, param, monitor):
     """
     :param sources: a list with a single UCERF source
-    :param src_filter: a SourceFilter instance
     :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
+    src_filter = param['src_filter']
     [src] = sources
     res = AccumDict()
     res.calc_times = []
@@ -173,9 +173,8 @@ def build_ruptures(sources, src_filter, param, monitor):
     dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     with filt_mon:
         eb_ruptures = stochastic.build_eb_ruptures(
-            src, num_ses, cmaker, sitecol, n_occ.items())
-        dic['rup_array'] = (stochastic.get_rup_array(eb_ruptures)
-                            if eb_ruptures else ())
+            src, num_ses, cmaker.ir_mon, n_occ.items())
+        dic['rup_array'] = stochastic.get_rup_array(eb_ruptures)
     dt = time.time() - t0
     dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
     return dic
@@ -205,3 +204,4 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
+        self.param['src_filter'] = self.src_filter
