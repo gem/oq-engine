@@ -180,12 +180,13 @@ class EventBasedCalculator(base.HazardCalculator):
                         smap.submit(block, par, self.src_filter)
         mon = self.monitor('saving ruptures')
         for dic in smap:
-            eb_ruptures = dic['eb_ruptures']
-            calc_times += dic['calc_times']
-            eff_ruptures += dic['eff_ruptures']
-            if eb_ruptures:
+            if dic['calc_times']:
+                calc_times += dic['calc_times']
+            if dic['eff_ruptures']:
+                eff_ruptures += dic['eff_ruptures']
+            if dic['rup_array']:
                 with mon:
-                    self.rupser.save(eb_ruptures)
+                    self.rupser.save(dic['rup_array'])
         self.rupser.close()
 
         # logic tree reduction, must be called before storing the events
@@ -299,11 +300,11 @@ class EventBasedCalculator(base.HazardCalculator):
         than 4,294,967,296. The limits are due to the numpy dtype used to
         store the GMFs (gmv_dt). They could be relaxed in the future.
         """
-        max_ = dict(events=2**32, imts=2**8)
+        max_ = dict(events=TWO32, imts=2**8)
         E = getattr(self, 'E', 0)  # 0 for non event based
         num_ = dict(events=E, imts=len(self.oqparam.imtls))
         if self.sitecol:
-            max_['sites'] = 2**16
+            max_['sites'] = min(self.oqparam.max_num_sites, TWO32)
             num_['sites'] = len(self.sitecol)
         for var in max_:
             if num_[var] > max_[var]:

@@ -29,7 +29,7 @@ from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_base import (
-    DEFAULT_TRT, UcerfFilter, generate_background_ruptures)
+    DEFAULT_TRT, generate_background_ruptures)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -172,8 +172,10 @@ def build_ruptures(sources, src_filter, param, monitor):
     tot_occ = sum(n_occ.values())
     dic = {'eff_ruptures': {src.src_group_id: src.num_ruptures}}
     with filt_mon:
-        dic['eb_ruptures'] = stochastic.build_eb_ruptures(
+        eb_ruptures = stochastic.build_eb_ruptures(
             src, num_ses, cmaker, sitecol, n_occ.items())
+        dic['rup_array'] = (stochastic.get_rup_array(eb_ruptures)
+                            if eb_ruptures else ())
     dt = time.time() - t0
     dic['calc_times'] = {src.id: numpy.array([tot_occ, len(sitecol), dt], F32)}
     return dic
@@ -203,5 +205,3 @@ class UCERFHazardCalculator(event_based.EventBasedCalculator):
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         self.precomputed_gmfs = False
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
