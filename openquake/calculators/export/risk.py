@@ -248,11 +248,12 @@ def export_agg_losses_ebr(ekey, dstore):
     # populate rup_data and event_by_eid
     # TODO: avoid reading the events twice
     for rgetter in getters.get_rupture_getters(dstore):
-        for ebr in rgetter:
+        ruptures = rgetter.get_ruptures()
+        for ebr in ruptures:
             for event in events_by_rupid[ebr.serial]:
                 event_by_eid[event['eid']] = event
         if has_rup_data:
-            rup_data.update(get_rup_data(rgetter))
+            rup_data.update(get_rup_data(ruptures))
     for r, row in enumerate(agg_losses):
         rec = elt[r]
         event = event_by_eid[row['eid']]
