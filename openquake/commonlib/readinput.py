@@ -884,20 +884,28 @@ def get_composite_source_model(oqparam, monitor=None, in_memory=True,
     csm.info.gsim_lt.check_imts(oqparam.imtls)
     if monitor.hdf5:
         csm.info.gsim_lt.store_gmpe_tables(monitor.hdf5)
+    if (oqparam.prefilter_sources == 'rtree' and
+            oqparam.calculation_mode != 'ucerf_classical'):
+        # rtree can be used only with processpool, otherwise one gets an
+        # RTreeError: Error in "Index_Create": Spatial Index Error:
+        # IllegalArgumentException: SpatialIndex::DiskStorageManager:
+        # Index/Data file cannot be read/writen.
+        srcfilter = RtreeFilter(srcfilter.sitecol,
+                                oqparam.maximum_distance,
+                                srcfilter.hdf5path)
     if (srcfilter and oqparam.split_sources and
             oqparam.prefilter_sources != 'no' and
             oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
-        if (oqparam.prefilter_sources == 'rtree' and
-                oqparam.calculation_mode != 'ucerf_classical'):
-            # rtree can be used only with processpool, otherwise one gets an
-            # RTreeError: Error in "Index_Create": Spatial Index Error:
-            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-            # Index/Data file cannot be read/writen.
-            srcfilter = RtreeFilter(srcfilter.sitecol,
-                                    oqparam.maximum_distance,
-                                    srcfilter.hdf5path)
         csm = parallel_split_filter(
             csm, srcfilter, split_all, monitor('split_filter'))
+    elif (srcfilter and oqparam.prefilter_sources != 'no' and
+          oqparam.calculation_mode not in 'ucerf_hazard ucerf_risk'):
+        # filter but do not split
+        srcs_by_grp = collections.defaultdict(list)
+        for src in csm.get_sources():
+            if srcfilter.get_close_sites(src) is not None:
+                srcs_by_grp[src.src_group_id].append(src)
+        csm = csm.new(srcs_by_grp)
     return csm
 
 
