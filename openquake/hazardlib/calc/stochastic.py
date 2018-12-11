@@ -178,7 +178,7 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
             yield AccumDict(
                 rup_array=rup_array, calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
-        ebrs = build_eb_ruptures(src, num_ses, cmaker, sites)
+        ebrs = build_eb_ruptures(src, num_ses, cmaker)
         n_occ = sum(ebr.n_occ for ebr in ebrs)
         eb_ruptures.extend(ebrs)
         eff_ruptures += src.num_ruptures
@@ -190,12 +190,11 @@ def sample_ruptures(sources, param, src_filter=source_site_noop_filter,
                     eff_ruptures={grp_id: eff_ruptures})
 
 
-def build_eb_ruptures(src, num_ses, cmaker, s_sites, rup_n_occ=()):
+def build_eb_ruptures(src, num_ses, cmaker, rup_n_occ=()):
     """
     :param src: a source object
     :param num_ses: number of stochastic event sets
     :param cmaker: a ContextMaker instance
-    :param s_sites: a (filtered) site collection
     :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
     :returns: a list of EBRuptures
     """
