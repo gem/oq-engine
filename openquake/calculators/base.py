@@ -19,7 +19,6 @@ import os
 import sys
 import abc
 import pdb
-import math
 import logging
 import operator
 import itertools
@@ -31,7 +30,7 @@ import numpy
 from openquake.baselib import (
     config, general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
-from openquake.hazardlib.calc.filters import SourceFilter, RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
@@ -343,39 +342,27 @@ class HazardCalculator(BaseCalculator):
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
-        minweight = source.MINWEIGHT * (math.sqrt(len(self.sitecol))
-                                        if self.sitecol else 1)
-        maxweight = self.csm.get_maxweight(weight, ct, minweight)
+        maxweight = self.csm.get_maxweight(weight, ct, source.MINWEIGHT)
         if not hasattr(self, 'logged'):
-            if maxweight == minweight:
-                logging.info('Using minweight=%d', minweight)
+            if maxweight == source.MINWEIGHT:
+                logging.info('Using minweight=%d', source.MINWEIGHT)
             else:
                 logging.info('Using maxweight=%d', maxweight)
             self.logged = True
         return general.block_splitter(sources, maxweight, weight,
                                       operator.attrgetter('src_group_id'))
 
-    def get_filter(self):
+    @general.cached_property
+    def src_filter(self):
         """
-        :returns: a SourceFilter/RtreeFilter or None
+        :returns: a SourceFilter/UcerfFilter
         """
         oq = self.oqparam
         self.hdf5cache = self.datastore.hdf5cache()
         sitecol = self.sitecol.complete if self.sitecol else None
-        self.src_filter = SourceFilter(
-            sitecol, oq.maximum_distance, self.hdf5cache)
         if 'ucerf' in oq.calculation_mode:
-            return UcerfFilter(sitecol, oq.maximum_distance)
-        elif oq.prefilter_sources == 'rtree':
-            # rtree can be used only with processpool, otherwise one gets an
-            # RTreeError: Error in "Index_Create": Spatial Index Error:
-            # IllegalArgumentException: SpatialIndex::DiskStorageManager:
-            # Index/Data file cannot be read/writen.
-            src_filter = RtreeFilter(
-                sitecol, oq.maximum_distance, self.hdf5cache)
-        else:
-            src_filter = self.src_filter
-        return src_filter
+            return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
+        return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
     def can_read_parent(self):
         """
@@ -419,7 +406,7 @@ class HazardCalculator(BaseCalculator):
             self.csm = readinput.get_composite_source_model(
                 oq, self.monitor(),
                 split_all=oq.split_sources,
-                srcfilter=self.get_filter())
+                srcfilter=self.src_filter)
         self.init()  # do this at the end of pre-execute
 
     def pre_execute(self, pre_calculator=None):

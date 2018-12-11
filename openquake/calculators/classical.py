@@ -280,10 +280,15 @@ class PreCalculator(ClassicalCalculator):
     """
     def execute(self):
         eff_ruptures = AccumDict(accum=0)
+        # weight, nsites, time
+        calc_times = AccumDict(accum=numpy.zeros(3, F32))
         for src in self.csm.get_sources():
             for grp_id in src.src_group_ids:
                 eff_ruptures[grp_id] += src.num_ruptures
+                calc_times[src.id] += numpy.array(
+                    [src.weight, src.nsites, 0], F32)
         self.store_csm_info(eff_ruptures)
+        self.store_source_info(calc_times)
         return {}
 
 
