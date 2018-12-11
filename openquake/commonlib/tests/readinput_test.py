@@ -599,6 +599,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_applyToSources(self):
         oq = readinput.get_oqparam('job.ini', case_21)
+        oq.prefilter_sources = 'no'
         with mock.patch('logging.info') as info:
             readinput.get_composite_source_model(oq)
         self.assertEqual(
