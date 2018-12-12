@@ -33,7 +33,6 @@ import itertools
 import collections
 import operator
 from collections import namedtuple
-from decimal import Decimal
 import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby, duplicated
@@ -43,7 +42,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, valid, nrml, InvalidFile
+from openquake.hazardlib import geo, valid, nrml, InvalidFile, pmf
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceGroup)
 
@@ -202,7 +201,7 @@ class Branch(object):
     :param branch_id:
         Value of ``@branchID`` attribute.
     :param weight:
-        Decimal value of weight assigned to the branch. A text node contents
+        float value of weight assigned to the branch. A text node contents
         of ``<uncertaintyWeight />`` child node.
     :param value:
         The actual uncertainty parameter value. A text node contents
@@ -310,7 +309,7 @@ class BranchSet(object):
         """
         for path in self._enumerate_paths([]):
             flat_path = []
-            weight = Decimal('1.0')
+            weight = 1.0
             while path:
                 path, branch = path
                 weight *= branch.weight
@@ -758,7 +757,7 @@ class SourceModelLogicTree(object):
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
-        if weight_sum != 1.0:
+        if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise ValidationError(
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
@@ -1442,7 +1441,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = Decimal(branch.uncertaintyWeight.text)
+                    weight = float(branch.uncertaintyWeight.text)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
@@ -1471,7 +1470,7 @@ class GsimLogicTree(object):
                     bt = BranchTuple(
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
-                assert sum(weights) == 1, weights
+                assert abs(sum(weights) - 1) < pmf.PRECISION, weights
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
