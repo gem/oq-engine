@@ -309,7 +309,7 @@ class BranchSet(object):
         """
         for path in self._enumerate_paths([]):
             flat_path = []
-            weight = float('1.0')
+            weight = 1.0
             while path:
                 path, branch = path
                 weight *= branch.weight
