@@ -142,13 +142,15 @@ def get_rup_array(ebruptures):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
+# NB: there is no filtering of the ruptures: the sources are supposed to
+# have been prefiltered
 def sample_ruptures(sources, param, monitor=Monitor()):
     """
     :param sources:
-        a sequence of sources of the same group
+        a sequence of (prefiltered) sources of the same group
     :param param:
-        a dictionary of additional parameters including rlzs_by_gsim,
-        ses_per_logic_tree_path and filter_distance
+        a dictionary of additional parameters including
+        ses_per_logic_tree_path
     :param monitor:
         monitor instance
     :yields:
@@ -165,37 +167,18 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     for src in sources:
         t0 = time.time()
         if len(eb_ruptures) > MAX_RUPTURES:
-            rup_array = get_rup_array(eb_ruptures)
-            yield AccumDict(
-                rup_array=rup_array, calc_times={}, eff_ruptures={})
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                            calc_times={}, eff_ruptures={})
             eb_ruptures.clear()
-        ebrs = build_eb_ruptures(src, num_ses, ir_mon)
-        n_occ = sum(ebr.n_occ for ebr in ebrs)
-        eb_ruptures.extend(ebrs)
+        samples = getattr(src, 'samples', 1)
+        n_occ = 0
+        for rup, n_occ in src.sample_ruptures(samples * num_ses, ir_mon):
+            ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
+            eb_ruptures.append(ebr)
+            n_occ += ebr.n_occ
         eff_ruptures += src.num_ruptures
         dt = time.time() - t0
         calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
-    rup_array = get_rup_array(eb_ruptures)
-    yield AccumDict(rup_array=rup_array,
+    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
                     calc_times=calc_times,
                     eff_ruptures={grp_id: eff_ruptures})
-
-
-def build_eb_ruptures(src, num_ses, ir_mon, rup_n_occ=()):
-    """
-    :param src: a source object
-    :param num_ses: number of stochastic event sets
-    :param cmaker: a ContextMaker instance
-    :param rup_n_occ: (rup, n_occ) pairs [inferred from the source]
-    :returns: a list of EBRuptures
-    """
-    ebrs = []
-    samples = getattr(src, 'samples', 1)
-    if rup_n_occ == ():
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_ruptures *before* the filtering
-        rup_n_occ = src.sample_ruptures(samples, num_ses, ir_mon)
-    for rup, n_occ in rup_n_occ:
-        ebrs.append(EBRupture(rup, src.id, src.src_group_id, n_occ, samples))
-    return ebrs
