@@ -51,6 +51,10 @@ class PmapGetter(object):
         self.nbytes = 0
         self.sids = sids
 
+    @property
+    def imts(self):  # can be removed?
+        return list(self.imtls)
+
     @general.cached_property
     def weights(self):
         """
