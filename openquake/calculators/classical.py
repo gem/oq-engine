@@ -255,6 +255,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def calc_stats(self, parent):
         oq = self.oqparam
+        if not oq.hazard_stats():
+            return
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
