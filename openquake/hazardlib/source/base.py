@@ -102,10 +102,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, num_samples, num_ses, ir_monitor):
+    def sample_ruptures(self, eff_num_ses, ir_monitor):
         """
-        :param num_samples: number of realizations of the source model
-        :param num_ses: number of stochastic event sets
+        :param eff_num_ses: number of stochastic event sets * number of samples
         :param ir_monitor: a monitor object for .iter_ruptures()
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
@@ -122,8 +121,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if tom and unsplit:  # time-independent source
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
             numpy.random.seed(self.serial)
-            occurs = numpy.random.poisson(rates * tom.time_span
-                                          * num_ses * num_samples)
+            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
             for rup, serial, num_occ in zip(ruptures, serials, occurs):
                 if num_occ:
                     rup.serial = serial  # used as seed
@@ -131,12 +129,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         else:  # time-dependent source
             for rup, serial in zip(ruptures, serials):
                 numpy.random.seed(serial)
-                occurs = rup.sample_number_of_occurrences(
-                    (num_samples, num_ses))
+                occurs = rup.sample_number_of_occurrences(eff_num_ses)
                 if mutex_weight < 1:
                     # consider only the occurrencies below the mutex_weight
-                    occurs *= (numpy.random.random((num_samples, num_ses)) <
-                               mutex_weight)
+                    occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
                 num_occ = occurs.sum()
                 if num_occ:
                     rup.serial = serial  # used as seed
