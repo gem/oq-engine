@@ -75,7 +75,7 @@ class Print(object):
 
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
-b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
+b1, x15.xml, grp=[0], weight=1.0: 1 realization(s)>
 See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation
 <RlzsAssoc(size=1, rlzs=1)
 0,AkkarBommer2010(): [0]>'''
