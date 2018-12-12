@@ -24,7 +24,8 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import humansize, group_array, DictArray
+from openquake.baselib.general import (
+    humansize, group_array, DictArray, deprecated)
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
@@ -559,6 +560,7 @@ def export_hazard_npz(ekey, dstore):
     return [fname]
 
 
+@deprecated('Use the CSV exported instead')
 @export.add(('gmf_data', 'xml'))
 def export_gmf(ekey, dstore):
     """
@@ -567,8 +569,6 @@ def export_gmf(ekey, dstore):
     """
     oq = dstore['oqparam']
     if not oq.calculation_mode.startswith('scenario'):
-        logging.warn('The GMF exporter in .xml format has been removed, '
-                     'use the one in .csv format')
         return []
     sitecol = dstore['sitecol']
     investigation_time = (None if oq.calculation_mode == 'scenario'
