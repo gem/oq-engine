@@ -706,6 +706,17 @@ def check_levels(imls, imt, min_iml=1E-10):
         imls[0] = min_iml
 
 
+def imt_periods(value):
+    """
+    >>> imt_periods('0, 0.5, 1.0')
+    [0.0, 0.5, 1.0]
+    """
+    periods = positivefloats(value.replace(',', ' '))
+    if periods != sorted(periods):
+        raise ValueError('The periods are not sorted: %s' % periods)
+    return periods
+
+
 def intensity_measure_types_and_levels(value):
     """
     :param value: input string

@@ -82,6 +82,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_params = valid.Param(valid.dictionary)
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.gsim, valid.FromFile())
+    gsim_weights = valid.Param(valid.dictionary, {})
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
@@ -90,6 +91,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
+    imt_periods = valid.Param(valid.imt_periods, [])
     individual_curves = valid.Param(valid.boolean, False)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
@@ -254,6 +256,11 @@ class OqParam(valid.ParamSet):
             self._gsims_by_trt = gsim_lt.values
             for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
+
+            # check the gsim weights
+            if self.imt_periods:
+                self.check_gsim_weights(gsim_lt)
+
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
@@ -308,6 +315,20 @@ class OqParam(valid.ParamSet):
             logging.warn(
                 'You are specifying a grid, a site model and an exposure at '
                 'the same time: consider using `oq prepare_site_model`')
+
+    def check_gsim_weights(self, gsim_lt):
+        """
+        Check the gsim_weights (if any) against the gsim logic tree
+        """
+        branch_ids = [branch.id for branch in gsim_lt.branches]
+        if branch_ids != list(self.gsim_weights):
+            raise ValueError('Got %s, but the gsim_logic_tree file has %s'
+                             % (branch_ids, list(self.gsim_weights)))
+        num_weights = len(self.imt_periods)
+        for branch_id, weights in self.gsim_weights.items():
+            if len(weights) != num_weights:
+                raise ValueError('Expected %d weights for %s, found %s' %
+                                 (num_weights, branch_id, weights))
 
     def check_gsims(self, gsims):
         """
