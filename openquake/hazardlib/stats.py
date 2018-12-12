@@ -127,7 +127,7 @@ def compute_pmap_stats(pmaps, stats, imtls, weights):
         slc = imtls(imt)
         for i, array in enumerate(compute_stats(curves, stats, weights[imt])):
             for j, sid in numpy.ndenumerate(sids):
-                out[sid].array[slc, i] = array[j]
+                out[sid].array[slc, i] = array[j, slc]
     return out
 
 

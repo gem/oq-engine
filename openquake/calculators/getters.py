@@ -56,7 +56,7 @@ class PmapGetter(object):
         """
         :returns: a dictionary imt -> weights for each realization
         """
-        if self.gsim_weights:
+        if hasattr(self, 'gsim_weights'):
             # use different weights for different IMT periods
             acc = general.AccumDict(accum=[])  # imt -> weights
             for i, period in enumerate(self.imt_periods):
@@ -70,10 +70,6 @@ class PmapGetter(object):
             return acc
         w = [rlz.weight for rlz in self.rlzs_assoc.realizations]
         return {imt: w for imt in self.imtls}
-
-    @property
-    def imts(self):
-        return list(self.imtls)
 
     def init(self):
         """
@@ -182,6 +178,7 @@ class PmapGetter(object):
             the kind of PoEs to extract; if not given, returns the realization
             if there is only one or the statistics otherwise.
         """
+        self.init()  # if not called already
         num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
