@@ -340,7 +340,7 @@ class NodalPlane(object):
 
     :param probability:
         Probability for this node in a Nodal Plane Distribution, as a
-        :class:`decimal.Decimal`.
+        :class:`float`.
     :param float strike:
         Strike angle.
     :param float dip:
@@ -374,7 +374,7 @@ class HypocentralDepth(object):
 
     :param probability:
         Probability for this node in a Hypocentral Depth Distribution, as a
-        :class:`decimal.Decimal`.
+        :class:`float`.
     :param float depth:
         Depth (in km).
     """

@@ -256,7 +256,7 @@ validators = {
     'probability': valid.probability,
     'occurRates': valid.positivefloats,  # they can be > 1
     'weight': valid.probability,
-    'uncertaintyWeight': decimal.Decimal,
+    'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
