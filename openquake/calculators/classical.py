@@ -188,7 +188,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if parent is self.datastore:  # read now, not in the workers
                 logging.info('Reading PoEs on %d sites', len(t))
                 pgetter.init()
-            yield pgetter, hstats
+            yield pgetter, hstats, self.oqparam.imtls
 
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
@@ -292,10 +292,11 @@ class PreCalculator(ClassicalCalculator):
         return {}
 
 
-def build_hazard_stats(pgetter, hstats, monitor):
+def build_hazard_stats(pgetter, hstats, imtls, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param hstats: a list of pairs (statname, statfunc)
+    :param imtls: a DictArray of intensity measure types and levels
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -313,7 +314,7 @@ def build_hazard_stats(pgetter, hstats, monitor):
     pmap_by_kind = {}
     for statname, stat in hstats:
         with monitor('compute ' + statname):
-            pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
+            pmap = compute_pmap_stats(pmaps, [stat], imtls, pgetter.weights)
         pmap_by_kind['hcurves', statname] = pmap
         if pgetter.poes:
             pmap_by_kind['hmaps', statname] = calc.make_hmap(

@@ -51,9 +51,25 @@ class PmapGetter(object):
         self.nbytes = 0
         self.sids = sids
 
-    @property
+    @general.cached_property
     def weights(self):
-        return [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        """
+        :returns: a dictionary imt -> weights for each realization
+        """
+        if self.gsim_weights:
+            # use different weights for different IMT periods
+            acc = general.AccumDict(accum=[])  # imt -> weights
+            for i, period in enumerate(self.imt_periods):
+                imt = 'PGA' if period == 0 else 'SA(%s)' % period
+                for branch_id, weights in self.gsim_weights.items():
+                    for rlz in self.rlzs_assoc.realizations:
+                        if branch_id in rlz.gsim_rlz.lt_path:
+                            weight = (rlz.weight / rlz.gsim_rlz.weight *
+                                      weights[i])
+                            acc[imt].append(weight)
+            return acc
+        w = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        return {imt: w for imt in self.imtls}
 
     @property
     def imts(self):
@@ -72,6 +88,8 @@ class PmapGetter(object):
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
         oq = self.dstore['oqparam']
+        self.gsim_weights = oq.gsim_weights
+        self.imt_periods = oq.imt_periods
         self.imtls = oq.imtls
         self.poes = oq.poes
         self.data = {}

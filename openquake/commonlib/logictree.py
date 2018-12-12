@@ -33,7 +33,6 @@ import itertools
 import collections
 import operator
 from collections import namedtuple
-from decimal import Decimal
 import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.general import groupby, duplicated
@@ -310,7 +309,7 @@ class BranchSet(object):
         """
         for path in self._enumerate_paths([]):
             flat_path = []
-            weight = Decimal('1.0')
+            weight = 1.0
             while path:
                 path, branch = path
                 weight *= branch.weight
@@ -1442,7 +1441,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = Decimal(branch.uncertaintyWeight.text)
+                    weight = float(branch.uncertaintyWeight.text)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
