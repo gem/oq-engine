@@ -68,18 +68,6 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-def combined_weight(branch_ids, gsim_weights, p):
-    """
-    :param branch_ids: a tuple of branch IDs for the given realization
-    :param gsims_weights: dictionary branch_id -> P weights
-    :param p: IMT period index in the range 0 .. P-1
-    :returns: the combined weight for the given branches and IMT
-    """
-    return numpy.product([
-        gsim_weights[branch_id][p] if branch_id in gsim_weights else 1
-        for branch_id in branch_ids])
-
-
 class RlzsAssoc(object):
     """
     Realization association class. It should not be instantiated directly,
@@ -222,12 +210,12 @@ class RlzsAssoc(object):
             return dic
 
         # use different weights for different IMT periods
-        for p, period in enumerate(imt_periods):
+        arr = self.csm_info.gsim_lt.get_weights(imt_periods, gsim_weights)
+        for p, period in enumerate(imt_periods, 1):
             imt = 'PGA' if period == 0 else 'SA(%s)' % period
             for rlz in self.realizations:
-                weight = (rlz.weight / rlz.gsim_rlz.weight *
-                          combined_weight(rlz.gsim_rlz.lt_path,
-                                          gsim_weights, p))
+                r = rlz.gsim_rlz.ordinal
+                weight = rlz.weight / rlz.gsim_rlz.weight * arr[p, r]
                 dic[imt].append(weight)
         return dic
 

@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib import datastore
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats
+from openquake.hazardlib import correlation, stats, pmf
 from openquake.hazardlib import valid, InvalidFile
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
@@ -329,10 +329,15 @@ class OqParam(valid.ParamSet):
             raise ValueError('Got %s, but the gsim_logic_tree file has %s'
                              % (branch_ids, list(self.gsim_weights)))
         num_weights = len(self.imt_periods)
+        sums = numpy.zeros(num_weights)
         for branch_id, weights in self.gsim_weights.items():
             if len(weights) != num_weights:
                 raise ValueError('Expected %d weights for %s, found %s' %
                                  (num_weights, branch_id, weights))
+            sums += numpy.array(weights)
+        if (numpy.abs(sums - 1) > pmf.PRECISION).any():
+            raise ValueError('The weights for %s do not sum to 1: %s'
+                             % self.gsim_weights)
 
     def check_gsims(self, gsims):
         """

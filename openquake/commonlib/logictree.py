@@ -1277,6 +1277,18 @@ class InvalidLogicTree(Exception):
     pass
 
 
+def combined_weight(branch_ids, gsim_weights, p):
+    """
+    :param branch_ids: a tuple of branch IDs for the given realization
+    :param gsims_weights: dictionary branch_id -> P weights
+    :param p: IMT period index in the range 0 .. P-1
+    :returns: the combined weight for the given branches and IMT
+    """
+    return numpy.product([
+        gsim_weights[branch_id][p] if branch_id in gsim_weights else 1
+        for branch_id in branch_ids])
+
+
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -1523,6 +1535,22 @@ class GsimLogicTree(object):
         else:
             gsims = set(self.get_gsim_by_trt(rlz, trt) for rlz in rlzs)
         return sorted(gsims)
+
+    def get_weights(self, imt_periods, gsim_weights):
+        """
+        :param imt_periods: a list of P IMT periods (floats)
+        :param gsim_weights: a dictionary branch_id -> [P weights]
+        :returns: an array of (P + 1, R) weights
+        """
+        rlzs = list(self)
+        w = numpy.zeros((len(imt_periods) + 1, len(rlzs)))
+        # use different weights for different IMT periods
+        w[0, :] = [rlz.weight for rlz in rlzs]
+        for p, period in enumerate(imt_periods, 1):
+            for rlz in self:
+                w[p, rlz.ordinal] = combined_weight(
+                    rlz.lt_path, gsim_weights, p - 1)
+        return w
 
     def __iter__(self):
         """
