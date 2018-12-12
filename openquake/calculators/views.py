@@ -38,7 +38,7 @@ from openquake.commonlib.writers import (
     build_header, scientificformat, FIVEDIGITS)
 from openquake.calculators import getters
 
-FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
+FLOAT = (float, numpy.float32, numpy.float64, float)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 F32 = numpy.float32
 U32 = numpy.uint32

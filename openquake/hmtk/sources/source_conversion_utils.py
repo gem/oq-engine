@@ -45,7 +45,7 @@
 # liability for use of the software.
 
 import abc
-from decimal import Decimal
+from decimal import float
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib import mfd
