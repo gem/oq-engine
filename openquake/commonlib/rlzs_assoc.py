@@ -20,7 +20,7 @@ import logging
 import operator
 import collections
 import numpy
-from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib import probability_map
 
 
 MAX_INT = 2 ** 31 - 1
@@ -66,6 +66,18 @@ class LtRealization(object):
 
     def __hash__(self):
         return hash(repr(self))
+
+
+def combined_weight(branch_ids, gsim_weights, p):
+    """
+    :param branch_ids: a tuple of branch IDs for the given realization
+    :param gsims_weights: dictionary branch_id -> P weights
+    :param p: IMT period index in the range 0 .. P-1
+    :returns: the combined weight for the given branches and IMT
+    """
+    return numpy.product([
+        gsim_weights[branch_id][p] if branch_id in gsim_weights else 1
+        for branch_id in branch_ids])
 
 
 class RlzsAssoc(object):
@@ -212,12 +224,11 @@ class RlzsAssoc(object):
         # use different weights for different IMT periods
         for p, period in enumerate(imt_periods):
             imt = 'PGA' if period == 0 else 'SA(%s)' % period
-            for branch_id, weights in gsim_weights.items():
-                for rlz in self.realizations:
-                    if branch_id in rlz.gsim_rlz.lt_path:
-                        weight = (rlz.weight / rlz.gsim_rlz.weight *
-                                  weights[p])
-                        dic[imt].append(weight)
+            for rlz in self.realizations:
+                weight = (rlz.weight / rlz.gsim_rlz.weight *
+                          combined_weight(rlz.gsim_rlz.lt_path,
+                                          gsim_weights, p))
+                dic[imt].append(weight)
         return dic
 
     def _add_realizations(self, offset, lt_model, all_trts, gsim_rlzs):
