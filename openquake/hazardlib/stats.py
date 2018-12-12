@@ -125,7 +125,9 @@ def compute_pmap_stats(pmaps, stats, imtls, weights):
     out = p0.__class__.build(L, nstats, sids)
     for imt in imtls:
         slc = imtls(imt)
-        for i, array in enumerate(compute_stats(curves, stats, weights[imt])):
+        w = weights.get(imt) or weights[None]
+        # NB: weights[None] when the weights are the same for all IMTs
+        for i, array in enumerate(compute_stats(curves, stats, w)):
             for j, sid in numpy.ndenumerate(sids):
                 out[sid].array[slc, i] = array[j, slc]
     return out

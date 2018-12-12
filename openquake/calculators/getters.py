@@ -52,28 +52,20 @@ class PmapGetter(object):
         self.sids = sids
 
     @property
+    def R(self):
+        return len(self.rlzs_assoc.realizations)
+
+    @property
     def imts(self):  # can be removed?
         return list(self.imtls)
 
     @general.cached_property
     def weights(self):
         """
-        :returns: a dictionary imt -> weights for each realization
+        :returns: a dictionary imt -> weights
         """
-        if hasattr(self, 'gsim_weights'):
-            # use different weights for different IMT periods
-            acc = general.AccumDict(accum=[])  # imt -> weights
-            for i, period in enumerate(self.imt_periods):
-                imt = 'PGA' if period == 0 else 'SA(%s)' % period
-                for branch_id, weights in self.gsim_weights.items():
-                    for rlz in self.rlzs_assoc.realizations:
-                        if branch_id in rlz.gsim_rlz.lt_path:
-                            weight = (rlz.weight / rlz.gsim_rlz.weight *
-                                      weights[i])
-                            acc[imt].append(weight)
-            return acc
-        w = [rlz.weight for rlz in self.rlzs_assoc.realizations]
-        return {imt: w for imt in self.imtls}
+        return self.rlzs_assoc.get_weights_by_imt(
+            self.imt_periods, self.gsim_weights)
 
     def init(self):
         """
@@ -183,16 +175,15 @@ class PmapGetter(object):
             if there is only one or the statistics otherwise.
         """
         self.init()  # if not called already
-        num_rlzs = len(self.weights)
         if not kind:  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k].value
-            elif num_rlzs == 1:
+            elif self.R == 1:
                 yield 'mean', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
-            for rlzi in range(num_rlzs):
+            for rlzi in range(self.R):
                 hcurves = self.get(rlzi)
                 yield 'rlz-%03d' % rlzi, hcurves
         elif 'poes' in self.dstore and kind.startswith('rlz-'):
@@ -210,7 +201,7 @@ class PmapGetter(object):
             returns the mean considering only the contribution for group XX
         """
         self.init()
-        if len(self.weights) == 1:  # one realization
+        if self.R == 1:  # one realization
             # the standard deviation is zero
             pmap = self.get(0, grp)
             for sid, pcurve in pmap.items():

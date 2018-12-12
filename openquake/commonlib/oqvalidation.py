@@ -259,6 +259,10 @@ class OqParam(valid.ParamSet):
 
             # check the gsim weights
             if self.imt_periods:
+                for period in self.imt_periods:
+                    imt = 'SA(%s)' % period if period else 'PGA'
+                    if imt not in self.imtls:
+                        raise ValueError('IMT period %s is unknown' % period)
                 self.check_gsim_weights(gsim_lt)
 
         elif self.gsim is not None:

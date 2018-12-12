@@ -208,6 +208,22 @@ class RlzsAssoc(object):
             return
         return self.realizations[int(mo.group(1))]
 
+    def get_weights_by_imt(self, imt_periods, gsim_weights):
+        if not gsim_weights:
+            return {None: [rlz.weight for rlz in self.realizations]}
+
+        # use different weights for different IMT periods
+        dic = collections.defaultdict(list)  # imt -> weights
+        for i, period in enumerate(imt_periods):
+            imt = 'PGA' if period == 0 else 'SA(%s)' % period
+            for branch_id, weights in gsim_weights.items():
+                for rlz in self.realizations:
+                    if branch_id in rlz.gsim_rlz.lt_path:
+                        weight = (rlz.weight / rlz.gsim_rlz.weight *
+                                  weights[i])
+                        dic[imt].append(weight)
+        return dic
+
     def _add_realizations(self, offset, lt_model, all_trts, gsim_rlzs):
         idx = numpy.arange(offset, offset + len(gsim_rlzs))
         rlzs = []

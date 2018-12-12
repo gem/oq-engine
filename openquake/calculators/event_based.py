@@ -381,10 +381,10 @@ class EventBasedCalculator(base.HazardCalculator):
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         if result and oq.hazard_curves_from_gmfs:
-            rlzs = self.rlzs_assoc.realizations
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
-            weights = [rlz.weight for rlz in rlzs]
+            weights = self.rlzs_assoc.get_weights_by_imt(
+                oq.imt_periods, oq.gsim_weights)
             # NB: in the future we may want to save to individual hazard
             # curves if oq.individual_curves is set; for the moment we
             # save the statistical curves only
@@ -392,13 +392,13 @@ class EventBasedCalculator(base.HazardCalculator):
             pmaps = list(result.values())
             if len(hstats):
                 logging.info('Computing statistical hazard curves')
-                if len(weights) != len(pmaps):
+                if self.R != len(pmaps):
                     # this should never happen, unless I break the
                     # logic tree reduction mechanism during refactoring
                     raise AssertionError('Expected %d pmaps, got %d' %
-                                         (len(weights), len(pmaps)))
+                                         (self.R, len(pmaps)))
                 for statname, stat in hstats:
-                    pmap = compute_pmap_stats(pmaps, [stat], weights)
+                    pmap = compute_pmap_stats(pmaps, [stat], oq.imtls, weights)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
