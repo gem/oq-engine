@@ -1360,9 +1360,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
 class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
-        branches = [logictree.Branch(1, float('0.2'), 'A'),
-                    logictree.Branch(1, float('0.3'), 'B'),
-                    logictree.Branch(1, float('0.5'), 'C')]
+        branches = [logictree.Branch(1, 0.2, 'A'),
+                    logictree.Branch(1, 0.3, 'B'),
+                    logictree.Branch(1, 0.5, 'C')]
         samples = logictree.sample(branches, 1000, 42)
 
         def count(samples, value):
@@ -1377,14 +1377,14 @@ class SampleTestCase(unittest.TestCase):
         self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
-        branches = [logictree.Branch(0, float('0.1'), 0),
-                    logictree.Branch(1, float('0.2'), 1)]
+        branches = [logictree.Branch(0, 0.1, 0),
+                    logictree.Branch(1, 0.2, 1)]
         with self.assertRaises(ValueError):
             logictree.sample(branches, 1000, 42)
 
     def test_sample_one_branch(self):
         # always the same branch is returned
-        branches = [logictree.Branch(0, float('1.0'), 0)]
+        branches = [logictree.Branch(0, 1.0, 0)]
         bs = logictree.sample(branches, 10, 42)
         for b in bs:
             self.assertEqual(b.branch_id, 0)
@@ -1392,14 +1392,14 @@ class SampleTestCase(unittest.TestCase):
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
     def test_enumerate(self):
-        b0 = logictree.Branch('0', float('0.64'), '0')
-        b1 = logictree.Branch('1', float('0.36'), '1')
-        b00 = logictree.Branch('0.0', float('0.33'), '0.0')
-        b01 = logictree.Branch('0.1', float('0.27'), '0.1')
-        b02 = logictree.Branch('0.2', float('0.4'), '0.2')
-        b10 = logictree.Branch('1.0', float('1.0'), '1.0')
-        b100 = logictree.Branch('1.0.0', float('0.1'), '1.0.0')
-        b101 = logictree.Branch('1.0.1', float('0.9'), '1.0.1')
+        b0 = logictree.Branch('0', 0.64, '0')
+        b1 = logictree.Branch('1', 0.36, '1')
+        b00 = logictree.Branch('0.0', 0.33, '0.0')
+        b01 = logictree.Branch('0.1', 0.27, '0.1')
+        b02 = logictree.Branch('0.2', 0.4, '0.2')
+        b10 = logictree.Branch('1.0', 1.0, '1.0')
+        b100 = logictree.Branch('1.0.0', 0.1, '1.0.0')
+        b101 = logictree.Branch('1.0.1', 0.9, '1.0.1')
         bs_root = logictree.BranchSet(None, None)
         bs_root.branches = [b0, b1]
         bs0 = logictree.BranchSet(None, None)
@@ -1443,7 +1443,7 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
 
     def test_nonexistent_branch(self):
         bs = logictree.BranchSet(None, None)
-        br = logictree.Branch('br', float('1.0'), None)
+        br = logictree.Branch('br', 1.0, None)
         bs.branches.append(br)
         self.assertRaises(AssertionError, bs.get_branch_by_id, 'bz')
 
