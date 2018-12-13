@@ -474,7 +474,9 @@ hazard_uhs-mean.csv
     @attr('qa', 'hazard', 'classical')
     def test_case_30(self):  # point on the international data line
         if NOT_DARWIN:  # broken on macOS
-            self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)
+            self.assert_curves_ok(['hazard_curve-PGA.csv',
+                                   'hazard_curve-SA(1.0).csv'],
+                                  case_30.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_31(self):
