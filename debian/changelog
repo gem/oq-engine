@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended `--reuse-hazard` to all calculators
   * Fixed a bug in event_based_risk from GMFs with coefficients of variations
 
   [Graeme Weatherill]
