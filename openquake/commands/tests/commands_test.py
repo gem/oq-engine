@@ -27,14 +27,14 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib.datastore import read
 from openquake import commonlib
-from openquake.commonlib.readinput import read_csv
+from openquake.commonlib.readinput import read_csv, get_oqparam
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
-from openquake.commands.engine import run_job
+from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
@@ -433,6 +433,12 @@ class EngineRunJobTestCase(unittest.TestCase):
         with read(job_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
+
+    def test_smart_run(self):
+        # test smart_run with gmf_ebrisk, since it was breaking
+        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
+        oqparam = get_oqparam(ini)
+        smart_run(ini, oqparam, 'info', None, '', False)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
