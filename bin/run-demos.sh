@@ -20,9 +20,8 @@ done
 # test the --eos option
 oq engine --eos -1 /tmp
 
-# test generation of statistical hazard curves from previous calculation;
-# -7 is LogicTreeCase3ClassicalPSHA; FIXME: this is fragile
-oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -7
+# test generation of statistical hazard curves from previous calculation
+oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
 # do something with the generated data
 oq extract hazard/rlzs -1 local
