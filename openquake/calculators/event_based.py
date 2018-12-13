@@ -47,19 +47,6 @@ rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
 
 
-def get_idxs(data, eid2idx):
-    """
-    Convert from event IDs to event indices.
-
-    :param data: an array with a field eid
-    :param eid2idx: a dictionary eid -> idx
-    :returns: the array of event indices
-    """
-    uniq, inv = numpy.unique(data['eid'], return_inverse=True)
-    idxs = numpy.array([eid2idx[eid] for eid in uniq])[inv]
-    return idxs
-
-
 def store_rlzs_by_grp(dstore):
     """
     Save in the datastore a composite array with fields (grp_id, gsim_id, rlzs)
@@ -242,7 +229,7 @@ class EventBasedCalculator(base.HazardCalculator):
             data = result.pop('gmfdata')
             if len(data) == 0:
                 return acc
-            idxs = get_idxs(data, eid2idx)  # this has to be fast
+            idxs = base.get_idxs(data, eid2idx)  # this has to be fast
             data['eid'] = idxs  # replace eid with idx
             self.datastore.extend('gmf_data/data', data)
             # it is important to save the number of bytes while the
