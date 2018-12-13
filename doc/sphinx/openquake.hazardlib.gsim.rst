@@ -475,6 +475,14 @@ geomatrix_1993
     :undoc-members:
     :show-inheritance:
 
+germany_2018
+----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.germany_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ghofrani_atkinson_2014
 ------------------------------------------------------
 
