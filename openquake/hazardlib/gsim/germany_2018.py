@@ -55,25 +55,13 @@ STRESS_DROP_ADJUST = {
     "H": np.log(1.5)}
 
 
-def adjustment_fact(median, branch):
+class AkkarEtAlRhyp2014Germany(AkkarEtAlRhyp2014):
     """
-    Applies stress drop adjustment factors from the STRESS_DROP_ADJ dictionary
-
-    :param numpy.ndarray median:
-        Median ground motions
-
-    :param str branch:
-        Key to indicate the branch
+    Akkar et al. (2014) "Rhypo" model with a scalar adjustment factor
     """
-    return median + STRESS_DROP_ADJUST[branch]
-
-
-class AkkarEtAlRhyp2014LSD(AkkarEtAlRhyp2014):
-    """
-    Akkar et al. (2014) "Rhypo" model with the "Low" stress drop adjustment
-    for Germany
-    """
-    SD_BRANCH = "L"
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -81,32 +69,17 @@ class AkkarEtAlRhyp2014LSD(AkkarEtAlRhyp2014):
         """
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        return mean + STRESS_DROP_ADJUST[self.SD_BRANCH], stddevs
-
-
-class AkkarEtAlRhyp2014MSD(AkkarEtAlRhyp2014LSD):
-    """
-    Akkar et al. (2014) "Rhypo" model with the "Middle" stress drop adjustment
-    for Germany
-    """
-    SD_BRANCH = "M"
-
-
-class AkkarEtAlRhyp2014HSD(AkkarEtAlRhyp2014LSD):
-    """
-    Akkar et al. (2014) "Rhypo" model with the "High" stress drop adjustment
-    for Germany
-    """
-    SD_BRANCH = "H"
+        return mean + self.adjustment_factor, stddevs
 
 
 # Bindi et al 2014
-class BindiEtAl2014RhypLSD(BindiEtAl2014Rhyp):
+class BindiEtAl2014RhypGermany(BindiEtAl2014Rhyp):
     """
-    Bindi et al. (2014) "Rhypo" model with the "Low" stress drop adjustment for
-    Germany
+    Bindi et al. (2014) "Rhypo" model with a scalar adjustment factor
     """
-    SD_BRANCH = "L"
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -114,23 +87,7 @@ class BindiEtAl2014RhypLSD(BindiEtAl2014Rhyp):
         """
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        return mean + STRESS_DROP_ADJUST[self.SD_BRANCH], stddevs
-
-
-class BindiEtAl2014RhypMSD(BindiEtAl2014RhypLSD):
-    """
-    Bindi et al. (2014) "Rhypo" model with the "Middle" stress drop adjustment
-    for Germany
-    """
-    SD_BRANCH = "M"
-
-
-class BindiEtAl2014RhypHSD(BindiEtAl2014RhypLSD):
-    """
-    Bindi et al. (2014) "Rhypo" model with the "High" stress drop adjustment
-    for Germany
-    """
-    SD_BRANCH = "H"
+        return mean + self.adjustment_factor, stddevs
 
 
 def rhypo_to_rrup(rhypo, mag):
@@ -188,35 +145,22 @@ class CauzziEtAl2014Rhypo(CauzziEtAl2014):
         return mean
 
 
-class CauzziEtAl2014RhypoLSD(CauzziEtAl2014Rhypo):
+class CauzziEtAl2014RhypoGermany(CauzziEtAl2014Rhypo):
     """
-    Cauzzi et al. (2014) model adapted for rhypo, with the "Low" stress
-    drop adjustment for Germany
+    Cauzzi et al. (2014) model adapted for rhypo, with the scalar adjustment
+    factor
     """
-    SD_BRANCH = "L"
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
+        Returns the adjusted mean and standard deviation
         """
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        return mean + STRESS_DROP_ADJUST[self.SD_BRANCH], stddevs
-
-
-class CauzziEtAl2014RhypoMSD(CauzziEtAl2014RhypoLSD):
-    """
-    Cauzzi et al. (2014) model adapted for rhypo, with the "Middle" stress
-    drop adjustment for Germany
-    """
-    SD_BRANCH = "M"
-
-
-class CauzziEtAl2014RhypoHSD(CauzziEtAl2014RhypoLSD):
-    """
-    Cauzzi et al. (2014) model adapted for rhypo, with the "High" stress drop
-    adjustment for Germany
-    """
-    SD_BRANCH = "H"
+        return mean + self.adjustment_factor, stddevs
 
 
 # Derras et al 2014
@@ -286,12 +230,14 @@ class DerrasEtAl2014Rhypo(DerrasEtAl2014):
         return p_n
 
 
-class DerrasEtAl2014RhypoLSD(DerrasEtAl2014Rhypo):
+class DerrasEtAl2014RhypoGermany(DerrasEtAl2014Rhypo):
     """
-    Derras et al. (2014) with Rhypo adjustment plus "Low" stress drop
-    adjustment factor for Germany
+    Derras et al. (2014) with Rhypo adjustment plus scalar adjustment factor
+    for Germany
     """
-    SD_BRANCH = "L"
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -299,31 +245,17 @@ class DerrasEtAl2014RhypoLSD(DerrasEtAl2014Rhypo):
         """
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        return mean + STRESS_DROP_ADJUST[self.SD_BRANCH], stddevs
-
-
-class DerrasEtAl2014RhypoMSD(DerrasEtAl2014RhypoLSD):
-    """
-    Derras et al. (2014) with Rhypo adjustment plus "Middle" stress drop
-    adjustment factor for Germany
-    """
-    SD_BRANCH = "M"
-
-
-class DerrasEtAl2014RhypoHSD(DerrasEtAl2014RhypoLSD):
-    """
-    Derras et al. (2014) with Rhypo adjustment plus "High" stress drop
-    adjustment factor for Germany
-    """
-    SD_BRANCH = "H"
+        return mean + self.adjustment_factor, stddevs
 
 
 # Bindi et al. (2017)
-class BindiEtAl2017RhypoLSD(BindiEtAl2017Rhypo):
+class BindiEtAl2017RhypoGermany(BindiEtAl2017Rhypo):
     """
-    Bindi et al. 2017 with "Low" stress drop adjustment factor for Germany
+    Bindi et al. 2017 with scalar stress drop adjustment factor
     """
-    SD_BRANCH = "L"
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -331,18 +263,4 @@ class BindiEtAl2017RhypoLSD(BindiEtAl2017Rhypo):
         """
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        return mean + STRESS_DROP_ADJUST[self.SD_BRANCH], stddevs
-
-
-class BindiEtAl2017RhypoMSD(BindiEtAl2017RhypoLSD):
-    """
-    Bindi et al. 2017 with "Middle" stress drop adjustment factor for Germany
-    """
-    SD_BRANCH = "M"
-
-
-class BindiEtAl2017RhypoHSD(BindiEtAl2017RhypoLSD):
-    """
-    Bindi et al. 2017 with "High" stress drop adjustment factor for Germany
-    """
-    SD_BRANCH = "H"
+        return mean + self.adjustment_factor, stddevs
