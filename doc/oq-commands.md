@@ -175,7 +175,7 @@ of hazard curves, hazard maps and uniform hazard spectra
 for all realizations the command to use is
 
 ```
-$ oq extract hazard/rlzs
+$ oq extract hazard/rlzs <calc_id> local
 ```
 
 Be warned that for large calculations the extraction will likely be slower
