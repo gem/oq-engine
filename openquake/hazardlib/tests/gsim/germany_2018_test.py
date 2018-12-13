@@ -16,12 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 import unittest
+import numpy as np
+from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
-from openquake.hazardlib.gsim.germany_2018 import *
-
+from openquake.hazardlib.gsim.germany_2018 import (AkkarEtAlRhyp2014Germany,
+                                                   BindiEtAl2014RhypGermany,
+                                                   CauzziEtAl2014Rhypo,
+                                                   CauzziEtAl2014RhypoGermany,
+                                                   DerrasEtAl2014Rhypo,
+                                                   DerrasEtAl2014RhypoGermany,
+                                                   BindiEtAl2017RhypoGermany)
 
 # First Test the Cauzzi et al. (2014) and Derras et al., (2014) adjustments
 # using test tables generated from the FRISK implementation
@@ -113,31 +120,31 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
                         1.5 * np.ones_like(high_mean))
 
     def test_akkar_germany_adjustments(self):
-        adj_gmpes = [AkkarEtAlRhyp2014LSD(),
-                     AkkarEtAlRhyp2014MSD(),
-                     AkkarEtAlRhyp2014HSD()]
-        self.check_gmpe_adjustments(adj_gmpes, AkkarEtAlRhyp2014())
+        adj_gmpes = [AkkarEtAlRhyp2014Germany(adjustment_factor="0.75"),
+                     AkkarEtAlRhyp2014Germany(adjustment_factor="1.25"),
+                     AkkarEtAlRhyp2014Germany(adjustment_factor="1.5")]
+        self.check_gmpe_adjustments(adj_gmpes, AkkarEtAlRhyp2014Germany())
 
     def test_bindi_2014_germany_adjustments(self):
-        adj_gmpes = [BindiEtAl2014RhypLSD(),
-                     BindiEtAl2014RhypMSD(),
-                     BindiEtAl2014RhypHSD()]
-        self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2014Rhyp())
+        adj_gmpes = [BindiEtAl2014RhypGermany(adjustment_factor="0.75"),
+                     BindiEtAl2014RhypGermany(adjustment_factor="1.25"),
+                     BindiEtAl2014RhypGermany(adjustment_factor="1.5")]
+        self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2014RhypGermany())
 
     def test_cauzzi_germany_adjustments(self):
-        adj_gmpes = [CauzziEtAl2014RhypoLSD(),
-                     CauzziEtAl2014RhypoMSD(),
-                     CauzziEtAl2014RhypoHSD()]
-        self.check_gmpe_adjustments(adj_gmpes, CauzziEtAl2014Rhypo())
+        adj_gmpes = [CauzziEtAl2014RhypoGermany(adjustment_factor="0.75"),
+                     CauzziEtAl2014RhypoGermany(adjustment_factor="1.25"),
+                     CauzziEtAl2014RhypoGermany(adjustment_factor="1.5")]
+        self.check_gmpe_adjustments(adj_gmpes, CauzziEtAl2014RhypoGermany())
 
     def test_derras_germany_adjustments(self):
-        adj_gmpes = [DerrasEtAl2014RhypoLSD(),
-                     DerrasEtAl2014RhypoMSD(),
-                     DerrasEtAl2014RhypoHSD()]
-        self.check_gmpe_adjustments(adj_gmpes, DerrasEtAl2014Rhypo())
+        adj_gmpes = [DerrasEtAl2014RhypoGermany(adjustment_factor="0.75"),
+                     DerrasEtAl2014RhypoGermany(adjustment_factor="1.25"),
+                     DerrasEtAl2014RhypoGermany(adjustment_factor="1.5")]
+        self.check_gmpe_adjustments(adj_gmpes, DerrasEtAl2014RhypoGermany())
 
     def test_bindi_2017_germany_adjustments(self):
-        adj_gmpes = [BindiEtAl2017RhypoLSD(),
-                     BindiEtAl2017RhypoMSD(),
-                     BindiEtAl2017RhypoHSD()]
-        self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2017Rhypo())
+        adj_gmpes = [BindiEtAl2017RhypoGermany(adjustment_factor="0.75"),
+                     BindiEtAl2017RhypoGermany(adjustment_factor="1.25"),
+                     BindiEtAl2017RhypoGermany(adjustment_factor="1.5")]
+        self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2017RhypoGermany())
