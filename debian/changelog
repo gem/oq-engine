@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * Extended `--reuse-hazard` to all calculators
+  * Fixed a bug in event_based_risk from GMFs with coefficients of variations
+
   [Graeme Weatherill]
   * Adds magnitude scaling relation for Germany
-  
+
   [Michele Simionato]
   * Used floats for the the GSIM realization weights, not Python Decimals
   * Added a flag `fast_sampling`, by default False
