@@ -120,47 +120,42 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-class EBRunner(object):
+def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     """
-    A class to run event based risk calculations
+    Run calculations by storing their hazard checksum and reusing previous
+    calculations if requested.
     """
-    def __init__(self, job_ini, oqparam, log_level, log_file, exports,
-                 reuse_hazard):
-        self.job_ini = job_ini
-        self.oqparam = oqparam
-        self.log_level = log_level
-        self.log_file = log_file
-        self.exports = exports
-        checksum = readinput.get_checksum32(oqparam, hazard=True)
-        # retrieve an old calculation with the right checksum, if any
-        job = logs.dbcmd('get_job_from_checksum', checksum)
+    checksum = readinput.get_checksum32(oqparam, hazard=True)
+    # retrieve an old calculation with the right checksum, if any
+    job = logs.dbcmd('get_job_from_checksum', checksum)
+    if oqparam.calculation_mode == 'event_based_risk':
         kw = dict(calculation_mode='event_based')
-        if (oqparam.sites or 'sites' in oqparam.inputs or
-                'site_model' in oqparam.inputs):
-            # remove exposure from the hazard
-            kw['exposure_file'] = ''
-        if job is None:
-            # recompute the hazard and store the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
-            logs.dbcmd('add_checksum', self.hc_id, checksum)
-        elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
-            # recompute and update the job associated to the checksum
-            self.hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
-            logs.dbcmd('update_job_checksum', self.hc_id, checksum)
-        else:
-            # sanity check
-            assert job.description == oqparam.description, (
-                job.description, oqparam.description)
-            self.hc_id = job.id
-            logging.info('Reusing job #%d', job.id)
-
-    def run_risk(self):
-        job_id = run_job(self.job_ini, self.log_level, self.log_file,
-                         self.exports, hazard_calculation_id=self.hc_id)
-        if self.oqparam.aggregate_by:
+    else:
+        kw = {}
+    if (oqparam.sites or 'sites' in oqparam.inputs or
+            'site_model' in oqparam.inputs):
+        # remove exposure from the hazard
+        kw['exposure_file'] = ''
+    if job is None:
+        # recompute the hazard and store the checksum
+        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        logs.dbcmd('add_checksum', hc_id, checksum)
+    elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        # recompute and update the job associated to the checksum
+        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        logs.dbcmd('update_job_checksum', hc_id, checksum)
+    else:
+        # compute the risk or the stats by reusing the hazard
+        assert job.description == oqparam.description, (
+            job.description, oqparam.description)  # sanity check
+        hc_id = job.id
+        logging.info('Reusing job #%d', job.id)
+        job_id = run_job(job_ini, log_level, log_file,
+                         exports, hazard_calculation_id=hc_id)
+        if oqparam.aggregate_by:
             logging.info('Exporting aggregated data')
             dstore = datastore.read(job_id)
-            aggby = 'aggregate_by/%s/' % ','.join(self.oqparam.aggregate_by)
+            aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
             fnames = []
             fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
             fnames.extend(export((aggby + 'curves', 'csv'), dstore))
@@ -237,16 +232,13 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         if len(job_inis) == 1 and not hc_id:
-            # init logs before calling get_oqparam but without creating a job
+            # init logs before calling get_oqparam
             logs.init('nojob', getattr(logging, log_level.upper()))
             # not using logs.handle that logs on the db
             oq = readinput.get_oqparam(job_inis[0])
-            if oq.calculation_mode.startswith('event_based'):
-                ebr = EBRunner(job_inis[0], oq, log_level, log_file,
-                               exports, reuse_hazard)
-                if oq.calculation_mode.endswith('risk'):
-                    ebr.run_risk()
-                return
+            smart_run(job_inis[0], oq, log_level, log_file,
+                      exports, reuse_hazard)
+            return
         for i, job_ini in enumerate(job_inis):
             open(job_ini, 'rb').read()  # IOError if the file does not exist
             job_id = run_job(job_ini, log_level, log_file,
