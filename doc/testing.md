@@ -19,7 +19,7 @@ Python packages can also be specified to run only a subset of tests. Some exampl
 $ nosetests -v -a '!slow' openquake.hazardlib
 
 # Calculators
-$ nosetests -v -a '!slow' openquake.hazardlib
+$ nosetests -v -a '!slow' openquake.calculators
 
 # Engine server
 $ oq dbserver start &
