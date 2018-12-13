@@ -287,6 +287,14 @@ def view_params(token, dstore):
                       for param in params])
 
 
+def rst_links(*fnames):
+    links = []
+    for fname in fnames:
+        bname = os.path.basename(fname)
+        links.append("`%s <%s>`_" % (bname, bname))
+    return ' '.join(links)
+
+
 def build_links(items):
     out = []
     for key, fname in items:
@@ -295,10 +303,9 @@ def build_links(items):
                 b = os.path.basename(v)
                 out.append(('reqv:' + k, "`%s <%s>`_" % (b, b)))
         elif isinstance(fname, list):
-            out.append((key, ' '.join(os.path.basename(f) for f in fname)))
+            out.append((key, rst_links(*fname)))
         else:
-            bname = os.path.basename(fname)
-            out.append((key, "`%s <%s>`_" % (bname, bname)))
+            out.append((key, rst_links(fname)))
     return sorted(out)
 
 
