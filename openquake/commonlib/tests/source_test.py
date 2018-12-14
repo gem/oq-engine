@@ -737,7 +737,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
-        self.assertEqual(rlz.weight, 1.)
+        self.assertEqual(rlz.weight['default'], 1.)
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
