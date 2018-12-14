@@ -385,7 +385,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     raise AssertionError('Expected %d pmaps, got %d' %
                                          (len(weights), len(pmaps)))
                 for statname, stat in hstats:
-                    pmap = compute_pmap_stats(pmaps, [stat], weights)
+                    pmap = compute_pmap_stats(pmaps, [stat], weights, oq.imtls)
                     arr = numpy.zeros((N, L), F32)
                     for sid in pmap:
                         arr[sid] = pmap[sid].array[:, 0]
