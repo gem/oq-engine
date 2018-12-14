@@ -49,8 +49,10 @@ def getdata(what, calc_ids, samplesites):
     for dstore in dstores[1:]:
         oq = dstore['oqparam']
         numpy.testing.assert_equal(dstore['sitecol'].array, sitecol.array)
-        numpy.testing.assert_equal(oq.imtls.array, imtls.array)
-        numpy.testing.assert_equal(oq.poes, poes)
+        if what == 'hcurves':
+            numpy.testing.assert_equal(oq.imtls.array, imtls.array)
+        elif what == 'hmaps':
+            numpy.testing.assert_equal(oq.poes, poes)
         arrays.append(get(dstore, what, imtls, sids))
         dstore.close()
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
