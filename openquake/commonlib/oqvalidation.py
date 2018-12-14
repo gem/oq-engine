@@ -19,6 +19,7 @@
 import os
 import logging
 import functools
+import operator
 import multiprocessing
 import numpy
 
@@ -421,14 +422,31 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composity dtype (poe, imt)
         """
+        imts = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                imts.append(imt)
+        #imts.sort(key=operator.attrgetter('period'))
         return numpy.dtype([('%s-%s' % (poe, imt), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
+
+    def periods(self):
+        """
+        :returns: the periods of the IMTs with a period
+        """
+        p = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                p.append(imt.period)
+        return p
 
     def imt_dt(self):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, float) for imt in self.imtls])
+        return numpy.dtype([(str(imt), float) for imt in self.imtls])
 
     @property
     def lti(self):

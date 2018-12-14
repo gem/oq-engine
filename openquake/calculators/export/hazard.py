@@ -383,8 +383,7 @@ def export_hcurves_csv(ekey, dstore):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(
-                hcurves, oq.imtls, oq.poes, len(sitemesh))
+            uhs_curves = calc.make_uhs(hcurves, oq, len(sitemesh))
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
@@ -437,20 +436,22 @@ def export_uhs_xml(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    periods = [imt for imt in oq.imtls if hasattr(imt, 'period')]
+    periods = oq.periods()
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        _, periods = calc.get_imts_periods(oq.imtls)
-        uhs = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(sitemesh))
+        uhs = calc.make_uhs(hcurves, oq, len(sitemesh))
         for poe in oq.poes:
+            poe_str = '%s-' % poe
             fname = hazard_curve_name(
                 dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
             data = []
-            for site, curve in zip(sitemesh, uhs[str(poe)]):
-                data.append(UHS(curve, Location(site)))
+            for site, curve in zip(sitemesh, uhs):
+                levels = [curve[f] for f in curve.dtype.names
+                          if f.startswith(poe_str)]
+                data.append(UHS(levels, Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)
