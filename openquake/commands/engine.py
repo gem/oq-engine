@@ -125,9 +125,6 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     Run calculations by storing their hazard checksum and reusing previous
     calculations if requested.
     """
-    checksum = readinput.get_checksum32(oqparam, hazard=True)
-    # retrieve an old calculation with the right checksum, if any
-    job = logs.dbcmd('get_job_from_checksum', checksum)
     if (oqparam.calculation_mode == 'event_based_risk' and
             'gmfs' not in oqparam.inputs):
         kw = dict(calculation_mode='event_based')
@@ -137,6 +134,9 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             kw['exposure_file'] = ''
     else:
         kw = {}
+    checksum = readinput.get_checksum32(oqparam, hazard=True)
+    # retrieve an old calculation with the right checksum, if any
+    job = logs.dbcmd('get_job_from_checksum', checksum)
     if job is None:
         # recompute the hazard and store the checksum
         hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
