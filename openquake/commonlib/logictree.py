@@ -1277,6 +1277,44 @@ class InvalidLogicTree(Exception):
     pass
 
 
+class GsimWeight(object):
+    """
+    A composite weight by IMTs extracted from the gsim_logic_tree_file
+    """
+    def __init__(self, branch):
+        nodes = list(branch.getnodes('uncertaintyWeight'))
+        assert 'imt' not in nodes[0].attrib, nodes[0].attrib
+        self.dic = {'default': float(nodes[0].text)}
+        for n in nodes[1:]:
+            self.dic[n['imt']] = float(n.text)
+
+    def __mul__(self, other):
+        new = object.__new__(self.__class__)
+        if isinstance(other, self.__class__):
+            new.dic = {k: self.dic[k] * other.dic[k] for k in self.dic}
+        else:  # assume a float
+            new.dic = {k: self.dic[k] * other for k in self.dic}
+        return new
+
+    __rmul__ = __mul__
+
+    def __add__(self, other):
+        new = object.__new__(self.__class__)
+        if isinstance(other, self.__class__):
+            new.dic = {k: self.dic[k] + other.dic[k] for k in self.dic}
+        else:  # assume a float
+            new.dic = {k: self.dic[k] + other for k in self.dic}
+        return new
+
+    __radd__ = __add__
+
+    def get(self, imt):
+        try:
+            return self.dic[imt]
+        except KeyError:
+            return self.dic['default']
+
+
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -1441,7 +1479,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = float(branch.uncertaintyWeight.text)
+                    weight = GsimWeight(branch)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
