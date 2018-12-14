@@ -187,7 +187,13 @@ def sample(weighted_objects, num_samples, seed):
     :return:
         A subsequence of the original sequence with `num_samples` elements
     """
-    weights = numpy.array([float(obj.weight) for obj in weighted_objects])
+    weights = []
+    for obj in weighted_objects:
+        w = obj.weight
+        if isinstance(obj.weight, float):
+            weights.append(w)
+        else:
+            weights.append(w['default'])
     numpy.random.seed(seed)
     idxs = numpy.random.choice(len(weights), num_samples, p=weights)
     # NB: returning an array would break things
@@ -1308,6 +1314,14 @@ class ImtWeight(object):
 
     __radd__ = __add__
 
+    def __truediv__(self, other):
+        new = object.__new__(self.__class__)
+        if isinstance(other, self.__class__):
+            new.dic = {k: self.dic[k] / other[k] for k in self.dic}
+        else:  # assume a float
+            new.dic = {k: self.dic[k] / other for k in self.dic}
+        return new
+
     def is_one(self):
         """
         Check that all the inner weights are 1 up to the precision
@@ -1321,7 +1335,7 @@ class ImtWeight(object):
             return self.dic['default']
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name, self.dic)
+        return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
 class GsimLogicTree(object):
@@ -1597,6 +1611,6 @@ class GsimLogicTree(object):
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
-                                    b.id, b.uncertainty, b.weight)
+                                    b.id, b.uncertainty, b.weight['default'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
