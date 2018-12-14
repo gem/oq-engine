@@ -22,23 +22,22 @@ from openquake.commonlib import calc
 from openquake.commands import engine
 
 
-def make_figure(indices, n_sites, imtls, poes, pmaps):
+def make_figure(indices, n_sites, oq, pmaps):
     """
     :param indices: the indices of the sites under analysis
     :param n_sites: total number of sites
-    :param imtls: DictArray with the IMTs and levels
-    :param poes: PoEs used to compute the hazard maps
+    :param oq: instance of OqParam
     :param pmaps: a list of probability maps per realization
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
-    n_poes = len(poes)
-    uhs_by_rlz = [calc.make_uhs(pmap, imtls, poes, n_sites) for pmap in pmaps]
-    _, periods = calc.get_imts_periods(imtls)
+    n_poes = len(oq.poes)
+    uhs_by_rlz = [calc.make_uhs(pmap, oq, n_sites) for pmap in pmaps]
+    periods = [imt.period for imt in oq.imtls if hasattr(imt, 'period')]
     for i, site in enumerate(indices):
-        for j, poe in enumerate(poes):
+        for j, poe in enumerate(oq.poes):
             ax = fig.add_subplot(len(indices), n_poes, i * n_poes + j + 1)
             ax.grid(True)
             ax.set_xlim([periods[0], periods[-1]])
@@ -74,6 +73,7 @@ def plot_uhs(calc_id, sites='0'):
     pmaps = getter.get_pmaps(numpy.array(indices))
     plt = make_figure(valid, n_sites, oq.imtls, oq.poes, pmaps)
     plt.show()
+
 
 plot_uhs.arg('calc_id', 'a computation id', type=int)
 plot_uhs.opt('sites', 'comma-separated string with the site indices')
