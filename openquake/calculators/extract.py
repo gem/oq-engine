@@ -280,7 +280,7 @@ def extract_uhs(dstore, what):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
     for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
-        dic[name] = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+        dic[name] = calc.make_uhs(hcurves, oq, len(mesh))
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
