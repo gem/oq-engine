@@ -249,7 +249,7 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hmaps_csv(key, dest, sitemesh, array, pdic, comment):
+def export_hmaps_csv(key, dest, sitemesh, array, hmap_dt, comment):
     """
     Export the hazard maps of the given realization into CSV.
 
@@ -257,14 +257,10 @@ def export_hmaps_csv(key, dest, sitemesh, array, pdic, comment):
     :param dest: name of the exported file
     :param sitemesh: site collection
     :param array: an array of shape (N, P * I)
-    :param pdic: intensity measure types and levels
+    :param hmap_dt: numpy dtype for hazard maps
     :param comment: comment to use as header of the exported CSV file
     """
-    imts = list(pdic)
-    poes = pdic[imts[0]]
-    dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
-                      for imt in imts for poe in poes])
-    curves = util.compose_arrays(sitemesh, array.view(dt)[:, 0])
+    curves = util.compose_arrays(sitemesh, array.view(hmap_dt)[:, 0])
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -382,8 +378,6 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = get_mesh(sitecol)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    if oq.poes:
-        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     checksum = dstore.get_attr('/', 'checksum32')
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
@@ -398,7 +392,7 @@ def export_hcurves_csv(ekey, dstore):
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
             hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic,
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, oq.hmap_dt(),
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
             fnames.extend(
