@@ -1277,7 +1277,7 @@ class InvalidLogicTree(Exception):
     pass
 
 
-class GsimWeight(object):
+class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
     """
@@ -1291,7 +1291,7 @@ class GsimWeight(object):
     def __mul__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] * other.dic[k] for k in self.dic}
+            new.dic = {k: self.dic[k] * other[k] for k in self.dic}
         else:  # assume a float
             new.dic = {k: self.dic[k] * other for k in self.dic}
         return new
@@ -1301,18 +1301,27 @@ class GsimWeight(object):
     def __add__(self, other):
         new = object.__new__(self.__class__)
         if isinstance(other, self.__class__):
-            new.dic = {k: self.dic[k] + other.dic[k] for k in self.dic}
+            new.dic = {k: self.dic[k] + other[k] for k in self.dic}
         else:  # assume a float
             new.dic = {k: self.dic[k] + other for k in self.dic}
         return new
 
     __radd__ = __add__
 
-    def get(self, imt):
+    def is_one(self):
+        """
+        Check that all the inner weights are 1 up to the precision
+        """
+        return all(abs(v - 1.) < pmf.PRECISION for v in self.dic.values())
+
+    def __getitem__(self, imt):
         try:
             return self.dic[imt]
         except KeyError:
             return self.dic['default']
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name, self.dic)
 
 
 class GsimLogicTree(object):
@@ -1479,7 +1488,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = GsimWeight(branch)
+                    weight = ImtWeight(branch)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)
@@ -1508,7 +1517,8 @@ class GsimLogicTree(object):
                     bt = BranchTuple(
                         branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
-                assert abs(sum(weights) - 1) < pmf.PRECISION, weights
+                tot = sum(weights)
+                assert tot.is_one(), tot
                 if duplicated(branch_ids):
                     raise InvalidLogicTree(
                         'There where duplicated branchIDs in %s' % self.fname)
