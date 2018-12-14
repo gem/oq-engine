@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source import rupture
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, source, calc, writers
+from openquake.commonlib import readinput, logictree, source, calc, writers
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.calculators.ucerf_base import UcerfFilter
@@ -485,7 +485,13 @@ class HazardCalculator(BaseCalculator):
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
-            self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
+            csm_info = self.datastore['csm_info']
+            if self.oqparam.hazard_calculation_id:
+                # redefine the realizations by reading the weights from the
+                # gsim_logic_tree_file that could be different from the parent
+                csm_info.gsim_lt = logictree.GsimLogicTree(
+                    self.oqparam.inputs['gsim_logic_tree'], set(csm_info.trts))
+            self.rlzs_assoc = csm_info.get_rlzs_assoc()
         elif hasattr(self, 'csm'):
             self.check_floating_spinning()
             self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
