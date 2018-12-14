@@ -180,7 +180,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def gen_getters(self, parent):
         """
-        :yields: pgetter, hstats, monitor
+        :yields: pgetter, hstats
         """
         hstats = self.oqparam.hazard_stats()
         for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
@@ -313,7 +313,8 @@ def build_hazard_stats(pgetter, hstats, monitor):
     pmap_by_kind = {}
     for statname, stat in hstats:
         with monitor('compute ' + statname):
-            pmap = compute_pmap_stats(pmaps, [stat], pgetter.weights)
+            pmap = compute_pmap_stats(
+                pmaps, [stat], pgetter.weights, pgetter.imtls)
         pmap_by_kind['hcurves', statname] = pmap
         if pgetter.poes:
             pmap_by_kind['hmaps', statname] = calc.make_hmap(

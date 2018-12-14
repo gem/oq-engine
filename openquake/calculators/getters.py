@@ -202,8 +202,10 @@ class PmapGetter(object):
         else:  # multiple realizations
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            return self.rlzs_assoc.compute_pmap_stats(
-                dic, [stats.mean_curve, stats.std_curve])
+            pmaps = self.rlzs_assoc.combine_pmaps(dic)
+            return stats.compute_pmap_stats(
+                pmaps, [stats.mean_curve, stats.std_curve],
+                self.weights, self.imtls)
 
 
 class GmfDataGetter(collections.Mapping):
