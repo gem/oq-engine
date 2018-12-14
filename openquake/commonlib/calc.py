@@ -183,24 +183,6 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 # ################## utilities for classical calculators ################ #
 
-def get_imts_periods(imtls):
-    """
-    Returns a list of IMT strings and a list of periods. There is an element
-    for each IMT of type Spectral Acceleration, including PGA which is
-    considered an alias for SA(0.0). The lists are sorted by period.
-
-    :param imtls: a set of intensity measure type strings
-    :returns: a list of IMT strings and a list of periods
-    """
-    imts = []
-    for im in imtls:
-        imt = from_string(im)
-        if hasattr(imt, 'period'):
-            imts.append(imt)
-    imts.sort(key=operator.attrgetter('period'))
-    return imts, [imt.period for imt in imts]
-
-
 def make_hmap(pmap, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability map.
@@ -250,7 +232,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hcurves, imtls, poes, nsites):
+def make_uhs(hcurves, oq, nsites):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -259,22 +241,20 @@ def make_uhs(hcurves, imtls, poes, nsites):
 
     :param pmap:
         a composite array of hazard curves
-    :param imtls:
-        a dictionary of intensity measure types and levels
-    :param poes:
-        a sequence of PoEs for the underlying hazard maps
+    :param oq:
+        an OqParam instance
+    :param uhs_dt:
+        a numpy dtype with (poe, imt)
     :returns:
         an composite array containing nsites uniform hazard maps
     """
-    imts, _ = get_imts_periods(imtls)
-    array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    uhs = numpy.zeros(nsites, uhs_dt)
+    array = make_hmap_array(hcurves, oq.imtls, oq.poes, len(hcurves))
+    uhs = numpy.zeros(nsites, oq.uhs_dt())
     for field in array.dtype.names:
         imt, poe = field.split('-')
-        if any(imt == str(i) for i in imts):
-            uhs[poe][imt] = array[field]
+        poe_imt = '%s-%s' % (poe, imt)
+        if poe_imt in uhs.dtype.names:
+            uhs[poe_imt] = array[field]
     return uhs
 
 
