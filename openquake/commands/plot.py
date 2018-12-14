@@ -60,8 +60,8 @@ def get_pmaps(dstore, indices):
     getter = getters.PmapGetter(dstore, rlzs_assoc)
     getter.init()
     pmaps = getter.get_pmaps(indices)
-    weights = dstore['csm_info'].rlzs['weight']
-    mean = compute_pmap_stats(pmaps, [mean_curve], weights, getter.imtls)
+    mean = compute_pmap_stats(
+        pmaps, [mean_curve], getter.weights, getter.imtls)
     return mean, pmaps
 
 
