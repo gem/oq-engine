@@ -410,6 +410,20 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
+    def hmap_dt(self):
+        """
+        :returns: a composity dtype (imt, poe)
+        """
+        return numpy.dtype([('%s-%s' % (imt, poe), F32)
+                            for imt in self.imtls for poe in self.poes])
+
+    def uhs_dt(self):
+        """
+        :returns: a composity dtype (poe, imt)
+        """
+        return numpy.dtype([('%s-%s' % (poe, imt), F32)
+                            for imt in self.imtls for poe in self.poes])
+
     def imt_dt(self):
         """
         :returns: a numpy dtype {imt: float}
