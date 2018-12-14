@@ -80,7 +80,8 @@ def show(what='contents', calc_id=-1, extra=()):
         sitecol = ds['sitecol']
         pmaps = getter.get_pmaps(sitecol.sids)
         weights = [rlz.weight for rlz in getter.rlzs]
-        mean = stats.compute_pmap_stats(pmaps, [numpy.mean], weights)
+        mean = stats.compute_pmap_stats(
+            pmaps, [numpy.mean], weights, getter.imtls)
         dists = []
         for rlz, pmap in zip(getter.rlzs, pmaps):
             dist = rmsep(mean.array, pmap.array, min_value)
