@@ -58,4 +58,5 @@ def plot_hmaps(calc_id):
     plt = make_figure(dstore['sitecol'], oq.imtls, oq.poes, array)
     plt.show()
 
+
 plot_hmaps.arg('calc_id', 'a computation id', type=int)
