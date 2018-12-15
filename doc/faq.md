@@ -1,5 +1,12 @@
 # FAQ
 
+### Help! There is an error in my calculation!
+
+You are in the wrong place. These are the FAQ for IT issues, concerning
+how to install the engine. If you have already installed it and have
+issues running calculations you should go [here for hazard calculations](
+faq-hazard.md) and [here for risk calculations](faq-risk.md).
+
 ### Python 2.7 compatibility 
 
 Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
