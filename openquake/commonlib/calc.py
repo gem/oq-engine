@@ -231,27 +231,26 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hcurves, oq, nsites):
+def make_uhs(hmap, oq, nsites):
     """
     Make Uniform Hazard Spectra curves for each location.
 
     It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
-    :param pmap:
-        a composite array of hazard curves
+    :param hmap:
+        a composite array of hazard maps
     :param oq:
         an OqParam instance
     :returns:
         an composite array containing nsites uniform hazard maps
     """
-    array = make_hmap_array(hcurves, oq.imtls, oq.poes, len(hcurves))
     uhs = numpy.zeros(nsites, oq.uhs_dt())
-    for field in array.dtype.names:
+    for field in hmap.dtype.names:
         imt, poe = field.split('-')
         poe_imt = '%s-%s' % (poe, imt)
         if poe_imt in uhs.dtype.names:
-            uhs[poe_imt] = array[field]
+            uhs[poe_imt] = hmap[field]
     return uhs
 
 
