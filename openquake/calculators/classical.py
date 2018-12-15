@@ -178,18 +178,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 num_sources += len(block)
         logging.info('Sent %d sources in %d tasks', num_sources, num_tasks)
 
-    def gen_getters(self, parent):
-        """
-        :yields: pgetter, hstats
-        """
-        hstats = self.oqparam.hazard_stats()
-        for t in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pgetter = getters.PmapGetter(parent, self.rlzs_assoc, t.sids)
-            if parent is self.datastore:  # read now, not in the workers
-                logging.info('Reading PoEs on %d sites', len(t))
-                pgetter.init()
-            yield pgetter, hstats
-
     def save_hazard_stats(self, acc, pmap_by_kind):
         """
         Works by side effect by saving statistical hcurves and hmaps on the
@@ -245,31 +233,37 @@ class ClassicalCalculator(base.HazardCalculator):
                     sorted(data), grp_source_dt)
 
             # save a copy of the poes in hdf5cache
-            if hasattr(self, 'hdf5cache'):
-                with hdf5.File(self.hdf5cache) as cache:
-                    cache['oqparam'] = oq
-                    self.datastore.hdf5.copy('poes', cache)
-                self.calc_stats(self.hdf5cache)
-            else:
-                self.calc_stats(self.datastore)
+            with hdf5.File(self.hdf5cache) as cache:
+                cache['oqparam'] = oq
+                self.datastore.hdf5.copy('poes', cache)
+            self.calc_stats(self.hdf5cache)
 
     def calc_stats(self, parent):
         oq = self.oqparam
+        hstats = oq.hazard_stats()
         # initialize datasets
         N = len(self.sitecol.complete)
         L = len(oq.imtls.array)
         P = len(oq.poes)
         I = len(oq.imtls)
-        for name, stat in oq.hazard_stats():
+        R = len(self.rlzs_assoc.realizations)
+        names = [name for name, _ in hstats]
+        if R > 1 and oq.individual_curves:
+            for r in range(R):
+                names.append('rlz-%03d' % r)
+        for name in names:
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
             self.datastore.set_attrs('hcurves/%s' % name, nbytes=N * L * 4)
             if oq.poes:
                 self.datastore.create_dset('hmaps/' + name, F32, (N, P * I))
                 self.datastore.set_attrs('hmaps/' + name, nbytes=N * P * I * 4)
         logging.info('Building hazard statistics')
-        parallel.Starmap(
-            build_hazard_stats, self.gen_getters(parent), self.monitor()
-        ).reduce(self.save_hazard_stats)
+        ct = oq.concurrent_tasks
+        iterargs = ((getters.PmapGetter(parent, self.rlzs_assoc, t.sids),
+                     hstats, oq.individual_curves)
+                    for t in self.sitecol.split_in_tiles(ct))
+        parallel.Starmap(build_hazard_stats, iterargs, self.monitor()).reduce(
+            self.save_hazard_stats)
 
 
 @base.calculators.add('preclassical')
@@ -292,10 +286,11 @@ class PreCalculator(ClassicalCalculator):
         return {}
 
 
-def build_hazard_stats(pgetter, hstats, monitor):
+def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
     """
     :param pgetter: an :class:`openquake.commonlib.getters.PmapGetter`
     :param hstats: a list of pairs (statname, statfunc)
+    :param individual_curves: if True, also build the individual curves
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> ProbabilityMap
 
@@ -319,4 +314,11 @@ def build_hazard_stats(pgetter, hstats, monitor):
         if pgetter.poes:
             pmap_by_kind['hmaps', statname] = calc.make_hmap(
                 pmap, pgetter.imtls, pgetter.poes)
+    if len(pmaps) > 1 and individual_curves:
+        for r, pmap in enumerate(pmaps):
+            key = 'rlz-%03d' % r
+            pmap_by_kind['hcurves', key] = pmap
+            if pgetter.poes:
+                pmap_by_kind['hmaps', key] = calc.make_hmap(
+                    pmap, pgetter.imtls, pgetter.poes)
     return pmap_by_kind
