@@ -305,20 +305,28 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             return {}
         if sum(len(pmap) for pmap in pmaps) == 0:  # no data
             return {}
+    imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
+    hmaps = []
     for statname, stat in hstats:
         with monitor('compute ' + statname):
-            pmap = compute_pmap_stats(
-                pmaps, [stat], pgetter.weights, pgetter.imtls)
+            pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
         pmap_by_kind['hcurves', statname] = pmap
         if pgetter.poes:
             pmap_by_kind['hmaps', statname] = calc.make_hmap(
                 pmap, pgetter.imtls, pgetter.poes)
+            if statname == 'std':
+                for p in pmaps:
+                    hmaps.append(calc.make_hmap(p, imtls, poes))
+                pmap_by_kind['hmaps', statname] = (
+                    compute_pmap_stats(hmaps, [stat], weights, imtls))
+
     if len(pmaps) > 1 and individual_curves:
         for r, pmap in enumerate(pmaps):
             key = 'rlz-%03d' % r
             pmap_by_kind['hcurves', key] = pmap
-            if pgetter.poes:
-                pmap_by_kind['hmaps', key] = calc.make_hmap(
-                    pmap, pgetter.imtls, pgetter.poes)
+            if pgetter.poes and hmaps:
+                pmap_by_kind['hmaps', key] = hmaps[r]
+            elif pgetter.poes:
+                pmap_by_kind['hmaps', key] = calc.make_hmap(pmap, imtls, poes)
     return pmap_by_kind
