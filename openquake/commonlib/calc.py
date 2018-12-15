@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
-import operator
 import numpy
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
 
 TWO16 = 2 ** 16
@@ -231,7 +229,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hmap, oq, nsites):
+def make_uhs(hmap, oq):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -243,9 +241,9 @@ def make_uhs(hmap, oq, nsites):
     :param oq:
         an OqParam instance
     :returns:
-        an composite array containing nsites uniform hazard maps
+        a composite array containing uniform hazard spectra
     """
-    uhs = numpy.zeros(nsites, oq.uhs_dt())
+    uhs = numpy.zeros(len(hmap), oq.uhs_dt())
     for field in hmap.dtype.names:
         imt, poe = field.split('-')
         poe_imt = '%s-%s' % (poe, imt)
