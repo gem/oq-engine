@@ -37,7 +37,7 @@ def make_figure(indices, n_sites, oq, pmaps):
     uhs_by_rlz = []
     for pmap in pmaps:
         hmap = calc.make_hmap_array(pmap, oq.imtls, oq.poes, n_sites)
-        uhs_by_rlz.append(calc.make_uhs(hmap, oq, n_sites))
+        uhs_by_rlz.append(calc.make_uhs(hmap, oq))
     periods = oq.imt_periods()
     for i, site in enumerate(indices):
         for j, poe in enumerate(oq.poes):
