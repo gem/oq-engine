@@ -35,7 +35,7 @@ def make_figure(indices, n_sites, oq, pmaps):
     fig = plt.figure()
     n_poes = len(oq.poes)
     uhs_by_rlz = [calc.make_uhs(pmap, oq, n_sites) for pmap in pmaps]
-    periods = [imt.period for imt in oq.imtls if hasattr(imt, 'period')]
+    periods = oq.imt_periods()
     for i, site in enumerate(indices):
         for j, poe in enumerate(oq.poes):
             ax = fig.add_subplot(len(indices), n_poes, i * n_poes + j + 1)
