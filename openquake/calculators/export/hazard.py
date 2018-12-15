@@ -436,7 +436,7 @@ def export_uhs_xml(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    periods = oq.periods()
+    periods = oq.imt_periods()
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         uhs = calc.make_uhs(hcurves, oq, len(sitemesh))

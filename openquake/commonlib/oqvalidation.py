@@ -427,11 +427,11 @@ class OqParam(valid.ParamSet):
             imt = from_string(im)
             if hasattr(imt, 'period'):
                 imts.append(imt)
-        #imts.sort(key=operator.attrgetter('period'))
+        imts.sort(key=operator.attrgetter('period'))
         return numpy.dtype([('%s-%s' % (poe, imt), F32)
-                            for imt in imts for poe in self.poes])
+                            for poe in self.poes for imt in imts])
 
-    def periods(self):
+    def imt_periods(self):
         """
         :returns: the periods of the IMTs with a period
         """
