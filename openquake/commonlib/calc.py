@@ -221,8 +221,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
         hcurves = pmap.value
     except AttributeError:
         hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F32)
-              for imt in imtls for poe in poes]
+    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
         curves = hcurves[:, imtls(imt)]
@@ -243,8 +242,6 @@ def make_uhs(hcurves, oq, nsites):
         a composite array of hazard curves
     :param oq:
         an OqParam instance
-    :param uhs_dt:
-        a numpy dtype with (poe, imt)
     :returns:
         an composite array containing nsites uniform hazard maps
     """
