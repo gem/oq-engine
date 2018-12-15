@@ -262,8 +262,11 @@ hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
 hazard_curve-mean-SA(0.1).csv
+hazard_curve-std-PGA.csv
+hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
+hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
         # test UHS XML export
