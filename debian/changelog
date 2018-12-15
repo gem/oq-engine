@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Replaced the `~` in the header of the UHS csv files with a `-`
   * Restored the `individual_curves` flag even for the hazard curves
   * Implemented dGMPE weights per intensity measure type
   * Extended `--reuse-hazard` to all calculators
