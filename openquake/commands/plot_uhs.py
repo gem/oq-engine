@@ -48,9 +48,10 @@ def make_figure(indices, n_sites, oq, pmaps):
                 'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
+            fields = [f for f in uhs_by_rlz[0].dtype.names
+                      if f.startswith(str(poe))]
             for r, all_uhs in enumerate(uhs_by_rlz):
-                uhs = list(all_uhs[str(poe)][site])
-                ax.plot(periods, uhs, label=r)
+                ax.plot(periods, list(all_uhs[site][fields]), label=r)
     plt.legend()
     return plt
 
