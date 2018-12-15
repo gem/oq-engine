@@ -385,7 +385,7 @@ def export_hcurves_csv(ekey, dstore):
                 oq.hazard_maps):
             hmap = dstore['hmaps/' + kind].value.view(hmap_dt)[:, 0]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(hmap, oq, len(sitemesh))
+            uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
@@ -441,7 +441,7 @@ def export_uhs_xml(ekey, dstore):
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(sitemesh))
-        uhs = calc.make_uhs(hmap, oq, len(sitemesh))
+        uhs = calc.make_uhs(hmap, oq)
         for poe in oq.poes:
             poe_str = '%s-' % poe
             fname = hazard_curve_name(
