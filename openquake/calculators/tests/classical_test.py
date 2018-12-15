@@ -348,15 +348,15 @@ hazard_uhs-std.csv
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, delta=1E-7)
+            case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # check exporting a single realization in XML and CSV
-        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
         if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
-        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
         # extracting hmaps
