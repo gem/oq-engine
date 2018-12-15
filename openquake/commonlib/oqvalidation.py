@@ -411,14 +411,14 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
-    def hmap_dt(self):
+    def hmap_dt(self):  # used for CSV export
         """
-        :returns: a composity dtype (imt, poe)
+        :returns: a composite dtype (imt, poe)
         """
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
                             for imt in self.imtls for poe in self.poes])
 
-    def uhs_dt(self):
+    def uhs_dt(self):  # used for CSV export
         """
         :returns: a composity dtype (poe, imt)
         """
