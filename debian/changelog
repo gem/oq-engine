@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Implemented different GMPE weights per intensity measure type
+  * Restored the `individual_curves` flag even for the hazard curves
+  * Implemented dGMPE weights per intensity measure type
   * Extended `--reuse-hazard` to all calculators
   * Fixed a bug in event_based_risk from GMFs with coefficients of variations
 
