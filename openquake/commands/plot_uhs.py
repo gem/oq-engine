@@ -71,7 +71,7 @@ def plot_uhs(calc_id, sites='0'):
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     pmaps = getter.get_pmaps(numpy.array(indices))
-    plt = make_figure(valid, n_sites, oq.imtls, oq.poes, pmaps)
+    plt = make_figure(valid, n_sites, oq, pmaps)
     plt.show()
 
 
