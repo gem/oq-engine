@@ -24,8 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import (
-    humansize, group_array, DictArray, deprecated)
+from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
@@ -425,6 +424,8 @@ def get_metadata(realizations, kind):
         metadata['statistics'] = 'mean'
     elif kind == 'max':
         metadata['statistics'] = 'max'
+    elif kind == 'std':
+        metadata['statistics'] = 'std'
     return metadata
 
 
