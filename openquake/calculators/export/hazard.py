@@ -248,18 +248,17 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hmaps_csv(key, dest, sitemesh, array, hmap_dt, comment):
+def export_hmaps_csv(key, dest, sitemesh, array, comment):
     """
     Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
-    :param array: an array of shape (N, P * I)
-    :param hmap_dt: numpy dtype for hazard maps
+    :param array: a composite array of dtype hmap_dt
     :param comment: comment to use as header of the exported CSV file
     """
-    curves = util.compose_arrays(sitemesh, array.view(hmap_dt)[:, 0])
+    curves = util.compose_arrays(sitemesh, array)
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -378,25 +377,28 @@ def export_hcurves_csv(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     checksum = dstore.get_attr('/', 'checksum32')
+    hmap_dt = oq.hmap_dt()
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
+        if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
+                oq.hazard_maps):
+            hmap = dstore['hmaps/' + kind].value.view(hmap_dt)[:, 0]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(hcurves, oq, len(sitemesh))
+            uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hmaps_csv(ekey, fname, sitemesh, hmap, oq.hmap_dt(),
+                export_hmaps_csv(ekey, fname, sitemesh, hmap,
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves,
-                    oq, checksum))
+                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,
+                    checksum))
     return sorted(fnames)
 
 
@@ -440,7 +442,8 @@ def export_uhs_xml(ekey, dstore):
     periods = oq.imt_periods()
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        uhs = calc.make_uhs(hcurves, oq, len(sitemesh))
+        hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(sitemesh))
+        uhs = calc.make_uhs(hmap, oq)
         for poe in oq.poes:
             poe_str = '%s-' % poe
             fname = hazard_curve_name(
