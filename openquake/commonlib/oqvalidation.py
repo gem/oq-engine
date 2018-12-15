@@ -446,7 +446,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(str(imt), float) for imt in self.imtls])
+        return numpy.dtype([(imt, float) for imt in self.imtls])
 
     @property
     def lti(self):
