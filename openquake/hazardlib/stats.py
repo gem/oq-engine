@@ -21,29 +21,23 @@ Utilities to compute mean and quantile curves
 import numpy
 from openquake.baselib.python3compat import encode
 
-_mean = None  # set by mean_curve and std_curve
-
 
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
-    global _mean
     if weights is None:
         weights = [1. / len(values)] * len(values)
     if not isinstance(values, numpy.ndarray):
         values = numpy.array(values)
-    _mean = numpy.average(values, axis=0, weights=weights)
-    return _mean
+    return numpy.average(values, axis=0, weights=weights)
 
 
 def std_curve(values, weights=None):
-    global _mean
-    assert _mean is not None, 'You must call mean_curve before std_curve'
     if weights is None:
         weights = [1. / len(values)] * len(values)
-    res = numpy.sqrt(numpy.einsum('i,i...', weights, (_mean - values) ** 2))
-    _mean = None  # reset cache
+    m = mean_curve(values, weights)
+    res = numpy.sqrt(numpy.einsum('i,i...', weights, (m - values) ** 2))
     return res
 
 
