@@ -207,7 +207,6 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary grp_id -> hazard curves
         """
         oq = self.oqparam
-        self.R = len(self.rlzs_assoc.realizations)
         csm_info = self.datastore['csm_info']
         grp_trt = csm_info.grp_by("trt")
         grp_source = csm_info.grp_by("name")
@@ -234,13 +233,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     sorted(data), grp_source_dt)
 
             # save a copy of the poes in hdf5cache
-            if hasattr(self, 'hdf5cache'):  # this should happen always
-                with hdf5.File(self.hdf5cache) as cache:
-                    cache['oqparam'] = oq
-                    self.datastore.hdf5.copy('poes', cache)
-                self.calc_stats(self.hdf5cache)
-            else:
-                self.calc_stats(self.datastore)
+            with hdf5.File(self.hdf5cache) as cache:
+                cache['oqparam'] = oq
+                self.datastore.hdf5.copy('poes', cache)
+            self.calc_stats(self.hdf5cache)
 
     def calc_stats(self, parent):
         oq = self.oqparam
@@ -250,9 +246,10 @@ class ClassicalCalculator(base.HazardCalculator):
         L = len(oq.imtls.array)
         P = len(oq.poes)
         I = len(oq.imtls)
+        R = len(self.rlzs_assoc.realizations)
         names = [name for name, _ in hstats]
-        if self.R > 1 and oq.individual_curves:
-            for r in range(self.R):
+        if R > 1 and oq.individual_curves:
+            for r in range(R):
                 names.append('rlz-%03d' % r)
         for name in names:
             self.datastore.create_dset('hcurves/%s' % name, F32, (N, L))
