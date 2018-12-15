@@ -426,6 +426,8 @@ def get_metadata(realizations, kind):
         metadata['statistics'] = 'mean'
     elif kind == 'max':
         metadata['statistics'] = 'max'
+    elif kind == 'std':
+        metadata['statistics'] = 'std'
     return metadata
 
 
