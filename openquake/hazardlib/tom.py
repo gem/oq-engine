@@ -38,12 +38,13 @@ class PoissonTOM(object):
     :raises ValueError:
         If ``time_span`` is not positive.
     """
-    _slots_ = ['time_span']
+    _slots_ = ['time_span', 'occurrence_rate']
 
-    def __init__(self, time_span):
+    def __init__(self, time_span, occurrence_rate=None):
         if time_span <= 0:
             raise ValueError('time_span must be positive')
         self.time_span = time_span
+        self.occurrence_rate = occurrence_rate
 
     def get_probability_one_or_more_occurrences(self, occurrence_rate):
         """
