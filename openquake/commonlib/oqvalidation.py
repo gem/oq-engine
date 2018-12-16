@@ -433,14 +433,14 @@ class OqParam(valid.ParamSet):
 
     def imt_periods(self):
         """
-        :returns: the periods of the IMTs with a period
+        :returns: the IMTs with a period, as objects
         """
-        p = []
+        imts = []
         for im in self.imtls:
             imt = from_string(im)
             if hasattr(imt, 'period'):
-                p.append(imt.period)
-        return p
+                imts.append(imt)
+        return imts
 
     def imt_dt(self):
         """
