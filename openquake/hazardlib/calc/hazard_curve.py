@@ -95,6 +95,9 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
+    # Looping over the sources included in a source group. The `poe_map`
+    # method of the :class:`ContextMaker` method returns probabilities of
+    # non-exceedance
     for src, s_sites in src_filter(group):  # filter now
         t0 = time.time()
         try:
@@ -107,10 +110,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         if src_mutex:  # mutex sources, there is a single group
             for sid in poemap:
                 pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                pcurve += poemap[sid] * src.mutex_weight
+                pcurve += ~poemap[sid] * src.mutex_weight
         elif poemap:
             for gid in src.src_group_ids:
-                pmap[gid] |= poemap
+                pmap[gid] |= ~poemap
         pmap.calc_times[src.id] += numpy.array(
             [src.weight, len(s_sites), time.time() - t0])
         # storing the number of contributing ruptures too
