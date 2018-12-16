@@ -97,11 +97,13 @@ minimum_intensity:
 event_based_risk parameters
 ------------------------------
 
-asset_loss_table:
-   Running an event based risk calculation with asset_loss_table=true
-   will use a lot of memory. Make sure this parameter is false (the default)
-   unless you really need it. At the moment it is needed if you want to
-   compute loss curves and maps for all assets of your exposure.
+return_periods:
+  The ``return_periods`` are used to compute the loss curves. If not set,
+  the engine automatically define some reasonable return periods. Building
+  the loss curves is computationally heavy, especially if there are millions
+  of assets. If you are not interested in computing the loss curves but only
+  in the average losses you can set ``return_periods=0`` and the risk
+  calculation will be a lot faster.  
 
   
 concurrent_tasks parameter
@@ -117,4 +119,6 @@ concurrent_tasks:
    in some cases, you may be forced to set it. Typically this happens in
    event based calculations, when computing the ground motion fields.
    If you run out of memory, increasing this parameter will help, since
-   you will produce smaller tasks.
+   you will produce smaller tasks. Another case when it may help is when
+   computing hazard statistics with lots of sites and realizations, since
+   by increasing this parameter the tasks will contain less sites.
