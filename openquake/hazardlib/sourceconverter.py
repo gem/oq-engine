@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import re
 import operator
 import collections
 import pickle
@@ -68,6 +69,8 @@ class SourceGroup(collections.Sequence):
         get_set_num_ruptures
     :param tot_ruptures:
         the potential maximum number of ruptures contained in the group
+    :param temporal_occurrence_model:
+        A temporal occurrence model controlling the source group occurrence
     """
     @classmethod
     def collect(cls, sources):
@@ -92,7 +95,7 @@ class SourceGroup(collections.Sequence):
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
                  min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
-                 tot_ruptures=0):
+                 tot_ruptures=0, temporal_occurrence_model=None):
         # checks
         self.trt = trt
         self._check_init_variables(sources, name, src_interdep, rup_interdep)
@@ -110,6 +113,7 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
+        self.temporal_occurrence_model = temporal_occurrence_model
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -488,6 +492,33 @@ class SourceConverter(RuptureConverter):
         self.spinning_floating = spinning_floating
         self.source_id = source_id
 
+    def convert_tom(self, node, default=None):
+        """
+        Convert the given node into a Temporal Occurrence Model object.
+
+        :param node: a node of kind poissonTOM or brownianTOM
+        :returns: a :class:`openquake.hazardlib.mfd.EvenlyDiscretizedMFD.` or
+                  :class:`openquake.hazardlib.mfd.TruncatedGRMFD` instance
+        """
+        with context(self.fname, node):
+            found = False
+            for sn in node:
+                if sn.tag.endswith('poissonTOM'):
+                    found = True
+            if found:
+                [tom_node] = [subnode for subnode in node
+                              if subnode.tag.endswith(('poissonTOM'))]
+                if tom_node.tag.endswith('poissonTOM'):
+                    tag = 'occurrence_rate'
+                    if tag in tom_node.attrib:
+                        rate = float(tom_node[tag])
+                        return PoissonTOM(time_span=self.tom.time_span,
+                                          occurrence_rate=rate)
+                    else:
+                        return PoissonTOM(time_span=self.tom.time_span)
+            else:
+                return default
+
     def convert_mfdist(self, node):
         """
         Convert the given node into a Magnitude-Frequency Distribution
@@ -601,7 +632,7 @@ class SourceConverter(RuptureConverter):
             hypocenter_distribution=self.convert_hpdist(node),
             polygon=polygon,
             area_discretization=area_discretization,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.convert_tom(node, self.tom))
 
     def convert_pointSource(self, node):
         """
@@ -626,7 +657,7 @@ class SourceConverter(RuptureConverter):
             location=geo.Point(*lon_lat),
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.convert_tom(node, self.tom))
 
     def convert_multiPointSource(self, node):
         """
@@ -650,7 +681,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             mesh=geo.Mesh(F32(lons), F32(lats)),
-            temporal_occurrence_model=self.tom,
+            temporal_occurrence_model=self.convert_tom(node, self.tom),
         )
 
     def convert_simpleFaultSource(self, node):
@@ -687,7 +718,7 @@ class SourceConverter(RuptureConverter):
                 fault_trace=fault_trace,
                 dip=~geom.dip,
                 rake=~node.rake,
-                temporal_occurrence_model=self.tom,
+                temporal_occurrence_model=self.convert_tom(node, self.tom),
                 hypo_list=hypo_list,
                 slip_list=slip_list)
         return simple
@@ -715,7 +746,7 @@ class SourceConverter(RuptureConverter):
                 rupture_aspect_ratio=~node.ruptAspectRatio,
                 edges=edges,
                 rake=~node.rake,
-                temporal_occurrence_model=self.tom)
+                temporal_occurrence_model=self.convert_tom(node, self.tom))
         return cmplx
 
     def convert_characteristicFaultSource(self, node):
@@ -735,7 +766,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom)
+            temporal_occurrence_model=self.convert_tom(node, self.tom))
         return char
 
     def convert_nonParametricSeismicSource(self, node):
@@ -778,10 +809,18 @@ class SourceConverter(RuptureConverter):
                                   'srcs_weights')}
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.name = node.attrib.get('name')
+        # set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
+        #
         for src_node in node:
+            if re.search('TOM', src_node.tag):
+                if sg.temporal_occurrence_model is not None:
+                    msg = 'temporal occurrence model already defined'
+                    raise ValueError(msg)
+                sg.temporal_occurrence_model = self.convert_tom(node)
+                continue
             if self.source_id and self.source_id != src_node['id']:
                 continue  # filter by source_id
             src = self.convert_node(src_node)
