@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
+import numpy
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -82,6 +83,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
+    code = b'S'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
@@ -302,8 +304,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
 
     def __iter__(self):
-        mag_rates = [(mag, rate) for (mag, rate) in
-                     self.mfd.get_annual_occurrence_rates() if rate]
+        mag_rates = self.get_annual_occurrence_rates()
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
@@ -322,3 +323,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         return SimpleFaultSurface.surface_projection_from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (N, 3)
+        """
+        return numpy.array([(p.x, p.y, p.z) for p in self.fault_trace],
+                           numpy.float32)

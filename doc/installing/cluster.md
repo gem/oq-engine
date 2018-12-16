@@ -26,12 +26,15 @@ Note: you have to **restart every celery node** after a configuration change.
 
 ### Enable Celery
 
-In all the nodes, the following file should be modified to enable the *Celery* support:
+In all the nodes, the following file should be modified to enable *multi node* and *Celery* support:
 
 `/etc/openquake/openquake.cfg:`
 
 ```
 [distribution]
+# set multi_node = true if are on a cluster
+multi_node = true
+
 # enable celery only if you have a cluster
 oq_distribute = celery
 ```
@@ -106,10 +109,7 @@ For more information please refer to https://www.rabbitmq.com/man/rabbitmqctl.1.
 *celery* must run all of the worker nodes. It can be started with
 
 ```bash
-## RHEL
 sudo service openquake-celery start
-## Ubuntu
-sudo supervisorctl start openquake-celery
 ```
 
 The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.

@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-
 """
 Prototype of a 'Catalogue' class
 """
@@ -111,6 +109,82 @@ class Catalogue(object):
 
     def get_number_events(self):
         return len(self.data['eventID'])
+
+    def __len__(self):
+        return self.get_number_events()
+    
+    def __str__(self):
+        """
+        Returns a shortened print of the catalogue
+        """
+        neq = self.get_number_events()
+        if not neq:
+            return "<Catalogue Object>No events"
+        elif neq > 20:
+            # Too many events to print, show 1st 10 and last 10
+            row_set = ["<Catalogue Object>{:g} events".format(neq)]
+            for i in range(10):
+                row_set.append(self._get_row_str(i))
+            row_set.append("...")
+            for i in range(-10, 0, 1):
+                row_set.append(self._get_row_str(i))
+        else:
+            # Show all events
+            row_set = ["<Catalogue Object>{:g} events".format(neq)]
+            for i in range(neq):
+                row_set.append(self._get_row_str(i))
+        return "\n".join(row_set)
+
+    def _get_row_str(self, i):
+        """
+        Returns a string representation of the key information in a row
+        """
+        row_data = ["{:s}".format(self.data['eventID'][i]),
+                    "{:g}".format(self.data['year'][i]),
+                    "{:g}".format(self.data['month'][i]),
+                    "{:g}".format(self.data['day'][i]),
+                    "{:g}".format(self.data['hour'][i]),
+                    "{:g}".format(self.data['minute'][i]),
+                    "{:.1f}".format(self.data['second'][i]),
+                    "{:.3f}".format(self.data['longitude'][i]),
+                    "{:.3f}".format(self.data['latitude'][i]),
+                    "{:.1f}".format(self.data['depth'][i]),
+                    "{:.1f}".format(self.data['magnitude'][i])]
+        return " ".join(row_data)
+
+    def __getitem__(self, key):
+        """
+        If the key is provided as an int, return a data for that index,
+        otherwise if it is a string then return the data column
+        """
+        if isinstance(key, int):
+            # Gets the row specied
+            row =[]
+            for attr in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[attr]):
+                    row.append(self.data[attr][key])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            return row
+        elif isinstance(key, str):
+            return self.data[key]
+        else:
+            raise ValueError("__getitem__ requires integer or string")
+
+    def __iter__(self):
+        """
+        Iteration yields for each event a list of data
+        """
+        for i in range(len(self)):
+            row =[]
+            for key in self.SORTED_ATTRIBUTE_LIST:
+                if len(self.data[key]):
+                    row.append(self.data[key][i])
+                else:
+                    # For empty columns just append None
+                    row.append(None)
+            yield row
 
     def add_event(self):
         raise NotImplementedError

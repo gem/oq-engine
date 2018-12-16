@@ -33,6 +33,7 @@ def shakemap(id):
     print(mon)
     print('Saved %s' % dest)
 
+
 shakemap.arg('id', 'USGS Shakemap ID')
 
 

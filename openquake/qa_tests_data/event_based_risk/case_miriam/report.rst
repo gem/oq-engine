@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============== ===================
-checksum32     604,091,143        
-date           2018-06-05T06:38:38
-engine_version 3.2.0-git65c4735   
+checksum32     3,146,040,075      
+date           2018-10-05T03:04:53
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 1792, num_levels = 50
@@ -74,16 +74,16 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2,558        2,558       
-source_model.xml 1      Subduction Interface 3,945        3,945       
+source_model.xml 0      Active Shallow Crust 2,348        2,558       
+source_model.xml 1      Subduction Interface 3,345        3,945       
 ================ ====== ==================== ============ ============
 
-============= =====
-#TRT models   2    
-#eff_ruptures 6,503
-#tot_ruptures 6,503
-#tot_weight   0    
-============= =====
+============= =======
+#TRT models   2      
+#eff_ruptures 5,693  
+#tot_ruptures 6,503  
+#tot_weight   963,985
+============= =======
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -116,20 +116,20 @@ PCR-SLSB-1 1.00000 0.0     1   1   3         3
 
 Slowest sources
 ---------------
-========= ================== ============ ========= ========== ========= ========= ======
-source_id source_class       num_ruptures calc_time split_time num_sites num_split events
-========= ================== ============ ========= ========== ========= ========= ======
-D         ComplexFaultSource 3,945        8.92168   4.189E-04  1,792     47        2,054 
-F         ComplexFaultSource 2,558        5.39641   3.607E-04  1,792     35        250   
-========= ================== ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      F         C    0     8     2,558        3.98342   44         57,344    32        30    
+1      D         C    8     12    3,945        6.44758   90         73,472    41        264   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================== ========= ======
-source_class       calc_time counts
-================== ========= ======
-ComplexFaultSource 14        2     
-================== ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+C    10        2     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -137,37 +137,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.01803 0.00974 0.00786 0.04244 41       
-compute_ruptures   1.44569 0.63156 0.19824 2.32474 10       
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.22471 NaN     0.22471 0.22471 1      
+split_filter       3.62658 NaN     3.62658 3.62658 1      
+build_ruptures     1.16258 0.43381 0.91523 2.28003 9      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================ ============================================================================== =========
-task             sent                                                                           received 
-RtreeFilter      srcs=82.43 KB monitor=13.85 KB srcfilter=11.17 KB                              659.52 KB
-compute_ruptures sources=643.07 KB param=9.6 KB monitor=3.45 KB src_filter=2.28 KB gsims=1.3 KB 15.3 MB  
-================ ============================================================================== =========
+================== ======================================================================== ========
+task               sent                                                                     received
+read_source_models monitor=0 B fnames=0 B converter=0 B                                     2.13 KB 
+split_filter       srcs=27.27 KB monitor=439 B srcfilter=220 B sample_factor=21 B seed=15 B 1.04 MB 
+build_ruptures     srcs=1.04 MB param=3.74 KB monitor=3.23 KB srcfilter=1.93 KB             11.25 MB
+================== ======================================================================== ========
 
 Slowest operations
 ------------------
-=============================== ======== ========= ======
-operation                       time_sec memory_mb counts
-=============================== ======== ========= ======
-total compute_ruptures          14       17        10    
-EventBasedRuptureCalculator.run 3.48851  13        1     
-managing sources                2.65927  13        1     
-total prefilter                 0.73928  4.75391   41    
-reading site collection         0.36316  0.30078   1     
-reading composite source model  0.24262  0.0       1     
-making contexts                 0.14567  0.0       489   
-saving ruptures                 0.06078  1.02344   10    
-reading exposure                0.05565  0.0       1     
-unpickling compute_ruptures     0.03523  3.36719   10    
-unpickling prefilter            0.01498  0.0       41    
-store source_info               0.00801  0.0       1     
-setting event years             0.00374  0.0       1     
-splitting sources               0.00107  0.0       1     
-=============================== ======== ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total build_ruptures     10       2.37500   9     
+updating source_info     3.64196  0.0       1     
+total split_filter       3.62658  0.26172   1     
+saving ruptures          2.31776  9.18359   1     
+total read_source_models 0.22471  0.0       1     
+making contexts          0.08766  0.0       322   
+reading exposure         0.07407  0.0       1     
+store source_info        0.00554  0.0       1     
+setting event years      0.00201  0.0       1     
+======================== ======== ========= ======

@@ -1,3 +1,303 @@
+  [Michele Simionato]
+  * Made the export of uniform hazard spectra fast
+  * Made the `std` hazard output properly exportable
+  * Replaced the `~` in the header of the UHS csv files with a `-`
+  * Restored the `individual_curves` flag even for the hazard curves
+  * Implemented dGMPE weights per intensity measure type
+  * Extended `--reuse-hazard` to all calculators
+  * Fixed a bug in event_based_risk from GMFs with coefficients of variations
+
+  [Graeme Weatherill]
+  * Adds magnitude scaling relation for Germany
+
+  [Michele Simionato]
+  * Used floats for the the GSIM realization weights, not Python Decimals
+  * Added a flag `fast_sampling`, by default False
+  * Added an API `/extract/src_loss_table/<loss_type>`
+  * Removed the rupture filtering from `sample_ruptures` and optimized it in
+    the `RuptureGetter` by making use of the bounding box
+  * Raised the limit on `ses_per_logic_tree_path` from 2**16 to 2**32;
+  * Added a parameter `max_num_sites` to increase the number of sites accepted
+    by an event based calculation up to 2 ** 32 (the default is still 2 ** 16)
+  * Added a command `oq compare` to compare hazard curves and maps within
+    calculations
+  * Extended the engine to read transparently zipped source models and exposures
+  * Restored the check for invalid source IDs in applyToSources
+  * Extended the command `oq zip` to zip source models and exposures
+  * Parallelized the associations event ID -> realization ID
+  * Improved the message when assets are discarded in scenario calculations
+  * Implemented aggregation by multiple tags, plus a special case for the
+    country code in event based risk
+
+  [Marco Pagani]
+  * Added two modified versions of the Bindi et al. (2011) to be used in a
+    backbone approach to compute hazard in Italy
+
+  [Michele Simionato]
+  * Changed the way loss curves and loss maps are stored in order to unify
+    the aggregation logic with the one used for the average losses
+  * Now it is possible to compute the ruptures without specifying the sites
+  * Added an early check for the case of missing intensity measure types
+  * Deprecated the case of exposure, site model and region_grid_spacing all
+    set at the same time
+  * Implemented multi-exposure functionality in event based risk
+  * Changed the event based calculator to store the ruptures incrementally
+    without keeping them all in memory
+  * Refactored the UCERF event based calculator to work as much as possible
+    the regular calculator
+  * Optimized the management and storage of the aggregate losses in the event
+    based risk calculation; also, reduced the memory consumption
+  * Changed the default for `individual_curves` to "false", which is the right
+    default for large calculations
+  * Optimized the saving of the events
+  * Removed the `save_ruptures` flag in the job.ini since ruptures must be saved
+    always
+  * Optimized the rupture generation in case of sampling and changed the
+    algorithm and seeds
+  * Fixed a bug with the IMT `SA(1)` considered different from `SA(1.0)`
+  * Removed the long-time deprecated GMF exporter in XML format for event_based
+  * Added a re-use hazard feature in event_based_risk in single-file mode
+  * Made the event ID unique also in scenario calculations with
+    multiple realizations
+  * Removed the annoying hidden .zip archives littering the export directory
+  * Added an easy way to read the exposure header
+  * Added a way to run Python scripts using the engine libraries via `oq shell`
+  * Improved the minimum_magnitude feature
+  * Fixed the check on missing hazard IMTs
+  * Reduced substantially the memory occupation in event based risk
+  * Added the option `spatial_correlation=no correlation` for risk calculations
+    from ShakeMaps
+  * Removed the experimental calculator `ucerf_risk`
+  * Optimized the sampling of time-independent sources for the case of
+   `prefilter_sources=no`
+  * Changed the algorithm associating events to SESs and made the event based
+    hazard calculator faster in the case of many SESs
+  * Reduced substantially the memory consumption in event based risk
+  * Made it possible to read multiple site model files in the same calculation
+  * Implemented a smart single job.ini file mode for event based risk
+  * Now warnings for invalid parameters are logged in the database too
+  * Fixed `oq export avg_losses-stats` for the case of one realization
+  * Added `oq export losses_by_tag` and `oq export curves_by_tag`
+  * Extended `oq export` to work in a multi-user situation
+  * Forbidden event based calculations with more than `max_potential_paths`
+    in the case of full enumeration
+  * Saved a large amount of memory in event_based_risk calculations
+  * Added a command `oq export losses_by_tag/<tagname> <calc_id>`
+  * Extended `oq zip` to zip the risk files together with the hazard files
+  * Changed the building convention for the event IDs and made them unique
+    in the event loss table, even in the case of full enumeration
+  * Optimized the splitting of complex fault sources
+  * Fixed the ShakeMap download procedure for `uncertainty.zip` archives
+    with an incorrect structure (for instance for ci3031111)
+  * Disabled the spatial correlation in risk-from-ShakeMap by default
+  * Optimized the rupture sampling where there is a large number of SESs
+  * Extended the `reqv` feature to multiple tectonic region types and
+    removed the spinning/floating for the TRTs using the feature
+  * Reduced the GMPE logic tree upfront for TRTs missing in the source model
+  * Fixed the ShakeMap downloader to use the USGS GeoJSON feed
+  * Improved the error message when there are more than 65536 distinct tags
+    in the exposure
+  * Turned `vs30measured` into an optional parameter
+
+  [Chris Van Houtte]
+  * Added `siteclass` as a site parameter, and `reference_site_class` as
+    a site parameter than can be specified by the user in the ini file
+  * Added new classes to mcverry_2006.py to take siteclass as a predictor
+  * Updated comments in mcverry_2006.py
+  * Added new mcverry_2006 test tables to account for difference in site
+    parameter
+  * Added qa_test_data classical case_32
+
+  [Michele Simionato]
+  * Fixed the rupture exporter for Canada
+  * Extended the `oq prepare_site_model` to optionally generate the
+    fields z1pt0, z2pt5 and vs30measured
+  * It is now an error to specify both the sites and the site model in the
+    job.ini, to avoid confusion with the precedency
+  * Implemented a reader for site models in CSV format
+  * Made the export_dir relative to the input directory
+  * Better error message for ShakeMaps with zero stddev
+  * Added a source_id-filtering feature in the job.ini
+  * Added a check on non-homogeneous tectonic region types in a source group
+  * Fixed the option `oq engine --config-file` that broke a few releases ago
+  * Replaced `nodal_dist_collapsing_distance` and
+     `hypo_dist_collapsing_distance` with `pointsource_distance` and made
+     use of them in the classical and event based calculators
+
+  [Graeme Weatherill]
+  * Fixes to hmtk completeness tables for consistent rates and addition of
+    more special methods to catalogue
+
+  [Michele Simionato]
+  * Restricted ChiouYoungs2008SWISS01 to StdDev.TOTAL to avoid a bug
+    when computing the GMFs with inter/intra stddevs
+  * Raised an error if assets are discarded because too far from the hazard
+    sites (before it was just a warning)
+  * Added an attribute .srcidx to every event based rupture and stored it
+  * Fixed an issue with the Byte Order Mark (BOM) for CSV exposures prepared
+    with Microsoft Excel
+  * Reduced the site collection instead of just filtering it; this fixes
+    a source filtering bug and changes the numbers in case of GMF-correlation
+  * Added a command `oq prepare_site_model` to prepare a sites.csv file
+    containing the vs30 and changed the engine to use it
+  * Added a cutoff when storing a PoE=1 from a CSV file, thus avoiding NaNs
+    in classical_damage calculations
+  * Reduced the data transfer in the risk model by only considering the
+    taxonomies relevant for the exposure
+  * Extended `oq engine --run` to accept a list of files
+  * Optimized the saving of the risk results in event based in the case of
+    many sites and changed the command `oq show portfolio_loss` to show
+    mean and standard deviation of the portfolio loss for each loss type
+
+  [Marco Pagani]
+  * Added a first and preliminary version of the GMM for the Canada model
+    represented in an analytical form.
+  * Added a modified version of Atkinson and Macias to be used for the
+    calculation of hazard in NSHMP2014.
+  * Added support for PGA to the Si and Midorikawa (1999).
+
+  [Michele Simionato]
+  * Made it possible to run the risk over an hazard calculation of another user
+  * Worked around the OverflowError: cannot serialize a bytes object larger
+    than 4 GiB in event based calculations
+  * Started using Python 3.6 features
+  * Fixed the check on vulnerability function ID uniqueness for NRML 0.5
+  * Ruptures and GMFs are now computed concurrently, thus mitigating the
+    issue of slow tasks
+  * Changed the name of the files containing the disaggregation outputs:
+    instead of longitude and latitude they contain the site ID now
+  * If a worker runs close to out of memory, now a warning appears in the
+    main log
+  * 'lons' and 'lats' are now spelled 'lon' and 'lat' in
+    the REQUIRES_SITES_PARAMETERS to be consistent with site_model.xml
+
+  [Daniele Viganò]
+  * Fixed a bug about 'The openquake master lost its controlling terminal'
+    when running with 'nohup' from command line
+
+  [Michele Simionato]
+  * The `export_dir` is now created recursively, i.e. subdirectories are
+    automatically created if needed
+  * Fixed a bug with the minimum_magnitude feature and extended it to be
+    tectonic region type dependent
+  * Changed the rupture generation to yield bunches of ruptures, thus avoiding
+    the 4GB pickle limit
+  * Parallelized the splitting of the sources, thus making the preprocessing
+    faster
+
+  [Marco Pagani]
+  * Implemented two additional versions of the Silva et al. 2002 GMPE
+  * Added the possibility of setting rake to 'undefined'
+  * Added first 'modified GMPE' implementing the site term for Canada 2015 model
+  * Fixed a bug in the disaggregation calculation due to wrong binning of magnitudes
+
+  [Michele Simionato]
+  * Now the combination uniform_hazard_spectra=true and mean_hazard_curves=false
+    is accepted again, as requested by Laurentiu Danciu
+
+  [Daniele Viganò]
+  * Support for Ubuntu Trusty is removed
+  * Replaced supervisord with systemd in Ubuntu packages
+
+  [Michele Simionato]
+  * Changed the way the rupture geometries are stored to be consistent with
+    the source geometries
+  * We are now saving information about the source geometries in the datastore
+    (experimentally)
+  * Fixed a bug in event based with sampling causing incorrect GMFs
+  * Unified all distribution mechanisms to returns the outputs via zmq
+  * Added a check for inconsistent IMTs between hazard and risk
+  * Replaced the forking processpool with a spawning processpool
+
+python3-oq-engine (3.2.0-1~xenial01) xenial; urgency=low
+
+  [Kendra Johnson]
+  * Implemented a version of Munson and Thurber (1997) for use with the
+    USGS Hawaii hazard model
+  * Implemented PGA for Campbell (1997)
+
+  [Matteo Nastasi]
+  * specified 'amd64' as the only architecture supported by ubuntu packages
+
+  [Michele Simionato]
+  * Changed the source writer: now the `srcs_weights` are written in the XML
+    file only if they are nontrivial
+  * Changed the algorithm assigning the seeds: they are now generated before
+    the source splitting; also, a seed-related bug in the splitting was fixed
+  * For event based, moved the rupture generation in the prefiltering phase
+
+  [Daniele Viganò]
+  * Fixed a bug with CTRL-C when using the `processpool` distribution
+
+  [Robin Gee]
+  * Raised the source ID length limit in the validation from 60 to 75 characters
+    to allow sources with longer IDs
+
+  [Michele Simionato]
+  * Introduced a `multi_node` flag in `openquake.cfg` and used it to
+    fully parallelize the prefiltering in a cluster
+  * Used the rupture seed as rupture ID in event based calculations
+  * Changed the deprecation mechanism of GSIMs to use a class attribute
+    `superseded_by=NewGsimClass`
+  * Solved the pickling bug in event based hazard by using generator tasks
+  * Improved the distribution of the risk tasks by changing the weight
+
+  [Pablo Heresi]
+  * Contributed the HM2018CorrelationModel
+
+  [Michele Simionato]
+  * Restored the `individual_curves` flag that for the moment is used for the
+    risk curves
+  * Introduced two experimental new parameters `floating_distance` and
+    `spinning_distance` to reduce hypocenter distributions and nodal plane
+    distributions of ruptures over the corresponding distances
+  * Optimized the parsing of the logic tree when there is no "applyToSources"
+  * Made the IMT classes extensible in client code
+  * Reduced the hazard maps from 64 to 32 bit, to be consistent with the
+    hazard curves and to reduce by half the download time
+
+  [Graeme Weatherill]
+  * Implements a fix of Montalva et al (2016) for new coefficients (now
+    Montalva et al. (2017))
+
+  [Michele Simionato]
+  * Parallelized the reading of the source models
+  * Optimized `oq info --report` by not splitting the sources in that case
+  * Speedup the download of the hazard curves, maps and uhs
+  * Honored `concurrent_tasks` in the prefiltering phase too
+  * It is now legal to compute uniform hazard spectra for a single period
+  * Added command `oq plot_memory`
+  * Introduced a MultiGMPE concept
+  * Saved the size of the datastore in the database and used it in the WebUI
+
+  [Graeme Weatherill]
+  * Adds geotechnical related IMTs
+
+  [Michele Simionato]
+  * Renamed /extract/agglosses -> /extract/agg_losses and same for aggdamages
+  * Supported equivalent epicentral distance with a `reqv_hdf5` file
+  * Fixed the risk from ShakeMap feature in the case of missing IMTs
+  * Changed the way gmf_data/indices and ruptures are stored
+  * Added experimental support for dask
+  * Added 11 new site parameters for geotechnic hazard
+  * Changed the SiteCollection to store only the parameters required by the
+    GSIMs
+
+  [Robin Gee]
+  * The number of sites is now an argument in the method _get_stddevs()
+    in the GMPE of Kanno, 2006
+
+  [Michele Simionato]
+  * Changed the serialization of ruptures to HDF5: the geometries are now
+    stored in a different dataset
+  * Bug fix: the asset->site association was performed even when not needed
+  * Made it possible to serialize to .hdf5 multipoint sources and
+    nonparametric gridded sources
+  * Added a check on source model logic tree files: the uncertaintyModel
+    values cannot be repeated in the same branchset
+  * Added a flag `std_hazard_curves`; by setting it to `true` the user can
+    compute the standard deviation of the hazard curves across realizations
+
   [Marco Pagani]
   * Added Thingbaijam et al. (2017) magnitude-scaling relationship
 
@@ -39,6 +339,8 @@
   * Optimized the memory consumption in the UCERF classical calculator
   * Added a parameter `minimum_magnitude` in the job.ini
   * Added an utility `utils/combine_mean_curves.py`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 06 Sep 2018 12:27:53 +0000
 
 python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
 

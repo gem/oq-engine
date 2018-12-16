@@ -2,7 +2,7 @@
 
 The OpenQuake Engine is also available in the form of **self-installable binary distribution**.
 This way of installing OpenQuake is strongly suggested for old versions of Linux which
-do not ship with Python 3.5 (like RHEL/CentOS/SL 6), or for users that do not have
+do not ship with Python 3.6 (like RHEL/CentOS/SL 6), or for users that do not have
 administrator privileges (they cannot run `sudo` or `su`).
 
 ### Differences with packages for Ubuntu and RedHat
@@ -11,8 +11,7 @@ This distribution has some differences with the packages we provide for Ubuntu a
 
 - includes its own distribution of the dependencies needed by the OpenQuake Engine
     - OpenSSL 1.0
-    - HDF5 1.8
-    - Python 3.5
+    - Python 3.6
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, rtree and few more)
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
@@ -30,14 +29,14 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.1.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.2.0-1.run using any browser
 
 From a terminal run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-linux64-3.1.0-1.run
-./openquake-setup-linux64-3.1.0-1.run
+chmod +x openquake-setup-linux64-3.2.0-1.run
+./openquake-setup-linux64-3.2.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 

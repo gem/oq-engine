@@ -3,7 +3,6 @@
 The OpenQuake Engine stable tree is available in the form of *deb* binary packages for the following Ubuntu releases:
 - **Ubuntu 18.04** LTS (Bionic)
 - **Ubuntu 16.04** LTS (Xenial)
-- **Ubuntu 14.04** LTS (Trusty) 
 
 Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
@@ -28,7 +27,7 @@ sudo apt install python3-oq-engine
 
 ## Configure the system services
 
-The package installs three system service managed through [supervisord](http://supervisord.org/):
+The package installs three system service managed through [systemd](https://www.freedesktop.org/software/systemd/man/systemctl.html):
 - `openquake-dbserver`: provides the database for the OpenQuake Engine and must be started before running any `oq engine` command
 - `openquake-webui`: provides the WebUI and is optional
 - `openquake-celery`: used only on a multi-node setup, not used in a default setup
@@ -37,12 +36,12 @@ The package installs three system service managed through [supervisord](http://s
 
 To manually start, stop or restart a service run
 ```bash
-sudo supervisorctl <start|stop|restart> openquake-dbserver openquake-webui
+sudo systemctl <start|stop|restart> openquake-dbserver openquake-webui
 ```
 
 To check the status of a service run
 ```bash
-sudo supervisorctl status openquake-dbserver openquake-webui
+sudo systemctl status openquake-dbserver openquake-webui
 ```
 
 ## Run the OpenQuake Engine
@@ -70,9 +69,9 @@ sudo apt autoremove
 To reset the database `oq reset` command can be used:
 
 ```bash
-sudo supervisorctl stop openquake-dbserver
+sudo systemctl stop openquake-dbserver
 sudo -u openquake oq reset
-sudo supervisorctl start openquake-dbserver
+sudo systemctl start openquake-dbserver
 ```
 
 To remove **all** the data produced by the OpenQuake Engine (including datastores) you must also remove `~/oqdata` in each users' home. The `reset-db` bash script is provided, as a reference, in `/usr/share/openquake/engine/utils`.

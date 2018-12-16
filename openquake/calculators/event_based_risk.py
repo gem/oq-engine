@@ -19,9 +19,10 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.general import AccumDict
+from openquake.baselib.python3compat import zip, encode
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.calc.stochastic import TWO32
 from openquake.risklib import riskinput
 from openquake.calculators import base
 from openquake.calculators.export.loss_curves import get_loss_builder
@@ -33,7 +34,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
-indices_dt = numpy.dtype([('start', U32), ('stop', U32)])
 
 
 def build_loss_tables(dstore):
@@ -43,23 +43,21 @@ def build_loss_tables(dstore):
     oq = dstore['oqparam']
     L = len(oq.loss_dt().names)
     R = dstore['csm_info'].get_num_rlzs()
-    events = dstore['events']
     serials = dstore['ruptures']['serial']
-    rup_by_eid = dict(zip(events['eid'], events['rup_id']))
     idx_by_ser = dict(zip(serials, range(len(serials))))
     tbl = numpy.zeros((len(serials), L), F32)
     lbr = numpy.zeros((R, L), F32)  # losses by rlz
     for rec in dstore['losses_by_event'].value:  # call .value for speed
-        rupid = rup_by_eid[rec['eid']]
-        tbl[idx_by_ser[rupid]] += rec['loss']
+        idx = idx_by_ser[rec['eid'] // TWO32]
+        tbl[idx] += rec['loss']
         lbr[rec['rlzi']] += rec['loss']
     return tbl, lbr
 
 
-def event_based_risk(riskinput, riskmodel, param, monitor):
+def event_based_risk(riskinputs, riskmodel, param, monitor):
     """
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
@@ -69,80 +67,82 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    with monitor('%s.init' % riskinput.hazard_getter.__class__.__name__):
-        riskinput.hazard_getter.init()
-    eids = riskinput.hazard_getter.eids
-    A = len(riskinput.aids)
-    E = len(eids)
     I = param['insured_losses'] + 1
     L = len(riskmodel.lti)
-    R = riskinput.hazard_getter.num_rlzs
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, (L * I,)))])
-    ass = []
-    agg = numpy.zeros((E, R, L * I), F32)
-    avg = AccumDict(accum={} if riskinput.by_site or not param['avg_losses']
-                    else numpy.zeros(A, F64))
-    result = dict(assratios=ass, aids=riskinput.aids, avglosses=avg)
-    if 'builder' in param:
-        builder = param['builder']
-        A = len(riskinput.aids)
-        R = len(builder.weights)
-        P = len(builder.return_periods)
-        all_curves = numpy.zeros((A, R, P), builder.loss_dt)
-        aid2idx = {aid: idx for idx, aid in enumerate(riskinput.aids)}
-    # update the result dictionary and the agg array with each output
-    for out in riskmodel.gen_outputs(riskinput, monitor):
-        if len(out.eids) == 0:  # this happens for sites with no events
-            continue
-        r = out.rlzi
-        eid2idx = riskinput.hazard_getter.eid2idx
-        for l, loss_ratios in enumerate(out):
-            if loss_ratios is None:  # for GMFs below the minimum_intensity
+    for ri in riskinputs:
+        with monitor('getting hazard'):
+            ri.hazard_getter.init()
+            hazard = ri.hazard_getter.get_hazard()
+        mon = monitor('build risk curves', measuremem=False)
+        A = len(ri.aids)
+        R = ri.hazard_getter.num_rlzs
+        try:
+            avg = numpy.zeros((A, R, L * I), F32)
+        except MemoryError:
+            raise MemoryError(
+                'Building array avg of shape (%d, %d, %d)' % (A, R, L*I))
+        result = dict(aids=ri.aids, avglosses=avg)
+        acc = AccumDict()  # accumulator eidx -> agglosses
+        aid2idx = {aid: idx for idx, aid in enumerate(ri.aids)}
+        if 'builder' in param:
+            builder = param['builder']
+            P = len(builder.return_periods)
+            all_curves = numpy.zeros((A, R, P), builder.loss_dt)
+        # update the result dictionary and the agg array with each output
+        for out in riskmodel.gen_outputs(ri, monitor, hazard):
+            if len(out.eids) == 0:  # this happens for sites with no events
                 continue
-            loss_type = riskmodel.loss_types[l]
-            indices = numpy.array([eid2idx[eid] for eid in out.eids])
-            for a, asset in enumerate(out.assets):
-                ratios = loss_ratios[a]  # shape (E, I)
-                aid = asset.ordinal
-                aval = asset.value(loss_type)
-                losses = aval * ratios
-                if 'builder' in param:
+            r = out.rlzi
+            agglosses = numpy.zeros((len(out.eids), L*I), F32)
+            for l, loss_ratios in enumerate(out):
+                if loss_ratios is None:  # for GMFs below the minimum_intensity
+                    continue
+                loss_type = riskmodel.loss_types[l]
+                for a, asset in enumerate(out.assets):
+                    ratios = loss_ratios[a]  # shape (E, I)
+                    aid = asset.ordinal
                     idx = aid2idx[aid]
+                    aval = asset.value(loss_type)
+                    losses = aval * ratios
+                    if 'builder' in param:
+                        with mon:  # this is the heaviest part
+                            for i in range(I):
+                                lt = loss_type + '_ins' * i
+                                all_curves[idx, r][lt] = builder.build_curve(
+                                    aval, ratios[:, i], r)
+
+                    # average losses
+                    if param['avg_losses']:
+                        rat = ratios.sum(axis=0) * param['ses_ratio'] * aval
+                        for i in range(I):
+                            avg[idx, r, l + L * i] = rat[i]
+
+                    # agglosses
                     for i in range(I):
-                        lt = loss_type + '_ins' * i
-                        all_curves[idx, r][lt] = builder.build_curve(
-                            aval, ratios[:, i], r)
+                        agglosses[:, l + L * i] += losses[:, i]
 
-                # average losses
-                if param['avg_losses']:
-                    rat = ratios.sum(axis=0) * param['ses_ratio']
-                    for i in range(I):
-                        lba = avg[l + L * i, r]
-                        try:
-                            lba[aid] += rat[i]
-                        except KeyError:
-                            lba[aid] = rat[i]
+            # NB: I could yield the agglosses per output, but then I would
+            # have millions of small outputs with big data transfer and slow
+            # saving time
+            acc += dict(zip(out.eids, agglosses))
 
-                # agglosses
-                for i in range(I):
-                    li = l + L * i
-                    # this is the critical loop: it is important to keep it
-                    # vectorized in terms of the event indices
-                    agg[indices, r, li] += losses[:, i]
+        if 'builder' in param:
+            clp = param['conditional_loss_poes']
+            result['curves-rlzs'], result['curves-stats'] = builder.pair(
+                all_curves, param['stats'])
+            if R > 1 and param['individual_curves'] is False:
+                del result['curves-rlzs']
+            if clp:
+                result['loss_maps-rlzs'], result['loss_maps-stats'] = (
+                    builder.build_maps(all_curves, clp, param['stats']))
+                if R > 1 and param['individual_curves'] is False:
+                    del result['loss_maps-rlzs']
 
-    idx = agg.nonzero()  # return only the nonzero values
-    result['agglosses'] = (idx, agg[idx])
-    if 'builder' in param:
-        clp = param['conditional_loss_poes']
-        result['curves-rlzs'], result['curves-stats'] = builder.pair(
-            all_curves, param['stats'])
-        if clp:
-            result['loss_maps-rlzs'], result['loss_maps-stats'] = (
-                builder.build_maps(all_curves, clp, param['stats']))
-
-    # store info about the GMFs, must be done at the end
-    result['gmdata'] = riskinput.gmdata
-    return result
+        # store info about the GMFs, must be done at the end
+        result['agglosses'] = (numpy.array(list(acc)),
+                               numpy.array(list(acc.values())))
+        yield result
 
 
 @base.calculators.add('event_based_risk')
@@ -156,9 +156,9 @@ class EbrCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         super().pre_execute('event_based')
-        parent = self.dynamic_parent
+        parent = self.datastore.parent
         if not self.oqparam.ground_motion_fields:
-            return  # this happens in the reportwrite
+            return  # this happens in the reportwriter
 
         self.L = len(self.riskmodel.lti)
         self.T = len(self.assetcol.tagcol)
@@ -166,9 +166,9 @@ class EbrCalculator(base.RiskCalculator):
         self.I = oq.insured_losses + 1
         if parent:
             self.datastore['csm_info'] = parent['csm_info']
-            self.eids = sorted(parent['events']['eid'])
+            self.events = parent['events'].value[['eid', 'rlz']]
         else:
-            self.eids = sorted(self.datastore['events']['eid'])
+            self.events = self.datastore['events'].value[['eid', 'rlz']]
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -181,7 +181,7 @@ class EbrCalculator(base.RiskCalculator):
                     oq.return_periods, oq.loss_dt())
         # sorting the eids is essential to get the epsilons in the right
         # order (i.e. consistent with the one used in ebr from ruptures)
-        self.E = len(self.eids)
+        self.E = len(self.events)
         eps = self.epsilon_getter()()
         self.riskinputs = self.build_riskinputs('gmf', eps, self.E)
         self.param['insured_losses'] = oq.insured_losses
@@ -195,8 +195,7 @@ class EbrCalculator(base.RiskCalculator):
         if avg_losses:
             self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
-        self.agglosses = numpy.zeros((self.E, self.R, self.L * self.I), F32)
-        self.num_losses = numpy.zeros((self.A, self.R), U32)
+        self.agglosses = numpy.zeros((self.E, self.L * self.I), F32)
         if 'builder' in self.param:
             self.build_datasets(self.param['builder'])
         if parent:
@@ -210,15 +209,17 @@ class EbrCalculator(base.RiskCalculator):
         S = len(stats)
         P = len(builder.return_periods)
         C = len(self.oqparam.conditional_loss_poes)
-        self.loss_maps_dt = oq.loss_dt((F32, (C,)))
-        self.datastore.create_dset(
-            'curves-rlzs', builder.loss_dt, (A, R, P), fillvalue=None)
+        LI = self.L * self.I
+        self.loss_maps_dt = (F32, (C, LI))
+        if oq.individual_curves or R == 1:
+            self.datastore.create_dset('curves-rlzs', F32, (A, R, P, LI))
+            self.datastore.set_attrs(
+                'curves-rlzs', return_periods=builder.return_periods)
         if oq.conditional_loss_poes:
             self.datastore.create_dset(
                 'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
         if R > 1:
-            self.datastore.create_dset(
-                'curves-stats', builder.loss_dt, (A, S, P), fillvalue=None)
+            self.datastore.create_dset('curves-stats', F32, (A, S, P, LI))
             self.datastore.set_attrs(
                 'curves-stats', return_periods=builder.return_periods,
                 stats=[encode(name) for (name, func) in stats])
@@ -240,58 +241,43 @@ class EbrCalculator(base.RiskCalculator):
             self.oqparam.master_seed,
             self.oqparam.ignore_covs or not self.riskmodel.covs)
 
-    def save_losses(self, dic, offset=0):
+    def save_losses(self, dic):
         """
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, assratios, avglosses
-        :param offset:
-            realization offset
+            dictionary with agglosses, avglosses
         """
+        idxs, agglosses = dic.pop('agglosses')
+        if len(idxs):
+            self.agglosses[idxs] += agglosses
         aids = dic.pop('aids')
-        agglosses = dic.pop('agglosses')
-        avglosses = dic.pop('avglosses')
-        with self.monitor('saving event loss table', autoflush=True):
-            idx, agg = agglosses
-            self.agglosses[idx] += agg
-
-        if not hasattr(self, 'vals'):
-            self.vals = self.assetcol.values()
-        with self.monitor('saving avg_losses-rlzs'):
-            for (li, r), ratios in avglosses.items():
-                l = li if li < self.L else li - self.L
-                vs = self.vals[self.riskmodel.loss_types[l]]
-                self.dset[aids, r, li] += numpy.array(
-                    [ratios.get(aid, 0) * vs[aid] for aid in aids])
+        if self.oqparam.avg_losses:
+            self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
         self._save_maps(dic, aids)
-
         self.taskno += 1
 
     def _save_curves(self, dic, aids):
         for key in ('curves-rlzs', 'curves-stats'):
             array = dic.get(key)  # shape (A, S, P)
             if array is not None:
-                for aid, arr in zip(aids, array):
-                    self.datastore[key][aid] = arr
+                shp = array.shape + (self.L * self.I,)
+                self.datastore[key][aids, ...] = array.view(F32).reshape(shp)
 
     def _save_maps(self, dic, aids):
         for key in ('loss_maps-rlzs', 'loss_maps-stats'):
-            array = dic.get(key)  # shape (A, S)
+            array = dic.get(key)  # shape (A, S, C, LI)
             if array is not None:
-                loss_maps = numpy.zeros(array.shape[:2], self.loss_maps_dt)
-                for lti, lt in enumerate(self.loss_maps_dt.names):
-                    loss_maps[lt] = array[:, :, :, lti]
-                for aid, arr in zip(aids, loss_maps):
-                    self.datastore[key][aid] = arr
+                self.datastore[key][aids, ...] = array
 
     def combine(self, dummy, res):
         """
         :param dummy: unused parameter
         :param res: a result dictionary
         """
-        self.save_losses(res, offset=0)
+        with self.monitor('saving losses', measuremem=True):
+            self.save_losses(res)
         return 1
 
     def post_execute(self, result):
@@ -302,12 +288,13 @@ class EbrCalculator(base.RiskCalculator):
         elt_dt = numpy.dtype(
             [('eid', U64), ('rlzi', U16), ('loss', (F32, (self.L * self.I,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            # saving zeros is a lot faster than adding an `if loss.sum()`
             agglosses = numpy.fromiter(
-                ((e, r, loss)
-                 for e, losses in zip(self.eids, self.agglosses)
-                 for r, loss in enumerate(losses) if loss.sum()), elt_dt)
+                ((eid, rlz, losses)
+                 for (eid, rlz), losses in zip(self.events, self.agglosses)
+                 if losses.any()), elt_dt)
             self.datastore['losses_by_event'] = agglosses
+            loss_types = ' '.join(self.oqparam.loss_dt().names)
+            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
         self.postproc()
 
     def postproc(self):
@@ -327,7 +314,7 @@ class EbrCalculator(base.RiskCalculator):
             return
         if dstore.parent:
             dstore.parent.open('r')  # to read the ruptures
-        if 'ruptures' in dstore:
+        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
             logging.info('Building loss tables')
             with self.monitor('building loss tables', measuremem=True):
                 rlt, lbr = build_loss_tables(dstore)
@@ -338,10 +325,13 @@ class EbrCalculator(base.RiskCalculator):
         logging.info('Building aggregate loss curves')
         with self.monitor('building agg_curves', measuremem=True):
             array, arr_stats = b.build(dstore['losses_by_event'].value, stats)
-        self.datastore['agg_curves-rlzs'] = array
-        units = self.assetcol.units(loss_types=array.dtype.names)
-        self.datastore.set_attrs(
-            'agg_curves-rlzs', return_periods=b.return_periods, units=units)
+        units = self.assetcol.cost_calculator.get_units(
+            loss_types=array.dtype.names)
+        if oq.individual_curves or self.R == 1:
+            self.datastore['agg_curves-rlzs'] = array
+            self.datastore.set_attrs(
+                'agg_curves-rlzs',
+                return_periods=b.return_periods, units=units)
         if arr_stats is not None:
             self.datastore['agg_curves-stats'] = arr_stats
             self.datastore.set_attrs(

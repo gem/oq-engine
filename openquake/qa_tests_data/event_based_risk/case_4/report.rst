@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============== ===================
-checksum32     3,253,033,277      
-date           2018-06-05T06:38:36
-engine_version 3.2.0-git65c4735   
+checksum32     3,454,425,156      
+date           2018-10-05T03:04:51
+engine_version 3.3.0-git48e9a474fd
 ============== ===================
 
 num_sites = 14, num_levels = 91
@@ -63,6 +63,7 @@ grp_id gsims                                                                    
 ====== ========================================================================== ================= ======================= ============================
 0      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
 1      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+2      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
 ====== ========================================================================== ================= ======================= ============================
 
 Realizations per (TRT, GSIM)
@@ -92,8 +93,8 @@ source_model          grp_id trt                  eff_ruptures tot_ruptures
 ============= =====
 #TRT models   2    
 #eff_ruptures 9,162
-#tot_ruptures 9,270
-#tot_weight   0    
+#tot_ruptures 9,297
+#tot_weight   1,967
 ============= =====
 
 Estimated data transfer for the avglosses
@@ -125,27 +126,27 @@ SAM_4S   1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ============ ============ ========= ========== ========= ========= ======
-source_id    source_class num_ruptures calc_time split_time num_sites num_split events
-============ ============ ============ ========= ========== ========= ========= ======
-AS_TRAS334   AreaSource   2,280        1.37275   0.01971    8.10526   38        83    
-AS_TRAS360   AreaSource   1,872        0.90197   0.00944    3.38462   39        72    
-AS_TRAS346   AreaSource   1,581        0.75659   0.01434    4.12903   31        8     
-AS_TRAS395   AreaSource   1,296        0.66966   0.00750    4.03704   27        60    
-AS_TRAS458   AreaSource   1,197        0.60991   0.01622    2.19048   21        23    
-AS_TRAS410   AreaSource   720          0.35848   0.00375    7.00000   12        20    
-FSBG_TRBG989 AreaSource   324          0.11758   0.00530    1.75000   8         12    
-100041       PointSource  27           0.0       3.338E-06  0.0       0         0     
-============ ============ ============ ========= ========== ========= ========= ======
+====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id    code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      AS_TRAS334   A    0     23    2,280        1.97539   0.74925    308       38        9.00000
+0      AS_TRAS346   A    23    36    1,581        1.26891   0.35582    128       31        1.00000
+0      AS_TRAS360   A    36    44    1,872        1.54192   0.29259    132       39        9.00000
+0      AS_TRAS395   A    44    52    1,296        0.94057   0.16772    109       27        5.00000
+0      AS_TRAS410   A    52    61    720          0.51375   0.03603    84        12        1.00000
+0      AS_TRAS458   A    61    67    1,197        0.90864   0.26732    46        21        3.00000
+1      FSBG_TRBG989 A    0     7     324          0.11018   0.03343    14        8         2.00000
+2      100041       P    0     1     27           0.0       0.0        0.0       0         0.0    
+====== ============ ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-AreaSource   4.78693   7     
-PointSource  0.0       1     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    7.25936   7     
+P    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -153,37 +154,34 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00508 0.00210 0.00159 0.00953 46       
-compute_ruptures   0.44499 0.15339 0.12538 0.63850 11       
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.02820 0.03694 0.00172 0.07040 3      
+split_filter       0.07603 NaN     0.07603 0.07603 1      
+build_ruptures     0.09868 0.02426 0.04131 0.20062 76     
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================ ================================================================================ =========
-task             sent                                                                             received 
-RtreeFilter      srcs=140.01 KB monitor=15.54 KB srcfilter=12.53 KB                               146.08 KB
-compute_ruptures sources=124.34 KB param=14.82 KB gsims=4.19 KB monitor=3.79 KB src_filter=2.5 KB 60.65 KB 
-================ ================================================================================ =========
+================== ======================================================================== =========
+task               sent                                                                     received 
+read_source_models monitor=1.08 KB converter=957 B fnames=587 B                             13.16 KB 
+split_filter       srcs=46.86 KB monitor=381 B srcfilter=220 B sample_factor=21 B seed=15 B 92.27 KB 
+build_ruptures     srcs=194.79 KB param=120.75 KB monitor=27.31 KB srcfilter=16.33 KB       268.16 KB
+================== ======================================================================== =========
 
 Slowest operations
 ------------------
-=============================== ======== ========= ======
-operation                       time_sec memory_mb counts
-=============================== ======== ========= ======
-total compute_ruptures          4.89490  7.20703   11    
-EventBasedRuptureCalculator.run 1.49722  0.43359   1     
-managing sources                1.01588  0.09766   1     
-total prefilter                 0.23353  3.40625   46    
-reading composite source model  0.09459  0.0       1     
-splitting sources               0.07686  0.0       1     
-store source_info               0.07294  0.33594   1     
-making contexts                 0.03218  0.0       31    
-saving ruptures                 0.02807  0.0       11    
-unpickling prefilter            0.02037  0.0       46    
-reading site collection         0.00961  0.0       1     
-unpickling compute_ruptures     0.00458  0.0       11    
-reading exposure                0.00187  0.0       1     
-setting event years             0.00110  0.0       1     
-=============================== ======== ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total build_ruptures     7.49950   0.25000   76    
+saving ruptures          0.59935   0.51562   1     
+updating source_info     0.09535   0.0       1     
+total read_source_models 0.08460   0.0       3     
+total split_filter       0.07603   0.0       1     
+making contexts          0.03793   0.0       31    
+store source_info        0.03082   0.0       1     
+setting event years      0.00140   0.0       1     
+reading exposure         5.062E-04 0.0       1     
+======================== ========= ========= ======

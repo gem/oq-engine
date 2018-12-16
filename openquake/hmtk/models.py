@@ -17,8 +17,6 @@
 are intended to be produced by NRML XML parsers and consumed by NRML XML
 serializers.
 """
-
-from collections import OrderedDict
 from collections import namedtuple
 
 
@@ -54,9 +52,9 @@ class SeismicSource(object):
     @property
     def attrib(self):
         """
-        General XML element attributes for a seismic source, as an OrderedDict.
+        General XML element attributes for a seismic source, as a dict.
         """
-        return OrderedDict([
+        return dict([
             ('id', str(self.id)),
             ('name', str(self.name)),
             ('tectonicRegion', str(self.trt)),
@@ -283,7 +281,7 @@ class IncrementalMFD(object):
     :param float bin_width:
         Width of a single histogram bin.
     :param list occur_rates:
-        `list` of occurrence rates (`float` values).
+        `list` of occurrence rates (float values).
     """
 
     def __init__(self, min_mag=None, bin_width=None, occur_rates=None):
@@ -294,9 +292,9 @@ class IncrementalMFD(object):
     @property
     def attrib(self):
         """
-        An `OrderedDict` of XML element attributes for this MFD.
+        A dict of XML element attributes for this MFD.
         """
-        return OrderedDict([
+        return dict([
             ('minMag', str(self.min_mag)),
             ('binWidth', str(self.bin_width)),
         ])
@@ -326,9 +324,9 @@ class TGRMFD(object):
     @property
     def attrib(self):
         """
-        An `OrderedDict` of XML element attributes for this MFD.
+        An dict of XML element attributes for this MFD.
         """
-        return OrderedDict([
+        return dict([
             ('aValue', str(self.a_val)),
             ('bValue', str(self.b_val)),
             ('minMag', str(self.min_mag)),
@@ -342,7 +340,7 @@ class NodalPlane(object):
 
     :param probability:
         Probability for this node in a Nodal Plane Distribution, as a
-        :class:`decimal.Decimal`.
+        float.
     :param float strike:
         Strike angle.
     :param float dip:
@@ -360,9 +358,9 @@ class NodalPlane(object):
     @property
     def attrib(self):
         """
-        An `OrderedDict` of XML element attributes for this NodalPlane.
+        A dict of XML element attributes for this NodalPlane.
         """
-        return OrderedDict([
+        return dict([
             ('probability', str(self.probability)),
             ('strike', str(self.strike)),
             ('dip', str(self.dip)),
@@ -376,7 +374,7 @@ class HypocentralDepth(object):
 
     :param probability:
         Probability for this node in a Hypocentral Depth Distribution, as a
-        :class:`decimal.Decimal`.
+        float.
     :param float depth:
         Depth (in km).
     """
@@ -388,9 +386,9 @@ class HypocentralDepth(object):
     @property
     def attrib(self):
         """
-        An `OrderedDict` of XML element attribute for this HypocentralDepth.
+        An dict of XML element attribute for this HypocentralDepth.
         """
-        return OrderedDict([
+        return dict([
             ('probability', str(self.probability)),
             ('depth', str(self.depth)),
         ])

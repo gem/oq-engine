@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib.node import Node
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.baselib.hdf5 import ArrayWrapper
-from openquake.hazardlib import valid, nrml
+from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import utils, scientific
 
@@ -104,6 +104,8 @@ def get_risk_models(oqparam, kind=None):
             key_type = mo.group(1)  # the cost_type in the key
             # can be occupants, structural, nonstructural, ...
             rmodel = nrml.to_python(oqparam.inputs[key])
+            if len(rmodel) == 0:
+                raise InvalidFile('%s is empty!' % oqparam.inputs[key])
             rmodels[key_type] = rmodel
             if rmodel.lossCategory is None:  # NRML 0.4
                 continue

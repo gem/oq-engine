@@ -40,14 +40,15 @@ GST = {'gsim_logic_tree': gettemp('''\
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>'''),
-       'source': 'fake', "job_ini": "job.ini"}
+       "job_ini": "job.ini",
+       "source_model_logic_tree": "fake"}
 
 # hard-coded to avoid a dependency from openquake.calculators
 OqParam.calculation_mode.validator.choices = (
     'classical', 'disaggregation', 'scenario', 'scenario_damage',
     'event_based', 'event_based_risk', 'classical_risk')
 
-fakeinputs = {"source": "fake", "job_ini": "job.ini"}
+fakeinputs = {"job_ini": "job.ini", "source_model_logic_tree": "fake"}
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -205,7 +206,7 @@ class OqParamTestCase(unittest.TestCase):
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
-        self.assertEqual(oq.export_dir, '.')
+        self.assertEqual(oq.export_dir, os.getcwd())
 
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
@@ -289,15 +290,16 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='scenario',
-                gsim='AbrahamsonSilva1997',
+                gsim='AbrahamsonSilva2008',
                 sites='0.1 0.2',
                 maximum_distance='400',
+                reference_vs30_value='760',
                 intensity_measure_types='PGA',
                 inputs=fakeinputs,
             ).validate()
-        self.assertIn("Please set a value for 'reference_vs30_value', this is"
-                      " required by the GSIM AbrahamsonSilva1997",
-                      str(ctx.exception))
+        self.assertIn(
+            "Please set a value for 'reference_depth_to_1pt0km_per_sec', this "
+            "is required by the GSIM AbrahamsonSilva2008", str(ctx.exception))
 
     def test_uniform_hazard_spectra(self):
         with self.assertRaises(ValueError) as ctx:
@@ -316,7 +318,7 @@ class OqParamTestCase(unittest.TestCase):
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
 
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.warn') as w:
             OqParam(
                 calculation_mode='classical',
                 gsim='BooreAtkinson2008',
@@ -328,18 +330,18 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
             ).set_risk_imtls({})
-        self.assertIn("There is a single IMT, uniform_hazard_spectra cannot "
-                      "be True", str(ctx.exception))
+        self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
+                      "will contain a single point", w.call_args[0][0])
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
         vf = mock.Mock()
-        vf.imt = ' SA(0.1)'
+        vf.imt = 'SA (0.1)'
         vf.imls = [0.1, 0.2]
         rm = dict(taxo=dict(structural=vf))
-        with self.assertRaises(ValueError) as ctx:
+        with self.assertRaises(KeyError) as ctx:
             oq.set_risk_imtls(rm)
-        self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+        self.assertIn("'SA '", str(ctx.exception))
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
@@ -380,3 +382,15 @@ class OqParamTestCase(unittest.TestCase):
                 uniform_hazard_spectra='1')
         self.assertIn("iml_disagg and poes_disagg cannot be set at the "
                       "same time", str(ctx.exception))
+
+    def test_optimize_same_id_sources(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='event_based', inputs=fakeinputs,
+                sites='0.1 0.2',
+                maximum_distance='400',
+                intensity_measure_types='PGA',
+                optimize_same_id_sources='true',
+            ).validate()
+        self.assertIn('can be true only in the classical\ncalculators',
+                      str(ctx.exception))

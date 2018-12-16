@@ -82,16 +82,16 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_2d.__file__, 'job_h.ini,job_r.ini',
                             exports='csv')
         # this is also a case with a single site but an exposure grid,
-        # to test the corner case
+        # to test a corner case
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname)
 
         # test agglosses
-        tot = extract(self.calc.datastore, 'agglosses/occupants')
-        aac(tot.array, [0.0282811])
+        tot = extract(self.calc.datastore, 'agg_losses/occupants')
+        aac(tot.array, [0.031716], atol=1E-5)
 
         # test agglosses with *
-        tbl = extract(self.calc.datastore, 'agglosses/occupants?taxonomy=*')
+        tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
         self.assertEqual(tbl.array.shape, (1, 1))  # 1 taxonomy, 1 rlz
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -185,14 +185,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # check losses by taxonomy
-        agglosses = extract(self.calc.datastore, 'agglosses/structural?'
+        agglosses = extract(self.calc.datastore, 'agg_losses/structural?'
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
         aac(agglosses, [[1981.4681, 2363.5803],
                         [712.8535, 924.75616],
                         [986.7066, 1344.0371]])
 
         # extract agglosses with a * and a selection
-        obj = extract(self.calc.datastore, 'agglosses/structural?'
+        obj = extract(self.calc.datastore, 'agg_losses/structural?'
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
@@ -213,8 +213,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
-        agglosses = extract(self.calc.datastore, 'agglosses/structural')
-        aac(agglosses.array, [984065.75])
+        agglosses = extract(self.calc.datastore, 'agg_losses/structural')
+        aac(agglosses.array, [1159817.1])
 
         # make sure the fullreport can be extracted
         view('fullreport', self.calc.datastore)
@@ -223,7 +223,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_9(self):
         # using gmfs.xml
         self.run_calc(case_9.__file__, 'job.ini')
-        agglosses = extract(self.calc.datastore, 'agglosses/structural')
+        agglosses = extract(self.calc.datastore, 'agg_losses/structural')
         aac(agglosses.array, [7306.7124])
 
     @attr('qa', 'risk', 'scenario_risk')

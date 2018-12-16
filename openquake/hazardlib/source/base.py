@@ -19,6 +19,7 @@ seismic sources.
 """
 import abc
 import math
+import numpy
 from openquake.baselib.slots import with_slots
 
 
@@ -37,7 +38,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
-               'src_group_id', 'num_ruptures', 'seed', 'id', 'min_mag']
+               'src_group_id', 'num_ruptures', 'id', 'min_mag']
     RUPTURE_WEIGHT = 1.  # overridden in (Multi)PointSource, AreaSource
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
@@ -100,6 +101,42 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             Generator of instances of sublclass of :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
+
+    def sample_ruptures(self, eff_num_ses, ir_monitor):
+        """
+        :param eff_num_ses: number of stochastic event sets * number of samples
+        :param ir_monitor: a monitor object for .iter_ruptures()
+        :yields: pairs (rupture, num_occurrences[num_samples])
+        """
+        mutex_weight = getattr(self, 'mutex_weight', 1)
+        with ir_monitor:
+            ruptures = list(self.iter_ruptures())
+        tom = getattr(self, 'temporal_occurrence_model', None)
+        unsplit = isinstance(self.serial, int)
+        if unsplit:  # prefilter_sources=no was given
+            serials = numpy.arange(
+                self.serial, self.serial + self.num_ruptures)
+        else:  # the serials have been generated in prefiltering
+            serials = self.serial
+        if tom and unsplit:  # time-independent source
+            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            numpy.random.seed(self.serial)
+            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
+            for rup, serial, num_occ in zip(ruptures, serials, occurs):
+                if num_occ:
+                    rup.serial = serial  # used as seed
+                    yield rup, num_occ
+        else:  # time-dependent source
+            for rup, serial in zip(ruptures, serials):
+                numpy.random.seed(serial)
+                occurs = rup.sample_number_of_occurrences(eff_num_ses)
+                if mutex_weight < 1:
+                    # consider only the occurrencies below the mutex_weight
+                    occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
+                num_occ = occurs.sum()
+                if num_occ:
+                    rup.serial = serial  # used as seed
+                    yield rup, num_occ
 
     def __iter__(self):
         """
@@ -225,7 +262,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        return self.mfd.get_min_max_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
+        return max(self.min_mag, min_mag), max_mag
 
     def __repr__(self):
         """

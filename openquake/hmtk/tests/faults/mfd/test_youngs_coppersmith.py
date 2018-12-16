@@ -45,7 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-
 '''
 Module to test :class:
 :openquake.hmtk.faults.mfd.youngs_coppersmith.YoungsCoppersmithExponential

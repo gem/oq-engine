@@ -1,0 +1,4 @@
+theme: jekyll-theme-architect
+
+include:
+  - README.md

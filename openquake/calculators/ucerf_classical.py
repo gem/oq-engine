@@ -15,17 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import logging
 import operator
 
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.commonlib import source
-
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator
-from openquake.calculators.ucerf_base import UcerfFilter
-# FIXME: the counting of effective ruptures has to be revised
 
 
 @base.calculators.add('ucerf_classical')
@@ -36,12 +33,9 @@ class UcerfClassicalCalculator(ClassicalCalculator):
     def pre_execute(self):
         super().pre_execute()
         self.csm_info = self.csm.info
-        self.src_filter = UcerfFilter(
-            self.sitecol, self.oqparam.maximum_distance)
         for sm in self.csm.source_models:  # one branch at the time
             [grp] = sm.src_groups
             for src in grp:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
                 grp.tot_ruptures += src.num_ruptures
 
     def execute(self):
@@ -66,15 +60,12 @@ class UcerfClassicalCalculator(ClassicalCalculator):
             ).reduce(self.agg_dicts, acc)
             ucerf = grp.sources[0].orig
             logging.info('Getting background sources from %s', ucerf.source_id)
-            srcs = ucerf.get_background_sources(self.src_filter)
-            for src in srcs:
-                self.csm.infos[src.source_id] = source.SourceInfo(src)
+            sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
+            srcs = ucerf.get_background_sources(self.src_filter, sample)
             acc = parallel.Starmap.apply(
                 classical, (srcs, self.src_filter, gsims, param, monitor),
                 weight=operator.attrgetter('weight'),
                 concurrent_tasks=oq.concurrent_tasks,
             ).reduce(self.agg_dicts, acc)
-
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos, acc)
+        self.store_csm_info(acc.eff_ruptures)
         return acc  # {grp_id: pmap}
