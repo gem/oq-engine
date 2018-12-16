@@ -277,8 +277,12 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
         # npz exports
-        export(('hmaps', 'npz'), self.calc.datastore)
-        export(('uhs', 'npz'), self.calc.datastore)
+        [fname] = export(('hmaps', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        [fname] = export(('uhs', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
