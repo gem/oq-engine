@@ -639,10 +639,11 @@ class SourceModelLogicTree(object):
         """
         fnames = self.info.smpaths
         trts = set()
-        logging.info('Reading TRTs from %d model file(s)', len(fnames))
         for fname in fnames:
             if not fname.endswith('.hdf5'):
                 trts.update(TRT_REGEX.findall(open(fname).read()))
+        logging.info('Read %d TRTs from %d model file(s)',
+                     len(trts), len(fnames))
         return trts
 
     def parse_tree(self, tree_node, validate):
