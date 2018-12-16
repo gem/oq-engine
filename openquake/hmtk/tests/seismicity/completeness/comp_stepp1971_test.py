@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 '''Tests for revised Stepp (1971) completeness analysis procedure'''
 import os
 import unittest

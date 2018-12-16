@@ -1,4 +1,4 @@
-# source_model_tree_path=('b1',), gsim_tree_path=('b1',), investigation_time=50.0, imt="PGA"
+# mean, investigation_time=50.0, imt="PGA", checksum=3398720512
 lon,lat,depth,poe-0.01,poe-0.1,poe-0.3
 15.00000,37.70000,-2.01300,8.550831E-03,0.000000E+00,0.000000E+00
 15.00000,37.80000,-2.09500,2.061190E-01,1.125127E-04,0.000000E+00

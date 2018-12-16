@@ -78,7 +78,7 @@ class DostEtAl2004(GMPE):
         imean = (self._compute_magnitude_term(C, rup.mag) +
                  self._compute_distance_term(C, dists.rhypo))
         # Convert mean from cm/s and cm/s/s
-        if isinstance(imt, PGA):
+        if imt.name == "PGA":
             mean = np.log((10.0 ** (imean)) / g)
         else:
             mean = np.log(10.0 ** imean)

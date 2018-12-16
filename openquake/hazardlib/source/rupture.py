@@ -24,6 +24,7 @@ import abc
 import numpy
 import math
 import itertools
+import collections
 from openquake.baselib import general
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib import geo
@@ -35,7 +36,13 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
-pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
+U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
+TWO16 = U64(2 ** 16)
+TWO32 = U64(2 ** 32)
+pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
+events_dt = numpy.dtype([('eid', U64), ('rlz', U16)])
 classes = {}  # initialized in .init()
 
 
@@ -78,9 +85,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         Initialize the class dictionaries `._code` and .`types` encoding the
         bidirectional correspondence between an integer in the range 0..255
-        (the code) and a triplet of classes (rupture_class, surface_class,
-        source_class). This is useful when serializing the rupture to and
-        from HDF5.
+        (the code) and a pair of classes (rupture_class, surface_class).
+        This is useful when serializing the rupture to and from HDF5.
         """
         rupture_classes = [BaseRupture] + list(get_subclasses(BaseRupture))
         surface_classes = list(get_subclasses(BaseSurface))
@@ -135,7 +141,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -146,7 +152,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
             http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
         :returns:
-            int, Number of rupture occurrences
+            numpy array of size n with number of rupture occurrences
         """
         raise NotImplementedError
 
@@ -185,7 +191,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             mag, rake, tectonic_region_type, hypocenter, surface,
             rupture_slip_direction)
         # an array of probabilities with sum 1
-        self.pmf = numpy.array(
+        self.probs_occur = numpy.array(
             [prob for (prob, occ) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
@@ -209,16 +215,15 @@ class NonParametricProbabilisticRupture(BaseRupture):
         # Converting from 1d to 2d
         if len(poes.shape) == 1:
             poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = self.pmf
+        p_kT = self.probs_occur
         prob_no_exceed = numpy.array(
-            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
-        )
+            [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)])
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
         prob_no_exceed[prob_no_exceed > 1.] = 1.  # sanity check
         prob_no_exceed[poes == 0.] = 1.  # avoid numeric issues
         return prob_no_exceed
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -227,11 +232,8 @@ class NonParametricProbabilisticRupture(BaseRupture):
         Uses 'Inverse Transform Sampling' method.
         """
         # compute cdf from pmf
-        cdf = numpy.cumsum(self.pmf)
-
-        rn = numpy.random.random()
-        [n_occ] = numpy.digitize([rn], cdf)
-
+        cdf = numpy.cumsum(self.probs_occur)
+        n_occ = numpy.digitize(numpy.random.random(n), cdf)
         return n_occ
 
 
@@ -288,18 +290,17 @@ class ParametricProbabilisticRupture(BaseRupture):
         rate = self.occurrence_rate
         return tom.get_probability_one_occurrence(rate)
 
-    def sample_number_of_occurrences(self):
+    def sample_number_of_occurrences(self, n=1):
         """
         Draw a random sample from the distribution and return a number
-        of events to occur.
+        of events to occur as an array of integers of size n.
 
         Uses :meth:
         `openquake.hazardlib.tom.PoissonTOM.sample_number_of_occurrences`
         of an assigned temporal occurrence model.
         """
-        return self.temporal_occurrence_model.sample_number_of_occurrences(
-            self.occurrence_rate
-        )
+        r = self.occurrence_rate * self.temporal_occurrence_model.time_span
+        return numpy.random.poisson(r, n)
 
     def get_probability_no_exceedance(self, poes):
         """
@@ -540,18 +541,36 @@ class ExportedRupture(object):
         self.indices = indices
 
 
+def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
+    """
+    :param rup_array: a composite array with fields serial, n_occ and grp_id
+    :param samples_by_grp: a dictionary grp_id -> samples
+    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
+    """
+    all_eids = []
+    for rup in rup_array:
+        grp_id = rup['grp_id']
+        samples = samples_by_grp[grp_id]
+        num_rlzs = num_rlzs_by_grp[grp_id]
+        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
+        eids = TWO32 * U64(rup['serial']) + numpy.arange(num_events, dtype=U64)
+        all_eids.append(eids)
+    return numpy.concatenate(all_eids)
+
+
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events):
+    def __init__(self, rupture, srcidx, grp_id, n_occ, samples=1):
+        assert rupture.serial  # sanity check
         self.rupture = rupture
-        self.sids = sids
-        self.events = events
-        self.eidx1 = 0
-        self.eidx2 = len(events)
+        self.srcidx = srcidx
+        self.grp_id = grp_id
+        self.n_occ = n_occ
+        self.samples = samples
 
     @property
     def serial(self):
@@ -560,44 +579,79 @@ class EBRupture(object):
         """
         return self.rupture.serial
 
-    @property
-    def grp_id(self):
+    def get_eids_by_rlz(self, rlzs_by_gsim):
         """
-        Group ID of the rupture
+        :param n_occ: number of occurrences
+        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param samples: number of samples in current source group
+        :returns: a dictionary rlz index -> eids array
         """
-        return int(self.events[0]['grp_id'])  # need Python int, not uint16
+        j = 0
+        dic = {}
+        if self.samples == 1:  # full enumeration or akin to it
+            for rlzs in rlzs_by_gsim.values():
+                for rlz in rlzs:
+                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U64) + (
+                        TWO32 * U64(self.serial))
+                    j += self.n_occ
+        else:  # associated eids to the realizations
+            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
+            histo = general.random_histogram(
+                self.n_occ, self.samples, self.serial)
+            for rlz, n in zip(rlzs, histo):
+                dic[rlz] = numpy.arange(j, j + n, dtype=U64) + (
+                    TWO32 * U64(self.serial))
+                j += n
+        return dic
 
-    @property
-    def weight(self):
+    def get_events(self, rlzs_by_gsim):
         """
-        Weight of the EBRupture
+        :returns: an array of events with fields eid, rlz
         """
-        return len(self.sids) * len(self.events)
+        all_eids, rlzs = [], []
+        for rlz, eids in self.get_eids_by_rlz(rlzs_by_gsim).items():
+            all_eids.extend(eids)
+            rlzs.extend([rlz] * len(eids))
+        return numpy.fromiter(zip(all_eids, rlzs), events_dt)
 
-    @property
-    def eids(self):
+    def get_eids(self, num_rlzs):
         """
-        An array with the underlying event IDs
+        :param num_rlzs: the number of realizations for the given group
+        :returns: an array of event IDs
         """
-        return self.events['eid']
+        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
+        return TWO32 * U64(self.serial) + numpy.arange(num_events, dtype=U64)
 
-    @property
-    def multiplicity(self):
+    def get_events_by_ses(self, events, num_ses):
         """
-        How many times the underlying rupture occurs.
+        :returns: a dictionary ses index -> events array
         """
-        return len(self.events)
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        events_by_ses = collections.defaultdict(list)
+        for ses, event in zip(sess, events):
+            events_by_ses[ses].append(event)
+        for ses in events_by_ses:
+            events_by_ses[ses] = numpy.array(events_by_ses[ses])
+        return events_by_ses
 
-    def export(self, mesh):
+    def get_ses_by_eid(self, rlzs_by_gsim, num_ses):
+        events = self.get_events(rlzs_by_gsim)
+        numpy.random.seed(self.serial)
+        sess = numpy.random.choice(num_ses, len(events)) + 1
+        return dict(zip(events['eid'], sess))
+
+    def export(self, mesh, rlzs_by_gsim, num_ses):
         """
         Yield :class:`Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        events_by_ses = general.group_array(self.events, 'ses')
-        new = ExportedRupture(self.serial, events_by_ses, self.sids)
-        new.mesh = mesh[self.sids]
-        new.multiplicity = self.multiplicity
+        events = self.get_events(rlzs_by_gsim)
+        events_by_ses = self.get_events_by_ses(events, num_ses)
+        new = ExportedRupture(self.serial, events_by_ses)
+        new.mesh = mesh[()]
         if isinstance(rupture.surface, geo.ComplexFaultSurface):
             new.typology = 'complexFaultsurface'
         elif isinstance(rupture.surface, geo.SimpleFaultSurface):
@@ -635,5 +689,5 @@ class EBRupture(object):
         return new
 
     def __repr__(self):
-        return '<%s %d%s>' % (
-            self.__class__.__name__, self.serial, self.events['eid'])
+        return '<%s %d[%d]>' % (
+            self.__class__.__name__, self.serial, self.n_occ)

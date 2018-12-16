@@ -20,56 +20,79 @@
 Module :mod:`openquake.hazardlib.imt` defines different intensity measure
 types.
 """
-import re
+import ast
 import operator
 import functools
 
-# NB: (MS) the management of the IMTs implemented here is horrible and will
-# be thrown away when we will need to introduce a new IMT.
+# NB: (MS) the management of the IMTs implemented here is complex, it would
+# be better to have a single IMT class, but it is as it is for legacy reasons
 
-__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
+registry = {}  # IMT string -> IMT class
 
-DEFAULT_SA_DAMPING = 5.0
 
-imt_cache = {}  # used in from_string
+def positivefloat(val):
+    """
+    Raise a ValueError if val <= 0
+    """
+    if val <= 0:
+        raise ValueError(val)
+
+
+def imt2tup(string):
+    """
+    >>> imt2tup('PGA')
+    ('PGA',)
+    >>> imt2tup('SA(1.0)')
+    ('SA', 1.0)
+    >>> imt2tup('SA(1)')
+    ('SA', 1.0)
+    """
+    s = string.strip()
+    if not s.endswith(')'):
+        # no parenthesis, PGA is considered the same as PGA()
+        return (s,)
+    name, rest = s.split('(', 1)
+    return (name,) + tuple(float(x) for x in ast.literal_eval(rest[:-1] + ','))
 
 
 def from_string(imt):
     """
-    Convert an IMT string into a hazardlib object. It is fast because cached.
+    Convert an IMT string into an hazardlib object.
 
     :param str imt:
         Intensity Measure Type.
     """
-    try:
-        return imt_cache[imt]
-    except KeyError:
-        if imt.startswith('SA'):
-            match = re.match(r'^SA\(([^)]+?)\)$', imt)
-            period = float(match.group(1))
-            instance = SA(period, DEFAULT_SA_DAMPING)
-        else:
-            try:
-                imt_class = globals()[imt]
-            except KeyError:
-                raise ValueError('Unknown IMT: ' + repr(imt))
-            instance = imt_class(None, None)
-        imt_cache[imt] = instance
-        return instance
+    tup = imt2tup(imt)
+    return registry[tup[0]](*tup[1:])
 
 
 class IMTMeta(type):
-    """Metaclass setting the _slots_ and the properties of IMT classes"""
+    """
+    Metaclass setting __slots__, __new__ and the properties of IMT classes
+    """
     def __new__(mcs, name, bases, dct):
         dct['__slots__'] = ()
         cls = type.__new__(mcs, name, bases, dct)
-        for index, field in enumerate(cls._fields):
+        fields = ''
+        for index, (field, check) in enumerate(cls._fields):
             setattr(cls, field, property(operator.itemgetter(index + 1)))
+            fields += field + ','
+        evaldic = {}
+        code = '''def __new__(cls, %s):
+    self = tuple.__new__(cls, (%r, %s))
+    for arg, (field, check) in zip(self[1:], self._fields):
+        check(arg)
+    return self
+    ''' % (fields, name, fields)
+        exec(code, evaldic)
+        cls.__new__ = evaldic['__new__']
+        cls.__new__.__defaults__ = cls._defaults
+        registry[name] = cls
         return cls
 
 
 @functools.total_ordering
-class _IMT(tuple, metaclass=IMTMeta):
+class IMT(tuple, metaclass=IMTMeta):
     """
     Base class for intensity measure type.
 
@@ -78,29 +101,29 @@ class _IMT(tuple, metaclass=IMTMeta):
     are any).
     """
     _fields = ()
+    _defaults = None
 
-    def __new__(cls, sa_period=None, sa_damping=None):
-        return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
+    @property
+    def name(self):
+        """The name of the Intensity Measure Type (ex. "PGA", "SA", ...)"""
+        return self[0]
 
     def __getnewargs__(self):
-        return tuple(getattr(self, field) for field in self._fields)
-
-    def __str__(self):
-        if self[0] == 'SA':
-            return 'SA(%s)' % self[1]
-        return self[0]
+        return tuple(getattr(self, field) for field, check in self._fields)
 
     def __lt__(self, other):
         return (self[0], self[1] or 0, self[2] or 0) < (
             other[0], other[1] or 0, other[2] or 0)
 
     def __repr__(self):
+        if not self._fields:  # return the name
+            return self[0]
         return '%s(%s)' % (type(self).__name__,
-                           ', '.join('%s=%s' % (field, getattr(self, field))
-                                     for field in type(self)._fields))
+                           ', '.join(str(getattr(self, field))
+                                     for field, check in self._fields))
 
 
-class PGA(_IMT):
+class PGA(IMT):
     """
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
@@ -108,19 +131,19 @@ class PGA(_IMT):
     period = 0.0
 
 
-class PGV(_IMT):
+class PGV(IMT):
     """
     Peak ground velocity during an earthquake measured in units of ``cm/sec``.
     """
 
 
-class PGD(_IMT):
+class PGD(IMT):
     """
     Peak ground displacement during an earthquake measured in units of ``cm``.
     """
 
 
-class SA(_IMT):
+class SA(IMT):
     """
     Spectral acceleration, defined as the maximum acceleration of a damped,
     single-degree-of-freedom harmonic oscillator. Units are ``g``, times
@@ -134,60 +157,86 @@ class SA(_IMT):
     :raises ValueError:
         if period or damping is not positive.
     """
-    _fields = ('period', 'damping')
+    _fields = (('period', positivefloat), ('damping', positivefloat))
+    _defaults = (5.0,)  # damping
 
-    def __new__(cls, period, damping=DEFAULT_SA_DAMPING):
-        if not period > 0:
-            raise ValueError('period must be positive')
-        if not damping > 0:
-            raise ValueError('damping must be positive')
-        return _IMT.__new__(cls, period, damping)
+    def __repr__(self):
+        if self.damping != 5.0:
+            return '%s(%s, %s)' % (self.name, self.period, self.damping)
+        else:
+            return '%s(%s)' % (self.name, self.period)
 
 
-class IA(_IMT):
+class IA(IMT):
     """
     Arias intensity. Determines the intensity of shaking by measuring
     the acceleration of transient seismic waves. Units are ``m/s``.
     """
 
 
-class CAV(_IMT):
+class CAV(IMT):
     """
     Cumulative Absolute Velocity. Defins the integral of the absolute
     acceleration time series. Units are "g-sec"
     """
 
 
-class RSD(_IMT):
+class RSD(IMT):
     """
     Relative significant duration, 5-95% of :class:`Arias intensity
     <IA>`, in seconds.
     """
 
 
-class RSD595(_IMT):
+class RSD595(IMT):
     """
     Alias for RSD
     """
 
 
-class RSD575(_IMT):
+class RSD575(IMT):
     """
     Relative significant duration, 5-75% of :class:`Arias intensity
     <IA>`, in seconds.
     """
 
 
-class RSD2080(_IMT):
+class RSD2080(IMT):
     """
     Relative significant duration, 20-80% of :class:`Arias intensity
     <IA>`, in seconds.
     """
 
 
-class MMI(_IMT):
+class MMI(IMT):
     """
     Modified Mercalli intensity, a Roman numeral describing the severity
     of an earthquake in terms of its effects on the earth's surface
     and on humans and their structures.
+    """
+
+# geotechnical IMTs
+
+
+class PGDfLatSpread(IMT):
+    """
+    Permanent ground defomation (m) from lateral spread
+    """
+
+
+class PGDfSettle(IMT):
+    """
+    Permanent ground defomation (m) from settlement
+    """
+
+
+class PGDfSlope(IMT):
+    """
+    Permanent ground deformation (m) from slope failure
+    """
+
+
+class PGDfRupture(IMT):
+    """
+    Permanent ground deformation (m) from co-seismic rupture
     """

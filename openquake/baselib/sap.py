@@ -51,7 +51,6 @@ Parsers can be composed too.
 import sys
 import inspect
 import argparse
-from collections import OrderedDict
 
 
 NODEFAULT = object()
@@ -100,7 +99,7 @@ class Script(object):
         defaults = defaults or ()
         nodefaults = len(args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
-        self.argdict = OrderedDict(zip(args, alldefaults))
+        self.argdict = dict(zip(args, alldefaults))
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parentparser = get_parentparser(parentparser, descr, help)
         self.names = []

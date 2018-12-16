@@ -32,8 +32,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
                                           DistancesContext)
-from openquake.hazardlib.imt import (PGA, PGV, PGD, SA, CAV, MMI, IA, RSD575,
-                                     RSD595, RSD2080)
+from openquake.hazardlib.imt import registry
+from openquake.hazardlib.imt import from_string
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -69,7 +69,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     linenum = 1
     discrepancies = []
     started = time.time()
-    for testcase in _parse_csv(datafile, debug):
+    for testcase in _parse_csv(
+            datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
             = testcase
@@ -175,7 +176,7 @@ context objects changed = %s'''
     return stats
 
 
-def _parse_csv(datafile, debug):
+def _parse_csv(datafile, debug, req_site_params):
     """
     Parse a data file in csv format and generate everything needed to exercise
     GSIM and check the result.
@@ -191,13 +192,13 @@ def _parse_csv(datafile, debug):
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
-        = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+        = _parse_csv_line(headers, next(reader), req_site_params)
+    sattrs = sctx._slots_
     dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
         (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
-            = _parse_csv_line(headers, line)
+            = _parse_csv_line(headers, line, req_site_params)
         if not debug \
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
@@ -220,7 +221,7 @@ def _parse_csv(datafile, debug):
     yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
-def _parse_csv_line(headers, values):
+def _parse_csv_line(headers, values, req_site_params):
     """
     Parse a single line from data file.
 
@@ -254,7 +255,7 @@ def _parse_csv_line(headers, values):
             is taken from column ``result_type``.
     """
     rctx = RuptureContext()
-    sctx = SitesContext()
+    sctx = SitesContext(slots=req_site_params)
     dctx = DistancesContext()
     expected_results = {}
     stddev_types = result_type = damping = None
@@ -276,46 +277,42 @@ def _parse_csv_line(headers, values):
             damping = float(value)
         elif param.startswith('site_'):
             # value is sites context object attribute
-            if (param == 'site_vs30measured') or (param == 'site_backarc'):
+            if param == 'site_vs30measured' or param == 'site_backarc':
                 value = float(value) != 0
+            elif param == 'site_siteclass':
+                value = numpy.string_(value)
             else:
                 value = float(value)
-            setattr(sctx, param[len('site_'):], numpy.array([value]))
+            # site_lons, site_lats, site_depths -> lon, lat, depth
+            if param.endswith(('lons', 'lats', 'depths')):
+                attr = param[len('site_'):-1]
+            else:  # vs30s etc
+                attr = param[len('site_'):]
+            setattr(sctx, attr, numpy.array([value]))
         elif param.startswith('dist_'):
             # value is a distance measure
             value = float(value)
             setattr(dctx, param[len('dist_'):], numpy.array([value]))
         elif param.startswith('rup_'):
             # value is a rupture context attribute
-            value = float(value)
+            try:
+                value = float(value)
+            except ValueError:
+                if value != 'undefined':
+                    raise
+
             setattr(rctx, param[len('rup_'):], value)
         elif param == 'component_type':
             pass
         else:
             # value is the expected result (of result_type type)
             value = float(value)
-            if param == 'pga':
-                imt = PGA()
-            elif param == 'pgv':
-                imt = PGV()
-            elif param == 'pgd':
-                imt = PGD()
-            elif param == 'cav':
-                imt = CAV()
-            elif param == 'mmi':
-                imt = MMI()
-            elif param == "arias":
-                imt = IA()
-            elif param == "rsd595":
-                imt = RSD595()
-            elif param == "rsd575":
-                imt = RSD575()
-            elif param == "rsd2080":
-                imt = RSD2080()
-            else:
-                period = float(param)
-                assert damping is not None
-                imt = SA(period, damping)
+            if param == 'arias':  # ugly legacy corner case
+                param = 'ia'
+            try:    # The title of the column should be IMT(args)
+                imt = from_string(param.upper())
+            except KeyError:  # Then it is just a period for SA
+                imt = registry['SA'](float(param), damping)
 
             expected_results[imt] = numpy.array([value])
 

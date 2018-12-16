@@ -243,6 +243,14 @@ bradley_2013
     :undoc-members:
     :show-inheritance:
 
+campbell_1997
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_1997
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_2003
 ---------------------------------------------
 
@@ -579,6 +587,23 @@ montalva_2016
     :undoc-members:
     :show-inheritance:
 
+montalva_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.montalva_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+multi
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.multi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 munson_thurber_1997
 ---------------------------------------------
 
@@ -599,6 +624,22 @@ nga_east
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.nga_east
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nrcan15_site_term
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nrcan15_site_term_linear
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.mgmpe.nrcan15_site_term_linear
     :members:
     :undoc-members:
     :show-inheritance:

@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ===================
 checksum32     3,909,444,611      
-date           2018-06-26T14:57:45
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:58:00
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -36,7 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -102,46 +101,63 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== ============ ============
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 87           86          
-source_model.xml 1      Active Shallow Crust 143          86          
-source_model.xml 2      Active Shallow Crust 143          86          
-source_model.xml 3      Active Shallow Crust 176          86          
-source_model.xml 4      Active Shallow Crust 176          86          
-source_model.xml 5      Active Shallow Crust 176          86          
-source_model.xml 6      Active Shallow Crust 145          86          
-source_model.xml 7      Active Shallow Crust 147          86          
-source_model.xml 8      Active Shallow Crust 147          86          
-source_model.xml 9      Active Shallow Crust 180          86          
-source_model.xml 10     Active Shallow Crust 180          86          
-source_model.xml 11     Active Shallow Crust 179          86          
+source_model.xml 0      Active Shallow Crust 86           86          
+source_model.xml 1      Active Shallow Crust 86           86          
+source_model.xml 2      Active Shallow Crust 86           86          
+source_model.xml 3      Active Shallow Crust 119          86          
+source_model.xml 4      Active Shallow Crust 119          86          
+source_model.xml 5      Active Shallow Crust 119          86          
+source_model.xml 6      Active Shallow Crust 88           86          
+source_model.xml 7      Active Shallow Crust 88           86          
+source_model.xml 8      Active Shallow Crust 88           86          
+source_model.xml 9      Active Shallow Crust 121          86          
+source_model.xml 10     Active Shallow Crust 121          86          
+source_model.xml 11     Active Shallow Crust 121          86          
 ================ ====== ==================== ============ ============
 
 ============= =====
 #TRT models   12   
-#eff_ruptures 1,879
+#eff_ruptures 1,242
 #tot_ruptures 1,032
 #tot_weight   2,880
 ============= =====
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= ========= ======
-source_id source_class              num_ruptures calc_time split_time num_sites num_split events
-========= ========================= ============ ========= ========== ========= ========= ======
-COMFLT1   ComplexFaultSource        62           0.06728   1.431E-06  1.00000   12        0     
-SFLT1     SimpleFaultSource         58           0.05633   1.931E-05  1.00000   46        0     
-CHAR1     CharacteristicFaultSource 1            0.00692   1.431E-06  1.00000   23        0     
-========= ========================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      CHAR1     X    0     308   1            0.0       1.597E-05  0.0       1         0.0   
+0      COMFLT1   C    308   312   29           0.0       1.454E-05  0.0       1         0.0   
+0      SFLT1     S    312   314   56           0.0       1.554E-04  0.0       2         0.0   
+1      CHAR1     X    0     8     1            0.0       5.245E-06  0.0       1         0.0   
+1      COMFLT1   C    8     12    29           0.0       6.437E-06  0.0       1         0.0   
+1      SFLT1     S    12    14    56           0.0       8.011E-05  0.0       2         0.0   
+2      CHAR1     X    0     344   1            0.0       4.292E-06  0.0       1         0.0   
+2      COMFLT1   C    344   348   29           0.0       5.484E-06  0.0       1         0.0   
+2      SFLT1     S    348   350   56           0.0       6.962E-05  0.0       2         0.0   
+3      CHAR1     X    0     308   1            0.0       4.053E-06  0.0       1         0.0   
+3      COMFLT1   C    308   312   62           0.0       5.484E-06  0.0       1         0.0   
+3      SFLT1     S    312   314   56           0.0       6.819E-05  0.0       2         0.0   
+4      CHAR1     X    0     8     1            0.0       3.576E-06  0.0       1         0.0   
+4      COMFLT1   C    8     12    62           0.0       5.245E-06  0.0       1         0.0   
+4      SFLT1     S    12    14    56           0.0       6.628E-05  0.0       2         0.0   
+5      CHAR1     X    0     344   1            0.0       3.576E-06  0.0       1         0.0   
+5      COMFLT1   C    344   348   62           0.0       5.007E-06  0.0       1         0.0   
+5      SFLT1     S    348   350   56           0.0       7.725E-05  0.0       2         0.0   
+6      CHAR1     X    0     308   1            0.0       3.576E-06  0.0       1         0.0   
+6      COMFLT1   C    308   312   29           0.0       4.768E-06  0.0       1         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-========================= ========= ======
-source_class              calc_time counts
-========================= ========= ======
-CharacteristicFaultSource 0.00692   1     
-ComplexFaultSource        0.06728   1     
-SimpleFaultSource         0.05633   1     
-========================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+C    0.0       12    
+S    0.0       12    
+X    0.0       12    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -149,55 +165,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00537 0.00282 0.00116 0.01113 48       
-count_eff_ruptures 0.00714 0.00206 0.00310 0.00996 25       
-================== ======= ======= ======= ======= =========
-
-Fastest task
-------------
-taskno=18, weight=116, duration=0 s, sources="COMFLT1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   116     NaN    116 116 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=24, weight=248, duration=0 s, sources="COMFLT1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   248     NaN    248 248 1
-======== ======= ====== === === =
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.12383 0.03234 0.07153 0.15100 12     
+split_filter       0.06173 NaN     0.06173 0.06173 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ================================================================================ =========
-task               sent                                                                             received 
-RtreeFilter        srcs=119.53 KB monitor=15.09 KB srcfilter=13.08 KB                               124.11 KB
-count_eff_ruptures sources=112.33 KB param=10.72 KB monitor=8.03 KB srcfilter=6.01 KB gsims=2.93 KB 9.73 KB  
-================== ================================================================================ =========
+================== ======================================= =========
+task               sent                                    received 
+read_source_models converter=4.55 KB fnames=1.25 KB        130.63 KB
+split_filter       srcs=25.37 KB srcfilter=253 B seed=14 B 29.41 KB 
+================== ======================================= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.92526   0.0       1     
-managing sources               0.40584   0.0       1     
-total prefilter                0.25795   4.74219   48    
-total count_eff_ruptures       0.17852   6.39844   25    
-unpickling prefilter           0.01731   0.0       48    
-store source_info              0.00761   0.0       1     
-unpickling count_eff_ruptures  0.00755   0.0       25    
-aggregate curves               0.00692   0.0       25    
-splitting sources              7.322E-04 0.0       1     
-reading site collection        3.412E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 1.48594  0.11719   12    
+total split_filter       0.06173  0.0       1     
+======================== ======== ========= ======

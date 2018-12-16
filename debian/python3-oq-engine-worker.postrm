@@ -23,9 +23,6 @@ case "$1" in
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
-    if pgrep supervisord 2>&1 > /dev/null; then
-        supervisorctl reload
-    fi
     ;;
   purge)
     # This package has previously been removed and is now having

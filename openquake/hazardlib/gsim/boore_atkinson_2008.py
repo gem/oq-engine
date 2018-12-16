@@ -72,6 +72,9 @@ class BooreAtkinson2008(GMPE):
     #: See paragraph 'Predictor Variables', pag 103
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -96,12 +99,14 @@ class BooreAtkinson2008(GMPE):
             # avoid recomputing PGA on rock, just add site terms
             mean = np.log(pga4nl) + \
                 self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                        C_SR)
         else:
             mean = self._compute_magnitude_scaling(rup, C) + \
                 self._compute_distance_scaling(rup, dists, C) + \
                 self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                        C_SR)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
@@ -158,7 +163,9 @@ class BooreAtkinson2008(GMPE):
         because rake is always given.
         """
         U, SS, NS, RS = 0, 0, 0, 0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        if rup.rake == 'undefined':
+            U = 1
+        elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
             SS = 1
         elif rup.rake > 30.0 and rup.rake < 150.0:
@@ -205,7 +212,6 @@ class BooreAtkinson2008(GMPE):
         """
         # non linear slope
         bnl = self._compute_non_linear_slope(vs30, C)
-
         # compute the actual non-linear term
         return self._compute_non_linear_term(pga4nl, bnl)
 
@@ -228,12 +234,11 @@ class BooreAtkinson2008(GMPE):
         # equation (13b)
         idx = np.where((vs30 > V1) & (vs30 <= V2))
         bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+                   np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
         idx = np.where((vs30 > V2) & (vs30 < Vref))
         bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
-
         return bnl
 
     def _compute_non_linear_term(self, pga4nl, bnl):
@@ -263,7 +268,7 @@ class BooreAtkinson2008(GMPE):
 
         # equation (8c)
         idx = pga4nl > a2
-        fnl[idx] = bnl[idx] * np.log(pga4nl[idx] / 0.1)
+        fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
 
         return fnl
 

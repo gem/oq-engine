@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 10
 
 ============== ===================
 checksum32     873,192,949        
-date           2018-06-26T14:57:24
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:57:48
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -36,7 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -85,19 +84,20 @@ source_model.xml 1      Active Shallow Crust 3,000        3,000
 
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  3,000        0.00994   1.669E-06  1.00000   2         0     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         P    0     1     3,000        0.0       2.813E-05  0.0       1         0.0   
+1      1         P    0     1     3,000        0.0       7.391E-06  0.0       1         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  0.00994   1     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+P    0.0       2     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -105,55 +105,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =========
-operation-duration mean    stddev    min     max     num_tasks
-RtreeFilter        0.01203 0.00216   0.01050 0.01356 2        
-count_eff_ruptures 0.00660 8.971E-04 0.00597 0.00724 2        
-================== ======= ========= ======= ======= =========
-
-Fastest task
-------------
-taskno=2, weight=300, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   300     NaN    300 300 1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=1, weight=300, duration=0 s, sources="1"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   300     NaN    300 300 1
-======== ======= ====== === === =
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.01798 0.01158 0.00979 0.02617 2      
+split_filter       0.03147 NaN     0.03147 0.03147 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ==================================================================== ========
-task               sent                                                                 received
-RtreeFilter        srcs=2.28 KB monitor=644 B srcfilter=558 B                           2.51 KB 
-count_eff_ruptures sources=2.6 KB param=878 B monitor=658 B srcfilter=492 B gsims=240 B 718 B   
-================== ==================================================================== ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=214 B           3.06 KB 
+split_filter       srcs=1.45 KB srcfilter=253 B seed=14 B 1.59 KB 
+================== ====================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.16784   0.0       1     
-total prefilter                0.02406   2.30078   2     
-reading composite source model 0.01609   0.0       1     
-total count_eff_ruptures       0.01320   6.39844   2     
-store source_info              0.00644   0.0       1     
-aggregate curves               6.130E-04 0.0       2     
-unpickling prefilter           5.414E-04 0.0       2     
-unpickling count_eff_ruptures  5.350E-04 0.0       2     
-reading site collection        3.402E-04 0.0       1     
-splitting sources              2.863E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 0.03596  0.05859   2     
+total split_filter       0.03147  1.06250   1     
+======================== ======== ========= ======

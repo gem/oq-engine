@@ -214,19 +214,19 @@ class YuEtAl2013Ms(GMPE):
         # 225 is hardcoded under the assumption that the hypocentral depth
         # corresponds to 15 km (i.e. 15**2)
         mean1 = (a1ca + a1cb * mag +
-                    a1cc * np.log((ras**2+225)**0.5 +
-                                a1cd * np.exp(a1ce * mag)))
+                 a1cc * np.log((ras**2+225)**0.5 +
+                               a1cd * np.exp(a1ce * mag)))
         mean2 = (a2ca + a2cb * mag +
-                    a2cc * np.log((rbs**2+225)**0.5 +
-                                a2cd * np.exp(a2ce * mag)))
+                 a2cc * np.log((rbs**2+225)**0.5 +
+                               a2cd * np.exp(a2ce * mag)))
         #
         # Get distances
         x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
         y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
         mean = mean1 * mean2 / np.sqrt(x+y)
-        if isinstance(imt, (PGA)):
+        if imt.name == "PGA":
             mean = np.exp(mean)/g/100
-        elif isinstance(imt, (PGV)):
+        elif imt.name == "PGV":
             mean = np.exp(mean)
         else:
             raise ValueError('Unsupported IMT')
@@ -338,9 +338,9 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
         x = (mean1 * np.sin(np.radians(dists.azimuth)))**2
         y = (mean2 * np.cos(np.radians(dists.azimuth)))**2
         mean = mean1 * mean2 / np.sqrt(x+y)
-        if isinstance(imt, (PGA)):
+        if imt.name == "PGA":
             mean = np.exp(mean)/g/100
-        elif isinstance(imt, (PGV)):
+        elif imt.name == "PGV":
             mean = np.exp(mean)
         else:
             raise ValueError('Unsupported IMT')

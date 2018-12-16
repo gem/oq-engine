@@ -18,15 +18,13 @@
 import collections
 import itertools
 import operator
-import logging
+import mock
 import numpy
-from openquake.baselib import hdf5
-from openquake.baselib.general import (
-    AccumDict, groupby, group_array, get_array, block_splitter)
+from openquake.baselib import hdf5, datastore, general
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, geo, probability_map, stats
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.source.rupture import BaseRupture, EBRupture, classes
+from openquake.hazardlib.source.rupture import EBRupture, classes
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import _gmvs_to_haz_curve
 
@@ -34,8 +32,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-
-BaseRupture.init()  # initialize rupture codes
 
 
 class PmapGetter(object):
@@ -59,6 +55,10 @@ class PmapGetter(object):
     def weights(self):
         return [rlz.weight for rlz in self.rlzs_assoc.realizations]
 
+    @property
+    def imts(self):
+        return list(self.imtls)
+
     def init(self):
         """
         Read the poes and set the .data attribute with the hazard curves
@@ -71,8 +71,10 @@ class PmapGetter(object):
             self.dstore.open('r')  # if not
         if self.sids is None:
             self.sids = self.dstore['sitecol'].sids
-        self.imtls = self.dstore['oqparam'].imtls
-        self.data = collections.OrderedDict()
+        oq = self.dstore['oqparam']
+        self.imtls = oq.imtls
+        self.poes = oq.poes
+        self.data = {}
         try:
             hcurves = self.get_hcurves(self.imtls)  # shape (R, N)
         except IndexError:  # no data
@@ -110,7 +112,7 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 
@@ -126,7 +128,7 @@ class PmapGetter(object):
         grps = [grp] if grp is not None else sorted(self.pmap_by_grp)
         array = self.rlzs_assoc.by_grp()
         for grp in grps:
-            for gsim_idx, rlzis in array[grp]:
+            for gsim_idx, rlzis in enumerate(array[grp]):
                 for r in rlzis:
                     if r == rlzi:
                         pmap |= self.pmap_by_grp[grp].extract(gsim_idx)
@@ -163,12 +165,12 @@ class PmapGetter(object):
             if there is only one or the statistics otherwise.
         """
         num_rlzs = len(self.weights)
-        if not kind:  # use default
+        if not kind or kind == 'all':  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
-                    yield k, self.dstore['hcurves/' + k]
+                    yield k, self.dstore['hcurves/' + k].value
             elif num_rlzs == 1:
-                yield 'rlz-000', self.get(0)
+                yield 'mean', self.get(0)
             return
         if 'poes' in self.dstore and kind in ('rlzs', 'all'):
             for rlzi in range(num_rlzs):
@@ -176,9 +178,10 @@ class PmapGetter(object):
                 yield 'rlz-%03d' % rlzi, hcurves
         elif 'poes' in self.dstore and kind.startswith('rlz-'):
             yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+        if 'hcurves' in self.dstore and kind == 'stats':
             for k in sorted(self.dstore['hcurves']):
-                yield k, self.dstore['hcurves/' + k]
+                if not k.startswith('rlz'):
+                    yield k, self.dstore['hcurves/' + k].value
 
     def get_mean(self, grp=None):
         """
@@ -190,58 +193,67 @@ class PmapGetter(object):
         """
         self.init()
         if len(self.weights) == 1:  # one realization
-            return self.get(0, grp)
-        else:  # multiple realizations, assume hcurves/mean is there
+            # the standard deviation is zero
+            pmap = self.get(0, grp)
+            for sid, pcurve in pmap.items():
+                array = numpy.zeros(pcurve.array.shape[:-1] + (2,))
+                array[:, 0] = pcurve.array[:, 0]
+                pcurve.array = array
+            return pmap
+        else:  # multiple realizations
             dic = ({g: self.dstore['poes/' + g] for g in self.dstore['poes']}
                    if grp is None else {grp: self.dstore['poes/' + grp]})
-            return self.rlzs_assoc.compute_pmap_stats(
-                dic, [stats.mean_curve, stats.std_curve])
+            pmaps = self.rlzs_assoc.combine_pmaps(dic)
+            return stats.compute_pmap_stats(
+                pmaps, [stats.mean_curve, stats.std_curve],
+                self.weights, self.imtls)
 
 
 class GmfDataGetter(collections.Mapping):
     """
     A dictionary-like object {sid: dictionary by realization index}
     """
-    def __init__(self, dstore, sids, num_rlzs, num_events, imtls):
+    def __init__(self, dstore, sids, num_rlzs):
         self.dstore = dstore
         self.sids = sids
         self.num_rlzs = num_rlzs
-        self.E = num_events
-        self.imtls = imtls
 
     def init(self):
         if hasattr(self, 'data'):  # already initialized
             return
         self.dstore.open('r')  # if not already open
-        self.eids = self.dstore['events']['eid']
-        self.eids.sort()
-        self.data = collections.OrderedDict()
+        try:
+            self.imts = self.dstore['gmf_data/imts'].value.split()
+        except KeyError:  # engine < 3.3
+            self.imts = list(self.dstore['oqparam'].imtls)
+        self.data = {}
         for sid in self.sids:
             self.data[sid] = data = self[sid]
             if not data:  # no GMVs, return 0, counted in no_damage
                 self.data[sid] = {rlzi: 0 for rlzi in range(self.num_rlzs)}
-        # dictionary eid -> index
-        if self.eids is not None:
-            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
         # now some attributes set for API compatibility with the GmfGetter
         # number of ground motion fields
         # dictionary rlzi -> array(imts, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imtls) + 1, F32))
+        self.E = len(self.dstore['events'])
 
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an OrderedDict rlzi -> datadict
+        :returns: an dict rlzi -> datadict
         """
         return self.data
 
     def __getitem__(self, sid):
         dset = self.dstore['gmf_data/data']
         idxs = self.dstore['gmf_data/indices'][sid]
-        if len(idxs) == 0:  # site ID with no data
+        if idxs.dtype.name == 'uint32':  # scenario
+            idxs = [idxs]
+        elif not idxs.dtype.names:  # engine >= 3.2
+            idxs = zip(*idxs)
+        data = [dset[start:stop] for start, stop in idxs]
+        if len(data) == 0:  # site ID with no data
             return {}
-        array = numpy.concatenate([dset[start:stop] for start, stop in idxs])
-        return group_array(array, 'rlzi')
+        return general.group_array(numpy.concatenate(data), 'rlzi')
 
     def __iter__(self):
         return iter(self.sids)
@@ -255,15 +267,13 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam,
-                 min_iml, samples=1):
-        assert sitecol is sitecol.complete, sitecol
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, oqparam, min_iml):
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
-        self.sitecol = sitecol
+        self.sitecol = sitecol.complete
         self.oqparam = oqparam
         self.min_iml = min_iml
-        self.N = len(self.sitecol.complete)
+        self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.I = len(oqparam.imtls)
         self.gmv_dt = numpy.dtype(
@@ -275,9 +285,8 @@ class GmfGetter(object):
             calc.filters.IntegrationDistance(oqparam.maximum_distance)
             if isinstance(oqparam.maximum_distance, dict)
             else oqparam.maximum_distance,
-            oqparam.filter_distance)
+            {'filter_distance': oqparam.filter_distance})
         self.correl_model = oqparam.correl_model
-        self.samples = samples
 
     @property
     def sids(self):
@@ -287,6 +296,10 @@ class GmfGetter(object):
     def imtls(self):
         return self.oqparam.imtls
 
+    @property
+    def imts(self):
+        return list(self.oqparam.imtls)
+
     def init(self):
         """
         Initialize the computers. Should be called on the workers
@@ -294,44 +307,35 @@ class GmfGetter(object):
         if hasattr(self, 'eids'):  # init already called
             return
         self.computers = []
-        eids = []
         for ebr in self.ebruptures:
+            if hasattr(ebr, 'sids'):  # filter the site collection
+                sitecol = self.sitecol.filtered(ebr.sids)
+            else:
+                sitecol = self.sitecol
             try:
                 computer = calc.gmf.GmfComputer(
-                    ebr, self.sitecol, self.oqparam.imtls, self.cmaker,
+                    ebr, sitecol, self.oqparam.imtls, self.cmaker,
                     self.oqparam.truncation_level, self.correl_model)
             except FarAwayRupture:
-                # due to numeric errors ruptures within the maximum_distance
-                # when written can be outside when read; I found a case with
+                # due to numeric errors, ruptures within the maximum_distance
+                # when written, can be outside when read; I found a case with
                 # a distance of 99.9996936 km over a maximum distance of 100 km
                 continue
             self.computers.append(computer)
-            eids.append(ebr.events['eid'])
-        self.eids = numpy.concatenate(eids) if eids else []
-        # dictionary rlzi -> array(imtls, events, nbytes)
-        self.gmdata = AccumDict(accum=numpy.zeros(self.I + 1, F32))
-        # dictionary eid -> index
-        self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
     def gen_gmv(self):
         """
-        Compute the GMFs for the given realization and populate the .gmdata
-        array. Yields tuples of the form (sid, eid, imti, gmv).
+        Compute the GMFs for the given realization and
+        yields tuples of the form (sid, eid, imti, gmv).
         """
-        sample = 0  # in case of sampling the realizations have a corresponding
-        # sample number from 0 to the number of samples of the given src model
-        for gs in self.rlzs_by_gsim:  # OrderedDict
-            rlzs = self.rlzs_by_gsim[gs]
-            for computer in self.computers:
-                rup = computer.rupture
-                sids = computer.sids
-                if self.samples > 1:
-                    # events of the current slice of realizations
-                    all_eids = [get_array(rup.events, sample=s)['eid']
-                                for s in range(sample, sample + len(rlzs))]
-                else:
-                    all_eids = [rup.events['eid']] * len(rlzs)
-                num_events = sum(len(eids) for eids in all_eids)
+        for computer in self.computers:
+            rup = computer.rupture
+            sids = computer.sids
+            eids_by_rlz = rup.get_eids_by_rlz(self.rlzs_by_gsim)
+            for gs, rlzs in self.rlzs_by_gsim.items():
+                num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+                if num_events == 0:
+                    continue
                 # NB: the trick for performance is to keep the call to
                 # compute.compute outside of the loop over the realizations
                 # it is better to have few calls producing big arrays
@@ -341,22 +345,20 @@ class GmfGetter(object):
                     arr = array[:, i, :]
                     arr[arr < miniml] = 0
                 n = 0
-                for r, rlzi in enumerate(rlzs):
-                    e = len(all_eids[r])
-                    gmdata = self.gmdata[rlzi]
-                    gmdata[-1] += e  # increase number of events
-                    for ei, eid in enumerate(all_eids[r]):
+                for rlzi in rlzs:
+                    eids = eids_by_rlz[rlzi]
+                    e = len(eids)
+                    if not e:
+                        continue
+                    for ei, eid in enumerate(eids):
                         gmf = array[:, :, n + ei]  # shape (N, I)
                         tot = gmf.sum(axis=0)  # shape (I,)
                         if not tot.sum():
                             continue
-                        for i, val in enumerate(tot):
-                            gmdata[i] += val
                         for sid, gmv in zip(sids, gmf):
                             if gmv.sum():
                                 yield rlzi, sid, eid, gmv
                     n += e
-            sample += len(rlzs)
 
     def get_hazard(self, data=None):
         """
@@ -376,7 +378,7 @@ class GmfGetter(object):
 
     def compute_gmfs_curves(self, monitor):
         """
-        :returns: a dict with keys gmdata, gmfdata, indices, hcurves
+        :returns: a dict with keys gmfdata, indices, hcurves
         """
         oq = self.oqparam
         dt = oq.gmf_data_dt()
@@ -413,23 +415,35 @@ class GmfGetter(object):
                 stop += 1
             indices.append((sid, start, stop))
             start = stop
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, gmdata=self.gmdata,
+        res = dict(gmfdata=gmfdata, hcurves=hcurves,
                    indices=numpy.array(indices, (U32, 3)))
         return res
 
 
-def get_ruptures_by_grp(dstore, slice_=slice(None)):
+def get_rupture_getters(dstore, slc=slice(None), split=0, hdf5cache=None):
     """
-    Extracts the ruptures corresponding to the given slice. If missing,
-    extract all ruptures.
-
-    :returns: a dictionary grp_id -> list of EBRuptures
+    :returns: a list of RuptureGetters
     """
-    if slice_.stop is None:
-        n = len(dstore['ruptures']) - (slice_.start or 0)
-        logging.info('Reading %d ruptures from the datastore', n)
-    rgetter = RuptureGetter(dstore, slice_)
-    return groupby(rgetter, operator.attrgetter('grp_id'))
+    csm_info = dstore['csm_info']
+    grp_trt = csm_info.grp_by("trt")
+    samples = csm_info.get_samples_by_grp()
+    rlzs_by_gsim = csm_info.get_rlzs_by_gsim_grp()
+    rup_array = dstore['ruptures'][slc]
+    code2cls = get_code2cls(dstore.get_attrs('ruptures'))
+    rgetters = []
+    by_grp = operator.itemgetter(2)  # serial, srcidx, grp_id
+    for block in general.split_in_blocks(rup_array, split, key=by_grp):
+        rups = numpy.array(block)
+        grp_id = rups[0]['grp_id']
+        if not rlzs_by_gsim[grp_id]:
+            # this may happen if a source model has no sources, like
+            # in event_based_risk/case_3
+            continue
+        rgetter = RuptureGetter(
+            hdf5cache or dstore.hdf5path, code2cls, rups,
+            grp_trt[grp_id], samples[grp_id], rlzs_by_gsim[grp_id])
+        rgetters.append(rgetter)
+    return rgetters
 
 
 def get_maxloss_rupture(dstore, loss_type):
@@ -442,123 +456,109 @@ def get_maxloss_rupture(dstore, loss_type):
     """
     lti = dstore['oqparam'].lti[loss_type]
     ridx = dstore.get_attr('rup_loss_table', 'ridx')[lti]
-    [ebr] = RuptureGetter(dstore, slice(ridx, ridx + 1))
+    [rgetter] = get_rupture_getters(dstore, slice(ridx, ridx + 1))
+    [ebr] = rgetter.get_ruptures()
     return ebr
 
 
+def get_code2cls(ruptures_attrs):
+    code2cls = {}  # code -> rupture_cls, surface_cls
+    for key, val in ruptures_attrs.items():
+        if key.startswith('code_'):
+            code2cls[int(key[5:])] = [classes[v] for v in val.split()]
+    return code2cls
+
+
+# this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
     Iterable over ruptures.
 
-    :param dstore:
-        a DataStore instance with a dataset names `ruptures`
-    :param mask:
-        which ruptures to read; it can be:
-        - None: read all ruptures
-        - a slice
-        - a boolean mask
-        - a list of integers
-    :param grp_id:
-        the group ID of the ruptures, if they are homogeneous, or None
+    :param hdf5path:
+        path to an HDF5 file with a dataset names `ruptures`
+    :param rup_array:
+        an array of rupture parameters with homogeneous grp_id
     """
-    @classmethod
-    def from_(cls, dstore):
-        """
-        :returns: a dictionary grp_id -> RuptureGetter instance
-        """
-        array = dstore['ruptures'].value
-        grp_ids = numpy.unique(array['grp_id'])
-        return {grp_id: cls(dstore, array['grp_id'] == grp_id, grp_id)
-                for grp_id in grp_ids}
+    def __init__(self, hdf5path, code2cls, rup_array, trt, samples,
+                 rlzs_by_gsim):
+        self.hdf5path = hdf5path
+        self.code2cls = code2cls
+        self.rup_array = rup_array
+        self.trt = trt
+        self.samples = samples
+        self.rlzs_by_gsim = rlzs_by_gsim
+        [self.grp_id] = numpy.unique(rup_array['grp_id'])
 
-    def __init__(self, dstore, mask=None, grp_id=None):
-        self.dstore = dstore
-        self.mask = slice(None) if mask is None else mask
-        self.grp_id = grp_id
-
-    def split(self, block_size):
+    def get_eid_rlz(self, monitor=None):
         """
-        Split a RuptureGetter in multiple getters, each one containing a block
-        of ruptures.
-
-        :param block_size:
-            maximum length of the rupture blocks
-        :returns:
-            `RuptureGetters` containing `block_size` ruptures and with
-            an attribute `.n_events` counting the total number of events
+        :returns: a composite array with the associations eid->rlz
         """
-        getters = []
-        indices, = self.mask.nonzero()
-        for block in block_splitter(indices, block_size):
-            idxs = list(block)  # not numpy.int_(block)!
-            rgetter = self.__class__(self.dstore, idxs, self.grp_id)
-            rup = self.dstore['ruptures'][idxs]
-            # use int below, otherwise n_events would be a numpy.uint64
-            rgetter.n_events = int((rup['eidx2'] - rup['eidx1']).sum())
-            getters.append(rgetter)
-        return getters
+        eid_rlz = []
+        for rup in self.rup_array:
+            ebr = EBRupture(mock.Mock(serial=rup['serial']), rup['srcidx'],
+                            self.grp_id, rup['n_occ'], self.samples)
+            for rlz, eids in ebr.get_eids_by_rlz(self.rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid, rlz))
+        return numpy.array(eid_rlz, [('eid', U64), ('rlz', U16)])
 
-    def __iter__(self):
-        self.dstore.open('r')  # if needed
-        attrs = self.dstore.get_attrs('ruptures')
-        code2cls = {}  # code -> rupture_cls, surface_cls
-        for key, val in attrs.items():
-            if key.startswith('code_'):
-                code2cls[int(key[5:])] = [classes[v] for v in val.split()]
-        grp_trt = self.dstore['csm_info'].grp_by("trt")
-        ruptures = self.dstore['ruptures'][self.mask]
-        # NB: ruptures.sort(order='serial') causes sometimes a SystemError:
-        # <ufunc 'greater'> returned a result with an error set
-        # this is way I am sorting with Python and not with numpy below
-        data = sorted((ser, idx) for idx, ser in enumerate(ruptures['serial']))
-        for serial, ridx in data:
-            rec = ruptures[ridx]
-            evs = self.dstore['events'][rec['eidx1']:rec['eidx2']]
-            if self.grp_id is not None and self.grp_id != rec['grp_id']:
-                continue
-            mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-            rupture_cls, surface_cls = code2cls[rec['code']]
-            rupture = object.__new__(rupture_cls)
-            rupture.serial = serial
-            rupture.surface = object.__new__(surface_cls)
-            rupture.mag = rec['mag']
-            rupture.rake = rec['rake']
-            rupture.seed = rec['seed']
-            rupture.hypocenter = geo.Point(*rec['hypo'])
-            rupture.occurrence_rate = rec['occurrence_rate']
-            rupture.tectonic_region_type = grp_trt[rec['grp_id']]
-            pmfx = rec['pmfx']
-            if pmfx != -1:
-                rupture.pmf = self.dstore['pmfs'][pmfx]
-            if surface_cls is geo.PlanarSurface:
-                rupture.surface = geo.PlanarSurface.from_array(rec['points'])
-            elif surface_cls is geo.MultiSurface:
-                rupture.surface.__init__([
-                    geo.PlanarSurface.from_array(m1.flatten()) for m1 in mesh])
-            elif surface_cls is geo.GriddedSurface:
-                # fault surface, strike and dip will be computed
-                rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.mesh = Mesh(m['lon'], m['lat'], m['depth'])
-            else:  # fault surface, strike and dip will be computed
-                rupture.surface.strike = rupture.surface.dip = None
-                m = mesh[0]
-                rupture.surface.__init__(
-                    RectangularMesh(m['lon'], m['lat'], m['depth']))
-            ebr = EBRupture(rupture, (), evs)
-            ebr.eidx1 = rec['eidx1']
-            ebr.eidx2 = rec['eidx2']
-            # not implemented: rupture_slip_direction
-            yield ebr
+    def get_ruptures(self, srcfilter=None):
+        """
+        :returns: a list of EBRuptures filtered by bounding box
+        """
+        ebrs = []
+        with datastore.read(self.hdf5path) as dstore:
+            rupgeoms = dstore['rupgeoms']
+            for rec in self.rup_array:
+                mesh = numpy.zeros((3, rec['sy'], rec['sz']), F32)
+                geom = rupgeoms[rec['gidx1']:rec['gidx2']].reshape(
+                    rec['sy'], rec['sz'])
+                mesh[0] = geom['lon']
+                mesh[1] = geom['lat']
+                mesh[2] = geom['depth']
+                rupture_cls, surface_cls = self.code2cls[rec['code']]
+                rupture = object.__new__(rupture_cls)
+                rupture.serial = rec['serial']
+                rupture.surface = object.__new__(surface_cls)
+                rupture.mag = rec['mag']
+                rupture.rake = rec['rake']
+                rupture.hypocenter = geo.Point(*rec['hypo'])
+                rupture.occurrence_rate = rec['occurrence_rate']
+                rupture.tectonic_region_type = self.trt
+                if surface_cls is geo.PlanarSurface:
+                    rupture.surface = geo.PlanarSurface.from_array(
+                        mesh[:, 0, :])
+                elif surface_cls is geo.MultiSurface:
+                    # mesh has shape (3, n, 4)
+                    rupture.surface.__init__([
+                        geo.PlanarSurface.from_array(mesh[:, i, :])
+                        for i in range(mesh.shape[1])])
+                elif surface_cls is geo.GriddedSurface:
+                    # fault surface, strike and dip will be computed
+                    rupture.surface.strike = rupture.surface.dip = None
+                    rupture.surface.mesh = Mesh(*mesh)
+                else:
+                    # fault surface, strike and dip will be computed
+                    rupture.surface.strike = rupture.surface.dip = None
+                    rupture.surface.__init__(RectangularMesh(*mesh))
+                grp_id = rec['grp_id']
+                ebr = EBRupture(rupture, rec['srcidx'], grp_id,
+                                rec['n_occ'], self.samples)
+                # not implemented: rupture_slip_direction
+                bbox = (rec['minlon'], rec['minlat'],
+                        rec['maxlon'], rec['maxlat'])
+                if srcfilter is None:
+                    ebrs.append(ebr)
+                    continue
+                ebr.sids = srcfilter.get_sids_within(
+                        bbox, rupture.tectonic_region_type, rupture.mag)
+                if len(ebr.sids):
+                    ebrs.append(ebr)
+        return ebrs
 
     def __len__(self):
-        if hasattr(self.mask, 'start'):  # is a slice
-            if self.mask.start is None and self.mask.stop is None:
-                return len(self.dstore['ruptures'])
-            else:
-                return self.mask.stop - self.mask.start
-        elif isinstance(self.mask, list):
-            # NB: h5py wants lists, not arrays of indices
-            return len(self.mask)
-        else:  # is a boolean mask
-            return self.mask.sum()
+        return len(self.rup_array)
+
+    def __repr__(self):
+        return '<%s grp_id=%d, %d rupture(s)>' % (
+            self.__class__.__name__, self.grp_id, len(self))

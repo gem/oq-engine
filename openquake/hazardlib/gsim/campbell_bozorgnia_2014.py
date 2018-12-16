@@ -103,7 +103,7 @@ class CampbellBozorgnia2014(GMPE):
         pga1100 = np.exp(self.get_mean_values(C_PGA, sites, rup, dists, None))
         # Get mean and standard deviations for IMT
         mean = self.get_mean_values(C, sites, rup, dists, pga1100)
-        if isinstance(imt, SA) and (imt.period <= 0.25):
+        if imt.name == "SA" and imt.period <= 0.25:
             # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on soil

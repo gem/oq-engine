@@ -78,7 +78,7 @@ class ProbabilityCurve(object):
     def __invert__(self):
         return self.__class__(1. - self.array)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.array.any())
 
     def __repr__(self):
@@ -94,7 +94,7 @@ class ProbabilityCurve(object):
         """
         curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
-            curve[imt] = self.array[imtls.slicedic[imt], idx]
+            curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
 
@@ -117,7 +117,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -127,7 +127,7 @@ class ProbabilityMap(dict):
         """
         dic = cls(shape_y, shape_z)
         for sid in sids:
-            dic.setdefault(sid, initvalue)
+            dic.setdefault(sid, initvalue, dtype)
         return dic
 
     @classmethod
@@ -152,18 +152,19 @@ class ProbabilityMap(dict):
         self.shape_y = shape_y
         self.shape_z = shape_z
 
-    def setdefault(self, sid, value):
+    def setdefault(self, sid, value, dtype=F64):
         """
         Works like `dict.setdefault`: if the `sid` key is missing, it fills
         it with an array and returns the associate ProbabilityCurve
 
         :param sid: site ID
         :param value: value used to fill the returned ProbabilityCurve
+        :param dtype: dtype used internally (F32 or F64)
         """
         try:
             return self[sid]
         except KeyError:
-            array = numpy.empty((self.shape_y, self.shape_z), F64)
+            array = numpy.empty((self.shape_y, self.shape_z), dtype)
             array.fill(value)
             pc = ProbabilityCurve(array)
             self[sid] = pc
@@ -207,35 +208,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
-                curves_by_imt[sid] = self[sid].array[
-                    imtls.slicedic[imt], idx]
-        return curves
-
-    # used when exporting to npy
-    def convert_npy(self, imtls, sids, idx=0):
-        """
-        Convert a probability map into a composite array of dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            array of site IDs containing all the sites in the ProbabilityMap
-        :param idx:
-            index on the z-axis (default 0)
-        """
-        dtlist = [(imt, [(str(iml), F32) for iml in imtls[imt]])
-                  for imt in imtls]
-        curves = numpy.zeros(len(sids), dtlist)
-        for s, sid in enumerate(sids):
-            try:
-                array = self[sid].array
-            except KeyError:
-                continue
-            for imt in imtls:
-                imls = curves.dtype[imt].names
-                values = array[imtls.slicedic[imt], idx]
-                for iml, val in zip(imls, values):
-                    curves[s][imt][iml] = val
+                curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
     def convert2(self, imtls, sids):
@@ -260,7 +233,7 @@ class ProbabilityMap(dict):
                 except KeyError:
                     pass  # the poes will be zeros
                 else:
-                    curves_by_imt[i] = pcurve.array[imtls.slicedic[imt], 0]
+                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
         return curves
 
     def filter(self, sids):

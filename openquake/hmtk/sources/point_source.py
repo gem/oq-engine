@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -45,7 +44,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
 '''
 Module implements openquake.hmtk.sources.point_source.mtkPointSource class, which
 represents the mtk implementation of the point source typology. This extends

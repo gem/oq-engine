@@ -21,12 +21,14 @@ import getpass
 import logging
 from openquake.baselib import sap, config, datastore
 from openquake.baselib.general import safeprint
-from openquake.commonlib import logs
+from openquake.hazardlib import valid
+from openquake.commonlib import logs, readinput
 from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+from openquake.calculators.export import export
 from openquake.commands.abort import abort
 
 
@@ -34,20 +36,37 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
+def read(calc_id, username=None):
+    """
+    :param calc_id: a calculation ID
+    :param username: if given, restrict the search to the user's calculations
+    :returns: the associated DataStore instance
+    """
+    if isinstance(calc_id, str) or calc_id < 0 and not username:
+        # get the last calculation in the datastore of the current user
+        return datastore.read(calc_id)
+    job = logs.dbcmd('get_job', calc_id, username)
+    if job:
+        return datastore.read(job.ds_calc_dir + '.hdf5')
+    else:
+        # calc_id can be present in the datastore and not in the database:
+        # this happens if the calculation was run with `oq run`
+        return datastore.read(calc_id)
+
+
 def get_job_id(job_id, username=None):
-    username = username or getpass.getuser()
     job = logs.dbcmd('get_job', job_id, username)
     if not job:
-        sys.exit('Job %s of %s not found' % (job_id, username))
+        sys.exit('Job %s not found' % job_id)
     return job.id
 
 
-def run_job(cfg_file, log_level='info', log_file=None, exports='',
-            hazard_calculation_id=None,  username=getpass.getuser(), **kw):
+def run_job(job_ini, log_level='info', log_file=None, exports='',
+            username=getpass.getuser(), **kw):
     """
     Run a job using the specified config file and other options.
 
-    :param str cfg_file:
+    :param str job_ini:
         Path to calculation config (INI-style) files.
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
@@ -55,20 +74,19 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
         Path to log file.
     :param exports:
         A comma-separated string of export types requested by the user.
-    :param hazard_calculation_id:
-        ID of the previous calculation or None
     :param username:
         Name of the user running the job
+    :param kw:
+        Extra parameters like hazard_calculation_id and calculation_mode
     """
-    # if the master dies, automatically kill the workers
-    job_ini = os.path.abspath(cfg_file)
-    job_id, oqparam = eng.job_from_file(
-        job_ini, username, hazard_calculation_id)
-    kw['username'] = username
-    eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-    for line in logs.dbcmd('list_outputs', job_id, False):
-        safeprint(line)
+    job_id = logs.init('job', getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        job_ini = os.path.abspath(job_ini)
+        oqparam = eng.job_from_file(job_ini, job_id, username, **kw)
+        kw['username'] = username
+        eng.run_calc(job_id, oqparam, exports, **kw)
+        for line in logs.dbcmd('list_outputs', job_id, False):
+            safeprint(line)
     return job_id
 
 
@@ -102,6 +120,50 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
+def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
+    """
+    Run calculations by storing their hazard checksum and reusing previous
+    calculations if requested.
+    """
+    if (oqparam.calculation_mode == 'event_based_risk' and
+            'gmfs' not in oqparam.inputs):
+        kw = dict(calculation_mode='event_based')
+        if (oqparam.sites or 'sites' in oqparam.inputs or
+                'site_model' in oqparam.inputs):
+            # remove exposure from the hazard
+            kw['exposure_file'] = ''
+    else:
+        kw = {}
+    checksum = readinput.get_checksum32(oqparam, hazard=True)
+    # retrieve an old calculation with the right checksum, if any
+    job = logs.dbcmd('get_job_from_checksum', checksum)
+    if job is None:
+        # recompute the hazard and store the checksum
+        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        logs.dbcmd('add_checksum', hc_id, checksum)
+    elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        # recompute and update the job associated to the checksum
+        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
+        logs.dbcmd('update_job_checksum', hc_id, checksum)
+    else:
+        # compute the risk or the stats by reusing the hazard
+        assert job.description == oqparam.description, (
+            job.description, oqparam.description)  # sanity check
+        hc_id = job.id
+        logging.info('Reusing job #%d', job.id)
+        job_id = run_job(job_ini, log_level, log_file,
+                         exports, hazard_calculation_id=hc_id)
+        if oqparam.aggregate_by:
+            logging.info('Exporting aggregated data')
+            dstore = datastore.read(job_id)
+            aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
+            fnames = []
+            fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
+            fnames.extend(export((aggby + 'curves', 'csv'), dstore))
+            for fname in fnames:
+                logging.info('Exported %s', fname)
+
+
 @sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, db_version, what_if_I_upgrade, run,
@@ -109,19 +171,18 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
            export_output, export_outputs, exports='',
-           log_level='info'):
+           log_level='info', reuse_hazard=False):
     """
     Run a calculation using the traditional command line API
     """
-    if run:
-        # the logging will be configured in engine.py
-        pass
-    else:
+    if not run:
         # configure a basic logging
-        logging.basicConfig(level=logging.INFO)
+        logs.init()
 
     if config_file:
-        config.load(os.path.abspath(os.path.expanduser(config_file)))
+        config.read(os.path.abspath(os.path.expanduser(config_file)),
+                    soft_mem_limit=int, hard_mem_limit=int, port=int,
+                    multi_user=valid.boolean, multi_node=valid.boolean)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
@@ -138,7 +199,6 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         sys.exit(err)
 
     if upgrade_db:
-        logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
         if msg.startswith('Your database is already updated'):
             pass
@@ -160,17 +220,32 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id:
+    if hazard_calculation_id == -1:
+        # get the latest calculation of the current user
+        hc_id = get_job_id(hazard_calculation_id, getpass.getuser())
+    elif hazard_calculation_id:
+        # make it possible to use calculations made by another user
         hc_id = get_job_id(hazard_calculation_id)
     else:
         hc_id = None
     if run:
-        job_ini = os.path.expanduser(run)
-        open(job_ini, 'rb').read()  # IOError if the file does not exist
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
-        run_job(os.path.expanduser(run), log_level, log_file,
-                exports, hazard_calculation_id=hc_id)
+        job_inis = [os.path.expanduser(f) for f in run]
+        if len(job_inis) == 1 and not hc_id:
+            # init logs before calling get_oqparam
+            logs.init('nojob', getattr(logging, log_level.upper()))
+            # not using logs.handle that logs on the db
+            oq = readinput.get_oqparam(job_inis[0])
+            smart_run(job_inis[0], oq, log_level, log_file,
+                      exports, reuse_hazard)
+            return
+        for i, job_ini in enumerate(job_inis):
+            open(job_ini, 'rb').read()  # IOError if the file does not exist
+            job_id = run_job(job_ini, log_level, log_file,
+                             exports, hazard_calculation_id=hc_id)
+            if not hc_id:  # use the first calculation as base for the others
+                hc_id = job_id
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
@@ -230,7 +305,7 @@ use in debugging and profiling.''', action='store_true')
 engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
 engine.opt('config_file', 'Custom openquake.cfg file, to override default '
            'configurations')
-engine._add('make_html_report', '--make-html-report', '-r',
+engine._add('make_html_report', '--make-html-report', '--r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
@@ -238,7 +313,7 @@ engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
 engine._add('run', '--run', help='Run a job with the specified config file',
-            metavar='CONFIG_FILE')
+            metavar='JOB_INI', nargs='+')
 engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
             help='List hazard calculation information', action='store_true')
 engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
@@ -269,3 +344,4 @@ engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
 engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
+engine.flg('reuse_hazard', 'Reuse the event based hazard if available')

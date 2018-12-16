@@ -25,7 +25,7 @@
                      applyToTectonicRegionType="Deep Seismicity">
 
                 <logicTreeBranch branchID="b21"> 
-                <uncertaintyModel>MontalvaEtAl2016SSlab</uncertaintyModel>
+                <uncertaintyModel>MontalvaEtAl2017SSlab</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
                 

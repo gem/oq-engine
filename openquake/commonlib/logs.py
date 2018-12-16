@@ -19,11 +19,12 @@
 Set up some system-wide loggers
 """
 
+import sys
 import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq, config, parallel
+from openquake.baselib import zeromq, config, parallel, datastore
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -59,13 +60,6 @@ def touch_log_file(log_file):
     :exc:`IOError` will be raised.
     """
     open(os.path.abspath(log_file), 'a').close()
-
-
-def set_level(level):
-    """
-    Initialize logs to write records with level `level` or above.
-    """
-    logging.root.setLevel(LEVELS.get(level, logging.WARNING))
 
 
 def _update_log_record(self, record):
@@ -143,7 +137,7 @@ def handle(job_id, log_level='info', log_file=None):
         handlers.append(LogFileHandler(job_id, log_file))
     for handler in handlers:
         logging.root.addHandler(handler)
-    set_level(log_level)
+    init(job_id, LEVELS.get(log_level, logging.WARNING))
     try:
         yield
     finally:
@@ -153,3 +147,35 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
+
+
+def get_last_calc_id(username=None):
+    """
+    :param username: if given, restrict to it
+    :returns: the last calculation in the database or the datastore
+    """
+    if config.dbserver.multi_user:
+        job = dbcmd('get_job', -1, username)  # can be None
+        return getattr(job, 'id', 0)
+    else:  # single user
+        return datastore.get_last_calc_id()
+
+
+def init(calc_id='nojob', level=logging.INFO):
+    """
+    1. initialize the root logger (if not already initialized)
+    2. set the format of the root handlers (if any)
+    3. return a new calculation ID candidate if calc_id is None
+    """
+    if not logging.root.handlers:  # first time
+        logging.basicConfig(level=level)
+    if calc_id == 'job':  # produce a calc_id by creating a job in the db
+        calc_id = dbcmd('create_job', datastore.get_datadir())
+    elif calc_id == 'nojob':  # produce a calc_id without creating a job
+        calc_id = datastore.get_last_calc_id() + 1
+    else:
+        assert isinstance(calc_id, int), calc_id
+    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
+    for handler in logging.root.handlers:
+        handler.setFormatter(logging.Formatter(fmt))
+    return calc_id

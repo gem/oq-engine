@@ -15,6 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import mock
 import numpy
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
@@ -27,13 +30,13 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28, case_29, case_30)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32)
 
 
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
-        kind = kw.pop('kind', '')  # 'all' or ''
+        kind = kw.pop('kind', '')
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore
         got = (export(('hcurves/' + kind, 'csv'), ds) +
@@ -90,9 +93,23 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        self.assert_curves_ok(
-            ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_2.__file__)
+        self.run_calc(case_2.__file__, 'job.ini')
+
+        # check view_pmap for a single realization
+        got = view('pmap:grp-00', self.calc.datastore)
+        self.assertEqual(got, '''\
+{0: <ProbabilityCurve
+[[2.26776679e-03 0.00000000e+00]
+ [1.67915423e-05 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]
+ [0.00000000e+00 0.00000000e+00]]>}''')
+
+        # check view inputs
+        lines = view('inputs', self.calc.datastore).splitlines()
+        self.assertEqual(len(lines), 9)
+
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_3(self):
@@ -132,7 +149,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
             case_7.__file__, 'job.ini', mean_hazard_curves='false',
-            poes='0.1')
+            calculation_mode='preclassical',  poes='0.1')
 
     @attr('qa', 'hazard', 'classical')
     def test_case_8(self):
@@ -169,6 +186,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_12(self):
+        # test Modified GMPE
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1_b2.csv'],
             case_12.__file__)
@@ -179,15 +197,13 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-mean_PGA.csv', 'hazard_curve-mean_SA(0.2).csv',
              'hazard_map-mean.csv'], case_13.__file__)
 
-        # test recomputing the hazard maps, i.e. with --hc
-        # must be run sequentially to avoid the usual heisenbug
+        # test recomputing the hazard maps
         self.run_calc(
-            case_13.__file__, 'job.ini', exports='csv', poes='0.2',
+            case_13.__file__, 'job.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id),
-            concurrent_tasks='0', gsim_logic_tree_file='',
-            source_model_logic_tree_file='')
+            gsim_logic_tree_file='', source_model_logic_tree_file='')
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
         # test extract/hazard/rlzs
@@ -202,10 +218,10 @@ class ClassicalTestCase(CalculatorTestCase):
                                    'hcurves/SA(0.2)/rlz-001',
                                    'hcurves/SA(0.2)/rlz-002',
                                    'hcurves/SA(0.2)/rlz-003'])
-        self.assertEqual(hmaps, ['hmaps/poe-0.2/rlz-000',
-                                 'hmaps/poe-0.2/rlz-001',
-                                 'hmaps/poe-0.2/rlz-002',
-                                 'hmaps/poe-0.2/rlz-003'])
+        self.assertEqual(hmaps, ['hmaps/poe-0.1/rlz-000',
+                                 'hmaps/poe-0.1/rlz-001',
+                                 'hmaps/poe-0.1/rlz-002',
+                                 'hmaps/poe-0.1/rlz-003'])
 
         # test extract/hcurves/rlz-0 also works, used by the npz exports
         haz = dict(extract(self.calc.datastore, 'hcurves'))
@@ -221,20 +237,36 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
+        # test preclassical and OQ_SAMPLE_SOURCES
+        with mock.patch.dict(os.environ, OQ_SAMPLE_SOURCES='1'):
+            self.run_calc(
+                case_14.__file__, 'job.ini', calculation_mode='preclassical')
+        rpt = view('ruptures_per_trt', self.calc.datastore)
+        self.assertEqual(rpt, """\
+================ ====== ==================== ============ ============
+source_model     grp_id trt                  eff_ruptures tot_ruptures
+================ ====== ==================== ============ ============
+simple_fault.xml 0      Active Shallow Crust 55           447         
+================ ====== ==================== ============ ============""")
+        # test classical
         self.assert_curves_ok([
             'hazard_curve-smltp_simple_fault-gsimltp_AbrahamsonSilva2008.csv',
             'hazard_curve-smltp_simple_fault-gsimltp_CampbellBozorgnia2008.csv'
         ], case_14.__file__, kind='all')
 
     @attr('qa', 'hazard', 'classical')
-    def test_case_15(self):  # full enumeration
+    def test_case_15(self):
+        # this is a case with both splittable and unsplittable sources
         self.assert_curves_ok('''\
 hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
 hazard_curve-mean-SA(0.1).csv
+hazard_curve-std-PGA.csv
+hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
+hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
         # test UHS XML export
@@ -245,8 +277,12 @@ hazard_uhs-mean.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
         # npz exports
-        export(('hmaps', 'npz'), self.calc.datastore)
-        export(('uhs', 'npz'), self.calc.datastore)
+        [fname] = export(('hmaps', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        [fname] = export(('uhs', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
@@ -284,7 +320,7 @@ hazard_uhs-mean.csv
         # reduction of the gsim logic tree
         ra = cinfo.get_rlzs_assoc(trts=['Stable Continental Crust'])
         self.assertEqual(sorted(ra.by_grp()), ['grp-00', 'grp-01'])
-        numpy.testing.assert_equal(ra.by_grp()['grp-00'][0], [0, [0, 1]])
+        numpy.testing.assert_equal(ra.by_grp()['grp-00'], [[0, 1]])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
@@ -316,22 +352,20 @@ hazard_uhs-mean.csv
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, delta=1E-7)
+            case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # check exporting a single realization in XML and CSV
-        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
         if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
-        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
         # extracting hmaps
         hmaps = dict(extract(self.calc.datastore, 'hmaps'))['all']['mean']
-        self.assertEqual(
-            hmaps.dtype.names,
-            ('PGA-0.002105', 'SA(0.2)-0.002105', 'SA(1.0)-0.002105'))
+        self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
@@ -400,12 +434,12 @@ hazard_uhs-mean.csv
             'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__)
-        checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 1554747528)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+        checksum = self.calc.datastore['/'].attrs['checksum32']
+        self.assertEqual(checksum, 3211843635)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_24(self):  # UHS
@@ -447,4 +481,17 @@ hazard_uhs-mean.csv
     @attr('qa', 'hazard', 'classical')
     def test_case_30(self):  # point on the international data line
         if NOT_DARWIN:  # broken on macOS
-            self.assert_curves_ok(['hazard_curve-PGA.csv'], case_30.__file__)
+            self.assert_curves_ok(['hazard_curve-PGA.csv',
+                                   'hazard_curve-SA(1.0).csv'],
+                                  case_30.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_31(self):
+        # source specific logic tree
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
+                               'hazard_curve-std-PGA.csv'], case_31.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_32(self):
+        # source specific logic tree
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_32.__file__)

@@ -24,10 +24,7 @@ import operator
 import tempfile
 import importlib
 import itertools
-try:  # with Python 3
-    from urllib.parse import quote_plus, unquote_plus
-except ImportError:  # with Python 2
-    from urllib import quote_plus, unquote_plus
+from urllib.parse import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
@@ -35,7 +32,11 @@ from openquake.baselib.python3compat import decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
+vuint8 = h5py.special_dtype(vlen=numpy.uint8)
+vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
+vfloat32 = h5py.special_dtype(vlen=numpy.float32)
+vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
@@ -62,6 +63,15 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     return dset
 
 
+def preshape(obj):
+    """
+    :returns: the shape of obj, except the last dimension
+    """
+    if hasattr(obj, 'shape'):  # array
+        return obj.shape[:-1]
+    return ()
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
@@ -72,7 +82,11 @@ def extend(dset, array, **attrs):
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,) + array.shape[1:])
+    if array.dtype.name == 'object':  # vlen array
+        shape = (newlength,) + preshape(array[0])
+    else:
+        shape = (newlength,) + array.shape[1:]
+    dset.resize(shape)
     dset[length:newlength] = array
     for key, val in attrs.items():
         dset.attrs[key] = val
@@ -87,8 +101,11 @@ def extend3(hdf5path, key, array, **attrs):
         try:
             dset = h5[key]
         except KeyError:
-            dset = create(h5, key, array.dtype,
-                          shape=(None,) + array.shape[1:])
+            if array.dtype.name == 'object':  # vlen array
+                shape = (None,) + preshape(array[0])
+            else:
+                shape = (None,) + array.shape[1:]
+            dset = create(h5, key, array.dtype, shape)
         length = extend(dset, array)
         for key, val in attrs.items():
             dset.attrs[key] = val
@@ -210,6 +227,27 @@ class ByteCounter(object):
             self.nbytes += nbytes
 
 
+class Group(collections.Mapping):
+    """
+    A mock for a h5py group object
+    """
+    def __init__(self, items, attrs):
+        self.dic = {quote_plus(k): v for k, v in items}
+        self.attrs = attrs
+
+    def __getitem__(self, key):
+        return self.dic[key]
+
+    def __setitem__(self, key, value):
+        self.dic[key] = value
+
+    def __iter__(self):
+        yield from self.dic
+
+    def __len__(self):
+        return len(self.dic)
+
+
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
@@ -238,6 +276,42 @@ class File(h5py.File):
         self.path = path
         return self
 
+    def save_vlen(self, key, data):
+        """
+        Save a sequence of variable-length arrays
+
+        :param key: name of the dataset
+        :param data: data to store as a list of arrays
+        """
+        shape = (None,) + data[0].shape[:-1]
+        try:
+            dset = self[key]
+        except KeyError:
+            vdt = h5py.special_dtype(vlen=data[0].dtype)
+            dset = create(self, key, vdt, shape, fillvalue=None)
+        nbytes = dset.attrs.get('nbytes', 0)
+        totlen = dset.attrs.get('totlen', 0)
+        for i, val in enumerate(data):
+            nbytes += val.nbytes
+            totlen += len(val)
+        length = len(dset)
+        dset.resize((length + len(data),) + shape[1:])
+        for i, arr in enumerate(data):
+            dset[length + i] = arr
+        dset.attrs['nbytes'] = nbytes
+        dset.attrs['totlen'] = totlen
+
+    def save_attrs(self, path, attrs, **kw):
+        items = list(attrs.items()) + list(kw.items())
+        if items:
+            a = super().__getitem__(path).attrs
+            for k, v in sorted(items):
+                try:
+                    a[k] = v
+                except Exception as exc:
+                    raise TypeError(
+                        'Could not store attribute %s=%s: %s' % (k, v, exc))
+
     def __setitem__(self, path, obj):
         cls = obj.__class__
         if hasattr(obj, '__toh5__'):
@@ -245,18 +319,20 @@ class File(h5py.File):
             pyclass = cls2dotname(cls)
         else:
             pyclass = ''
-        if isinstance(obj, dict):
+        if isinstance(obj, (dict, Group)) and obj:
             for k, v in sorted(obj.items()):
                 key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
+            if isinstance(obj, Group):
+                self.save_attrs(
+                    path, obj.attrs, __pyclass__=cls2dotname(Group))
+        elif isinstance(obj, list) and isinstance(obj[0], numpy.ndarray):
+            self.save_vlen(path, obj)
         else:
             super().__setitem__(path, obj)
         if pyclass:
             self.flush()  # make sure it is fully saved
-            a = super().__getitem__(path).attrs
-            a['__pyclass__'] = pyclass
-            for k, v in sorted(attrs.items()):
-                a[k] = v
+            self.save_attrs(path, attrs, __pyclass__=pyclass)
 
     def __getitem__(self, path):
         h5obj = super().__getitem__(path)
@@ -269,7 +345,11 @@ class File(h5py.File):
                          for k, v in h5obj.items()}
             elif hasattr(h5obj, 'value'):
                 h5obj = h5obj.value
-            obj.__fromh5__(h5obj, h5attrs)
+            if hasattr(obj, '__fromh5__'):
+                obj.__fromh5__(h5obj, h5attrs)
+            else:  # Group object
+                obj.dic = h5obj
+                obj.attrs = h5attrs
             return obj
         else:
             return h5obj
@@ -288,6 +368,12 @@ class File(h5py.File):
         else:  # recursively determine the size of the datagroup
             obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
         return nbytes
+
+    def getitem(self, name):
+        """
+        Return a dataset by using h5py.File.__getitem__
+        """
+        return h5py.File.__getitem__(self, name)
 
     def save(self, nodedict, root=''):
         """
@@ -360,6 +446,7 @@ def save(path, items, **extra):
     """
     with File(path, 'w') as f:
         for key, val in items:
+            assert val is not None, key  # sanity check
             try:
                 f[key] = val
             except ValueError as err:
@@ -402,3 +489,69 @@ class ArrayWrapper(object):
     def shape(self):
         """shape of the underlying array"""
         return self.array.shape
+
+    def to_table(self):
+        """
+        Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
+        T1, ..., TN which are list of tags of lenghts D1, ... DN into
+        a table with rows (tag1, ... tagN, value) of maximum length
+        D1 * ... * DN. Zero values are discarded.
+
+        >>> from pprint import pprint
+        >>> dic = dict(tagnames=['taxonomy', 'occupancy'],
+        ...            taxonomy=['RC', 'WOOD'],
+        ...            occupancy=['RES', 'IND', 'COM'])
+        >>> arr = numpy.zeros((2, 3))
+        >>> arr[0, 0] = 2000
+        >>> arr[0, 1] = 5000
+        >>> arr[1, 0] = 500
+        >>> pprint(ArrayWrapper(arr, dic).to_table())
+        [['taxonomy', 'occupancy', 'value'],
+         ['RC', 'RES', 2000.0],
+         ['RC', 'IND', 5000.0],
+         ['WOOD', 'RES', 500.0]]
+        """
+        shape = self.array.shape
+        # the tagnames are bytestrings so they must be decoded
+        tagnames = decode_array(self.tagnames)
+        if len(shape) == len(tagnames):
+            return [tagnames + ['value']] + self._to_table()
+        elif len(shape) == len(tagnames) + 1:
+            tbl = [tagnames + [self.extra[0], 'value']]
+            return tbl + self._to_table(self.extra[1:])
+        else:
+            raise TypeError(
+                'There are %d dimensions but only %d tagnames' %
+                (len(shape), len(tagnames)))
+
+    def _to_table(self, extra=()):
+        tags = []  # tag_idx -> tag_values
+        shape = self.array.shape
+        if extra:
+            assert shape[-1] == len(extra), (shape[-1], len(extra))
+        tagnames = decode_array(self.tagnames)
+        for i, tagname in enumerate(tagnames):
+            values = getattr(self, tagname)
+            assert len(values) == shape[i], (len(values), shape[i])
+            tags.append(decode_array(values))
+        if extra:
+            tags.append(extra)
+        tbl = []
+        for idx, value in numpy.ndenumerate(self.array):
+            row = [tags[i][j] for i, j in enumerate(idx)] + [value]
+            if value > 0:
+                tbl.append(row)
+        return tbl
+
+
+def decode_array(values):
+    """
+    Decode the values which are bytestrings.
+    """
+    out = []
+    for val in values:
+        try:
+            out.append(val.decode('utf8'))
+        except AttributeError:
+            out.append(val)
+    return out

@@ -88,7 +88,7 @@ class KothaEtAl2016(GMPE):
 
         # Units of GMPE are in terms of m/s (corrected in an Erratum)
         # Convert to g
-        if isinstance(imt, (PGA, SA)):
+        if imt.name in "SA PGA":
             mean = np.log(np.exp(mean) / g)
         else:
             # For PGV convert from m/s to cm/s/s

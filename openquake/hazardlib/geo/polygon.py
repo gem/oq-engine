@@ -68,7 +68,8 @@ class Polygon(object):
         """
         Generate WKT (Well-Known Text) to represent this polygon.
         """
-        pairs = ['%s %s' % (lon, lat) for lon, lat in zip(self.lons, self.lats)]
+        pairs = ['%s %s' % (lon, lat)
+                 for lon, lat in zip(self.lons, self.lats)]
         # the polygon must form a closed loop; first and last coord pairs
         # are the same
         pairs.append(pairs[0])

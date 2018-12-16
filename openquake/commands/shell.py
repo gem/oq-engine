@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import sys
+import runpy
 from openquake.baselib import sap
 from openquake.hazardlib import nrml
 
@@ -49,10 +51,15 @@ class OpenQuake(object):
 
 
 @sap.Script
-def shell():
+def shell(script=None, args=()):
     """
-    Start an embedded (i)python instance with a global object "o"
+    Start an embedded (i)python instance with a global object "o" or
+    run a Python script in the engine environment.
     """
+    if script:
+        sys.argv = sys.argv[2:]  # strip ['oq', 'shell']
+        runpy.run_path(script, run_name='__main__')
+        return
     o = OpenQuake()  # noqa
     try:
         import IPython
@@ -61,3 +68,7 @@ def shell():
         import code
         code.interact(banner='Python shell with a global object "o"',
                       local=dict(o=o))
+
+
+shell.arg('script', 'python script to run (if any)')
+shell.arg('args', 'arguments to pass to the script', nargs='*')

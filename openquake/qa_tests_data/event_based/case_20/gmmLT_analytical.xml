@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs6"
+                                applyToTectonicRegionType="Active Shallow Offshore">
+
+                <logicTreeBranch branchID="b61">
+                    <uncertaintyModel gmpe_name="OceanicCan15Low">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b62">
+                    <uncertaintyModel gmpe_name="OceanicCan15Mid">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b63">
+                    <uncertaintyModel gmpe_name="OceanicCan15Upp">NRCan15SiteTerm</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
+

@@ -22,7 +22,6 @@ import sqlite3
 import unittest
 import tempfile
 import importlib
-import urllib
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (
