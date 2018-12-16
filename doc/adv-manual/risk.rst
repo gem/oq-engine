@@ -1,51 +1,51 @@
 Tips for running large risk calculations
 ========================================
 
-Running large risk calculations, especially ones with large logic
-trees, is an art, and there are various techniques that can be used to
-reduce an impossible calculation to a feasible one.
+Scenario calculations are usually not a performance problem, since
+they involve a single rupture. The problem is with event based
+calculations, where it is very much possible to have millions of
+ruptures. This section deals with running large event based risk
+calculations, especially ones with large logic trees, and explains
+various techniques that can be used to reduce an impossible
+calculation to a feasible one.
 
-Split the calculation in hazard part + risk part
+
+Understanding the hazard
 ------------------------------------------------
 
-The first thing to do when you have a large calculation is to reduce it
-so that it can run. The simplest way to do that is to reduce the exposure,
-for instance by considering a small geographics portion of it, of by
-sampling the assets. Once the calculation has been reduced, you can run
-it and determine if is dominated by the hazard or by the risk part.
+Usually event based calculations are dominated by the hazard component
+(unless there are lots of assets aggregated on few hazard sites) and
+therefore the first thing to do is to estimate the size of the hazard,
+i.e. the number of GMFs that will produced. Since we are talking about
+a large calculation, first of all we need reduce it so that it can
+run. The simplest way to do that is to reduce the parameters affecting
+the number of ruptures, i.e.
 
-Most of the times, the calculation will be dominated by the hazard part.
-If that is the case, your best option is to split your `job.ini` configuration
-file into a `job_hazard.ini` and a `job_risk.ini` file. Once you have
-computed the hazard with
+- investigation_time
+- ses_per_logic_tree_path
+- number_of_logic_tree_samples
 
-``$ oq engine --run job_hazard.ini``
+For instance, if you have ``ses_per_logic_tree_path = 10,000`` reduce
+it to 10, run the calculation and you will see in the log something
+like this::
 
-and got a calculation ID you can then run the risk with
+  [2018-12-16 09:09:57,689 #35263 INFO] Received
+  {'gmfdata': '752.18 MB', 'hcurves': '224 B', 'indices': '29.42 MB'}
 
-``$ oq engine --run job_risk.ini --hc <calc_id>``
+The amount of GMFs generated is 752.18 MB; since the calculation has
+been reduced by a factor of 1000, the full computation will generate
+around 750 GB of GMFs, which is a huge amount of data. Even if you
+will not run out of disk space, most likely you will run out of
+memory; even if you have enough memory to complete the hazard
+parte of the calculation, most likely the risk part will fail: 750 GB
+of GMFs are just too much for the current capabilities of the engine
+(I am writing around the time of version 3.3). You will have to reduce
+the calculation someway.
 
-This approach is convenient because you can run the heaviest
-calculation only once and then run different risk calculations, tuning
-the risk parameters, all starting from the same hazard. This is akin
-to caching the heavy part of the calculation.
-
-In some cases (for instance if there are millions assets aggregated on
-few hazard sites) the risk part can dominate over the hazard part. In
-`scenario_risk` or `scenario_damage` calculations the risk part
-normally dominates the hazard part, unless you have a lot of hazard
-sites and correlation of ground motion fields. In such situations
-there is no much point in splitting the `job.ini` file.
-
-Having ran the reduced calculation, once can estimate how long the full
-calculation will take. If the estimate gives you an impossibly large number
-(for instance if you discover thatf it takes 1 day to run 1/100th of the
-calculation) then you must use some optimization techniques.
-
-The most common techniques involves splitting the exposure in
-carefully chosen regions, aggregating the assets in such a way to
-reduce the number of hazard sites, and using the right hazard model
-for the task at hand.
+The most common techniques to reduce a risk calculation involves
+splitting the exposure in carefully chosen regions, aggregating the
+assets in such a way to reduce the number of hazard sites, and using
+the right hazard model for the task at hand.
 
 Collapsing of branches
 ----------------------
