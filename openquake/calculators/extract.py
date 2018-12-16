@@ -276,12 +276,19 @@ def extract_uhs(dstore, what):
     /extract/uhs/rlz-0, etc
     """
     oq = dstore['oqparam']
+    imts = oq.imt_periods()
     mesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     dic = {}
+    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
+    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in oq.poes])
     for name, hcurves in getters.PmapGetter(dstore, rlzs_assoc).items(what):
         hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(mesh))
-        dic[name] = calc.make_uhs(hmap, oq)
+        uhs = numpy.zeros(len(hmap), uhs_dt)
+        for field in hmap.dtype.names:
+            imt, poe = field.split('-')
+            uhs[poe][imt] = hmap[field]
+        dic[name] = uhs
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
 
