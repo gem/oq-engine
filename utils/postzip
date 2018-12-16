@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -17,8 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, json, requests
-from openquake.baselib import sap, config
+import json
+import requests
+from openquake.baselib import sap
+
 
 @sap.Script
 def postzip(zipfile, port=8800):
@@ -28,6 +30,7 @@ def postzip(zipfile, port=8800):
     resp = requests.post("http://localhost:%d/v1/calc/run" % port, {},
                          files=dic)
     print(json.loads(resp.text))
+
 
 postzip.arg('zipfile', 'archive with the files of the computation')
 postzip.arg('port', 'port to use', type=int)

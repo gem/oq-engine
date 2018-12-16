@@ -17,8 +17,8 @@ CDIR = os.path.dirname(__file__)
 
 
 def mean_gmf(shakemap):
-    gmfs = to_gmfs(
-        shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+    _, gmfs = to_gmfs(
+        shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
         num_gmfs=10, seed=42)
     return [gmfs[..., i].mean() for i in range(len(imts))]
 
@@ -29,17 +29,18 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
         array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array)
+        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt = mean_gmf(shakemap)
         aae(gmf_by_imt, [0.0047045, 0.0184625, 0.0346171, 0.0175625])
 
     def test_amplify(self):
-        res = amplify_ground_shaking(T=3.0, vs30=780, gmvs=[0.1, 0.2, 0.3])
+        gmvs = numpy.array([0.1, 0.2, 0.3])
+        res = amplify_ground_shaking(T=3.0, vs30=780, gmvs=gmvs)
         aae(res, [0.09832577, 0.19690711, 0.2958982])
 
-        res = amplify_ground_shaking(T=0.3, vs30=780, gmvs=[0.1, 0.2, 0.3])
+        res = amplify_ground_shaking(T=0.3, vs30=780, gmvs=gmvs)
         aae(res, [0.09909498, 0.19870543, 0.29922175])
 
     def test_matrices(self):
@@ -51,7 +52,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(dmatrix.sum(), 18539.6131407)
 
         # spatial correlation
-        sca = spatial_correlation_array(dmatrix, imts, 'spatial')
+        sca = spatial_correlation_array(dmatrix, imts, 'yes')
         aae(sca.sum(), 36.000370229)
 
         # spatial covariance
@@ -60,7 +61,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(scov.sum(), 13.166200147)
 
         # cross correlation
-        ccor = cross_correlation_matrix(imts, 'cross')
+        ccor = cross_correlation_matrix(imts, 'yes')
         aae(ccor.sum(), 10.49124788)
 
         # cholesky decomposition
@@ -78,14 +79,27 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['vs30'] = numpy.array([301.17] * 9)
         shakemap['val'] = val
         shakemap['std'] = std
-        gmfs = to_gmfs(
-            shakemap, crosscorr='corr', site_effects=False, trunclevel=3,
+        _, gmfs = to_gmfs(
+            shakemap, 'yes', 'no', site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
         # shape (R, N, E, M)
         aae(gmfs[..., 0].sum(axis=1), [[0.3708301, 0.5671011]])  # PGA
 
-        gmfs = to_gmfs(
-            shakemap, crosscorr='cross', site_effects=True, trunclevel=3,
+        _, gmfs = to_gmfs(
+            shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=1), [[0.4101717, 0.6240185]])  # PGA
+        aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)
+
+        # disable spatial correlation
+        _, gmfs = to_gmfs(
+            shakemap, 'no', 'no', site_effects=False,
+            trunclevel=3, num_gmfs=2, seed=42)
+        # shape (R, N, E, M)
+        aae(gmfs[..., 0].sum(axis=1), [[0.370832, 0.5670994]])  # PGA
+
+        _, gmfs = to_gmfs(
+            shakemap, 'no', 'yes', site_effects=True,
+            trunclevel=3, num_gmfs=2, seed=42)
+        aae(gmfs[..., 0].sum(axis=1), [[0.4101737, 0.6240165]])  # PGA
         aae(gmfs[..., 2].sum(axis=1), [[0.3946015, 0.5385107]])  # SA(1.0)

@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 '''
 Module :mod:`openquake.hmtk.strain.utils` holds a set of useful
 utility functions for the strain rate model calculations

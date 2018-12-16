@@ -16,31 +16,39 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
+import mock
 import os.path
-from openquake.baselib import sap, datastore
+from openquake.baselib import sap
 from openquake.commonlib import readinput
+from openquake.commands import engine
 
 
 @sap.Script
-def checksum(job_file_or_job_id):
+def checksum(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already
-    done) or from the job.ini/job.zip file (if not done yet).
+    done) or from the job.ini/job.zip file (if not done yet). If `thing`
+    is a source model logic tree file, get the checksum of the model by
+    ignoring the job.ini, the gmpe logic tree file and possibly other files.
     """
     try:
-        job_id = int(job_file_or_job_id)
+        job_id = int(thing)
         job_file = None
     except ValueError:
         job_id = None
-        job_file = job_file_or_job_id
+        job_file = thing
         if not os.path.exists(job_file):
             sys.exit('%s does not correspond to an existing file' % job_file)
     if job_id:
-        dstore = datastore.read(job_id)
+        dstore = engine.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
+    elif job_file.endswith('.xml'):  # assume it is a smlt file
+        inputs = {'source_model_logic_tree': job_file}
+        checksum = readinput.get_checksum32(mock.Mock(inputs=inputs))
     else:
         oq = readinput.get_oqparam(job_file)
         checksum = readinput.get_checksum32(oq)
     print(checksum)
 
-checksum.arg('job_file_or_job_id', 'job.ini, job.zip or job ID')
+
+checksum.arg('thing', 'job.ini, job.zip, job ID, smlt file')

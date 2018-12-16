@@ -84,36 +84,23 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
+def create_job(db, datadir):
     """
     Create job for the given user, return it.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
-    :param str calc_mode:
-        Calculation mode, such as classical, event_based, etc
-    :param user_name:
-        User who owns/started this job.
     :param datadir:
         Data directory of the user who owns/started this job.
-    :param description:
-         Description of the calculation
-    :param hc_id:
-        If not None, then the created job is a risk job
     :returns:
-        :class:`openquake.server.db.models.OqJob` instance.
+        the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    job = dict(id=calc_id,
-               calculation_mode=calc_mode,
-               description=description,
-               user_name=user_name,
-               hazard_calculation_id=hc_id,
-               is_running=1,
+    job = dict(id=calc_id, is_running=1, description='just created',
+               user_name='openquake', calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    job_id = db('INSERT INTO job (?S) VALUES (?X)',
-                job.keys(), job.values()).lastrowid
-    return job_id
+    return db('INSERT INTO job (?S) VALUES (?X)',
+              job.keys(), job.values()).lastrowid
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
@@ -293,7 +280,7 @@ DISPLAY_NAME = {
     'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'fullreport': 'Full Report',
-    'input_zip': 'Input Files'
+    'input': 'Input Files'
 }
 
 # sanity check, all display name keys must be exportable
@@ -302,17 +289,19 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-def create_outputs(db, job_id, keysize):
+def create_outputs(db, job_id, keysize, ds_size):
     """
     Build a correspondence between the outputs in the datastore and the
-    ones in the database.
+    ones in the database. Also, update the datastore size in the job table.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
-    :param dskeys: a list of datastore keys
+    :param keysize: a list of pairs (key, size_mb)
+    :param ds_size: total datastore size in MB
     """
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
+    db('UPDATE job SET size_mb=?x WHERE id=?x', ds_size, job_id)
     db.insert('output', 'oq_job_id display_name ds_key size_mb'.split(), rows)
 
 
@@ -564,7 +553,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
-             job.hazard_calculation_id) for job in jobs]
+             job.hazard_calculation_id, job.size_mb) for job in jobs]
 
 
 def update_job(db, job_id, dic):
@@ -728,3 +717,62 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY julianday(stop_time) - julianday(start_time)'''
     return db(query, description.lower())
+
+
+# checksums
+
+def add_checksum(db, job_id, value):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :param value:
+        value of the checksum (32 bit integer)
+    """
+    return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
+
+
+def update_job_checksum(db, job_id, checksum):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :param checksum:
+        the checksum (32 bit integer)
+    """
+    db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+       job_id, checksum)
+
+
+def get_checksum_from_job(db, job_id):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :returns:
+        the value of the checksum or 0
+    """
+    checksum = db('SELECT hazard_checksum FROM checksum WHERE job_id=?x',
+                  job_id, scalar=True)
+    return checksum
+
+
+def get_job_from_checksum(db, checksum):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        job ID
+    :returns:
+        the job associated to the checksum or None
+    """
+    # there is an UNIQUE constraint both on hazard_checksum and job_id
+    jobs = db('SELECT * FROM job WHERE id = ('
+              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
+              checksum)  # 0 or 1 jobs
+    if not jobs:
+        return
+    return jobs[0]

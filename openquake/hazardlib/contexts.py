@@ -23,6 +23,7 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.surface import PlanarSurface
 
 
 def get_distances(rupture, mesh, param):
@@ -76,15 +77,18 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None, filter_distance=None,
+    def __init__(self, gsims, maximum_distance=None, param=None,
                  monitor=Monitor()):
+        param = param or {}
         self.gsims = gsims
         self.maximum_distance = maximum_distance or {}
+        self.pointsource_distance = param.get('pointsource_distance', {})
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
+        filter_distance = param.get('filter_distance')
         if filter_distance is None:
             if 'rrup' in self.REQUIRES_DISTANCES:
                 filter_distance = 'rrup'
@@ -93,7 +97,10 @@ class ContextMaker(object):
             else:
                 filter_distance = 'rrup'
         self.filter_distance = filter_distance
+        self.reqv = param.get('reqv')
         self.REQUIRES_DISTANCES.add(self.filter_distance)
+        if self.reqv is not None:
+            self.REQUIRES_DISTANCES.add('repi')
         if hasattr(gsims, 'items'):  # gsims is actually a dict rlzs_by_gsim
             # since the ContextMaker must be used on ruptures with all the
             # same TRT, given a realization there is a single gsim
@@ -176,49 +183,82 @@ class ContextMaker(object):
         """
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
-            setattr(dctx, param, get_distances(rupture, sites, param))
+            distances = get_distances(rupture, sites, param)
+            setattr(dctx, param, distances)
+        reqv_obj = (self.reqv.get(rupture.tectonic_region_type)
+                    if self.reqv else None)
+        if reqv_obj and isinstance(rupture.surface, PlanarSurface):
+            reqv = reqv_obj.get(dctx.repi, rupture.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                dctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                reqv_rup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
+                dctx.rrup = reqv_rup
         self.add_rup_params(rupture)
         # NB: returning a SitesContext make sures that the GSIM cannot
         # access site parameters different from the ones declared
-        sctx = SitesContext(sites, self.REQUIRES_SITES_PARAMETERS)
+        sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def poe_map(self, src, sites, imtls, trunclevel, rup_indep=True):
+    def get_ruptures_sites(self, src, sites):
+        """
+        :param src: a hazardlib source
+        :param sites: the sites affected by it
+        :yields: pairs (ruptures, sites)
+        """
+        out = []
+        with self.ir_mon:
+            pdist = self.pointsource_distance.get(src.tectonic_region_type)
+            if hasattr(src, 'location') and pdist:
+                close_sites, far_sites = sites.split(src.location, pdist)
+                if close_sites is None:  # all is far
+                    out.append((list(src.iter_ruptures(False, False)),
+                                far_sites))
+                elif far_sites is None:  # all is close
+                    out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                else:
+                    out.append((list(src.iter_ruptures(True, True)),
+                                close_sites))
+                    out.append((list(src.iter_ruptures(False, False)),
+                                far_sites))
+            else:
+                out.append((list(src.iter_ruptures()), sites))
+        return out
+
+    def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
         """
         :param src: a source object
-        :param sites: a filtered SiteCollection
+        :param s_sites: a filtered SiteCollection of sites around the source
         :param imtls: intensity measure and levels
         :param trunclevel: truncation level
         :param rup_indep: True if the ruptures are independent
         :returns: a ProbabilityMap instance
         """
         pmap = ProbabilityMap.build(
-            len(imtls.array), len(self.gsims), sites.sids,
+            len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
         eff_ruptures = 0
-        with self.ir_mon:
-            rups = list(src.iter_ruptures())
-        # normally len(rups) == src.num_ruptures, but in UCERF .iter_ruptures
-        # discards far away ruptures: len(rups) < src.num_ruptures can happen
-        if len(rups) > src.num_ruptures:
-            raise ValueError('Expected at max %d ruptures, got %d' % (
-                src.num_ruptures, len(rups)))
-        weight = 1. / len(rups)
-        for rup in rups:
-            rup.weight = weight
-            try:
-                with self.ctx_mon:
-                    sctx, dctx = self.make_contexts(sites, rup)
-            except FarAwayRupture:
-                continue
-            eff_ruptures += 1
-            with self.poe_mon:
-                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                for sid, pne in zip(sctx.sids, pnes):
-                    if rup_indep:
-                        pmap[sid].array *= pne
-                    else:
-                        pmap[sid].array += pne * rup.weight
+        for rups, sites in self.get_ruptures_sites(src, s_sites):
+            if len(rups) > src.num_ruptures:
+                raise ValueError('Expected at max %d ruptures, got %d' % (
+                    src.num_ruptures, len(rups)))
+            weight = 1. / len(rups)
+            for rup in rups:
+                rup.weight = weight
+                try:
+                    with self.ctx_mon:
+                        sctx, dctx = self.make_contexts(sites, rup)
+                except FarAwayRupture:
+                    continue
+                eff_ruptures += 1
+                with self.poe_mon:
+                    pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                    for sid, pne in zip(sctx.sids, pnes):
+                        if rup_indep:
+                            pmap[sid].array *= pne
+                        else:
+                            pmap[sid].array += pne * rup.weight
         pmap = ~pmap
         pmap.eff_ruptures = eff_ruptures
         return pmap
@@ -320,15 +360,13 @@ class SitesContext(BaseContext):
     object.
     """
     # _slots_ is used in hazardlib check_gsim and in the SMTK
-    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-               'lons', 'lats')
-    # lons, lats are needed in si_midorikawa_1999_test.py
-
-    def __init__(self, sitecol=None, slots=None):
+    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
+                 sitecol=None):
+        self._slots_ = slots
         if sitecol is not None:
             self.sids = sitecol.sids
-            for name in self._slots_ if slots is None else slots:
-                setattr(self, name, getattr(sitecol, name))
+            for slot in slots:
+                setattr(self, slot, getattr(sitecol, slot))
 
 
 class DistancesContext(BaseContext):

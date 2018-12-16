@@ -22,18 +22,13 @@ BIONIC_DEP =
 BIONIC_REC =
 XENIAL_DEP =
 XENIAL_REC =
-TRUSTY_DEP =
-TRUSTY_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
 	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
+	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
-else ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
 else
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
@@ -51,7 +46,7 @@ override_dh_auto_clean:
 override_dh_install:
 	/opt/openquake/bin/python3 -m compileall $(PWD)/debian/python3-oq-engine$(PREFIX) || true
 	dh_install
-	sed -i 's@#.*env python@#!/opt/openquake/bin/python3@g' \
+	sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' \
 	  $$(grep -l 'env python' $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/lib/python3/dist-packages/openquake -name '*.py') \
           $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/bin -type f) \
 	  $$(find $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/utils -type f))
@@ -70,4 +65,4 @@ override_dh_gencontrol:
 	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
 
 %:
-	dh --with python3 --with quilt $@
+	dh --with python3 --with quilt,systemd $@

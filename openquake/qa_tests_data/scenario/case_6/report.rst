@@ -3,8 +3,8 @@ Scenario QA Test with Spatial Correlation - Case 2
 
 ============== ===================
 checksum32     2,135,006,889      
-date           2018-06-26T14:57:01
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:57:04
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 2, num_levels = 1
@@ -54,11 +54,17 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008(): [0]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Slowest operations
 ------------------
-======================= ======== ========= ======
-operation               time_sec memory_mb counts
-======================= ======== ========= ======
-computing gmfs          0.02501  0.25000   1     
-reading site collection 0.00686  0.0       1     
-======================= ======== ========= ======
+========= ======== ========= ======
+operation time_sec memory_mb counts
+========= ======== ========= ======
+========= ======== ========= ======

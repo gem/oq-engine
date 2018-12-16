@@ -24,25 +24,3 @@ set -e
 . /usr/share/debconf/confmodule
 
 GEM_DEB_PACKAGE="python3-oq-engine-worker"
-
-# setup supervisord
-# - if supervisord is running:
-#   - reload config and start the dbserver and the webui
-# - if supervisord is NOT running:
-#   - make sure it's started during boot
-#   - start it
-
-echo "Setup supervisord"
-
-if pgrep supervisord 2>&1 > /dev/null; then
-    supervisorctl reload
-else
-    if command -v systemctl 2>&1 > /dev/null; then
-        systemctl enable supervisor.service
-        systemctl start supervisor.service
-    else
-        update-rc.d supervisor defaults || true
-        /etc/init.d/supervisor start
-    fi
-fi
-

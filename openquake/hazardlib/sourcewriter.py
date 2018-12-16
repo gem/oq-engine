@@ -560,10 +560,11 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.srcs_weights:
-        attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
     if source_group.grp_probability is not None:
         attrs['grp_probability'] = source_group.grp_probability
+    srcs_weights = [getattr(src, 'mutex_weight', 1) for src in source_group]
+    if set(srcs_weights) != {1}:
+        attrs['srcs_weights'] = ' '.join(map(str, srcs_weights))
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 

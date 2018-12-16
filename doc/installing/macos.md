@@ -2,7 +2,7 @@
 
 The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution uses Python 3.5 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-354/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
+- this distribution uses Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-366/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
     - pip, numpy, scipy, h5py, django, shapely, rtree and few more
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
@@ -13,24 +13,24 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
 
 Requirements are:
 
-- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), or macOS 10.13 (High Sierra)
+- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), macOS 10.13 (High Sierra), or macOS 10.14 (Mojave)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
-- Python 3.5 (from https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg)
+- Python 3.6 from [python.org](https://python.org)
 
-Before you can start you must have downloaded and installed [Python 3.5](https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg).
+Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.9.pkg).
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.1.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.2.0-1.run using any browser
 
 From the Terminal app (or using iTerm) run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-3.1.0-1.run
-./openquake-setup-macos-3.1.0-1.run
+chmod +x openquake-setup-macos-3.2.0-1.run
+./openquake-setup-macos-3.2.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 

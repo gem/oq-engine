@@ -67,7 +67,7 @@ There are two major advantages when using `MultiPointSources`:
 At computation time MultiPointSources are split into PointSources and are
 indistinguishable from those. The serialization is the same as for other
 source typologies (call `write_source_model(fname, [mps])` or
-`nrml.parse(fname, sourceconverter)`) and in XML a `multiPointSource`
+`nrml.to_python(fname, sourceconverter)`) and in XML a `multiPointSource`
 looks like this::
 
 ```xml

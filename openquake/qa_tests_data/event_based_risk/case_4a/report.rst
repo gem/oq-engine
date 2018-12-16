@@ -3,8 +3,8 @@ Event Based Hazard
 
 ============== ===================
 checksum32     2,621,435,700      
-date           2018-06-26T14:57:13
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:57:45
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 11
@@ -38,42 +38,9 @@ exposure                 `exposure_model.xml <exposure_model.xml>`_
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                              
 job_ini                  `job_hazard.ini <job_hazard.ini>`_                                        
 site_model               `site_model.xml <site_model.xml>`_                                        
-source                   `source_model.xml <source_model.xml>`_                                    
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_              
 structural_vulnerability `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_
 ======================== ==========================================================================
-
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
-========= ======= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ================ ========= ========== ==========
-grp_id gsims            distances siteparams ruptparams
-====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       mag rake  
-====== ================ ========= ========== ==========
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 483          483         
-================ ====== ==================== ============ ============
 
 Exposure model
 --------------
@@ -91,21 +58,21 @@ Wood     1.00000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= ========= ======
-source_id source_class              num_ruptures calc_time split_time num_sites num_split events
-========= ========================= ============ ========= ========== ========= ========= ======
-3         SimpleFaultSource         24           0.38203   0.0        1.00000   15        9     
-1         CharacteristicFaultSource 1            0.00129   0.0        1.00000   1         0     
-========= ========================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         X    0     396   1            0.0       3.052E-05  0.0       1         0.0   
+0      3         S    396   398   482          0.0       0.00577    0.0       15        0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-========================= ========= ======
-source_class              calc_time counts
-========================= ========= ======
-CharacteristicFaultSource 0.00129   1     
-SimpleFaultSource         0.38203   1     
-========================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.0       1     
+X    0.0       1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -113,38 +80,26 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00623 0.00205 0.00258 0.00936 16       
-compute_hazard     0.07228 0.01358 0.04744 0.08445 6        
-================== ======= ======= ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.01755 NaN    0.01755 0.01755 1      
+split_filter       0.03235 NaN    0.03235 0.03235 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============== ================================================================================================= ========
-task           sent                                                                                              received
-RtreeFilter    srcs=30.22 KB monitor=5.03 KB srcfilter=4.36 KB                                                   30.86 KB
-compute_hazard sources_or_ruptures=24.06 KB param=15.8 KB monitor=1.89 KB rlzs_by_gsim=1.7 KB src_filter=1.44 KB 14.55 KB
-============== ================================================================================================= ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=388 B fnames=114 B            11.77 KB
+split_filter       srcs=11.42 KB srcfilter=253 B seed=14 B 18.55 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_hazard           0.43366   7.68359   6     
-building ruptures              0.41849   7.01562   6     
-managing sources               0.11952   0.00391   1     
-total prefilter                0.09962   4.74219   16    
-reading composite source model 0.01580   0.0       1     
-saving ruptures                0.01053   0.00391   6     
-unpickling prefilter           0.00451   0.0       16    
-store source_info              0.00420   0.0       1     
-making contexts                0.00201   0.0       5     
-reading site collection        0.00190   0.0       1     
-GmfGetter.init                 0.00183   0.15625   6     
-unpickling compute_hazard      0.00164   0.0       6     
-aggregating hcurves            0.00148   0.0       6     
-reading exposure               5.922E-04 0.0       1     
-splitting sources              4.907E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total split_filter       0.03235   0.0       1     
+total read_source_models 0.01755   0.0       1     
+reading exposure         5.083E-04 0.0       1     
+======================== ========= ========= ======

@@ -20,8 +20,8 @@
 Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 :class:`PlanarSurface`.
 """
+import logging
 import numpy
-
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -30,15 +30,6 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.slots import with_slots
-
-
-def _corners(array):
-    # convert a composite array with fields lon, lat, depth into four Points
-    # [topleft, topright, bottomleft, bottomright]
-    points = []
-    for p in array:
-        points.append(Point(p['lon'], p['lat'], p['depth']))
-    return points
 
 
 @with_slots
@@ -99,14 +90,14 @@ class PlanarSurface(BaseSurface):
         return Mesh(self.corner_lons, self.corner_lats, self.corner_depths)
 
     def __init__(self, strike, dip,
-                 top_left, top_right, bottom_right, bottom_left):
-        if not (top_left.depth == top_right.depth and
-                bottom_left.depth == bottom_right.depth):
-            raise ValueError("top and bottom edges must be parallel "
-                             "to the earth surface")
-
-        NodalPlane.check_dip(dip)
-        NodalPlane.check_strike(strike)
+                 top_left, top_right, bottom_right, bottom_left, check=True):
+        if check:
+            if not (top_left.depth == top_right.depth and
+                    bottom_left.depth == bottom_right.depth):
+                raise ValueError("top and bottom edges must be parallel "
+                                 "to the earth surface")
+            NodalPlane.check_dip(dip)
+            NodalPlane.check_strike(strike)
         self.dip = dip
         self.strike = strike
 
@@ -124,6 +115,7 @@ class PlanarSurface(BaseSurface):
         ])
         # now set the attributes normal, d, uv1, uv2, zero_zero
         self._init_plane()
+
         # now we can check surface for validity
         dists, xx, yy = self._project(self.mesh.xyz)
         # "length" of the rupture is measured along the top edge
@@ -132,16 +124,18 @@ class PlanarSurface(BaseSurface):
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         self.width = (width1 + width2) / 2.0
         self.length = (length1 + length2) / 2.0
-        # calculate the imperfect rectangle tolerance
-        # relative to surface's area
-        tolerance = (self.width * self.length *
-                     self.IMPERFECT_RECTANGLE_TOLERANCE)
-        if numpy.max(numpy.abs(dists)) > tolerance:
-            raise ValueError("corner points do not lie on the same plane")
-        if length2 < 0:
-            raise ValueError("corners are in the wrong order")
-        if abs(length1 - length2) > tolerance:
-            raise ValueError("top and bottom edges have different lengths")
+
+        if check:
+            # calculate the imperfect rectangle tolerance
+            # relative to surface's area
+            tolerance = (self.width * self.length *
+                         self.IMPERFECT_RECTANGLE_TOLERANCE)
+            if numpy.max(numpy.abs(dists)) > tolerance:
+                logging.warn("corner points do not lie on the same plane")
+            if length2 < 0:
+                raise ValueError("corners are in the wrong order")
+            if abs(length1 - length2) > tolerance:
+                raise ValueError("top and bottom edges have different lengths")
 
     @classmethod
     def from_corner_points(cls, top_left, top_right,
@@ -174,16 +168,20 @@ class PlanarSurface(BaseSurface):
         return self
 
     @classmethod
-    def from_array(cls, array):
+    def from_array(cls, array3N):
         """
-        :param array: a composite array with fields (lon, lat, depth)
+        :param array3N: an array of shape (3, N)
         :returns: a :class:`PlanarSurface` instance
         """
-        tl, tr, bl, br = _corners(array)
+        tl, tr, bl, br = [Point(*p) for p in array3N.T]
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
-        self = cls(strike, dip, tl, tr, br, bl)
+        # this is used when the planar surface geometry comes from an array
+        # in the datastore, which means it is correct and there is no need to
+        # check it again; also the check would fail because of a bug, see
+        # https://github.com/gem/oq-engine/issues/3392
+        self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
     def _init_plane(self):

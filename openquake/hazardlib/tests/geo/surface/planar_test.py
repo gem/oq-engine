@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
 import numpy
 
 from openquake.hazardlib.geo import Point
@@ -48,12 +47,6 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
         msg = 'corners are in the wrong order'
-        self.assert_failed_creation(0, 90, corners, ValueError, msg)
-
-    def test_corners_not_on_the_same_plane(self):
-        corners = [Point(0, -1, 1), Point(0, 1, 1),
-                   Point(-0.3, 1, 2), Point(0.3, -1, 2)]
-        msg = 'corner points do not lie on the same plane'
         self.assert_failed_creation(0, 90, corners, ValueError, msg)
 
     def test_top_edge_shorter_than_bottom_edge(self):

@@ -21,12 +21,10 @@ Package :mod:`openquake.hazardlib.gsim` contains base and specific
 implementations of ground shaking intensity models. See
 :mod:`openquake.hazardlib.gsim.base`.
 """
-import os
-import inspect
-import importlib
-from collections import OrderedDict
-from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, GroundShakingIntensityModel)
+from openquake.baselib.general import import_all
+from openquake.hazardlib.gsim.base import registry
+
+import_all('openquake.hazardlib.gsim')
 
 
 def get_available_gsims():
@@ -34,15 +32,4 @@ def get_available_gsims():
     Return an ordered dictionary with the available GSIM classes, keyed
     by class name.
     '''
-    gsims = {}
-    for fname in os.listdir(os.path.dirname(__file__)):
-        if fname.endswith('.py'):
-            modname, _ext = os.path.splitext(fname)
-            mod = importlib.import_module(
-                'openquake.hazardlib.gsim.' + modname)
-            for cls in mod.__dict__.values():
-                if inspect.isclass(cls) and issubclass(
-                    cls, GroundShakingIntensityModel) and cls not in (
-                        GroundShakingIntensityModel, GMPE, IPE):
-                    gsims[cls.__name__] = cls
-    return OrderedDict((k, gsims[k]) for k in sorted(gsims))
+    return dict(sorted(registry.items()))

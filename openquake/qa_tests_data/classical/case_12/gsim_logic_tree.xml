@@ -20,8 +20,10 @@
                     applyToTectonicRegionType="stable continental">
 
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  <uncertaintyModel gmpe_name="BooreAtkinson2008">
+                    NRCan15SiteTerm
+                  </uncertaintyModel>
+                  <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
 

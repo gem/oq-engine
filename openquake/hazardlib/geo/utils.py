@@ -29,10 +29,12 @@ import numpy
 from scipy.spatial import cKDTree
 import shapely.geometry
 
-from openquake.hazardlib.geo import geodetic
+from openquake.baselib.hdf5 import vstr
 from openquake.baselib.slots import with_slots
+from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
+F32 = numpy.float32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
@@ -103,6 +105,7 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict warn filter', mode
         dic = {}
+        discarded = []
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
@@ -111,10 +114,12 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warn('Association to %d km from site (%s %s)',
-                             int(distance), lon, lat)
+                logging.warn(
+                    'The closest vs30 site (%.1f %.1f) is distant more than %d'
+                    ' km from site #%d (%.1f %.1f)', obj['lon'], obj['lat'],
+                    int(distance), sid, lon, lat)
             elif mode == 'filter':
-                pass  # do not associate
+                discarded.append(obj)
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
@@ -123,9 +128,10 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
         return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]))
+                numpy.array([dic[sid] for sid in sorted(dic)]),
+                discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -133,11 +139,15 @@ class _GeographicObjects(object):
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
+        :param asset_ref: ID of the assets are a list of strings
         :returns: (filtered site collection, filtered assets by site)
         """
-        assert mode in 'strict warn filter', mode
+        assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
+        asset_dt = numpy.dtype(
+            [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
+        discarded = []
         for assets in assets_by_site:
             lon, lat = assets[0].location
             obj, distance = self.get_closest(lon, lat)
@@ -148,9 +158,8 @@ class _GeographicObjects(object):
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
-            elif mode == 'warn':
-                logging.warn('Discarding %s, lon=%.5f, lat=%.5f',
-                             assets, lon, lat)
+            else:
+                discarded.extend(assets)
         sids = sorted(assets_by_sid)
         if not sids:
             raise SiteAssociationError(
@@ -159,10 +168,13 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        return self.objects.filtered(sids), assets_by_site
+        data = [(asset_refs[asset.ordinal],) + asset.location
+                for asset in discarded]
+        discarded = numpy.array(data, asset_dt)
+        return self.objects.filtered(sids), assets_by_site, discarded
 
 
-def assoc(objects, sitecol, assoc_dist, mode):
+def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     """
     Associate geographic objects to a site collection.
 
@@ -180,7 +192,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
         # objects is a geo array with lon, lat fields or a mesh-like instance
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
+        return _GeographicObjects(sitecol).assoc2(
+            objects, assoc_dist, mode, asset_refs)
 
 
 def clean_points(points):
@@ -253,13 +266,26 @@ def get_longitudinal_extent(lon1, lon2):
 
 def get_bounding_box(obj, maxdist):
     """
-    Return the dilated bounding box of a geometric object
+    Return the dilated bounding box of a geometric object.
+
+    :param obj:
+        an object with method .get_bounding_box, or with an attribute .polygon
+        or a list of locations
+    :param maxdist: maximum distance in km
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)
-    bbox = obj.polygon.get_bbox()
-    a1 = maxdist * KM_TO_DEGREES
-    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    elif hasattr(obj, 'polygon'):
+        bbox = obj.polygon.get_bbox()
+    else:  # assume locations
+        lons = numpy.array([loc.longitude for loc in obj])
+        lats = numpy.array([loc.latitude for loc in obj])
+        min_lon, max_lon = lons.min(), lons.max()
+        if cross_idl(min_lon, max_lon):
+            lons %= 360
+        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+    a1 = min(maxdist * KM_TO_DEGREES, 90)
+    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 

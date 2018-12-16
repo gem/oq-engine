@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -45,12 +44,8 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-# -*- coding: utf-8 -*-
-import abc
-from decimal import Decimal
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib import mfd
 from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994

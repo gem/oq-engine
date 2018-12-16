@@ -15,21 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
 import sys
+import time
 import operator
 import collections
 from contextlib import contextmanager
 import numpy
-try:
-    import rtree
-except ImportError:
-    rtree = None
+import rtree
 from scipy.interpolate import interp1d
+
 from openquake.baselib import hdf5, config
-from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import gettemp, groupby
+from openquake.baselib.general import gettemp
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, within, fix_lon, get_bounding_box)
@@ -189,18 +185,69 @@ class IntegrationDistance(collections.Mapping):
         return repr(self.dic)
 
 
-def prefilter(srcs, srcfilter, monitor):
+def split_sources(srcs):
     """
-    :returns: a dict src_group_id -> sources
+    :param srcs: sources
+    :returns: a pair (split sources, split time)
     """
-    return groupby(srcfilter.filter(srcs), src_group_id)
+    from openquake.hazardlib.source import splittable
+    sources = []
+    split_time = {}  # src.id -> time
+    for src in srcs:
+        t0 = time.time()
+        mag_a, mag_b = src.get_min_max_mag()
+        min_mag = src.min_mag
+        if mag_b < min_mag:  # discard the source completely
+            continue
+        has_serial = hasattr(src, 'serial')
+        if has_serial:
+            src.serial = numpy.arange(
+                src.serial, src.serial + src.num_ruptures)
+        if not splittable(src):
+            sources.append(src)
+            split_time[src.id] = time.time() - t0
+            continue
+        if min_mag:
+            splits = []
+            for s in src:
+                s.min_mag = min_mag
+                mag_a, mag_b = s.get_min_max_mag()
+                if mag_b < min_mag:
+                    continue
+                s.num_ruptures = s.count_ruptures()
+                if s.num_ruptures:
+                    splits.append(s)
+        else:
+            splits = list(src)
+        split_time[src.id] = time.time() - t0
+        sources.extend(splits)
+        has_samples = hasattr(src, 'samples')
+        if len(splits) > 1:
+            start = 0
+            for i, split in enumerate(splits):
+                split.source_id = '%s:%s' % (src.source_id, i)
+                split.src_group_id = src.src_group_id
+                split.id = src.id
+                if has_serial:
+                    nr = split.num_ruptures
+                    split.serial = src.serial[start:start + nr]
+                    start += nr
+                if has_samples:
+                    split.samples = src.samples
+        elif splits:  # single source
+            splits[0].id = src.id
+            if has_serial:
+                splits[0].serial = src.serial
+            if has_samples:
+                splits[0].samples = src.samples
+    return sources, split_time
 
 
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources,
     i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .pfilter method
+    within the given maximum distance. There is also a .new method
     that filters the sources in parallel and returns a dictionary
     src_group_id -> filtered sources.
     Filter the sources by using `self.sitecol.within_bbox` which is
@@ -209,22 +256,21 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, hdf5path=None):
         if sitecol is not None and len(sitecol) < len(sitecol.complete):
             raise ValueError('%s is not complete!' % sitecol)
+        elif sitecol is None:
+            integration_distance = {}
         self.hdf5path = hdf5path
-        if hdf5path and (
-                config.distribution.oq_distribute in ('no', 'processpool') or
-                config.directory.shared_dir):  # store the sitecol
-            with hdf5.File(hdf5path, 'w') as h5:
-                h5['sitecol'] = sitecol
-        else:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
         self.integration_distance = (
             IntegrationDistance(integration_distance)
             if isinstance(integration_distance, dict)
             else integration_distance)
-        if os.environ.get('OQ_DISTRIBUTE') == 'no':
-            self.distribute = 'no'
-        else:
-            self.distribute = 'processpool'
+        if hdf5path and (
+                config.distribution.oq_distribute in ('no', 'processpool') or
+                config.directory.shared_dir):  # store the sitecol
+            with hdf5.File(hdf5path, 'w') as h5:
+                if sitecol is not None:
+                    h5['sitecol'] = sitecol
+        else:  # keep the sitecol in memory
+            self.__dict__['sitecol'] = sitecol
 
     @property
     def sitecol(self):
@@ -234,7 +280,7 @@ class SourceFilter(object):
         if 'sitecol' in vars(self):
             return self.__dict__['sitecol']
         with hdf5.File(self.hdf5path, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5['sitecol']
+            self.__dict__['sitecol'] = sc = h5.get('sitecol')
         return sc
 
     def get_rectangle(self, src):
@@ -280,6 +326,20 @@ class SourceFilter(object):
             bbs.append(bb)
         return bbs
 
+    def get_sids_within(self, bbox, trt, mag):
+        """
+        :returns:
+           the site indices within the bounding box enlarged by the integration
+           distance for the given TRT and magnitude
+        """
+        if not self.integration_distance:  # do not filter
+            return self.sitecol.sids
+        maxdist = self.integration_distance(trt, mag)
+        a1 = min(maxdist * KM_TO_DEGREES, 90)
+        a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+        bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
+        return self.sitecol.within_bbox(bb)
+
     def filter(self, sources):
         """
         :param sources: a sequence of sources
@@ -294,24 +354,6 @@ class SourceFilter(object):
             if len(indices):
                 src.indices = indices
                 yield src
-
-    def pfilter(self, sources, monitor):
-        """
-        Filter the sources in parallel by using Starmap.apply
-
-        :param sources: a sequence of sources
-        :param monitor: a Monitor instance
-        :returns: a dictionary src_group_id -> sources
-        """
-        sources_by_grp = Starmap.apply(
-            prefilter, (sources, self, monitor), distribute=self.distribute,
-            name=self.__class__.__name__).reduce()
-        Starmap.shutdown()  # close the processpool
-        Starmap.init()  # reopen it when necessary
-        # avoid task ordering issues
-        for sources in sources_by_grp.values():
-            sources.sort(key=operator.attrgetter('source_id'))
-        return sources_by_grp
 
 
 class RtreeFilter(SourceFilter):
@@ -341,14 +383,13 @@ class RtreeFilter(SourceFilter):
         Integration distance dictionary (TRT -> distance in km)
     """
     def __init__(self, sitecol, integration_distance, hdf5path=None):
-        if rtree is None:
-            raise ImportError('rtree')
         super().__init__(sitecol, integration_distance, hdf5path)
         self.indexpath = gettemp()
-        lonlats = zip(sitecol.lons, sitecol.lats)
         index = rtree.index.Index(self.indexpath)
-        for i, (lon, lat) in enumerate(lonlats):
-            index.insert(i, (lon, lat, lon, lat))
+        if sitecol:
+            lonlats = zip(sitecol.lons, sitecol.lats)
+            for i, (lon, lat) in enumerate(lonlats):
+                index.insert(i, (lon, lat, lon, lat))
         index.close()
 
     def filter(self, sources):
@@ -356,6 +397,9 @@ class RtreeFilter(SourceFilter):
         :param sources: a sequence of sources
         :yields: rtree-filtered sources
         """
+        if self.sitecol is None:  # do not filter
+            yield from sources
+            return
         index = rtree.index.Index(self.indexpath)
         try:
             for src in sources:

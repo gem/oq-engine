@@ -45,8 +45,6 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-#!/usr/bin/env python
-
 '''
 Module openquake.hmtk.plotting.seismicity.completeness.simple_completeness is a graphical
 function for estimating the completeness period of magnitude intervals

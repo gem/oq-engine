@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -23,7 +24,7 @@ from openquake.calculators.getters import PmapGetter
 
 
 @sap.Script
-def compare_mean_curves(calc_ref, calc, nsigma=1):
+def compare_mean_curves(calc_ref, calc, nsigma=3):
     """
     Compare the hazard curves coming from two different calculations.
     """
@@ -52,13 +53,18 @@ def compare_mean_curves(calc_ref, calc, nsigma=1):
         mean_ref, std_ref = pmap_ref[site_id_ref[lonlat]].array.T
         err = numpy.sqrt(std**2 + std_ref**2)
         for imt in imtls:
-            sl = imtls.slicedic[imt]
+            sl = imtls(imt)
             ok = (numpy.abs(mean[sl] - mean_ref[sl]) < nsigma * err[sl]).all()
             if not ok:
                 md = (numpy.abs(mean[sl] - mean_ref[sl])).max()
                 plt.title('point=%s, imt=%s, maxdiff=%.2e' % (lonlat, imt, md))
-                plt.loglog(imtls[imt], mean_ref[sl], label=str(calc_ref))
-                plt.loglog(imtls[imt], mean[sl], label=str(calc))
+                plt.loglog(imtls[imt], mean_ref[sl] + std_ref[sl],
+                           label=str(calc_ref), color='black')
+                plt.loglog(imtls[imt], mean_ref[sl] - std_ref[sl],
+                           color='black')
+                plt.loglog(imtls[imt], mean[sl] + std[sl], label=str(calc),
+                           color='red')
+                plt.loglog(imtls[imt], mean[sl] - std[sl], color='red')
                 plt.legend()
                 plt.show()
 

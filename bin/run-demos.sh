@@ -14,22 +14,25 @@ if [ ! -d "$1" ]; then
 fi
 
 for ini in $(find $1 -name job.ini | sort); do
-    oq engine --run $ini
+    oq engine --run $ini --exports xml,hdf5
 done
 
-# test generation of statistical hazard curves from previous calculation;
-# -7 is LogicTreeCase3ClassicalPSHA; FIXME: this is fragile
-oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --hc -7
+# test the --eos option
+oq engine --eos -1 /tmp
+
+# test generation of statistical hazard curves from previous calculation
+oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-hazard
 
 # do something with the generated data
-oq extract hazard/rlzs
+oq extract hazard/rlzs -1 local
 oq engine --lhc
 MPLBACKEND=Agg oq plot -1
 MPLBACKEND=Agg oq plot_uhs -1
 MPLBACKEND=Agg oq plot_sites -1
+MPLBACKEND=Agg oq plot_memory
 
 # fake a failed/executing calculation to check that it is not exported
-oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini
+oq engine --run $1/hazard/AreaSourceClassicalPSHA/job.ini --config-file openquake/engine/openquake.cfg
 oq db set_status -1 executing
 
 # display the calculations

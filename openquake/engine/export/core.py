@@ -55,6 +55,7 @@ def export_from_db(output_key, calc_id, datadir, target):
     :param calc_id: calculation ID
     :param datadir: directory containing the datastore
     :param target: directory, temporary when called from the engine server
+    :returns: the list of exported path names
     """
     makedirs(target)
     export.from_db = True
@@ -70,21 +71,7 @@ def export_from_db(output_key, calc_id, datadir, target):
             raise DataStoreExportError(
                 'Could not export %s in %s%s\n%s%s' %
                 (output_key + (version, tb_str, err)))
-        if not exported:
-            raise DataStoreExportError(
-                'Nothing to export for %s' % ds_key)
-        elif len(exported) > 1:
-            # NB: I am hiding the archive by starting its name with a '.',
-            # to avoid confusing the users, since the unzip files are
-            # already in the target directory; the archive is used internally
-            # by the WebUI, so it must be there; it would be nice not to
-            # generate it when not using the Web UI, but I will leave that
-            # feature for after the removal of the old calculators
-            archname = '.' + ds_key + '-' + fmt + '.zip'
-            general.zipfiles(exported, os.path.join(target, archname))
-            return os.path.join(target, archname)
-        else:  # single file
-            return exported[0]
+        return exported
 
 
 #: Used to separate node labels in a logic tree path
@@ -136,12 +123,4 @@ def export_output(dskey, calc_id, datadir, target_dir, export_types):
     if export_types and not outkey:
         yield 'There is no exporter for %s, %s' % (dskey, export_types)
         return
-    the_file = export_from_db(outkey, calc_id, datadir, target_dir)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        yield('Files exported:')
-        for fname in fnames:
-            yield(os.path.join(dname, fname))
-    else:
-        yield('File exported: %s' % the_file)
+    yield from export_from_db(outkey, calc_id, datadir, target_dir)

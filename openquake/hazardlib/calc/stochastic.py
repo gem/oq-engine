@@ -22,28 +22,37 @@
 """
 import sys
 import time
-import operator
-import collections
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc import filters
+from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 
+TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
 F64 = numpy.float64
-U64 = numpy.uint64
-U32 = numpy.uint32
 U16 = numpy.uint16
-event_dt = numpy.dtype([('eid', U64), ('grp_id', U16), ('ses', U32),
-                        ('sample', U32)])
+U32 = numpy.uint32
+U64 = numpy.uint64
+U8 = numpy.uint8
+I32 = numpy.int32
+F32 = numpy.float32
+MAX_RUPTURES = 1000
+
+
+def source_site_noop_filter(srcs):
+    for src in srcs:
+        yield src, None
+
+
+source_site_noop_filter.integration_distance = {}
 
 
 # this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(
-        sources, source_site_filter=filters.source_site_noop_filter):
+def stochastic_event_set(sources, source_site_filter=source_site_noop_filter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -72,7 +81,8 @@ def stochastic_event_set(
     for source, s_sites in source_site_filter(sources):
         try:
             for rupture in source.iter_ruptures():
-                for i in range(rupture.sample_number_of_occurrences()):
+                [n_occ] = rupture.sample_number_of_occurrences()
+                for _ in range(n_occ):
                     yield rupture
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -83,135 +93,92 @@ def stochastic_event_set(
 
 # ######################## rupture calculator ############################ #
 
-def set_eids(ebruptures):
-    """
-    Set event IDs on the given list of ebruptures.
-
-    :param ebruptures: a non-empty list of ruptures with the same grp_id
-    :returns: the event IDs
-    """
-    if not ebruptures:
-        return numpy.zeros(0)
-    all_eids = []
-    for ebr in ebruptures:
-        assert ebr.multiplicity < TWO32, ebr.multiplicity
-        eids = U64(TWO32 * ebr.serial) + numpy.arange(
-            ebr.multiplicity, dtype=U64)
-        ebr.events['eid'] = eids
-        all_eids.extend(eids)
-    return numpy.array(all_eids)
+rupture_dt = numpy.dtype([
+    ('serial', U32), ('srcidx', U16), ('grp_id', U16), ('code', U8),
+    ('n_occ', U16), ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+    ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
+    ('hypo', (F32, 3)), ('gidx1', U32), ('gidx2', U32),
+    ('sy', U16), ('sz', U16)])
 
 
-def sample_ruptures(group, src_filter=filters.source_site_noop_filter,
-                    gsims=(), param=(), monitor=Monitor()):
+# this is really fast
+def get_rup_array(ebruptures):
     """
-    :param group:
-        a SourceGroup or a sequence of sources of the same group
-    :param src_filter:
-        a source site filter (default noop filter)
-    :param gsims:
-        a list of GSIMs for the current tectonic region model
+    Convert a list of EBRuptures into a numpy composite array, by filtering
+    out the ruptures far away from every site
+    """
+    if not BaseRupture._code:
+        BaseRupture.init()  # initialize rupture codes
+
+    rups = []
+    geoms = []
+    nbytes = 0
+    offset = 0
+    for ebrupture in ebruptures:
+        rup = ebrupture.rupture
+        mesh = surface_to_array(rup.surface)
+        sy, sz = mesh.shape[1:]  # sanity checks
+        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
+        assert sz < TWO16, 'The rupture mesh spacing is too small'
+        points = mesh.reshape(3, -1).T   # shape (n, 3)
+        minlon = points[:, 0].min()
+        minlat = points[:, 1].min()
+        maxlon = points[:, 0].max()
+        maxlat = points[:, 1].max()
+        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        rate = getattr(rup, 'occurrence_rate', numpy.nan)
+        tup = (ebrupture.serial, ebrupture.srcidx, ebrupture.grp_id,
+               rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
+               minlon, minlat, maxlon, maxlat,
+               hypo, offset, offset + len(points), sy, sz)
+        offset += len(points)
+        rups.append(tup)
+        geoms.append(numpy.array([tuple(p) for p in points], point3d))
+        nbytes += rupture_dt.itemsize + mesh.nbytes
+    if not rups:
+        return ()
+    dic = dict(geom=numpy.concatenate(geoms), nbytes=nbytes)
+    # TODO: PMFs for nonparametric ruptures are not converted
+    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
+# NB: there is no filtering of the ruptures: the sources are supposed to
+# have been prefiltered
+def sample_ruptures(sources, param, monitor=Monitor()):
+    """
+    :param sources:
+        a sequence of (prefiltered) sources of the same group
     :param param:
-        a dictionary of additional parameters (by default
-        ses_per_logic_tree_path=1,  samples=1, seed=42, filter_distance=1000)
+        a dictionary of additional parameters including
+        ses_per_logic_tree_path
     :param monitor:
         monitor instance
-    :returns:
-        a dictionary with eb_ruptures, num_events, num_ruptures, calc_times
+    :yields:
+        dictionaries with keys rup_array, calc_times, eff_ruptures
     """
-    if not param:
-        param = dict(ses_per_logic_tree_path=1, samples=1, seed=42,
-                     filter_distance=1000)
-    if getattr(group, 'src_interdep', None) == 'mutex':
-        prob = {src: sw for src, sw in zip(group, group.srcs_weights)}
-    else:
-        prob = {src: 1 for src in group}
-    eb_ruptures = []
-    calc_times = []
-    rup_mon = monitor('making contexts', measuremem=False)
+    # AccumDict of arrays with 3 elements weight, nsites, calc_time
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Compute and save stochastic event sets
-    num_ruptures = 0
-    eids = numpy.zeros(0)
-    cmaker = ContextMaker(gsims, src_filter.integration_distance,
-                          param['filter_distance'], monitor)
-    for src, s_sites in src_filter(group):
+    num_ses = param['ses_per_logic_tree_path']
+    eff_ruptures = 0
+    grp_id = sources[0].src_group_id
+    eb_ruptures = []
+    ir_mon = monitor('iter_ruptures', measuremem=False)
+    for src in sources:
         t0 = time.time()
-        num_ruptures += src.num_ruptures
-        num_occ_by_rup = _sample_ruptures(
-            src, prob[src], param['ses_per_logic_tree_path'], param['samples'],
-            param['seed'])
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur, i.e.
-        # to call sample_ruptures *before* the filtering
-        for ebr in _build_eb_ruptures(
-                src, num_occ_by_rup, cmaker, s_sites, param['seed'], rup_mon):
+        if len(eb_ruptures) > MAX_RUPTURES:
+            yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                            calc_times={}, eff_ruptures={})
+            eb_ruptures.clear()
+        samples = getattr(src, 'samples', 1)
+        n_occ = 0
+        for rup, n_occ in src.sample_ruptures(samples * num_ses, ir_mon):
+            ebr = EBRupture(rup, src.id, grp_id, n_occ, samples)
             eb_ruptures.append(ebr)
-        eids = set_eids(eb_ruptures)
-        src_id = src.source_id.split(':', 1)[0]
+            n_occ += ebr.n_occ
+        eff_ruptures += src.num_ruptures
         dt = time.time() - t0
-        calc_times.append((src_id, src.nsites, eids, dt))
-    dic = dict(eb_ruptures=eb_ruptures, num_events=len(eids),
-               calc_times=calc_times, num_ruptures=num_ruptures)
-    return dic
-
-
-def _sample_ruptures(src, prob, num_ses, num_samples, seed):
-    """
-    Sample the ruptures contained in the given source.
-
-    :param src: a hazardlib source object
-    :param prob: a probability (1 for indep sources, < 1 for mutex sources)
-    :param num_ses: the number of Stochastic Event Sets to generate
-    :param num_samples: how many samples for the given source
-    :param seed: master seed from the job.ini file
-    :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
-    """
-    # the dictionary `num_occ_by_rup` contains a dictionary
-    # ses_id -> num_occurrences for each occurring rupture
-    num_occ_by_rup = collections.defaultdict(AccumDict)
-    # generating ruptures for the given source
-    for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = src.serial[rup_no] + seed
-        numpy.random.seed(rup.seed)
-        for sam_idx in range(num_samples):
-            for ses_idx in range(1, num_ses + 1):
-                # sampling of mutex sources if prob < 1
-                ok = numpy.random.random() < prob if prob < 1 else True
-                if ok:
-                    num_occ = rup.sample_number_of_occurrences()
-                    if num_occ:
-                        num_occ_by_rup[rup] += {(sam_idx, ses_idx): num_occ}
-        rup.rup_no = rup_no + 1
-    return num_occ_by_rup
-
-
-def _build_eb_ruptures(
-        src, num_occ_by_rup, cmaker, s_sites, random_seed, rup_mon):
-    """
-    Filter the ruptures stored in the dictionary num_occ_by_rup and
-    yield pairs (rupture, <list of associated EBRuptures>)
-    """
-    for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        rup.serial = rup.seed - random_seed + 1
-        if cmaker.maximum_distance:
-            with rup_mon:
-                try:
-                    rup.sctx, rup.dctx = cmaker.make_contexts(s_sites, rup)
-                    indices = rup.sctx.sids
-                except FarAwayRupture:
-                    # ignore ruptures which are far away
-                    del num_occ_by_rup[rup]  # save memory
-                    continue
-        else:
-            indices = ()
-
-        # creating EBRuptures
-        events = []
-        for (sam_idx, ses_idx), num_occ in sorted(
-                num_occ_by_rup[rup].items()):
-            for _ in range(num_occ):
-                # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in set_eids
-                events.append((0, src.src_group_id, ses_idx, sam_idx))
-        if events:
-            yield EBRupture(rup, indices, numpy.array(events, event_dt))
+        calc_times[src.id] += numpy.array([n_occ, src.nsites, dt])
+    yield AccumDict(rup_array=get_rup_array(eb_ruptures),
+                    calc_times=calc_times,
+                    eff_ruptures={grp_id: eff_ruptures})

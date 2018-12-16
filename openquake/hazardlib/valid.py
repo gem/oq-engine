@@ -23,12 +23,12 @@ Validation library for the engine, the desktop tools, and anything else
 import re
 import ast
 import logging
-import collections
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
-from openquake.hazardlib import imt, scalerel, gsim, pmf
+from openquake.hazardlib import imt, scalerel, gsim, pmf, site
+from openquake.hazardlib.gsim import registry
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -85,7 +85,7 @@ def gsim(value, **kwargs):
         gsim_class = GMPETable
     else:
         try:
-            gsim_class = GSIM[value]
+            gsim_class = registry[value]
         except KeyError:
             raise ValueError('Unknown GSIM: %s' % value)
     try:
@@ -167,6 +167,7 @@ class ChoiceCI(object):
                              value, self.choices))
         return value
 
+
 category = ChoiceCI('population', 'buildings')
 
 
@@ -185,6 +186,7 @@ class Choices(Choice):
                 raise ValueError("'%s' is not a valid choice in %s" % (
                     val, self.choices))
         return tuple(values)
+
 
 export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
@@ -210,7 +212,7 @@ def hazard_id(value):
         return ()
     try:
         return tuple(map(int, value.split(',')))
-    except:
+    except Exception:
         raise ValueError('Invalid hazard_id %r' % value)
 
 
@@ -259,7 +261,8 @@ class SimpleId(object):
         raise ValueError(
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
-MAX_ID_LENGTH = 60
+
+MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
@@ -270,14 +273,21 @@ nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
 
 
 class FloatRange(object):
-    def __init__(self, minrange, maxrange, name=''):
+    def __init__(self, minrange, maxrange, name='', accept=None):
         self.minrange = minrange
         self.maxrange = maxrange
         self.name = name
+        self.accept = accept
         self.__name__ = 'FloatRange[%s:%s]' % (minrange, maxrange)
 
     def __call__(self, value):
-        f = float_(value)
+        try:
+            f = float_(value)
+        except ValueError:  # passed a string
+            if value == self.accept:
+                return value
+            else:
+                raise
         if f > self.maxrange:
             raise ValueError("%s %s is bigger than the maximum (%s)" %
                              (self.name, f, self.maxrange))
@@ -285,6 +295,7 @@ class FloatRange(object):
             raise ValueError("%s %s is smaller than the minimum (%s)" %
                              (self.name, f, self.minrange))
         return f
+
 
 magnitude = FloatRange(0, 11, 'magnitude')
 
@@ -310,7 +321,7 @@ def utf8(value):
             return value.decode('utf-8')
         else:
             return value
-    except:
+    except Exception:
         raise ValueError('Not UTF-8: %r' % value)
 
 
@@ -351,7 +362,7 @@ def float_(value):
     """
     try:
         return float(value)
-    except:
+    except Exception:
         raise ValueError("'%s' is not a float" % value)
 
 
@@ -634,7 +645,7 @@ def intensity_measure_type(value):
     """
     try:
         return str(imt.from_string(value))
-    except:
+    except Exception:
         raise ValueError("Invalid IMT: '%s'" % value)
 
 
@@ -660,12 +671,13 @@ def intensity_measure_types(value):
     return imts
 
 
-def check_levels(imls, imt):
+def check_levels(imls, imt, min_iml=1E-10):
     """
     Raise a ValueError if the given levels are invalid.
 
     :param imls: a list of intensity measure and levels
     :param imt: the intensity measure type
+    :param min_iml: minimum intensity measure level (default 1E-10)
 
     >>> check_levels([0.1, 0.2], 'PGA')  # ok
     >>> check_levels([], 'PGA')
@@ -687,6 +699,11 @@ def check_levels(imls, imt):
         raise ValueError('The imls for %s are not sorted: %s' % (imt, imls))
     elif len(distinct(imls)) < len(imls):
         raise ValueError("Found duplicated levels for %s: %s" % (imt, imls))
+    elif imls[0] == 0 and imls[1] <= min_iml:  # apply the cutoff
+        raise ValueError("The min_iml %s=%s is larger than the second level "
+                         "for %s" % (imt, min_iml, imls))
+    elif imls[0] == 0 and imls[1] > min_iml:  # apply the cutoff
+        imls[0] = min_iml
 
 
 def intensity_measure_types_and_levels(value):
@@ -768,12 +785,12 @@ def dictionary(value):
     value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
-    except:
+    except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
     for key, val in dic.items():
         try:
             has_logscale = (val[0] == 'logscale')
-        except:  # no val[0]
+        except Exception:  # no val[0]
             continue
         if has_logscale:
             dic[key] = list(logscale(*val[1:]))
@@ -936,10 +953,10 @@ def point3d(value, lon, lat, depth):
     return longitude(lon), latitude(lat), positivefloat(depth)
 
 
-strike_range = FloatRange(0, 360)
-slip_range = strike_range
-dip_range = FloatRange(0, 90)
-rake_range = FloatRange(-180, 180)
+strike_range = FloatRange(0, 360, 'strike')
+slip_range = FloatRange(0, 360, 'slip')
+dip_range = FloatRange(0, 90, 'dip')
+rake_range = FloatRange(-180, 180, 'rake', 'undefined')
 
 
 def ab_values(value):
@@ -970,7 +987,7 @@ def integers(value):
         raise ValueError('Not a list of integers: %r' % value)
     try:
         ints = [int(float(v)) for v in values]
-    except:
+    except Exception:
         raise ValueError('Not a list of integers: %r' % value)
     return ints
 
@@ -1002,39 +1019,33 @@ def simple_slice(value):
         stop = ast.literal_eval(stop)
         if start is not None and stop is not None:
             assert start < stop
-    except:
+    except Exception:
         raise ValueError('invalid slice: %s' % value)
     return (start, stop)
 
-# ############################## site model ################################ #
-
-vs30_type = ChoiceCI('measured', 'inferred')
-
-SiteParam = collections.namedtuple(
-    'SiteParam', 'lon lat depth z1pt0 z2pt5 vs30measured vs30 backarc'.split())
-
-
-def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
-               depth=0, backarc="false"):
-    """
-    Used to convert a node like
-
-       <site lon="24.7125" lat="42.779167" vs30="462" vs30Type="inferred"
-       z1pt0="100" z2pt5="5" backarc="False"/>
-
-    into a 7-tuple (z1pt0, z2pt5, vs30measured, vs30, backarc, lon, lat)
-    """
-    return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
-                     vs30measured=vs30_type(vs30Type) == 'measured',
-                     vs30=positivefloat(vs30), lon=longitude(lon),
-                     lat=latitude(lat), depth=float_(depth),
-                     backarc=boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
 
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
+
+
+def site_param(dic):
+    """
+    Convert a dictionary site_model_param -> string into a dictionary
+    of valid casted site parameters.
+    """
+    new = {}
+    for name, val in dic.items():
+        if name == 'vs30Type':
+            # avoid "Unrecognized parameter vs30Type"
+            new['vs30measured'] = val == 'measured'
+        elif name not in site.site_param_dt:
+            raise ValueError('Unrecognized parameter %s' % name)
+        else:
+            new[name] = val
+    return new
 
 
 ###########################################################################
@@ -1198,3 +1209,30 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+
+class RjbEquivalent(object):
+    """
+    A class to compute the equivalent Rjb distance. Usage:
+
+    >> reqv = RjbEquivalent('lookup.hdf5')
+    >> reqv.get(repi_distances, mag)
+    """
+    def __init__(self, hdf5path):
+        with hdf5.File(hdf5path, 'r') as f:
+            self.repi = f['default/repi'].value  # shape D
+            self.mags = f['default/mags'].value  # shape M
+            self.reqv = f['default/reqv'].value  # shape D x M
+
+    def get(self, repi, mag):
+        """
+        :param repi: an array of epicentral distances in the range self.repi
+        :param mag: a magnitude in the range self.mags
+        :returns: an array of equivalent distances
+        """
+        mag_idx = numpy.abs(mag - self.mags).argmin()
+        dists = []
+        for dist in repi:
+            repi_idx = numpy.abs(dist - self.repi).argmin()
+            dists.append(self.reqv[repi_idx, mag_idx])
+        return numpy.array(dists)

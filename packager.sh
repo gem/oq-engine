@@ -42,7 +42,7 @@ set -e
 env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-python-deb|oq-python3.5|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
+GEM_DEPENDS="oq-python-deb|oq-python3.6|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -74,7 +74,6 @@ LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
 
 if [ "$LXC_VER" -lt 2 ]; then
     echo "LXC >= 2.0.0 is required." >&2
-    echo "Hint: LXC 2.0 is available for Trusty from backports."
     exit 1
 fi
 
@@ -87,7 +86,7 @@ NL="
 "
 TB="	"
 
-OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.5/dist-packages
+OPT_LIBS_PATH=/opt/openquake/lib/python3/dist-packages:/opt/openquake/lib/python3.6/dist-packages
 #
 #  functions
 
@@ -176,8 +175,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <trusty|xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (trusty, xenial or bionic),"
+    echo "    $0 [<-s|--serie> <xenial|bionic>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (xenial or bionic),"
     echo "           (default xenial)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
@@ -466,7 +465,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh "$lxc_ip" "tar xv"
 
-    ssh "$lxc_ip" "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
+    ssh "$lxc_ip" "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PATH=/opt/openquake/bin:\$PATH ; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
 
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
@@ -558,10 +557,10 @@ _pkgtest_innervm_run () {
             exit 1
         fi
 
-        # dbserver should be already started by supervisord. Let's have a check
+        # dbserver should be already started by systemd. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
         # the dbserver is alive
-        sleep 10; sudo /usr/bin/supervisorctl status
+        sleep 10; systemctl status openquake-dbserver
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
@@ -569,15 +568,13 @@ _pkgtest_innervm_run () {
         fi
 
         cd /usr/share/openquake/engine/demos
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/g' /etc/openquake/openquake.cfg
+        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/; s/multi_node = false/multi_node = true/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
-# FIXME: the big sleep below is a temporary workaround to avoid races.
-#        No better solution because we will abandon supervisord at all early
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
@@ -601,14 +598,13 @@ celery_wait() {
     return 1
 }
 
-sleep 30
-sudo supervisorctl status
-sudo supervisorctl start openquake-celery
+sudo systemctl status openquake-\\*
+sudo systemctl start openquake-celery
 
 celery_wait $GEM_MAXLOOP
 
         oq celery status
-        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1
+        oq engine --run risk/EventBasedRisk/job_hazard.ini && oq engine --run risk/EventBasedRisk/job_risk.ini --hc -1 || echo \"distribution with celery not supported without master and/or worker packages\"
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
@@ -820,7 +816,7 @@ devtest_run () {
         branch_cur="$branch"
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
+            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur\$" ; then
                 deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
                 found=1
                 break
@@ -928,7 +924,7 @@ builddoc_run () {
         branch_cur="$branch"
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
+            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur\$" ; then
                 deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
                 found=1
                 break
@@ -1145,7 +1141,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
+            if [ "$BUILD_UBUVER" != "xenial" -a "$BUILD_UBUVER" != "bionic" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
@@ -1218,7 +1214,7 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
-git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
+git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv ; rm -rf rpm)
 
 # NOTE: if in the future we need modules we need to execute the following commands
 #
@@ -1273,11 +1269,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
-        if [ "$dep" = "oq-libs" ]; then
-            sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
-        else
+
+        # if [ "$dep" = "oq-libs" ]; then
+        #     sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+        # else
             sed -i "s/\(${dep_pkg}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
-        fi
+        # fi
     done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \

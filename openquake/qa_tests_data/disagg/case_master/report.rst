@@ -3,8 +3,8 @@ disaggregation with a complex logic tree
 
 ============== ===================
 checksum32     1,766,748,636      
-date           2018-06-05T06:40:12
-engine_version 3.2.0-git65c4735   
+date           2018-12-13T12:57:08
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 2, num_levels = 102
@@ -36,8 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model_1.xml <source_model_1.xml>`_                  
-source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -82,35 +80,37 @@ Number of ruptures per tectonic region type
 source_model       grp_id trt                  eff_ruptures tot_ruptures
 ================== ====== ==================== ============ ============
 source_model_1.xml 0      Active Shallow Crust 543          543         
-source_model_1.xml 1      Stable Shallow Crust 5            4           
+source_model_1.xml 1      Stable Shallow Crust 4            4           
 source_model_2.xml 2      Active Shallow Crust 543          543         
-source_model_2.xml 3      Stable Shallow Crust 5            1           
+source_model_2.xml 3      Stable Shallow Crust 1            1           
 ================== ====== ==================== ============ ============
 
 ============= =====
 #TRT models   4    
-#eff_ruptures 1,096
+#eff_ruptures 1,091
 #tot_ruptures 1,091
-#tot_weight   3,086
+#tot_weight   1,543
 ============= =====
 
 Slowest sources
 ---------------
-========= ========================= ============ ========= ========== ========= ========= ======
-source_id source_class              num_ruptures calc_time split_time num_sites num_split events
-========= ========================= ============ ========= ========== ========= ========= ======
-1         SimpleFaultSource         543          0.12329   1.702E-04  2.00000   30        0     
-2         CharacteristicFaultSource 1            0.00290   7.153E-06  2.00000   4         0     
-========= ========================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight 
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
+0      1         S    0     2     543          2.77108   0.00663    30        15        767    
+1      2         S    2     4     4            0.01524   3.338E-05  2.00000   1         5.65685
+2      1         S    0     2     543          2.75106   0.00442    30        15        767    
+3      2         X    2     398   1            0.02847   9.775E-06  2.00000   1         1.41421
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= =======
 
 Computation times by source typology
 ------------------------------------
-========================= ========= ======
-source_class              calc_time counts
-========================= ========= ======
-CharacteristicFaultSource 0.00290   1     
-SimpleFaultSource         0.12329   1     
-========================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    5.53738   3     
+X    0.02847   1     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -118,57 +118,66 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00640 0.00285 0.00173 0.01420 32       
-count_eff_ruptures 0.00670 0.00250 0.00287 0.01028 25       
-================== ======= ======= ======= ======= =========
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.01328 0.00289 0.01123 0.01532 2      
+split_filter       0.05934 NaN     0.05934 0.05934 1      
+classical          0.25375 0.08970 0.01570 0.38125 22     
+build_hazard_stats 0.01233 0.00378 0.00965 0.01500 2      
+================== ======= ======= ======= ======= =======
 
 Fastest task
 ------------
-taskno=16, weight=73, duration=0 s, sources="1"
+taskno=22, weight=5, duration=0 s, sources="2"
 
-======== ======= ====== ======= === =
-variable mean    stddev min     max n
-======== ======= ====== ======= === =
-nsites   2.00000 0.0    2       2   3
-weight   24      17     8.48528 42  3
-======== ======= ====== ======= === =
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   2.00000 NaN    2       2       1
+weight   1.41421 NaN    1.41421 1.41421 1
+======== ======= ====== ======= ======= =
 
 Slowest task
 ------------
-taskno=9, weight=127, duration=0 s, sources="1"
+taskno=22, weight=94, duration=0 s, sources="2"
 
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   2.00000 NaN    2   2   1
-weight   127     NaN    127 127 1
-======== ======= ====== === === =
+======== ======= ====== ======= ======= =
+variable mean    stddev min     max     n
+======== ======= ====== ======= ======= =
+nsites   2.00000 NaN    2       2       1
+weight   1.41421 NaN    1.41421 1.41421 1
+======== ======= ====== ======= ======= =
 
 Data transfer
 -------------
-================== =============================================================================== ========
-task               sent                                                                            received
-RtreeFilter        srcs=42.48 KB monitor=10.81 KB srcfilter=8.72 KB                                46.04 KB
-count_eff_ruptures sources=42.31 KB param=31.86 KB monitor=8.62 KB srcfilter=5.69 KB gsims=5.37 KB 8.75 KB 
-================== =============================================================================== ========
+================== =============================================================== ========
+task               sent                                                            received
+read_source_models converter=776 B fnames=220 B                                    13.79 KB
+split_filter       srcs=12.16 KB srcfilter=253 B seed=14 B                         18.23 KB
+classical          group=37.64 KB param=28.75 KB src_filter=19.31 KB gsims=4.72 KB 84.03 KB
+build_hazard_stats pgetter=8.96 KB hstats=402 B                                    5.89 KB 
+================== =============================================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-PSHACalculator.run             0.60144   0.0       1     
-managing sources               0.25539   0.0       1     
-total prefilter                0.20480   5.31250   32    
-total count_eff_ruptures       0.16751   5.75781   25    
-reading composite source model 0.02812   0.0       1     
-unpickling prefilter           0.00945   0.0       32    
-aggregate curves               0.00675   0.0       25    
-store source_info              0.00662   0.0       1     
-unpickling count_eff_ruptures  0.00600   0.0       25    
-reading site collection        8.123E-04 0.0       1     
-splitting sources              7.889E-04 0.0       1     
-saving probability maps        1.943E-04 0.0       1     
-============================== ========= ========= ======
+======================== ========= ========= ======
+operation                time_sec  memory_mb counts
+======================== ========= ========= ======
+total classical          5.58245   0.26953   22    
+make_contexts            3.45065   0.0       1,091 
+get_poes                 1.64695   0.0       1,091 
+iter_ruptures            0.45209   0.0       32    
+total split_filter       0.05934   0.12891   1     
+store source_info        0.04960   0.0       22    
+total read_source_models 0.02655   0.0       2     
+total build_hazard_stats 0.02465   0.51562   2     
+combine pmaps            0.01719   0.51562   2     
+managing sources         0.00835   0.0       1     
+store source model       0.00559   0.0       2     
+aggregate curves         0.00555   0.0       22    
+saving probability maps  0.00473   0.0       1     
+compute quantile-0.15    0.00313   0.0       2     
+compute quantile-0.85    0.00282   0.0       2     
+saving statistics        0.00222   0.0       2     
+compute mean             9.081E-04 0.0       2     
+======================== ========= ========= ======

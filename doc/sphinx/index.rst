@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   intro
+   baselib
+   hazardlib
    architecture
    how-to-change-the-XML-for-sources
    internals

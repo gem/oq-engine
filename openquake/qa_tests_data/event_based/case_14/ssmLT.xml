@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt1">
+
+        <logicTreeBranchingLevel branchingLevelID="bl0">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs0">
+                <logicTreeBranch branchID="b01">
+                    <uncertaintyModel>
+                                ssm/nwest_18.xml
+                                ssm/snam_19.xml
+                                ssm/wbots_20.xml
+                                ssm/welkom_21.xml
+                                ssm/wrand_22.xml
+                    </uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- NWEST -->
+
+		<logicTreeBranchingLevel branchingLevelID="bl18a">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="18"
+                                branchSetID="bs181">
+                <logicTreeBranch branchID="b1811">
+                    <uncertaintyModel>1.92 0.87</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1812">
+                    <uncertaintyModel>3.82 1.45</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+		<logicTreeBranchingLevel branchingLevelID="bl18b">
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="18"
+                                branchSetID="bs182">
+                <logicTreeBranch branchID="b1821">
+                    <uncertaintyModel>5.32</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1822">
+                    <uncertaintyModel>5.20</uncertaintyModel>
+                    <uncertaintyWeight>0.50</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- SNAM -->
+
+		<logicTreeBranchingLevel branchingLevelID="bl19b">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="19"
+                                branchSetID="bs191">
+                <logicTreeBranch branchID="b1911">
+                    <uncertaintyModel>2.45 0.80</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1912">
+                    <uncertaintyModel>3.55 0.96</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1913">
+                    <uncertaintyModel>3.69 0.97</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>				
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>	
+
+		<logicTreeBranchingLevel branchingLevelID="bl19b">
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="19"
+                                branchSetID="bs192">
+                <logicTreeBranch branchID="b1921">
+                    <uncertaintyModel>5.96</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1922">
+                    <uncertaintyModel>5.80</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b1923">
+                    <uncertaintyModel>5.50</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>				
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- WBOTS -->
+
+		<logicTreeBranchingLevel branchingLevelID="bl20a">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="20"
+                                branchSetID="bs201">
+                <logicTreeBranch branchID="b2011">
+                    <uncertaintyModel>2.07 0.81</uncertaintyModel>
+                    <uncertaintyWeight>0.65</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2012">
+                    <uncertaintyModel>4.19 1.41</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>		
+		
+		<logicTreeBranchingLevel branchingLevelID="bl20b">
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="20"
+                                branchSetID="bs202">
+                <logicTreeBranch branchID="b2021">
+                    <uncertaintyModel>6.11</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2022">
+                    <uncertaintyModel>5.57</uncertaintyModel>
+                    <uncertaintyWeight>0.60</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- WELkOM -->
+
+		<logicTreeBranchingLevel branchingLevelID="bl21a">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="21"
+                                branchSetID="bs211">
+                <logicTreeBranch branchID="b2111">
+                    <uncertaintyModel>5.31 1.29</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2112">
+                    <uncertaintyModel>4.79 1.31</uncertaintyModel>
+                    <uncertaintyWeight>0.60</uncertaintyWeight>
+                </logicTreeBranch>					
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>		
+		
+		<logicTreeBranchingLevel branchingLevelID="bl21b">
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="21"
+                                branchSetID="bs212">
+                <logicTreeBranch branchID="b2121">
+                    <uncertaintyModel>5.30</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2122">
+                    <uncertaintyModel>5.24</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2123">
+                    <uncertaintyModel>5.60</uncertaintyModel>
+                    <uncertaintyWeight>0.30</uncertaintyWeight>
+                </logicTreeBranch>				
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <!-- WRAND -->
+
+		<logicTreeBranchingLevel branchingLevelID="bl22a">
+            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                applyToSources="22"
+                                branchSetID="bs221">
+                <logicTreeBranch branchID="b2211">
+                    <uncertaintyModel>6.93 1.65</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2212">
+                    <uncertaintyModel>6.20 1.42</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2213">
+                    <uncertaintyModel>6.53 1.52</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+				<logicTreeBranch branchID="b2214">
+                    <uncertaintyModel>5.64 1.32</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>					
+            </logicTreeBranchSet>			
+        </logicTreeBranchingLevel>		
+
+		<logicTreeBranchingLevel branchingLevelID="bl22b">
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="22"
+                                branchSetID="bs222">
+                <logicTreeBranch branchID="b2221">
+                    <uncertaintyModel>5.20</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2222">
+                    <uncertaintyModel>5.30</uncertaintyModel>
+                    <uncertaintyWeight>0.40</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2223">
+                    <uncertaintyModel>6.34</uncertaintyModel>
+                    <uncertaintyWeight>0.20</uncertaintyWeight>
+                </logicTreeBranch>				
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

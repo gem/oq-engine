@@ -196,7 +196,9 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, bytes):
+    if isinstance(value, numpy.bool_):
+        return '1' if value else '0'
+    elif isinstance(value, bytes):
         return value.decode('utf8')
     elif isinstance(value, str):
         return value
@@ -531,16 +533,13 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
         generator is empty.
         """
         return bool(self.nodes)
-
-    if sys.version > '3':
-        __bool__ = __nonzero__
 
     def __deepcopy__(self, memo):
         new = object.__new__(self.__class__)
@@ -675,7 +674,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
             if filter_elem(el):
                 yield node_from_elem(el, nodefactory)
                 el.clear()  # save memory
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
         if not str(fname) in msg:
@@ -761,7 +760,7 @@ def context(fname, node):
     """
     try:
         yield node
-    except:
+    except Exception:
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)

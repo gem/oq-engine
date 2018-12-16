@@ -15,11 +15,12 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import time
-import psutil
+import getpass
 from datetime import datetime
-
+import psutil
 import numpy
 
 from openquake.baselib.general import humansize
@@ -38,6 +39,13 @@ def _pairs(items):
         else:
             lst.append((name, repr(value)))
     return sorted(lst)
+
+
+def memory_rss(pid):
+    """
+    :returns: the RSS memory allocated by a process
+    """
+    return psutil.Process(pid).memory_info().rss
 
 
 # this is not thread-safe
@@ -71,10 +79,10 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='dummy', hdf5path=None,
+    def __init__(self, operation='', hdf5=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
-        self.hdf5path = hdf5path
+        self.hdf5 = hdf5
         self.autoflush = autoflush
         self.measuremem = measuremem
         self.mem = 0
@@ -84,6 +92,7 @@ class Monitor(object):
         self.counts = 0
         self.address = None
         self._flush = True
+        self.username = getpass.getuser()
 
     @property
     def dt(self):
@@ -92,9 +101,8 @@ class Monitor(object):
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
-        proc = psutil.Process(os.getpid())
         try:
-            return proc.memory_info().rss
+            return memory_rss(os.getpid())
         except psutil.AccessDenied:
             # no access to information about this process
             pass
@@ -151,12 +159,13 @@ class Monitor(object):
                 'Monitor(%r).flush() must not be called in a worker' %
                 self.operation)
         for child in self.children:
+            child.hdf5 = self.hdf5
             child.flush()
         data = self.get_data()
         if len(data) == 0:  # no information
             return []
-        elif self.hdf5path:
-            hdf5.extend3(self.hdf5path, 'performance_data', data)
+        elif self.hdf5:
+            hdf5.extend(self.hdf5['performance_data'], data)
 
         # reset monitor
         self.duration = 0
@@ -189,11 +198,13 @@ class Monitor(object):
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
-        msg = '%s%s%s' % (self.__class__.__name__, calc_id, self.operation)
+        msg = '%s%s%s[%s]' % (self.__class__.__name__, calc_id,
+                              self.operation, self.username)
         if self.measuremem:
             return '<%s, duration=%ss, memory=%s>' % (
                 msg, self.duration, humansize(self.mem))
         elif self.duration:
-            return '<%s, duration=%ss>' % (msg, self.duration)
+            return '<%s, duration=%ss, counts=%s>' % (
+                msg, self.duration, self.counts)
         else:
             return '<%s>' % msg

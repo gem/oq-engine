@@ -44,6 +44,7 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
+
 import abc
 import numpy as np
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
