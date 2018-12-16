@@ -15,13 +15,15 @@ geographics portion of the region interested, of by increasing the grid
 spacing. Once the calculation has been reduced, you can run
 it and determine what are the factors dominating the run time.
 
-As we discussed previously, you may want to tweak the quadratic parameters
-(maximum_distance, area_source_discretization, rupture_mesh_spacing,
-complex_fault_mesh_spacing). Also, you may want to choose different GMPEs,
-since some are faster than others. You may want to play with the logic tree,
-to reduce the number of realizations: this is especially important, in
-particular for event based calculation were the number of generated
-ground motion fields is linear with the number of realizations.
+As we discussed in section `common mistakes`_, you may want to tweak
+the quadratic parameters (``maximum_distance``,
+``area_source_discretization``, ``rupture_mesh_spacing``,
+``complex_fault_mesh_spacing``). Also, you may want to choose different
+GMPEs, since some are faster than others. You may want to play with
+the logic tree, to reduce the number of realizations: this is
+especially important, in particular for event based calculation were
+the number of generated ground motion fields is linear with the number
+of realizations.
 
 Once you have tuned the reduced computation, you can have an idea of the time
 required for the full calculation. It will be less than linear with the number
@@ -54,14 +56,14 @@ The maximum size of generated GMFs is
 
 ``N * E * B * G * I * S1 = 25 TB (terabytes)``
 
-Storing and share 25 TB of data is a big issue, so the problem seems
+Storing and sharing 25 TB of data is a big issue, so the problem seems
 without solution. However, most of the ground motion values are zero,
 because there is a maximum distance of 300 km and a rupture cannot
 affect all of the sites. So the size of the GMFs should be less than
 25 TB. Moreover, if you want to use such GMFs for a damage analysis,
 you may want to discard very small shaking that will not cause any
 damage to your buildings. The engine has a parameter to discard all
-GMFs below a minimum threshould, the `minimum_intensity` paramater. The
+GMFs below a minimum threshould, the `minimum_intensity` parameter. The
 higher the threshold, the smaller the size of the GMFs. By playing
 with that parameter you can reduce the size of the output by orders of
 magnitudes. Terabytes could easily become gigabytes with a well chosen
@@ -104,3 +106,6 @@ Disaggregation calculations can be quite large and are rather
 difficult to reduce, because they usually involve a single site, so
 there is nothing to reduce there. What can be reduced are the
 quadratic parameters.
+
+
+.. _common mistakes: common-mistakes.rst
