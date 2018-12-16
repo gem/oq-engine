@@ -101,12 +101,12 @@ class CalculatorTestCase(unittest.TestCase):
             hc_id = self.calc.datastore.calc_id
             calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-            # run the second job.ini with zero tasks to avoid fork issues
             with calc._monitor:
-                exported = calc.run(export_dir=self.edir, concurrent_tasks=0)
+                exported = calc.run(export_dir=self.edir)
                 result.update(exported)
             duration[inis[1]] = calc._monitor.duration
             self.calc = calc
+
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
         self.calc.datastore = dstore
@@ -173,6 +173,16 @@ class CalculatorTestCase(unittest.TestCase):
         """
         with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())
+
+    def assertEventsByRlz(self, events_by_rlz):
+        """
+        Check the distribution of the events by realization index
+        """
+        n_events = numpy.zeros(self.calc.R, int)
+        dic = general.group_array(self.calc.datastore['events'].value, 'rlz')
+        for rlzi, events in dic.items():
+            n_events[rlzi] = len(events)
+        numpy.testing.assert_equal(n_events, events_by_rlz)
 
     def run(self, result=None):
         res = super().run(result)

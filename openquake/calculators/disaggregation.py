@@ -34,7 +34,7 @@ from openquake.calculators import getters
 from openquake.calculators import base, classical
 
 weight = operator.attrgetter('weight')
-DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-%(lon)s-%(lat)s/'
+DISAGG_RES_FMT = '%(poe)s%(rlz)s-%(imt)s-sid-%(sid)s/'
 
 
 def _to_matrix(matrices, num_trts):
@@ -243,10 +243,9 @@ producing too small PoEs.'''
         self.trts = trts
 
         # build mag_edges
-        min_mag = min(sg.min_mag for smodel in csm.source_models
-                      for sg in smodel.src_groups)
-        max_mag = max(sg.max_mag for smodel in csm.source_models
-                      for sg in smodel.src_groups)
+        mmm = numpy.array([src.get_min_max_mag() for src in csm.get_sources()])
+        min_mag = mmm[:, 0].min()
+        max_mag = mmm[:, 1].max()
         mag_edges = oq.mag_bin_width * numpy.arange(
             int(numpy.floor(min_mag / oq.mag_bin_width)),
             int(numpy.ceil(max_mag / oq.mag_bin_width) + 1))
@@ -271,7 +270,6 @@ producing too small PoEs.'''
         # build all_args
         all_args = []
         maxweight = csm.get_maxweight(weight, oq.concurrent_tasks)
-        mon = self.monitor('disaggregation')
         R = iml4.shape[1]
         self.imldict = {}  # sid, rlzi, poe, imt -> iml
         for s in self.sitecol.sids:
@@ -289,16 +287,17 @@ producing too small PoEs.'''
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(trt, sm_id)
                 cmaker = ContextMaker(
                     rlzs_by_gsim, src_filter.integration_distance,
-                    oq.filter_distance)
+                    {'filter_distance': oq.filter_distance})
                 for block in block_splitter(sources, maxweight, weight):
                     all_args.append(
-                        (src_filter, block, cmaker, iml4, trti, self.bin_edges,
-                         oq, mon))
+                        (src_filter, block, cmaker, iml4, trti,
+                         self.bin_edges, oq))
 
         self.num_ruptures = [0] * len(self.trts)
         self.cache_info = numpy.zeros(3)  # operations, cache_hits, num_zeros
-        results = parallel.Starmap(compute_disagg, all_args).reduce(
-            self.agg_result, AccumDict(accum={}))
+        results = parallel.Starmap(
+            compute_disagg, all_args, self.monitor()
+        ).reduce(self.agg_result, AccumDict(accum={}))
 
         # set eff_ruptures
         trti = csm.info.trt2i()
@@ -346,8 +345,9 @@ producing too small PoEs.'''
             dic[sid, poe, imt][rlzi] = matrix
         res = {}  # sid, stat, poe, imt -> disagg_matrix
         for (sid, poe, imt), array in dic.items():
+            wei_imt = [weight[imt] for weight in weights]
             for stat, func in hstats:
-                matrix = compute_stats(array, [func], weights)[0]
+                [matrix] = compute_stats(array, [func], wei_imt)
                 res[sid, stat, poe, imt] = matrix
         return res
 
@@ -407,7 +407,7 @@ producing too small PoEs.'''
         disp_name = dskey + '/' + DISAGG_RES_FMT % dict(
             poe='' if poe is None else 'poe-%s-' % poe,
             rlz='rlz-%d' if isinstance(rlz_id, int) else rlz_id,
-            imt=imt_str, lon=lon, lat=lat)
+            imt=imt_str, sid=site_id)
         mag, dist, lonsd, latsd, eps = self.bin_edges
         lons, lats = lonsd[site_id], latsd[site_id]
         with self.monitor('extracting PMFs'):
@@ -463,13 +463,13 @@ producing too small PoEs.'''
                 for g, grp_id in enumerate(grp_ids):
                     pmap = pmap_by_grp['grp-%02d' % grp_id]
                     if sid in pmap:
-                        ys = pmap[sid].array[oq.imtls.slicedic[imt], 0]
+                        ys = pmap[sid].array[oq.imtls(imt), 0]
                         poes[g] = numpy.interp(iml4[sid, 0, imti, :], xs, ys)
                 for p, poe in enumerate(poes_disagg):
                     prefix = ('iml-%s' % oq.iml_disagg[imt] if poe is None
                               else 'poe-%s' % poe)
                     name = 'disagg_by_src/%s-%s-%s-%s' % (
-                        prefix, imt, rec['lons'], rec['lats'])
+                        prefix, imt, rec['lon'], rec['lat'])
                     if poes[:, p].sum():  # nonzero contribution
                         poe_agg = 1 - numpy.prod(1 - poes[:, p])
                         if poe and abs(1 - poe_agg / poe) > .1:

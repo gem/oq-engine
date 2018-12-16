@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ===================
 checksum32     124,630,436        
-date           2018-06-26T14:57:29
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:57:48
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 4
@@ -36,7 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -148,23 +147,23 @@ Number of ruptures per tectonic region type
 source_model     grp_id trt                  eff_ruptures tot_ruptures
 ================ ====== ==================== ============ ============
 source_model.xml 0      Active Shallow Crust 444          296         
-source_model.xml 1      Active Shallow Crust 268          296         
-source_model.xml 2      Active Shallow Crust 207          296         
+source_model.xml 1      Active Shallow Crust 208          296         
+source_model.xml 2      Active Shallow Crust 149          296         
 source_model.xml 3      Active Shallow Crust 534          296         
 source_model.xml 4      Active Shallow Crust 298          296         
 source_model.xml 5      Active Shallow Crust 239          296         
 source_model.xml 6      Active Shallow Crust 474          296         
 source_model.xml 7      Active Shallow Crust 238          296         
-source_model.xml 8      Active Shallow Crust 204          296         
-source_model.xml 9      Active Shallow Crust 498          296         
-source_model.xml 10     Active Shallow Crust 198          296         
-source_model.xml 11     Active Shallow Crust 172          296         
+source_model.xml 8      Active Shallow Crust 179          296         
+source_model.xml 9      Active Shallow Crust 409          296         
+source_model.xml 10     Active Shallow Crust 173          296         
+source_model.xml 11     Active Shallow Crust 114          296         
 source_model.xml 12     Active Shallow Crust 465          296         
 source_model.xml 13     Active Shallow Crust 229          296         
-source_model.xml 14     Active Shallow Crust 197          296         
-source_model.xml 15     Active Shallow Crust 500          296         
-source_model.xml 16     Active Shallow Crust 202          296         
-source_model.xml 17     Active Shallow Crust 174          296         
+source_model.xml 14     Active Shallow Crust 170          296         
+source_model.xml 15     Active Shallow Crust 411          296         
+source_model.xml 16     Active Shallow Crust 175          296         
+source_model.xml 17     Active Shallow Crust 116          296         
 source_model.xml 18     Active Shallow Crust 483          296         
 source_model.xml 19     Active Shallow Crust 247          296         
 source_model.xml 20     Active Shallow Crust 188          296         
@@ -178,27 +177,45 @@ source_model.xml 26     Active Shallow Crust 221          296
 
 ============= =====
 #TRT models   27   
-#eff_ruptures 8,691
+#eff_ruptures 8,175
 #tot_ruptures 7,992
 #tot_weight   8,175
 ============= =====
 
 Slowest sources
 ---------------
-========= ================= ============ ========= ========== ========= ========= ======
-source_id source_class      num_ruptures calc_time split_time num_sites num_split events
-========= ================= ============ ========= ========== ========= ========= ======
-SFLT2     SimpleFaultSource 89           0.16200   1.884E-05  1.00000   61        0     
-SFLT1     SimpleFaultSource 132          0.08860   2.861E-06  1.00000   32        0     
-========= ================= ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      SFLT1     S    0     2     60           0.0       3.695E-05  0.0       1         0.0   
+0      SFLT2     S    2     4     384          0.0       1.812E-04  0.0       2         0.0   
+1      SFLT1     S    0     2     60           0.0       1.597E-05  0.0       1         0.0   
+1      SFLT2     S    2     4     148          0.0       1.035E-04  0.0       2         0.0   
+2      SFLT1     S    0     2     60           0.0       1.287E-05  0.0       1         0.0   
+2      SFLT2     S    2     4     89           0.0       9.108E-05  0.0       2         0.0   
+3      SFLT1     S    0     2     150          0.0       1.168E-05  0.0       1         0.0   
+3      SFLT2     S    2     4     384          0.0       9.203E-05  0.0       2         0.0   
+4      SFLT1     S    0     2     150          0.0       1.192E-05  0.0       1         0.0   
+4      SFLT2     S    2     4     148          0.0       8.440E-05  0.0       2         0.0   
+5      SFLT1     S    0     2     150          0.0       1.097E-05  0.0       1         0.0   
+5      SFLT2     S    2     4     89           0.0       8.249E-05  0.0       2         0.0   
+6      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+6      SFLT2     S    2     4     384          0.0       8.249E-05  0.0       2         0.0   
+7      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+7      SFLT2     S    2     4     148          0.0       8.345E-05  0.0       2         0.0   
+8      SFLT1     S    0     2     90           0.0       1.097E-05  0.0       1         0.0   
+8      SFLT2     S    2     4     89           0.0       8.106E-05  0.0       2         0.0   
+9      SFLT1     S    0     2     25           0.0       1.764E-05  0.0       1         0.0   
+9      SFLT2     S    2     4     384          0.0       8.392E-05  0.0       2         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-================= ========= ======
-source_class      calc_time counts
-================= ========= ======
-SimpleFaultSource 0.25060   2     
-================= ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+S    0.0       54    
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -206,55 +223,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00748 0.00364 0.00257 0.01876 41       
-count_eff_ruptures 0.00514 0.00219 0.00220 0.01021 65       
-================== ======= ======= ======= ======= =========
-
-Fastest task
-------------
-taskno=63, weight=58, duration=0 s, sources="SFLT2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 NaN    1   1   1
-weight   58      NaN    58  58  1
-======== ======= ====== === === =
-
-Slowest task
-------------
-taskno=27, weight=83, duration=0 s, sources="SFLT1 SFLT2"
-
-======== ======= ====== === === =
-variable mean    stddev min max n
-======== ======= ====== === === =
-nsites   1.00000 0.0    1   1   2
-weight   41      23     25  58  2
-======== ======= ====== === === =
+================== ======= ======= ======= ======= =======
+operation-duration mean    stddev  min     max     outputs
+read_source_models 0.04190 0.01279 0.01803 0.08132 27     
+split_filter       0.11196 NaN     0.11196 0.11196 1      
+================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ================================================================================= ========
-task               sent                                                                              received
-RtreeFilter        srcs=55.52 KB monitor=12.89 KB srcfilter=11.17 KB                                 61.48 KB
-count_eff_ruptures sources=83.28 KB param=27.87 KB monitor=20.88 KB srcfilter=15.62 KB gsims=7.62 KB 23.51 KB
-================== ================================================================================= ========
+================== ======================================= ========
+task               sent                                    received
+read_source_models converter=10.23 KB fnames=2.82 KB       48.41 KB
+split_filter       srcs=16.38 KB srcfilter=253 B seed=14 B 24.15 KB
+================== ======================================= ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.63428   0.0       1     
-total count_eff_ruptures       0.33386   6.50391   65    
-total prefilter                0.30656   4.23828   41    
-managing sources               0.30462   0.0       1     
-aggregate curves               0.02380   0.0       65    
-unpickling prefilter           0.01666   0.0       41    
-unpickling count_eff_ruptures  0.01623   0.0       65    
-store source_info              0.00966   0.0       1     
-splitting sources              0.00123   0.0       1     
-reading site collection        3.638E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total read_source_models 1.13138  0.08203   27    
+total split_filter       0.11196  0.23047   1     
+======================== ======== ========= ======

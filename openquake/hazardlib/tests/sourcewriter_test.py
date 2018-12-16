@@ -20,7 +20,7 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.sourcewriter import write_source_model, hdf5write
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib import nrml
@@ -39,6 +39,9 @@ COLLECTION = os.path.join(os.path.dirname(__file__),
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
+GRIDDED = os.path.join(os.path.dirname(__file__),
+                       'source_model/gridded.xml')
+
 conv = SourceConverter(50., 1., 10, 0.1, 10.)
 
 
@@ -56,12 +59,16 @@ class SourceWriterTestCase(unittest.TestCase):
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
+        return smodel
 
     def test_mixed(self):
         self.check_round_trip(MIXED)
 
     def test_nonparam(self):
-        self.check_round_trip(NONPARAM)
+        [[src]] = self.check_round_trip(NONPARAM)
+
+        # test GriddedSource
+        self.assertFalse(src.is_gridded())
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
@@ -70,7 +77,23 @@ class SourceWriterTestCase(unittest.TestCase):
         self.check_round_trip(COLLECTION)
 
     def test_multipoint(self):
-        self.check_round_trip(MULTIPOINT)
+        smodel = self.check_round_trip(MULTIPOINT)
+
+        # test hdf5 round trip
+        temp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(temp, 'w') as f:
+            f['/'] = smodel
+        with hdf5.File(temp, 'r') as f:
+            sm = f['/']
+        self.assertEqual(smodel.name, sm.name)
+        self.assertEqual(len(smodel.src_groups), len(sm.src_groups))
+
+    def test_gridded(self):
+        # test xml -> hdf5
+        smodel = nrml.to_python(GRIDDED, conv)
+        temp = general.gettemp(suffix='.hdf5')
+        with hdf5.File(temp, 'w') as f:
+            f['/'] = smodel
 
 
 class DeepcopyTestCase(unittest.TestCase):

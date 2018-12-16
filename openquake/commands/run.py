@@ -18,18 +18,22 @@
 import collections
 import tempfile
 import logging
+import os.path
 import cProfile
 import pstats
 
 from openquake.baselib import performance, general, sap, datastore
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --slowest is given
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
+    base.calculators)
 
 
 def get_pstats(pstatfile, n):
@@ -67,27 +71,27 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params):
+def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
+         exports, params):
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz))
+    hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
               exports=exports, **params)
     hc_id = hcalc.datastore.calc_id
+    rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
     oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
-    rcalc = base.calculators(oq)
-    # disable concurrency in the second calculation to avoid fork issues
-    rcalc.run(concurrent_tasks=0, pdb=pdb, exports=exports,
-              hazard_calculation_id=hc_id, **params)
+    rcalc = base.calculators(oq, rcalc_id)
+    rcalc.run(pdb=pdb, exports=exports, hazard_calculation_id=hc_id, **params)
     return rcalc
 
 
-def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
+def _run(job_inis, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
-    logging.basicConfig(level=getattr(logging, loglevel.upper()))
-    job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
+    # set the logs first of all
+    calc_id = logs.init(level=getattr(logging, loglevel.upper()))
     with performance.Monitor('total runtime', measuremem=True) as monitor:
         if len(job_inis) == 1:  # run hazard or risk
             if hc:
@@ -97,6 +101,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
                 hc_id = None
                 rlz_ids = ()
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
+            vars(oqparam).update(params)
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:
@@ -105,30 +110,33 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
                     raise SystemExit(
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
-            calc = base.calculators(oqparam)
+            calc = base.calculators(oqparam, calc_id)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids, **params)
+                     rlz_ids=rlz_ids)
         else:  # run hazard + risk
             calc = run2(
-                job_inis[0], job_inis[1], concurrent_tasks, pdb,
-                exports, params)
+                job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
+                loglevel, exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
-    calc_path = calc.datastore.calc_dir  # used for the .pstat filename
+    calc_path, _ = os.path.splitext(calc.datastore.hdf5path)  # used below
     return calc
 
 
 @sap.Script
-def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
+def run(job_ini, slowest, hc, param='', concurrent_tasks=None, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation bypassing the database layer
     """
-    params = oqvalidation.OqParam.check(
-        dict(p.split('=', 1) for p in param or ()))
+    if param:
+        params = oqvalidation.OqParam.check(
+            dict(p.split('=', 1) for p in param.split(',')))
+    else:
+        params = {}
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
@@ -143,11 +151,10 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=None, exports='',
 
 
 run.arg('job_ini', 'calculation configuration file '
-        '(or files, comma-separated)')
+        '(or files, space-separated)', nargs='+')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
 run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
-run.opt('param', 'override parameter with the syntax NAME=VALUE ...',
-        nargs='+')
+run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
 run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
         type=int)
 run.opt('exports', 'export formats as a comma-separated string',

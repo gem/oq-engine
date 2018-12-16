@@ -42,7 +42,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
 from openquake.baselib import datastore
-from openquake.baselib.general import groupby, gettemp
+from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim
 
@@ -312,7 +312,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id) in calc_data:
+         parent_id, size_mb) in calc_data:
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
@@ -325,7 +325,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable))
+                 parent_id=parent_id, abortable=abortable, size_mb=size_mb))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -486,12 +486,15 @@ def run_calc(request):
 
 RUNCALC = '''\
 import os, sys, pickle
+from openquake.commonlib import logs
 from openquake.engine import engine
 if __name__ == '__main__':
     oqparam = pickle.loads(%(pik)r)
-    engine.run_calc(
-        %(job_id)s, oqparam, 'info', os.devnull, '', %(hazard_job_id)s,
-        username='%(username)s')
+    logs.init(%(job_id)s)
+    with logs.handle(%(job_id)s):
+        engine.run_calc(
+            %(job_id)s, oqparam, '', %(hazard_job_id)s,
+           username='%(username)s')
     os.remove(__file__)
 '''
 
@@ -501,7 +504,9 @@ def submit_job(job_ini, username, hazard_job_id=None):
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns the job ID and PID.
     """
-    job_id, oq = engine.job_from_file(job_ini, username, hazard_job_id)
+    job_id = logs.init('job')
+    oq = engine.job_from_file(
+        job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
     pik = pickle.dumps(oq, protocol=0)  # human readable protocol
     code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
                           username=username)
@@ -539,7 +544,7 @@ def calc_results(request, calc_id):
 
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
-    # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
+    # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
     results = logs.dbcmd('get_outputs', calc_id)
@@ -622,21 +627,23 @@ def get_result(request, result_id):
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
-    if exported is None:
+    if not exported:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for %s' % (export_type, ds_key))
+            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
+    elif len(exported) > 1:
+        # Building an archive so that there can be a single file download
+        archname = ds_key + '-' + export_type + '.zip'
+        zipfiles(exported, os.path.join(tmpdir, archname))
+        exported = os.path.join(tmpdir, archname)
+    else:  # single file
+        exported = exported[0]
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
 
-    bname = os.path.basename(exported)
-    if bname.startswith('.'):
-        # the "." is added by `export_from_db`, strip it
-        bname = bname[1:]
-    fname = 'output-%s-%s' % (result_id, bname)
-    # 'b' is needed when running the WebUI on Windows
-    stream = FileWrapper(open(exported, 'rb'))
+    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
     stream.close = lambda: (
         FileWrapper.close(stream), shutil.rmtree(tmpdir))
     response = FileResponse(stream, content_type=content_type)
@@ -754,8 +761,10 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict([('calc_id', calc_id)]))
+                  dict(calc_id=calc_id, size_mb=size_mb))
 
 
 @csrf_exempt

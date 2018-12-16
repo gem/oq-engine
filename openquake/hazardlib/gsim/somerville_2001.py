@@ -59,8 +59,8 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: two : horizontal components
+    #: attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
@@ -76,6 +76,9 @@ class SomervilleEtAl2001NSHMP2008(GMPE):
 
     #: Required distance measure is rjb
     REQUIRES_DISTANCES = set(('rjb', ))
+
+    #: Shear-wave velocity for reference soil conditions in [m s-1]
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

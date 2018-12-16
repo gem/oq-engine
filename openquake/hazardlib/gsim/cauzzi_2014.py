@@ -112,10 +112,10 @@ class CauzziEtAl2014(GMPE):
                 self._get_site_amplification_term(C, sites.vs30))
         # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
-        if isinstance(imt, PGA):
+        if imt.name == "PGA":
             mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
                           1e-2 / g)
-        elif isinstance(imt, SA):
+        elif imt.name == "SA":
             mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
                           1e-2 / g)
         else:
@@ -407,10 +407,10 @@ class CauzziEtAl2014NoSOF(CauzziEtAl2014):
                 self._get_site_amplification_term(C, sites.vs30))
         # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
-        if isinstance(imt, PGA):
+        if imt.name == "PGA":
             mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
                           1e-2 / g)
-        elif isinstance(imt, SA):
+        elif imt.name == "SA":
             mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
                           1e-2 / g)
         else:

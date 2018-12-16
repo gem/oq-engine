@@ -24,10 +24,10 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import sys
 import warnings
 import operator
-import collections
 import numpy
 import scipy.stats
 
+from openquake.hazardlib import pmf
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -151,7 +151,7 @@ def build_disagg_matrix(bdata, bin_edges, sid, mon=Monitor):
         # the 'international date line' issue
         # the 'minus 1' is needed because the digitize method returns the
         # index of the upper bound of the bin
-        mags_idx = numpy.digitize(bdata.mags, mag_bins) - 1
+        mags_idx = numpy.digitize(bdata.mags+pmf.PRECISION, mag_bins) - 1
         dists_idx = numpy.digitize(bdata.dists[:, sid], dist_bins) - 1
         lons_idx = _digitize_lons(bdata.lons[:, sid], lon_bins[sid])
         lats_idx = numpy.digitize(bdata.lats[:, sid], lat_bins[sid]) - 1
@@ -293,7 +293,7 @@ def disaggregation(
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
     cmaker = ContextMaker(rlzs_by_gsim, source_filter.integration_distance,
-                          filter_distance)
+                          {'filter_distance': filter_distance})
     iml4 = make_iml4(1, {str(imt): iml})
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}
@@ -498,7 +498,7 @@ def mag_lon_lat_pmf(matrix):
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
-pmf_map = collections.OrderedDict([
+pmf_map = dict([
     ('Mag', mag_pmf),
     ('Dist', dist_pmf),
     ('TRT', trt_pmf),

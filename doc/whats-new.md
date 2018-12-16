@@ -1,287 +1,363 @@
-Release notes for the OpenQuake Engine, version 3.1
+Release notes for the OpenQuake Engine, version 3.2
 ===================================================
 
-This release features several improvements to the engine calculators and
-a few important bug fixes. Over 150 issues were closed. For the complete list
-of changes, please see the changelog:
-https://github.com/gem/oq-engine/blob/engine-3.1/debian/changelog .
+This release features several improvements to the engine calculators, some
+new features and many bug fixes. Over 190 issues were closed. For the complete
+list of changes, please see the changelog:
+https://github.com/gem/oq-engine/blob/engine-3.2/debian/changelog.
 Here is a summary.
+
+Improvements to the calculators
+-------------------------------
+
+As always, there was a lot of work on the event based calculators,
+both on the hazard side and on the risk side. Some simplifications were
+made, and now the only way to run an event based risk calculation
+is by reading the ground motion fields stored in the datastore. In
+previous versions of the engine, in the case of an event based risk
+calculation with a single `job.ini` file, the GMFs were calculated 
+on the fly and kept in memory to compute the losses, but this approach had strong
+limitations and a bad performance. Now, the recommended way to run an
+event based risk calculation is to use two different `job.ini`
+files, one for the hazard part (generating the ruptures and producing the 
+ground motion fields) and one for the risk part (computing the losses),
+and to run the risk calculation after the hazard. 
+If you use a single job file, the GMFs will have to
+be transferred to the workers and this is less efficient than
+reading them from the datastore. Furthermore, on a cluster, rabbitmq/celery
+may run out of memory or fail in strange ways.
+
+The improvements to the event based calculators were motivated by
+the Global Risk Model project, which requires to be able to run
+calculations of unprecedented size. Since the calculations may become so
+huge as to be unmanagable, there is now a limit on the maximum size of the 
+GMFs that can be stored in the datastore: the
+`gmf_data` dataset cannot contain more than 4 billion rows. This
+limit forbids the users from running hazard calculations which are
+too big and would be impossible to run on the risk side anyway. If
+you are reaching the limit, you must revisit your calculation 
+configuration and try to reduce your calculation,
+preferably by reducing the number of realizations in the logic tree.
+
+The source prefiltering phase and the rupture-generation phase have
+been merged into a single preprocessing phase. At the end of it, an
+upper limit for the estimated size of the GMFs is printed: it means
+that you can kill a calculation if see you that the estimated GMFs
+size is of the order of terabytes. It should be noticed that the
+estimated size is an upper limit: if there is a `minimum_intensity`
+parameter, the GMFs below the threshold are discarded and therefore the
+actual size of the GMFs can be a lot less than the estimate, even
+orders of magnitude less.
+
+There was a *huge* improvement in the algorithm used to compute the
+loss curves and loss maps: they do not require storing the entire asset loss table
+anymore, so a lot of calculations that were technically impossible in the
+past are now possible and often even easy. Thanks to this breakthrough,
+the loss curves and maps are no more experimental outputs but *bona fide*
+outputs, they appear in the Web UI and are exportable like all the other
+risk outputs.
+
+Due to the many changes in the event based calculators — changes in the
+source splitting procedure, changes in the the source weights, changes
+in the seeds generation algorithm, changes in some outputs from
+64 bit floats to 32 bit floats and others — the numbers generated with
+this release of the engine are slightly different than before.
+This is expected.
+
+The way data is stored in the datastore has also changed, in
+particular, for the indices of the GMFs and the event based ruptures.
+These changes have been forced by a bug in HDFView 3.0 which is unable to visualize
+variable-length structured arrays, so we had to simplify the data
+structures used by the engine.
+
+During the calculation of the statistical hazard curves we now also compute
+the statistical hazard maps and store them. This makes the export of the
+hazard maps extremely fast at the cost of making the main computation slightly
+slower.
+
+We implemented the equivalent epicentre distance approximation. This is
+useful if you want to compare the results of a hazard calculation made
+with the OpenQuake engine with some other code using that approximation
+(i.e. USGS Fortran code).
+
+There were also some minor changes in the risk calculators, in particular
+in the number of risk inputs generated.
+
+We changed the `dmg_by_event` exporter which now produces a single .csv with
+all realizations instead of one file per realization. This is more convenient
+and more consistent with the way the GMF exporter works.
+
+Finally the memory consumption in UCERF classical calculations has been
+reduced drastically and the calculator is now optimized and simplified.
+
+Changes to hazardlib/HMTK
+-------------------------
+
+We made some work to make hazardlib more extensible: in particular, it
+is now possible to add new site parameters, new intensity measure
+types and new ground motion prediction equations *in user code*, without
+changing core modules of hazardlib. This was a major improvement.
+
+While at it, we added some new site parameters and new IMTs for
+geotechnic hazard. We also added a MultiGMPE clas calling different
+IMTs from different GMPEs, again for use in geotechnic hazard.
+
+We improved the GSIM deprecation mechanism. Now you can write something
+like this in your code
+
+```python
+class TheOldGSIM(GMPE):
+   superseded_by = TheNewGSIM
+```
+
+and each instantiation of the old GSIM class will warn the user pointing out
+that it is deprecated and supersed by the new GSIM.
+
+We used this mechanism to deprecate the GSIMs of Montalva et al (2016),
+since there are new versions of them published in 2017 with revised
+coefficients and implemented in hazardlib in this release.
+
+We fixed the source group XML writer so that the `srcs_weights` attribute
+is written only if they weights are nontrivial. If the attribute is missing
+the weights are assumed to be trivial, i.e. equal to 1. This is always the
+case except in the case of mutually exclusive sources which are used
+in the Japan model.
+
+We added the new scaling relationship: Thingbaijam et al. (2017).
+
+We added date validation in `openquake.htmk.seismicity.utils.decimal_time`.
+
+We removed excessive validation in the HMTK source model parser: now
+when the name is missing the source model is still accepted, since this
+is a common case and the name is not used by the calculators anyway.
+
+A new correlation model `HM2018CorrelationModel` was contributed by
+Pablo Heresi, as well as three new IMTs needed for this model.
+
+WebUI/QGIS plugin
+-----------------
+
+There were various improvements to the WebUI. For instance now
+all the WebUI outputs are streamed, so that the QGIS plugin can
+display a nice progress bar while downloading them.
+
+The biggest improvement is in the performance of extracting the
+hazard curves (or maps) from the WebUI or the QGIS plugin.
+For instance, for a continental scale calculation, with
+engine 3.1 you might have been required to wait around 20 minutes 
+for the preparation of the hazard curves (or maps) plus 20 seconds 
+to download them. Now you will just need to wait the 20
+seconds of download time, depending on the speed of your internet connection.
+
+Implementing such improvements required changing the internal storage
+format of hazard curves and hazard maps. That means that you cannot
+export calculations performed with previous version of the engine.
+
+Moreover, now the WebUI now displays some information on the size of the stored
+output, when possible. This is not the same as the size of the file that
+will be downloaded, since it depends on the chosen output format (XML
+outputs will be larger than CSV outputs) but it is still useful information.
+For instance if you see that the stored GMFs are 100 GB you might think twice
+before trying to download them. The size appears as a tooltip when hovering
+with the mouse over the output name in the WebUI and it is also available
+in the QGIS plugin and in calls to the URL `/v1/calc/list`.
+
+We added some additional information to the "Aggregate Loss Curves" output
+(`units`, `return_periods` and `stats`) so that they can be plotted
+nicely using the QGIS plugin.
+
+There is now a new entry point in the REST
+API `/v1/calc/XXX/extract/event_based_mfd` to extract the magnitude-frequency
+distribution of the ruptures of an event based calculation. This entry
+point will be accessible in the future to the QGIS plugin.
+
+We added indexes to the engine database and now the queries on it are
+a lot faster: this makes a difference if you have a database with
+thousands of calculations.
 
 Bug fixes
 ---------
 
-We discovered a performance regression in engine 2.9 and 3.0. The
-regression affects large hazard calculations and makes computing the
-statistics within the main calculation at best slow and at worse
-impossible because of data transfer issues / out-of-memory errors.  If
-you have engine 2.9 and 3.0 you can still compute the statistics -
-even for large calculations - but only in post-processing, i.e. with
-the `--hc` option.  This is not needed anymore. Actually, computing
-the statistics within the main calculation is as fast as in
-post-processing and much faster and memory-efficient than it was in
-engine 2.8 and previous versions. The price to pay for the gain was
-changing the way the PoEs are stored and the extraction routines. As a
-consequence, you cannot export with engine 3.1 the hazard curves
-generated by previous versions of the engine.
+We fixed a bug with the CTRL-C: now you can kill a calculation with a
+single CTRL-C, before you had to press it multiple times.
 
-We fixed a long standing performance bug in scenario calculations. The
-filtering of the sites according to the integration distance was done
-too late. Now it is done before even starting the calculation. If you
-have 1 million sites with only 1 thousand within the integration
-distance, then 990,000 sites are discarded up front. This makes it
-convenient to run scenarios with large exposures because only the
-sites and assets close to the rupture will be considered, even without
-the user specifying a `region` constraint in the `job.ini` file.
+Some users reported an annoying permission error on Windows, when trying to
+remove a temporary file after the end of a calculation. We fixed it.
 
-The user [Parisa on the mailing list](https://groups.google.com/d/msg/openquake-users/oxbWg7lRgbI/xrxa9FhYCAAJ) discovered a regression in the GMF importer
-from XML: it was not working anymore, unless a `sites.csv` file was specified.
-This has been fixed. The XML importer is still deprecated and the
-recommendation is to import GMFs in .csv format an with an explicit
-`sites.csv` file.
+There was an encoding error on Windows when reading the exposure: we
+fixed this, since the encoding is known (UTF-8).
 
-Our Canadian users discovered a bug in the hazard curves computed from
-nonparametric sources, causing the hazard curves to saturate at high
-intensities. It turns out the source of the bug was a numeric rounding
-issue that we fixed.
+There was a long standing bug in `classical_damage` calculations: even
+if fragility functions for multiple loss types were defined, only the
+`structural` loss type was computed. Now this has been fixed.
 
-We discovered a bug affecting the classical UCERF calculator, such that
-the computation was hanging without a clear reason. It was fixed by
-simplifying the distribution mechanism.
+Exporting the GMFs from a scenario calculation would sometimes fail in the presence
+of a filtered SiteCollection: this has been fixed now.
 
-We discovered a rare bug when reading ruptures from the datastore. Due
-to numeric errors in the conversion from 64 bits to 32 bits in the geometries,
-ruptures barely within the integration instance, could be read as outside the
-integration distance, then causing an error. This is a very rare case,
-but it may happen, especially in calculation with millions of ruptures.
-We fixed the issue by discarding such borderline ruptures.
+We fixed a bug in the command `oq engine --delete-calculation` which now
+removes the specified calculation correctly.
 
-We discovered a subtle bug in event based risk calculations, happening
-only when storing the GMFs and when using vulnerability functions with
-PMF: the results were depending on the order of the tasks storing the
-ground motion fields. This has been fixed by speciying the order in
-which the GMFs are read (they are read by event ID). In general this
-makes it easier to debug risk calculations reading the GMFs from the
-datastore.
+There was a rare splitting bug causing some event based calculations to
+fail for sources splitting into a single subsource.
 
-We discovered a tricky bug affecting calculations with sites and/or sources
-crossing the international date line. The bug has been there for years.
-In some cases, some sources could be incorrectly discarded, thus producing
-a hazard lower than reality. The solution of the bug involved completely
-discarding our old prefiltering mechanism.
+We reduced the error "corner points do not lie on the same plane" to a mere
+warning.
 
-Improvements to the filtering/prefiltering mechanisms
------------------------------------------------------
+We fixed an `OverflowError` when sending back from the workers more than
+4 GB of data: now the error message returns back to the user and does
+not get lost in the celery logs.
 
-We began improving the source prefiltering mechanism in engine 3.0 and
-we kept working on that. Now the prefiltering is performed in parallel
-and it is so efficient that we can prefilter millions of sources in a
-matter of minutes. Moreover the prefiltering is done only on the
-controller node and not duplicated on the workers nodes.  The change
-improved the performance of the calculators but also increased the
-data transfer. So we changed the engine to make it able to read the
-site collection directly from the datastore, thus saving GBs of data
-transfer. In cluster situations the new approach requires
-[setting a shared directory](https://github.com/gem/oq-engine/blob/engine-3.1/doc/installing/cluster.md#shared-filesystem-optional)
-otherwise the data transfer will be substantial. Due to the new
-prefiltering, is was possible to remove from the classical calculator
-the tiling mechanism, which was very complex and fragile, and still be
-faster than before. As a consequence, the data transfer is lower now
-than it ever was. Also, having removed the old prefiltering mechanism,
-a very tricky bug [over two year old has disappeared ](https://github.com/gem/oq-engine/issues/1965).
+Additional checks
+-----------------
 
-While the prefiltering involves sources and it is performed before the
-calculation starts, the filtering involves ruptures and is performed
-while the calculation runs. The filtering works by computing a lots of
-distances from each rupture to each hazard site and it can be slow.
-In engine 3.1 we reworked completely the
-filtering: now the default distance used for filtering is the
-so-called `rrup` distance which is nothing else than the Euclidean
-distance. Such distance can be computated with the
-`scipy.spatial.distance.cdist` function which is extremely efficient: 
-in some cases we measured speedups of over an order of magnitude with
-respect to the previous approach.
+We added a check so that the flag `optimize_same_id_sources` can be turned on
+for classical and disaggregation calculations only.
 
-The user can specify the distance used in the filtering by setting the
-parameter `filter_distance` in the `job.ini` file. For instance
-`filter_distance=rjb` would restore the Joyner-Boore distance that we
-used in previous versions of the engine (actually not exactly the same
-because now even the `rjb` distance is calling `scipy.spatial.distance.cdist`
-internally).  Due to the changes both to the default filter distance and to
-the low level function
-to compute the distance, the numbers produced be engine 3.1 will be
-slighly different from the numbers generated by previous versions.
-The differences however are minor and actually the current approach is
-more accurate than the previous one.
+We improved the exposure XML parser: now an incorrect exposure with an invalid
+node
 
-A refactoring of the site collection object made the computation of
-distances faster, not only for ruptures with complex geometries but
-also for ruptures coming from point sources. The net effect can be
-very significant if your computation is dominated by distance
-calculations. This in practice happens if you have a single GMPE; for
-instance, in and old model for South America with a single realization
-the performance of the full computation (i.e. distances + GMPE) nearly
-doubled.  In complex calculations with dozens of GMPEs the dominating
-factor is the time spent in the GMPE calculations and so you will not
-see any significant speedup due to the improvements in the filtering
-mechanism, even if you should still see some speedup due to the
-prefiltering improvements.
+```xml
+<costTypes name="structural" type="aggregated" unit="USD"/>
+```
+will raise a clear error message.
 
-Changes to hazardlib
---------------------
+We added a `LargeExposureGrid` error, to avoid mistakes when the engine
+automatically determines the grid from the exposure. For instance the
+exposure for France may contain assets in French Polynesia, causing a
+huge grid to be built. This situation is now flagged as an error.
 
-This release involved a substantial refactoring of hazardlib, mostly needed
-for the improvements in the filtering and prefiltering procedures.
+We added an extra check on the source model logic tree parser; a logic tree
+like the following
 
-There were several changes to the [Surface classes](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.geo.surface.html). In particular, now `PlanarSurfaces` do not require anymore the `rupture_mesh_spacing` to be instantiated
-(it was not used anyway). Moreover the class hierarchy has been simplified
-and one method have been removed. The [ContextMaker.make_contexts](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#openquake.hazardlib.contexts.ContextMaker.make_contexts) method now returns two
-values instead of three, and ruptures now have more attributes that
-they used to have. On the other hand, the attribute `.source_typology` was
-removed from Rupture classes, since it was not used. A `.polygon` property
-was added to each source class, to make the plotting of sources easier.
+```xml
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                applyToSources="1"
+                                branchSetID="bs7">
+                <logicTreeBranch branchID="b71">
+                    <uncertaintyModel> 7.7 </uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b72">
+                    <uncertaintyModel> 7.695 </uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b73">
+                    <uncertaintyModel> 7.7 </uncertaintyModel>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+```
+will be rejected because it makes no sense to have the same value (7.7)
+repeated twice. The `uncertaintyModel` values must be unique within
+a branchset.
 
-We fixed the serialization of griddedRuptures in the datastore.
+We added a check for duplicated branch IDs in the GSIM logic tree file.
 
-We added in [hazardlib.geo.utils](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.geo.html#module-openquake.hazardlib.geo.utils)
-an association function `assoc(objects, sitecol, assoc_dist, mode)`
-based on `scipy.spatial.cKDTree`
-which the engine uses to associate the assets to the hazard sites, to associate
-the site parameters to the hazard sites, or to associate a ShakeMap to
-an exposure.
+We raised the length limit in the source IDs from 60 characters to 75
+characters: this was needed to run the US14 collapsed model.
 
-The signature of [stochastic_event_set](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.calc.html#module-openquake.hazardlib.calc.stochastic) was
-slightly changed, by removing the redundant `sites` parameter. The API
-of the [correlation module](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#module-openquake.hazardlib.correlation) was slightly changed.
+We moved the check on the maximum number of sites (65,536) and maximum
+number of IMTs (256) in event_based calculations right at the
+beginning, to avoid performing any calculation in unsupported
+situations.
 
-The most visibile change is probably in the
-[Probability Mass Function](https://docs.openquake.org/oq-engine/3.1/openquake.hazardlib.html#module-openquake.hazardlib.pmf) class.
-In order to instantiate a PMF object a list of pairs (probability, object)
-is required. In the past the probability had to be expressed
-as a Python `Decimal` instance, while now a simple float can be used.
-Before the sum of the probabilities was checked to be exactly equal to 1,
-now it must be equal to 1 up to a tolerance of 1E-12. Since the `Decimals`
-at the end were converted into floats anyway, it felt easier and more
-honest to work with floats from the beginning.
+We removed a check on the Uniform Hazard Spectra: now UHS curves with a
+single period are valid, but a warning will be logged. This was requested
+by our Canadian users.
 
-It should be noticed that in spite of the major refactoring (over
-1,000 lines of Python code were removed) the changes to client code
-are very minor: the HMTK was unaffected and in
-the SMTK only two lines had to be fixed. So the change should not be
-a problems for users of hazardlib. If you run into problems, please ask
-on our [mailing list](https://groups.google.com/forum/#!forum/openquake-users).
+We added a check on the intensity measure types in the case of scenario
+calculations starting from a ShakeMap, because the ShakeMap could miss
+some of the IMTs required by the vulnerability/fragility functions.
 
-Finally, we should mention that a new GMPE was added, a version of the
-Yu et al. (2013) GMPE supporting Mw, contributed by M. Pagani and
-Changlong Li.
+New configuration parameters 
+-----------------------------
 
-Risk
------
+In the section `[distribution]` of the global configuration file
+`openquake.cfg` there is a new parameter `multi_node` which by
+default is `false`. You should change it to `true` if you are installing
+the engine on a cluster, otherwise you will get a warning.
 
-We unified the `region` and `region_constraint` parameters of the
-`job.ini`.  Old calculations with a `region_constraint` parameter will
-keep working, but you will see a deprecation warning telling to
-replace `region_constraint` with `region`. This is what the engine is
-doing internally now.
+There are three new parameters in the `job.ini` file.
 
-We kept improving our risk exporters. In particular, if the exposure
-has tags (a concept introduced in engine 2.9) now the exported CSV
-files (like average losses and such) will also contain the tag
-information. This makes it possible to aggregate the outputs by
-tag. Also, the risk demos have been updated so that the exposures have
-tags.
+The `minimum_magnitude` parameter allows to discard all the ruptures
+below a given threshold, thus making a calculation faster.
 
-We added two new scenario outputs `dmg_by_event` and `losses_by_event`
-and we changed slightly the format of the `realizations` output.
-We added an XML exporter for the site model: this is useful to check
-how the site model parameters were associated to the hazard sites.
-The work on the risk outputs has been reflected on the QGIS plugin.
+The `hypo_dist_collapsing_distance` parameter allows to discard all
+the ruptures more distant than the given distance. This feature applies to point
+sources, multipoint sources and are sources; it works by taking the
+hypocenter distribution and discarding all the ruptures except the first one.
 
-Experimental integration with USGS ShakeMaps
----------------------------------------------
+The `nodal_dist_collapsing_distance` parameter works similarly to the
+`hypo_dist_collapsing_distance`, but it acts on the nodal plane distribution.
 
-Engine 3.1 features a new experimental integration with USGS ShakeMaps.
-Essentially, when running a scenario risk or scenario damage calculation,
-you can specify in the `job.ini` the ID of an USGS ShakeMap. The engine
-will automatically
+By discarding all the ruptures over the collapsing distances,
+a calculation can become a lot faster without losing precision.
+For instance, we had a real calculation for Canada with area sources
+with a nodal plane distribution of length 12 and an hypocenter distribution
+of length 4: this approximation made the calculation 12 x 4 = 48 times
+faster.
 
-- download the ShakeMap (the grid.xml and uncertainty.xml files)
-- associate the GMFs from the ShakeMap to the exposure sites
-- consider only the IMTs required by the risk model
-- create a distribution of GMFs with the right standard deviation, i.e.
-  the standard deviation provided by the ShakeMap
-- perform the desired risk calculation, considering also the
-  cross correlation effect for multiple IMTs.
-
-The feature is highly experimented and provided only for the purpose of
-beta testing by external users.
-
-WebUI
------------------------------------------------------
-
-There was a bug with the groups in the WebUI, a features used only if
-the authentication is enabled, which is not the default. Due to the bug,
-users of a given group could not see calculations belonging to their
-group, unless they were admin users. This has been fixed.
-
-When a job dies abruptly, its status in the WebUI can remain
-`is_running`.  Now restarting the WebUI or just the DbServer fixes the status
-of jobs which are not really running. Also, now a job that did not
-start because there were no live celery nodes is properly marked as
-failed.
-
-The input files used to perform a calculation are now automatically zipped,
-saved in the datastore, and made accessible to the WebUI and the QGIS plugin.
-This is very useful if you need to repeat a calculation performed by
-another user on a different machine.
-
-New checks and warnings
-------------------------------
-
-The engine always had a check between the provided GMPEs and the
-GMF correlation model, since not all of the GMPEs supports correlation.
-However, the check was done in the middle of the computation. Now the check
-is done before starting the calculation, and the error message is clearer.
-
-We added a warning in the case of a logic tree with more than 10,000
-realizations, suggesting the user to sample it because otherwise the
-calculation will likely run out of memory.
-
-We warn the user when the source model contains duplicated source IDs,
-suggesting to set the `optimize_same_id_sources` flag if the sources
-are really duplicated (the ID could be duplicated without the sources being so).
-
-For scenario calculations, we added a check that the number of realizations
-must equal the number of distinct GMPEs.
-
-We added a check against duplicated GMPEs in the logic tree.
-
-We added an early check on the Python version, that must be greater or
-equal than 3.5.
+Note that we do not provide any facility to determine the appropriate
+collapsing distances to use: this is not easy and it is left for the
+future.
 
 oq commands
 -----------
 
-We added two new commands, which are useful in a cluster environment:
+There are two new `oq` commands, useful for advanced users.
 
-- `oq celery status` prints the number of active tasks
-- `oq celery inspect` prints some information on the active tasks
+`oq check_input` checks the validity of the input files: you can give
+to it a `job.ini` file or a zip archive containing the `job.ini`
+it. It uses exactly the same checks as the engine, but it does not run
+a calculation.
 
-We fixed a bug in `oq db get_executing_jobs`, which now returns only
-the jobs which are actually running. This required fixing the engine
-that was not storing the PIDs.
+`oq plot_memory <calc_id>` plots the memory allocated by the given calculation.
+This works only on a single machine and not on a cluster. It is useful to
+compare the memory consumption of a given calculation depending on the
+configuration parameters.
 
-We fixed the commands `oq to_shapefile` and `oq from_shapefile` by
-adding "YoungsCoppersmithMFD" and "arbitraryMFD" to the list of
-serializable magnitude-frequency distributions.
+Since the source models are read in parallel, the command `oq info
+--report` will be a lot faster than before in large source models
+split in several files. It will also use less memory. This makes it
+possible to estimate the size of extra-large models without running
+them.
 
-Packaging
-----------
+Internals
+---------
 
-For the first time we provide packages for Ubuntu 18.04 (Bionic) and Fedora 28.
-Old versions of Ubuntu (16.04 and 14.04) are still supported, and we
-keep providing packages for Red Hat distributions, as well as installers
-for Windows and macOS, docker containers, virtual machines and more.
+As usual, there was a lot of work on the internals of the engine that
+is not directly visible to the users but paves the way for changes
+that are in anticipated in future versions.
 
-We also updated our Python dependencies, in particular we include
-in our packages numpy 1.14.2, scipy 1.0.1, h5py 2.8, shapely 1.6.4, rtree 0.8.3,
-pyzmq-17.0.0, psutil-5.4.3 and Django 2.0.4.
+In particular there was a substantial effort on the parallelization
+framework; the engine is now able to express tasks as generator
+functions, potentially saving a lot of memory, but the feature is not
+used in the calculators yet. We did also some experiments with [dask](
+http://dask.pydata.org/en/latest/).
+
+We started a project to make some important class of sources
+serializable to HDF5, in particular MultiPointSources and
+nonparametric gridded sources. The benefits will be visible only
+in the future.
+
+We improved the documentation and the [FAQ page](
+https://github.com/gem/oq-engine/blob/master/doc/faq.md).
+
+Finally, there was a lot of work on the packaging (new Python 3.6,
+new h5py 2.8, work on Windows, MacOS and Linux packages).
+
+Deprecations
+------------
+
+Python 3.5 has been deprecated and the engine will stop working with
+it in the next release. This is of interest for people developing with
+the engine and hazardlib, because they should be ready to migrate to
+Python 3.6. For the other users nothing will change since the engine
+packages and installers include Python 3.6 already, starting from this
+release.
+
+Ubuntu Trusty (14.04) is deprecated and from the next release we will
+stop providing packages for it. The reason is that Trusty is reaching
+the [end of its life](https://wiki.ubuntu.com/Releases) and will not be supported even by Canonical. It
+will still be possible to install and use the engine on Trusty, but
+not with the packages.

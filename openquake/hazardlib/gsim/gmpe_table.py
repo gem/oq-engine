@@ -32,9 +32,9 @@ from scipy.interpolate import interp1d
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import const
+from openquake.hazardlib import const, site
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
+from openquake.hazardlib.gsim.base import GMPE, RuptureContext
 from openquake.baselib.python3compat import round
 
 
@@ -102,7 +102,7 @@ class AmplificationTable(object):
         self.values = self.values[self.argidx]
         if self.parameter in RuptureContext._slots_:
             self.element = "Rupture"
-        elif self.parameter in SitesContext._slots_:
+        elif self.parameter in site.site_param_dt:
             self.element = "Sites"
         else:
             raise ValueError("Amplification parameter %s not recognised!"
@@ -211,12 +211,11 @@ class AmplificationTable(object):
             Number Levels]
         """
         # Levels by Distances
-        if isinstance(imt, (imt_module.PGA, imt_module.PGV)):
+        if imt.name in 'PGA PGV':
             interpolator = interp1d(self.magnitudes,
-                                    numpy.log10(self.mean[str(imt)]), axis=2)
+                                    numpy.log10(self.mean[imt.name]), axis=2)
             output_table = 10.0 ** (
-                interpolator(rctx.mag).reshape(self.shape[0], self.shape[3])
-                )
+                interpolator(rctx.mag).reshape(self.shape[0], self.shape[3]))
         else:
             # For spectral accelerations - need two step process
             # Interpolate period - log-log space
@@ -242,9 +241,9 @@ class AmplificationTable(object):
         output_tables = []
         for stddev_type in stddev_types:
             # For PGA and PGV only needs to apply magnitude interpolation
-            if isinstance(imt, (imt_module.PGA, imt_module.PGV)):
+            if imt.name in 'PGA PGV':
                 interpolator = interp1d(self.magnitudes,
-                                        self.sigma[stddev_type][str(imt)],
+                                        self.sigma[stddev_type][imt.name],
                                         axis=2)
                 output_tables.append(
                     interpolator(rctx.mag).reshape(self.shape[0],
@@ -324,7 +323,7 @@ class GMPETable(GMPE):
                         os.path.join(self.GMPE_DIR, gmpe_table))
             else:
                 raise IOError("GMPE Table Not Defined!")
-        super().__init__()
+        super().__init__(gmpe_table=gmpe_table)
         self.imls = None
         self.stddevs = {}
         self.m_w = None
@@ -355,7 +354,7 @@ class GMPETable(GMPE):
         # Load intensity measure types and levels
         self.imls = hdf_arrays_to_dict(fle["IMLs"])
         self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(self._supported_imts())
-        if "SA" in self.imls.keys() and "T" not in self.imls:
+        if "SA" in self.imls and "T" not in self.imls:
             raise ValueError("Spectral Acceleration must be accompanied by "
                              "periods")
         # Get the standard deviations
@@ -410,10 +409,10 @@ class GMPETable(GMPE):
                 continue
             else:
                 try:
-                    imt_val = imt_module.from_string(key)
-                except:
+                    factory = getattr(imt_module, key)
+                except Exception:
                     continue
-                imt_list.append(imt_val.__class__)
+                imt_list.append(factory)
         return imt_list
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
@@ -506,12 +505,12 @@ class GMPETable(GMPE):
         :param val_type:
             String indicating the type of data {"IMLs", "Total", "Inter" etc}
         """
-        if isinstance(imt, (imt_module.PGA, imt_module.PGV)):
+        if imt.name in 'PGA PGV':
             # Get scalar imt
             if val_type == "IMLs":
-                iml_table = self.imls[str(imt)][:]
+                iml_table = self.imls[imt.name][:]
             else:
-                iml_table = self.stddevs[val_type][str(imt)][:]
+                iml_table = self.stddevs[val_type][imt.name][:]
             n_d, n_s, n_m = iml_table.shape
             iml_table = iml_table.reshape([n_d, n_m])
         else:
@@ -524,8 +523,8 @@ class GMPETable(GMPE):
 
             low_period = round(periods[0], 7)
             high_period = round(periods[-1], 7)
-            if (round(imt.period, 7) < low_period) or\
-                (round(imt.period, 7) > high_period):
+            if (round(imt.period, 7) < low_period) or (
+                    round(imt.period, 7) > high_period):
                 raise ValueError("Spectral period %.3f outside of valid range "
                                  "(%.3f to %.3f)" % (imt.period, periods[0],
                                                      periods[-1]))

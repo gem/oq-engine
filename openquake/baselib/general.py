@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Utility functions of general interest.
 """
@@ -36,6 +35,7 @@ import importlib
 import itertools
 import subprocess
 import collections
+from collections.abc import Mapping, Container
 
 import numpy
 from decorator import decorator
@@ -43,6 +43,13 @@ from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 F64 = numpy.float64
+
+
+def duplicated(items):
+    """
+    :returns: True if the items are duplicated, False otherwise
+    """
+    return len(items) > len(set(items))
 
 
 def cached_property(method):
@@ -60,6 +67,7 @@ def cached_property(method):
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
+    newmethod.__doc__ = method.__doc__
     return property(newmethod)
 
 
@@ -278,9 +286,13 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     if isinstance(sequence, int):
         return split_in_slices(sequence, hint)
-
-    if hint == 0:  # do not split
+    elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
+    elif hint in (0, 1):  # split by key
+        blocks = []
+        for k, group in groupby(sequence, key).items():
+            blocks.append(group)
+        return blocks
     items = list(sequence) if key is nokey else sorted(sequence, key=key)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
@@ -492,7 +504,7 @@ def search_module(module, syspath=sys.path):
     return filepath
 
 
-class CallableDict(collections.OrderedDict):
+class CallableDict(dict):
     r"""
     A callable object built on top of a dictionary of functions, used
     as a smart registry or as a poor man generic function dispatching
@@ -747,6 +759,9 @@ class DictArray(collections.Mapping):
         arr.array = array
         return arr
 
+    def __call__(self, imt):
+        return self.slicedic[imt]
+
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
 
@@ -776,7 +791,10 @@ class DictArray(collections.Mapping):
             self[imt] = carray[0][imt]
 
     def __eq__(self, other):
-        return (self.array == other.array).all()
+        arr = self.array == other.array
+        if isinstance(arr, bool):
+            return arr
+        return arr.all()
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -791,15 +809,14 @@ def groupby(objects, key, reducegroup=list):
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
     :param reducegroup: the function to apply to each group
-    :returns: an OrderedDict {key value: map(reducegroup, group)}
+    :returns: a dict {key value: map(reducegroup, group)}
 
     >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
     ...         lambda group: ''.join(x[1] for x in group))
-    OrderedDict([('A', '12'), ('B', '123')])
+    {'A': '12', 'B': '123'}
     """
     kgroups = itertools.groupby(sorted(objects, key=key), key)
-    return collections.OrderedDict((k, reducegroup(group))
-                                   for k, group in kgroups)
+    return {k: reducegroup(group) for k, group in kgroups}
 
 
 def groupby2(records, kfield, vfield):
@@ -836,9 +853,20 @@ def _reducerecords(group):
 
 def group_array(array, *kfields):
     """
-    Convert an array into an OrderedDict kfields -> array
+    Convert an array into a dict kfields -> array
     """
     return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def count(groupiter):
+    return sum(1 for row in groupiter)
+
+
+def countby(array, *kfields):
+    """
+    :returns: a dict kfields -> number of records with that key
+    """
+    return groupby(array, operator.itemgetter(*kfields), count)
 
 
 def get_array(array, **kw):
@@ -939,6 +967,21 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+def random_histogram(counts, nbins, seed):
+    """
+    Distribute a total number of counts on a set of bins homogenously.
+
+    >>> random_histogram(1, 2, 42)
+    array([1, 0])
+    >>> random_histogram(100, 5, 42)
+    array([28, 18, 17, 19, 18])
+    >>> random_histogram(10000, 5, 42)
+    array([2043, 2015, 2050, 1930, 1962])
+    """
+    numpy.random.seed(seed)
+    return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+
+
 def safeprint(*args, **kwargs):
     """
     Convert and print characters using the proper encoding
@@ -992,7 +1035,7 @@ def _get_free_port():
     raise RuntimeError('No free ports in the range 1920:2000')
 
 
-def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
+def zipfiles(fnames, archive, mode='w', log=lambda msg: None, cleanup=False):
     """
     Build a zip archive from the given file names.
 
@@ -1005,6 +1048,10 @@ def zipfiles(fnames, archive, mode='w', log=lambda msg: None):
         for f in fnames:
             log('Archiving %s' % f)
             z.write(f, f[prefix:])
+            if cleanup:  # remove the zipped file
+                os.remove(f)
+    log('Generated %s' % archive)
+    return archive
 
 
 def detach_process():
@@ -1041,3 +1088,36 @@ def debug(templ, *args):
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
         f.write(msg + '\n')
+
+
+def warn(msg, *args):
+    """
+    Print a warning on stderr
+    """
+    if not args:
+        sys.stderr.write('WARNING: ' + msg)
+    else:
+        sys.stderr.write('WARNING: ' + msg % args)
+
+
+def getsizeof(o, ids=None):
+    '''
+    Find the memory footprint of a Python object recursively, see
+    https://code.tutsplus.com/tutorials/understand-how-much-memory-your-python-objects-use--cms-25609
+    :param o: the object
+    :returns: the size in bytes
+    '''
+    ids = ids or set()
+    if id(o) in ids:
+        return 0
+
+    nbytes = sys.getsizeof(o)
+    ids.add(id(o))
+
+    if isinstance(o, Mapping):
+        return nbytes + sum(getsizeof(k, ids) + getsizeof(v, ids)
+                            for k, v in o.items())
+    elif isinstance(o, Container):
+        return nbytes + sum(getsizeof(x, ids) for x in o)
+
+    return nbytes

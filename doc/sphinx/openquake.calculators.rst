@@ -135,3 +135,11 @@ views module
     :members:
     :undoc-members:
     :show-inheritance:
+
+extract module
+----------------------------------
+
+.. automodule:: openquake.calculators.extract
+    :members:
+    :undoc-members:
+    :show-inheritance:

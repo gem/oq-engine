@@ -20,8 +20,6 @@
 Classes for serializing various NRML XML artifacts.
 """
 import operator
-from collections import OrderedDict
-
 
 import numpy
 
@@ -36,7 +34,7 @@ SM_TREE_PATH = 'sourceModelTreePath'
 GSIM_TREE_PATH = 'gsimTreePath'
 
 #: Maps XML writer constructor keywords to XML attribute names
-_ATTR_MAP = OrderedDict([
+_ATTR_MAP = dict([
     ('statistics', 'statistics'),
     ('quantile_value', 'quantileValue'),
     ('smlt_path', 'sourceModelTreePath'),
@@ -79,7 +77,7 @@ def _validate_hazard_metadata(md):
 
     if md.get('statistics') is not None:
         # make sure only valid statistics types are specified
-        if md.get('statistics') not in ('mean', 'max', 'quantile'):
+        if md.get('statistics') not in ('mean', 'max', 'quantile', 'std'):
             raise ValueError('`statistics` must be either `mean`, `max`, or '
                              '`quantile`')
     else:
@@ -323,12 +321,14 @@ def rupture_to_element(rup, parent=None):
         parent = et.Element('root')
     rup_elem = et.SubElement(parent, rup.typology)
     elem = et.SubElement(rup_elem, 'stochasticEventSets')
+    n = 0
     for ses in rup.events_by_ses:
         eids = rup.events_by_ses[ses]['eid']
+        n += len(eids)
         ses_elem = et.SubElement(elem, 'SES', id=ses)
         ses_elem.text = ' '.join(str(eid) for eid in eids)
     rup_elem.set('id', rup.rupid)
-    rup_elem.set('multiplicity', str(rup.multiplicity))
+    rup_elem.set('multiplicity', str(n))
     sub_elems(rup_elem, rup, 'magnitude',  'strike', 'dip', 'rake')
     h = rup.hypocenter
     et.SubElement(rup_elem, 'hypocenter', dict(lon=h.x, lat=h.y, depth=h.z))
@@ -373,7 +373,7 @@ def rupture_to_element(rup, parent=None):
             assert len(rup.lons) % 4 == 0
             assert len(rup.lons) == len(rup.lats) == len(rup.depths)
 
-            for offset in range(len(rup.lons) / 4):
+            for offset in range(len(rup.lons) // 4):
                 # looping on the coordinates of the sub surfaces, one
                 # planar surface at the time
                 start = offset * 4
@@ -607,15 +607,13 @@ class DisaggXMLWriter(object):
 
         The following are optional, depending on the `imt`:
 
-        * sa_period: Only used with imt = 'SA'.
-        * sa_damping: Only used with imt = 'SA'.
+        * sa_period
+        * sa_damping
     """
 
     #: Maps metadata keywords to XML attribute names for bin edge information
     #: passed to the constructor.
-    #: The dict here is an `OrderedDict` so as to give consistent ordering of
-    #: result attributes.
-    BIN_EDGE_ATTR_MAP = OrderedDict([
+    BIN_EDGE_ATTR_MAP = dict([
         ('mag_bin_edges', 'magBinEdges'),
         ('dist_bin_edges', 'distBinEdges'),
         ('lon_bin_edges', 'lonBinEdges'),

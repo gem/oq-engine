@@ -409,7 +409,7 @@ class GsimInstantiationTestCase(unittest.TestCase):
 
         class OldGMPE(NewGMPE):
             'The version which is deprecated'
-            deprecated = True
+            superseded_by = NewGMPE
 
         with mock.patch('warnings.warn') as warn:
             OldGMPE()  # instantiating this class will call warnings.warn

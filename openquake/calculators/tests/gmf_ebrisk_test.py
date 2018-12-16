@@ -55,21 +55,22 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 1.5788584)
+        aae(totloss, 0.46601775)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore['losses_by_event']
-        self.assertEqual(len(alt), 8)
+        self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum(axis=0)
-        aae(totloss, [7717694.], decimal=0)
+        val = 60.1378
+        aae(totloss / 1E6, [val], decimal=4)
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses, [7717694.], decimal=0)
+        aae(avglosses / 1E6, [val], decimal=4)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_ebr_2(self):
@@ -77,10 +78,10 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/avg_losses.txt', fname)
         alt = self.calc.datastore['losses_by_event']
-        self.assertEqual(len(alt), 20)
+        self.assertEqual(len(alt), 8)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
-        aae(totloss, 20210.27, decimal=2)
+        aae(totloss, 19281.387, decimal=2)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
@@ -89,7 +90,6 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
         self.run_calc(case_4.__file__, 'job_risk.ini',
-                      concurrent_tasks='0',  # avoid for bug
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
         [fname] = export(('agg_loss_table', 'csv'), calc1)
@@ -101,16 +101,15 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false')
         calc0 = self.calc.datastore  # single file event_based_risk
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
-                      calculation_mode='event_based',
-                      concurrent_tasks='0')
+                      calculation_mode='event_based')
         calc1 = self.calc.datastore  # event_based
         self.run_calc(case_master.__file__, 'job.ini', insured_losses='false',
                       hazard_calculation_id=str(calc1.calc_id),
                       source_model_logic_tree_file='',
-                      gsim_logic_tree_file='',
-                      concurrent_tasks='0')  # to avoid fork bug
+                      gsim_logic_tree_file='')
         calc2 = self.calc.datastore  # two files event_based_risk
 
+        check_csm_info(calc0, calc1)  # the csm_info arrays must be equal
         check_csm_info(calc0, calc2)  # the csm_info arrays must be equal
 
         if sys.platform == 'darwin':

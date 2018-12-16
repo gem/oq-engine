@@ -26,6 +26,8 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.abrahamson_2015 import (AbrahamsonEtAl2015SInter,
                                                       AbrahamsonEtAl2015SSlab)
+from openquake.hazardlib.gsim.montalva_2017 import (MontalvaEtAl2017SInter,
+                                                    MontalvaEtAl2017SSlab)
 
 
 class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
@@ -37,7 +39,16 @@ class MontalvaEtAl2016SInter(AbrahamsonEtAl2015SInter):
     Montalva, G., Bastias, N., Rodriguez-Marek, A. (2016), 'Ground Motion
     Prediction Equation for the Chilean Subduction Zone'. Submitted to
     Seismological Research Letters
+
+    NOTE (August 2018): The original implementation of Montalva et al. (2016)
+    was made prior to publication. The final published version of the model
+    (Montalva et al. 2017) contains modified coefficients with respect to this
+    version. It is strongly recommended to use the Montalva et al. (2017)
+    model, however this version is retained for reproducibility of previous
+    hazard models using this implementation
     """
+    superseded_by = MontalvaEtAl2017SInter
+    
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -127,7 +138,16 @@ class MontalvaEtAl2016SSlab(AbrahamsonEtAl2015SSlab):
     """
     Adaptation of the Abrahamson et al. (2015) BC Hydro subduction in-slab
     GMPE, calibrated to Chilean strong motion data
+
+    NOTE (August 2018): The original implementation of Montalva et al. (2016)
+    was made prior to publication. The final published version of the model
+    (Montalva et al. 2017) contains modified coefficients with respect to this
+    version. It is strongly recommended to use the Montalva et al. (2017)
+    model, however this version is retained for reproducibility of previous
+    hazard models using this implementation
     """
+    superseded_by = MontalvaEtAl2017SSlab
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

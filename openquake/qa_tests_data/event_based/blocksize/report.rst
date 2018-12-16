@@ -3,8 +3,8 @@ QA test for blocksize independence (hazard)
 
 ============== ===================
 checksum32     2,348,158,649      
-date           2018-06-26T14:58:32
-engine_version 3.2.0-gitb0cd949   
+date           2018-12-13T12:57:23
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 2, num_levels = 4
@@ -36,60 +36,32 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b1        1.00000 trivial(1)      1/1             
-========= ======= =============== ================
-
-Required parameters per tectonic region type
---------------------------------------------
-====== ================= =========== ======================= =================
-grp_id gsims             distances   siteparams              ruptparams       
-====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== ================= =========== ======================= =================
-
-Realizations per (TRT, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-================ ====== ==================== ============ ============
-source_model     grp_id trt                  eff_ruptures tot_ruptures
-================ ====== ==================== ============ ============
-source_model.xml 0      Active Shallow Crust 2,625        5,572       
-================ ====== ==================== ============ ============
-
 Slowest sources
 ---------------
-========= ============ ============ ========= ========== ========= ========= ======
-source_id source_class num_ruptures calc_time split_time num_sites num_split events
-========= ============ ============ ========= ========== ========= ========= ======
-1         PointSource  6            1.69730   0.0        2.00000   292       15    
-2         PointSource  6            0.51341   0.0        2.00000   97        13    
-3         PointSource  5            0.21586   0.0        2.00000   57        0     
-9         PointSource  3            0.00282   0.0        1.50000   2         0     
-========= ============ ============ ========= ========== ========= ========= ======
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
+0      1         A    0     4     1,752        0.0       26         0.0       292       0.0   
+0      2         A    4     8     582          0.0       2.71909    0.0       97        0.0   
+0      3         A    8     12    440          0.0       1.36021    0.0       57        0.0   
+0      4         A    12    16    267          0.0       0.0        0.0       0         0.0   
+0      5         A    16    20    518          0.0       0.0        0.0       0         0.0   
+0      6         A    20    24    316          0.0       0.0        0.0       0         0.0   
+0      7         A    24    28    1,028        0.0       0.0        0.0       0         0.0   
+0      8         A    28    32    447          0.0       0.0        0.0       0         0.0   
+0      9         A    32    36    222          0.0       0.05049    0.0       2         0.0   
+====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
 ------------------------------------
-============ ========= ======
-source_class calc_time counts
-============ ========= ======
-PointSource  2.42940   4     
-============ ========= ======
+==== ========= ======
+code calc_time counts
+==== ========= ======
+A    0.0       9     
+==== ========= ======
 
 Duplicated sources
 ------------------
@@ -97,37 +69,25 @@ There are no duplicated sources
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =========
-operation-duration mean    stddev  min     max     num_tasks
-RtreeFilter        0.00977 0.00340 0.00407 0.01975 59       
-compute_hazard     0.09544 0.02554 0.01619 0.15088 28       
-================== ======= ======= ======= ======= =========
+================== ======= ====== ======= ======= =======
+operation-duration mean    stddev min     max     outputs
+read_source_models 0.49892 NaN    0.49892 0.49892 1      
+split_filter       0.59246 NaN    0.59246 0.59246 1      
+================== ======= ====== ======= ======= =======
 
 Data transfer
 -------------
-============== ================================================================================================== ========
-task           sent                                                                                               received
-RtreeFilter    srcs=392.08 KB monitor=18.55 KB srcfilter=16.08 KB                                                 149 KB  
-compute_hazard sources_or_ruptures=169.4 KB param=63.55 KB monitor=8.8 KB rlzs_by_gsim=8.12 KB src_filter=6.73 KB 36.16 KB
-============== ================================================================================================== ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=388 B fnames=111 B           9.21 KB 
+split_filter       srcs=8.92 KB srcfilter=253 B seed=14 B 136.3 KB
+================== ====================================== ========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_hazard           2.67234   7.74219   28    
-building ruptures              2.59350   6.83203   28    
-total prefilter                0.57645   1.19141   59    
-splitting sources              0.50570   0.0       1     
-reading composite source model 0.50554   0.0       1     
-managing sources               0.33993   0.0       1     
-saving ruptures                0.03347   0.0       28    
-unpickling prefilter           0.02491   0.0       59    
-GmfGetter.init                 0.00889   0.20703   28    
-unpickling compute_hazard      0.00755   0.0       28    
-making contexts                0.00704   0.0       5     
-aggregating hcurves            0.00586   0.0       28    
-store source_info              0.00477   0.0       1     
-reading site collection        2.429E-04 0.0       1     
-============================== ========= ========= ======
+======================== ======== ========= ======
+operation                time_sec memory_mb counts
+======================== ======== ========= ======
+total split_filter       0.59246  1.42578   1     
+total read_source_models 0.49892  0.0       1     
+======================== ======== ========= ======

@@ -43,6 +43,8 @@ Valerio Poggi           March 2017
 Armando Scarpati        June 2017
 Anirudh Rao             November 2017
 Kendra Johnson          April 2018
+Pablo Heresi            August 2018
+Chris Van Houtte        October 2018
 
 Project management
 ------------------

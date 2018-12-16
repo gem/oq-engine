@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib.python3compat import decode
+from openquake.baselib.general import countby
 from openquake.commonlib import writers
 from openquake.risklib import scientific
 
@@ -29,9 +30,9 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     oq = dstore['oqparam']
     weights = dstore['csm_info'].rlzs['weight']
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = dstore['gmdata']['events']
+    num_events = countby(dstore['events'].value, 'rlz')
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, num_events.max())
+        eff_time, max(num_events.values()))
     return scientific.LossesByPeriodBuilder(
         numpy.array(periods), loss_dt or oq.loss_dt(), weights, num_events,
         eff_time, oq.investigation_time)
@@ -60,13 +61,14 @@ class LossCurveExporter(object):
         self.dstore = dstore
         try:
             self.builder = get_loss_builder(dstore)
-        except KeyError:  # no 'gmdata' for non event_based_risk
+        except KeyError:  # no 'events' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
         arefs = [decode(aref) for aref in self.assetcol.asset_refs]
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
-        self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+        oqparam = dstore['oqparam']
+        self.loss_types = dstore.get_attr(oqparam.risk_model, 'loss_types')
         self.R = dstore['csm_info'].get_num_rlzs()
 
     def parse(self, what):
@@ -111,9 +113,9 @@ class LossCurveExporter(object):
         for key in sorted(curves_dict):
             recs = curves_dict[key]
             data = [['asset', 'loss_type', 'loss', 'period' if ebr else 'poe']]
-            for loss_type in self.loss_types:
+            for li, loss_type in enumerate(self.loss_types):
                 if ebr:  # event_based_risk
-                    array = recs[loss_type]  # shape (A, P) loss_dt
+                    array = recs[:, :, li]  # shape (A, P, LI)
                     periods = self.builder.return_periods
                     for aref, losses in zip(asset_refs, array):
                         for period, loss in zip(periods, losses):

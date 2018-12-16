@@ -30,6 +30,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
+LOG10 = np.log(10)
+
 
 class Kanno2006Shallow(GMPE):
     # pylint: disable=too-few-public-methods
@@ -139,17 +141,17 @@ class Kanno2006Shallow(GMPE):
         log_mean += self._compute_site_amplification(sites, coeffs)
 
         # retrieve standard deviations
-        log_stddevs = self._get_stddevs(coeffs, stddev_types)
+        log_stddevs = self._get_stddevs(coeffs, sites.vs30.size, stddev_types)
 
         # convert from common to natural logarithm
-        ln_mean = log_mean*np.log(10)
-        ln_stddevs = log_stddevs*np.log(10)
+        ln_mean = log_mean*LOG10
+        ln_stddevs = np.array(log_stddevs)*LOG10
 
         # convert accelerations from cm/s^2 to g
-        if not isinstance(imt, PGV):
+        if not imt.name == "PGV":
             ln_mean -= np.log(100*g)
 
-        return ln_mean, [ln_stddevs]
+        return ln_mean, ln_stddevs
 
     @classmethod
     def _compute_mag_dist_terms(cls, rup, dists, coeffs):
@@ -174,14 +176,16 @@ class Kanno2006Shallow(GMPE):
 
         return coeffs['p']*np.log10(sites.vs30) + coeffs['q']
 
-    def _get_stddevs(self, coeffs, stddev_types):
+    def _get_stddevs(self, coeffs, num_sites, stddev_types):
         """
         Only total error is reported so this is a simple lookup.
         """
+        stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+            stddevs.append(np.zeros(num_sites) + coeffs['epsilon'])
 
-        return coeffs['epsilon']
+        return stddevs
 
     #: Coefficients obtained from author via personal communcation with
     #: slightly more precision than Table 3, p. 884.
@@ -374,7 +378,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: Since "R_tr is the shortest distance from the observation site to the
 #    #: Kuril, Japan, and Izu-Bonin trenches" this attenuation model is not
 #    #: trivially adaptable to other regions.
-#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lons', 'lats'))
+#    REQUIRES_SITES_PARAMETERS = set(('vs30', 'lon', 'lat'))
 #
 #    #: There aren't even plots of results for northeast Japan in the paper
 #    #: so results cannot be verified without a dataset from the authors.
@@ -427,7 +431,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        ``A = log(obs/pre) = (alpha*R_tr + beta)*(D - 30)``
 #        """
 #
-#        r_trench = _get_min_distance_to_sub_trench(sites.lons, sites.lats)
+#        r_trench = _get_min_distance_to_sub_trench(sites.lon, sites.lat)
 #
 #        log_amp = (coeffs['alpha']*r_trench + coeffs['beta']) * \
 #            (rup.hypo_depth - self.REF_DEPTH_KM)

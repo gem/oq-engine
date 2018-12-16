@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.munson_thurber_1997 import MunsonThurber1997
+from openquake.hazardlib.gsim.munson_thurber_1997 import (
+                                                  MunsonThurber1997,
+                                                  MunsonThurber1997Hawaii)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -33,3 +35,17 @@ class MunsonThurber1997TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('MT97/MT97_STD_TOTAL.csv', max_discrep_percentage=0.1)
+
+
+class MunsonThurber1997HawaiiTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = MunsonThurber1997Hawaii
+
+    # Test data were taken from Table 5 of Munson and Thurber (1997)
+    # (some decimals are added manually, due to lack of precision)
+    # Standard deviation is a fixed value
+
+    def test_mean(self):
+        self.check('MT97/MT97_HA_MEAN.csv', max_discrep_percentage=0.6)
+
+    def test_std_total(self):
+        self.check('MT97/MT97_HA_STD_TOTAL.csv', max_discrep_percentage=0.1)

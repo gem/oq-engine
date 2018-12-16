@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ============== ===================
-checksum32     3,074,586,051      
-date           2018-06-26T14:56:59
-engine_version 3.2.0-gitb0cd949   
+checksum32     1,635,481,027      
+date           2018-12-13T12:57:19
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 40
@@ -56,6 +56,14 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997(): [0]>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+============ ====== === ============ ============
+source_model grp_id trt eff_ruptures tot_ruptures
+============ ====== === ============ ============
+scenario     0      *   1            0           
+============ ====== === ============ ============
+
 Exposure model
 --------------
 =============== ========
@@ -77,10 +85,8 @@ MUR/LWAL/HEX:5 1.00000 NaN    1   1   1         1
 
 Slowest operations
 ------------------
-======================= ========= ========= ======
-operation               time_sec  memory_mb counts
-======================= ========= ========= ======
-computing gmfs          0.00282   0.04297   1     
-reading site collection 0.00251   0.0       1     
-reading exposure        7.353E-04 0.0       1     
-======================= ========= ========= ======
+================ ========= ========= ======
+operation        time_sec  memory_mb counts
+================ ========= ========= ======
+reading exposure 4.447E-04 0.0       1     
+================ ========= ========= ======

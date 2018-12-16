@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <!--Canterbury Seismic Source Model 50-yr temporary - F500518/eembiesum50years.grd-->
+  <sourceModel name="Seismic Source Model">
+    <pointSource id="2970" name="point2970" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>172.6 -43.55</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>40</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="5.0" binWidth="0.1">
+        <occurRates>0.01699 0.01371 0.01104 0.008891 0.007158 0.005746 0.004603 0.003676 0.002927 0.002324 0.001838 0.001449 0.00114 0.0008967 0.0007073 0.0005616 0.0004508 0.0003672 0.0003048 0.0002579 0.000221 0.0001903 0.0001633 0.0001383 0.0001155 9.462e-05 7.578e-05 5.928e-05 4.531e-05 3.398e-05 2.518e-05</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.25" strike="0" dip="90" rake="45"/>
+        <nodalPlane probability="0.25" strike="45" dip="90" rake="45"/>
+        <nodalPlane probability="0.25" strike="90" dip="90" rake="45"/>
+        <nodalPlane probability="0.25" strike="135" dip="90" rake="45"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="0.07527" depth="2"/>
+        <hypoDepth probability="0.35484" depth="5"/>
+        <hypoDepth probability="0.39785" depth="10"/>
+        <hypoDepth probability="0.17204" depth="20"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>

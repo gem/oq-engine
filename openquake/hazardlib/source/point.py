@@ -17,12 +17,13 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import numpy
 from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.utils import get_bounding_box
 
 
 def _get_rupture_dimensions(src, mag, nodal_plane):
@@ -98,6 +99,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
+    code = b'P'
     _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth location nodal_plane_distribution
     hypocenter_distribution
@@ -164,54 +166,29 @@ class PointSource(ParametricSeismicSource):
                 self.max_radius = radius
         return self.max_radius
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, hcdist=True, npdist=True):
         """
-        See :meth:
-        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
-
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(
-            self.temporal_occurrence_model, self.location)
-
-    def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
-                                   rate_scaling_factor=1):
-        """
-        The common part of :meth:
-        `openquake.hazardlib.source.point.Point.iter_ruptures`
-        shared between point source
-        and :class:`~openquake.hazardlib.source.area.AreaSource`.
-
-        :param temporal_occurrence_model:
-            The same object as given to :meth:
-            `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
-        :param location:
-            A :class:`~openquake.hazardlib.geo.point.Point`
-            object representing the hypocenter
-            location. In case of :class:`PointSource` it is the one provided
-            to constructor, and for area source the location points are taken
-            from polygon discretization.
-        :param rate_scaling_factor:
-            Positive float number to multiply occurrence rates by. It is used
-            by area source to scale the occurrence rates with respect
-            to number of locations. Point sources use no scaling
-            (``rate_scaling_factor = 1``).
-        """
-        assert 0 < rate_scaling_factor, rate_scaling_factor
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             for np_prob, np in self.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in self.hypocenter_distribution.data:
-                    hypocenter = Point(latitude=location.latitude,
-                                       longitude=location.longitude,
+                    hypocenter = Point(latitude=self.location.latitude,
+                                       longitude=self.location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate * np_prob * hc_prob
-                                       * rate_scaling_factor)
+                    occurrence_rate = (mag_occ_rate *
+                                       (np_prob if npdist else 1) *
+                                       (hc_prob if hcdist else 1))
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
+                    if not hcdist:
+                        break
+                if not npdist:
+                    break
 
     def count_ruptures(self):
         """
@@ -334,12 +311,14 @@ class PointSource(ParametricSeismicSource):
 
     def get_bounding_box(self, maxdist):
         """
-        Bounding box containing all points, enlarged by the maximum distance
-        and the maximum rupture projection radius (upper limit).
+        Bounding box of the point, enlarged by the maximum distance
         """
-        lon = self.location.longitude
-        lat = self.location.latitude
-        maxradius = self._get_max_rupture_projection_radius()
-        a1 = (maxdist + maxradius) * KM_TO_DEGREES
-        a2 = angular_distance(maxdist + maxradius, lat)
-        return lon - a2, lat - a1, lon + a2, lat + a1
+        radius = self._get_max_rupture_projection_radius()
+        return get_bounding_box([self.location], maxdist + radius)
+
+    def geom(self):
+        """
+        :returns: the geometry as an array of shape (1, 3)
+        """
+        loc = self.location
+        return numpy.array([[loc.x, loc.y, loc.z]], numpy.float32)

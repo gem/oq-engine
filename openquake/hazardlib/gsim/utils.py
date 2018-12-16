@@ -41,15 +41,16 @@ def mblg_to_mw_atkinson_boore_87(mag):
     """
     return 2.715 - 0.277 * mag + 0.127 * mag * mag
 
+
 def clip_mean(imt, mean):
     """
     Clip GMPE mean value at 1.5 g for PGA and 3 g for short periods
     (0.02 < T < 0.55)
     """
-    if imt == PGA():
+    if imt.period == 0:
         mean[mean > 0.405] = 0.405
 
-    if isinstance(imt, SA) and (0.02 < imt.period < 0.55):
+    if 0.02 < imt.period < 0.55:
         mean[mean > 1.099] = 1.099
 
     return mean

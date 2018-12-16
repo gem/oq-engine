@@ -21,17 +21,21 @@ Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
 <GroundShakingIntensityModel>`.
 """
+import re
 import abc
 import math
 import warnings
 import functools
-from scipy.special import ndtr
 import numpy
+from scipy.special import ndtr
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import *  # for backward compatibility
+
+
+registry = {}  # GSIM name -> GSIM class
 
 
 class NotVerifiedWarning(UserWarning):
@@ -53,33 +57,8 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-class MetaGSIM(abc.ABCMeta):
-    """
-    Metaclass controlling the instantiation mechanism.
-    A GroundShakingIntensityModel subclass with an
-    attribute deprecated=True will print a deprecation warning when
-    instantiated. A subclass with an attribute non_verified=True will
-    print a UserWarning.
-    """
-    deprecated = False
-    non_verified = False
-
-    def __call__(cls, **kwargs):
-        if cls.deprecated:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.__base__.__name__)
-            warnings.warn(msg, DeprecationWarning)
-        if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
-            warnings.warn(msg, NotVerifiedWarning)
-        self = super().__call__(**kwargs)
-        self.kwargs = kwargs
-        return self
-
-
 @functools.total_ordering
-class GroundShakingIntensityModel(metaclass=MetaGSIM):
+class GroundShakingIntensityModel(object):
     """
     Base class for all the ground shaking intensity models.
 
@@ -95,7 +74,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
@@ -172,6 +150,24 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     minimum_distance = 0  # can be set by the engine
+    superseded_by = None
+    non_verified = False
+
+    @classmethod
+    def __init_subclass__(cls):
+        registry[cls.__name__] = cls
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        cls = self.__class__
+        if cls.superseded_by:
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.superseded_by.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        if cls.non_verified:
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -388,11 +384,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
         """
-        if not issubclass(type(imt), imt_module._IMT):
-            raise ValueError('imt must be an instance of IMT subclass')
-        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+        names = set(f.__name__
+                    for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+        if imt.name not in names:
             raise ValueError('imt %s is not supported by %s' %
-                             (type(imt).__name__, type(self).__name__))
+                             (imt.name, type(self).__name__))
 
     def __lt__(self, other):
         """
@@ -414,7 +410,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return hash(str(self))
 
     def __str__(self):
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        kwargs = ', '.join('%s=%r' % kv for kv in self.kwargs.items())
         return "%s(%s)" % (self.__class__.__name__, kwargs)
 
     def __repr__(self):
@@ -494,6 +490,13 @@ def _norm_sf(values):
     return ndtr(- values)
 
 
+ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
+                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
+ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
+ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
+                             'COEFFS_SITE_RESPONSE']
+
+
 class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
@@ -518,6 +521,38 @@ class GMPE(GroundShakingIntensityModel):
         Returns numpy array of exponents of ``values``.
         """
         return numpy.exp(values)
+
+    def set_parameters(self):
+        """
+        Combines the parameters of the GMPE provided at the construction level
+        with the ones originally assigned to the backbone modified GMPE.
+        """
+        # Creating the list of keys
+        keys = {}
+        for key in dir(self):
+            if not callable(getattr(self, key)) and not re.search('^_', key):
+                # keys[key] = set(())
+                keys[key] = getattr(self, key)
+        # Setting parameters
+        for key in dir(self.gmpe):
+            if key in keys and not callable(getattr(self.gmpe, key)):
+                if re.search('^[A-Z]', key) and not re.search('^C', key):
+                    tmps = getattr(self.gmpe, key)
+                    try:
+                        keys[key] |= tmps
+                    except TypeError:
+                        if (key in ADMITTED_STR_PARAMETERS or
+                                key in ADMITTED_FLOAT_PARAMETERS):
+                            keys[key] = tmps
+                        elif (key in ADMITTED_TABLE_PARAMETERS):
+                            pass
+                        else:
+                            raise NameError('This is not a recognized type ' %
+                                            key)
+                    else:
+                        keys[key] = tmps
+        for key in keys:
+            setattr(self, key, keys[key])
 
 
 class IPE(GroundShakingIntensityModel):
@@ -614,11 +649,11 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    KeyError: PGV()
+    KeyError: PGV
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=1.0, damping=4)
+    KeyError: SA(1.0, 4)
 
     Table of coefficients for spectral acceleration could be indexed
     by instances of :class:`openquake.hazardlib.imt.SA` with period
@@ -636,14 +671,14 @@ class CoeffsTable(object):
     >>> ct[imt.SA(period=0.9, damping=15)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.9, damping=15)
+    KeyError: SA(0.9, 15)
 
     Extrapolation is not possible:
 
     >>> ct[imt.SA(period=0.01, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.01, damping=5)
+    KeyError: SA(0.01)
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -666,11 +701,11 @@ class CoeffsTable(object):
         if isinstance(table, str):
             self._setup_table_from_str(table, sa_damping)
         elif isinstance(table, dict):
-            for key in table:
-                if isinstance(key, imt_module.SA):
-                    self.sa_coeffs[key] = table[key]
+            for imt in table:
+                if imt.name == 'SA':
+                    self.sa_coeffs[imt] = table[imt]
                 else:
-                    self.non_sa_coeffs[key] = table[key]
+                    self.non_sa_coeffs[imt] = table[imt]
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
@@ -694,9 +729,9 @@ class CoeffsTable(object):
             try:
                 sa_period = float(imt_name)
             except Exception:
-                if not hasattr(imt_module, imt_name):
+                if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
-                imt = getattr(imt_module, imt_name)()
+                imt = imt_module.registry[imt_name]()
                 self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
@@ -717,7 +752,7 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if not isinstance(imt, imt_module.SA):
+        if imt.name != 'SA':
             return self.non_sa_coeffs[imt]
 
         try:
