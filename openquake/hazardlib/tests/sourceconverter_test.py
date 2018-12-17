@@ -218,5 +218,14 @@ class SourceConverterTestCase(unittest.TestCase):
         sc = SourceConverter(area_source_discretization=10.)
         sg = nrml.to_python(testfile, sc)
         msg = "Wrong occurrence rate in the temporal occurrence model"
-        self.assertEqual(sg[0].temporal_occurrence_model.occurrence_rate,
-                         0.01, msg)
+        expected = sg[0].temporal_occurrence_model.occurrence_rate
+        self.assertEqual(expected, 0.01, msg)
+        msg = "Wrong cluster definition"
+        self.assertEqual(sg[0].cluster, False, msg)
+
+    def test_source_group_cluster(self):
+        testfile = os.path.join(testdir, 'source_group_cluster.xml')
+        sc = SourceConverter(area_source_discretization=10.)
+        sg = nrml.to_python(testfile, sc)
+        msg = "Wrong cluster definition"
+        self.assertEqual(sg[0].cluster, True, msg)
