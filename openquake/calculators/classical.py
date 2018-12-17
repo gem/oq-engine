@@ -248,7 +248,7 @@ class ClassicalCalculator(base.HazardCalculator):
         I = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
         names = [name for name, _ in hstats]
-        if R > 1 and oq.individual_curves:
+        if R > 1 and oq.individual_curves or not hstats:
             for r in range(R):
                 names.append('rlz-%03d' % r)
         for name in names:
@@ -325,7 +325,7 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
                     pmap_by_kind['hmaps', statname] = calc.make_hmap(
                         pmap, pgetter.imtls, pgetter.poes)
 
-    if len(pmaps) > 1 and individual_curves:
+    if len(pmaps) > 1 and individual_curves or not hstats:
         for r, pmap in enumerate(pmaps):
             key = 'rlz-%03d' % r
             pmap_by_kind['hcurves', key] = pmap
