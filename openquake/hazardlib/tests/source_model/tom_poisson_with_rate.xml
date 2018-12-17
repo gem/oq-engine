@@ -23,9 +23,14 @@ xmlns:gml="http://www.opengis.net/gml"
                         </simpleFaultGeometry>
                         <magScaleRel> WC1994 </magScaleRel>
                         <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                        <poissonTOM occurrence_rate="0.01" />
-                        <truncGutenbergRichterMFD aValue="4.20" bValue="0.9"
-                                maxMag="7.0" minMag="6.0" />
+                        <poissonTOM occurrence_rate="0.01" mfd_normalised="true" />
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="6.0">
+                            <occurRates>
+                                0.5 0.30 0.15 0.05
+                            </occurRates>
+                        </incrementalMFD>
                         <rake>90</rake>
                     </simpleFaultSource>
             </sourceGroup>

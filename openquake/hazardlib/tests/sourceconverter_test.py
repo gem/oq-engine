@@ -209,6 +209,9 @@ class SourceConverterTestCase(unittest.TestCase):
         msg = "Wrong occurrence rate in the temporal occurrence model"
         self.assertEqual(src.temporal_occurrence_model.occurrence_rate,
                          0.01, msg)
+        msg = "Wrong definition of mfd normalisation"
+        self.assertEqual(src.temporal_occurrence_model.mfd_normalised,
+                         True, msg)
 
     def test_source_group_with_tom(self):
         testfile = os.path.join(testdir, 'source_group_with_tom.xml')
@@ -217,4 +220,3 @@ class SourceConverterTestCase(unittest.TestCase):
         msg = "Wrong occurrence rate in the temporal occurrence model"
         self.assertEqual(sg[0].temporal_occurrence_model.occurrence_rate,
                          0.01, msg)
-
