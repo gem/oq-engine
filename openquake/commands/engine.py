@@ -125,6 +125,11 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
     Run calculations by storing their hazard checksum and reusing previous
     calculations if requested.
     """
+    haz_checksum = readinput.get_checksum32(oqparam, hazard=True)
+    # retrieve an old calculation with the right checksum, if any
+    job = logs.dbcmd('get_job_from_checksum', haz_checksum)
+    reuse = reuse_hazard and job and os.path.exists(job.ds_calc_dir + '.hdf5')
+    # recompute the hazard and store the checksum
     if (oqparam.calculation_mode == 'event_based_risk' and
             'gmfs' not in oqparam.inputs):
         kw = dict(calculation_mode='event_based')
@@ -134,34 +139,30 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             kw['exposure_file'] = ''
     else:
         kw = {}
-    checksum = readinput.get_checksum32(oqparam, hazard=True)
-    # retrieve an old calculation with the right checksum, if any
-    job = logs.dbcmd('get_job_from_checksum', checksum)
-    if job is None:
-        # recompute the hazard and store the checksum
+    if not reuse:
         hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
-        logs.dbcmd('add_checksum', hc_id, checksum)
-    elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
-        # recompute and update the job associated to the checksum
-        hc_id = run_job(job_ini, log_level, log_file, exports, **kw)
-        logs.dbcmd('update_job_checksum', hc_id, checksum)
+        if job is None:
+            logs.dbcmd('add_checksum', hc_id, haz_checksum)
+        elif not reuse_hazard or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+            logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
+        if (oqparam.calculation_mode == 'event_based_risk' and
+                'gmfs' not in oqparam.inputs):
+            job_id = run_job(job_ini, log_level, log_file,
+                             exports, hazard_calculation_id=hc_id)
     else:
-        # compute the risk or the stats by reusing the hazard
-        assert job.description == oqparam.description, (
-            job.description, oqparam.description)  # sanity check
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
         job_id = run_job(job_ini, log_level, log_file,
                          exports, hazard_calculation_id=hc_id)
-        if oqparam.aggregate_by:
-            logging.info('Exporting aggregated data')
-            dstore = datastore.read(job_id)
-            aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
-            fnames = []
-            fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
-            fnames.extend(export((aggby + 'curves', 'csv'), dstore))
-            for fname in fnames:
-                logging.info('Exported %s', fname)
+    if oqparam.aggregate_by:
+        logging.info('Exporting aggregated data')
+        dstore = datastore.read(job_id)
+        aggby = 'aggregate_by/%s/' % ','.join(oqparam.aggregate_by)
+        fnames = []
+        fnames.extend(export((aggby + 'avg_losses', 'csv'), dstore))
+        fnames.extend(export((aggby + 'curves', 'csv'), dstore))
+        for fname in fnames:
+            logging.info('Exported %s', fname)
 
 
 @sap.Script
