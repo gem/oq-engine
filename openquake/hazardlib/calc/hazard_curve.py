@@ -88,6 +88,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     imtls = param['imtls']
     trunclevel = param.get('truncation_level')
     cmaker = ContextMaker(gsims, maxdist, param, monitor)
+    # prepare the probability maps
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
@@ -119,8 +120,10 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
         # storing the number of contributing ruptures too
         pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
                               for gid in src.src_group_ids}
+    # updating the probability map in the case of mutually exclusive sources
     if src_mutex and param.get('grp_probability'):
         pmap[src.src_group_id] *= param['grp_probability']
+    # updating the probability map in the case of mutually exclusive sources
     return pmap
 
 
