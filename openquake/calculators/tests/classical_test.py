@@ -262,8 +262,11 @@ hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
 hazard_curve-mean-SA(0.1).csv
+hazard_curve-std-PGA.csv
+hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
+hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
         # test UHS XML export
@@ -274,8 +277,12 @@ hazard_uhs-mean.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
         # npz exports
-        export(('hmaps', 'npz'), self.calc.datastore)
-        export(('uhs', 'npz'), self.calc.datastore)
+        [fname] = export(('hmaps', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        [fname] = export(('uhs', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
@@ -345,15 +352,15 @@ hazard_uhs-mean.csv
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, delta=1E-7)
+            case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # check exporting a single realization in XML and CSV
-        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
         if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
-        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
         # extracting hmaps
