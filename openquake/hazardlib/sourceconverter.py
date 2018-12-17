@@ -508,14 +508,25 @@ class SourceConverter(RuptureConverter):
             if found:
                 [tom_node] = [subnode for subnode in node
                               if subnode.tag.endswith(('poissonTOM'))]
+                # set time span
+                times = self.tom.time_span
                 if tom_node.tag.endswith('poissonTOM'):
+                    tom = PoissonTOM(time_span=times)
+                    # set occurrence rate param
                     tag = 'occurrence_rate'
                     if tag in tom_node.attrib:
                         rate = float(tom_node[tag])
-                        return PoissonTOM(time_span=self.tom.time_span,
-                                          occurrence_rate=rate)
-                    else:
-                        return PoissonTOM(time_span=self.tom.time_span)
+                        tom.occurrence_rate = rate
+                    # set mfd normalisation flag
+                    tag = 'mfd_normalised'
+                    mfdn = False
+                    if tag in tom_node.attrib:
+                        if tom_node[tag] == "true":
+                            mfdn = True
+                    tom.mfd_normalised = mfdn
+                    return tom
+                else:
+                    return PoissonTOM(time_span=self.tom.time_span)
             else:
                 return default
 
