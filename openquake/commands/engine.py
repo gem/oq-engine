@@ -147,8 +147,8 @@ def smart_run(job_ini, oqparam, log_level, log_file, exports, reuse_hazard):
             logs.dbcmd('update_job_checksum', hc_id, haz_checksum)
         if (oqparam.calculation_mode == 'event_based_risk' and
                 'gmfs' not in oqparam.inputs):
-            run_job(job_ini, log_level, log_file,
-                    exports, hazard_calculation_id=hc_id)
+            job_id = run_job(job_ini, log_level, log_file,
+                             exports, hazard_calculation_id=hc_id)
     else:
         hc_id = job.id
         logging.info('Reusing job #%d', job.id)
