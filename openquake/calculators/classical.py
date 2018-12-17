@@ -317,7 +317,7 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
             pmap_by_kind['hcurves', statname] = pmap
             if pgetter.poes:
-                if hmaps:
+                if statname == 'std':
                     pdic = DictArray({imt: pgetter.poes for imt in imtls})
                     pmap_by_kind['hmaps', statname] = (
                         compute_pmap_stats(hmaps, [stat], weights, pdic))
