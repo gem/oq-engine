@@ -19,6 +19,7 @@
 import os
 import logging
 import functools
+import operator
 import multiprocessing
 import numpy
 
@@ -409,6 +410,37 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = imtls
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+
+    def hmap_dt(self):  # used for CSV export
+        """
+        :returns: a composite dtype (imt, poe)
+        """
+        return numpy.dtype([('%s-%s' % (imt, poe), F32)
+                            for imt in self.imtls for poe in self.poes])
+
+    def uhs_dt(self):  # used for CSV export
+        """
+        :returns: a composity dtype (poe, imt)
+        """
+        imts = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                imts.append(imt)
+        imts.sort(key=operator.attrgetter('period'))
+        return numpy.dtype([('%s-%s' % (poe, imt), F32)
+                            for poe in self.poes for imt in imts])
+
+    def imt_periods(self):
+        """
+        :returns: the IMTs with a period, as objects
+        """
+        imts = []
+        for im in self.imtls:
+            imt = from_string(im)
+            if hasattr(imt, 'period'):
+                imts.append(imt)
+        return imts
 
     def imt_dt(self):
         """
