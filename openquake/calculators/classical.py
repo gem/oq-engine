@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, DictArray
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -318,8 +318,9 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             pmap_by_kind['hcurves', statname] = pmap
             if pgetter.poes:
                 if hmaps:
+                    pdic = DictArray({imt: pgetter.poes for imt in imtls})
                     pmap_by_kind['hmaps', statname] = (
-                        compute_pmap_stats(hmaps, [stat], weights, imtls))
+                        compute_pmap_stats(hmaps, [stat], weights, pdic))
                 else:
                     pmap_by_kind['hmaps', statname] = calc.make_hmap(
                         pmap, pgetter.imtls, pgetter.poes)
