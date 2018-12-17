@@ -71,6 +71,10 @@ class SourceGroup(collections.Sequence):
         the potential maximum number of ruptures contained in the group
     :param temporal_occurrence_model:
         A temporal occurrence model controlling the source group occurrence
+    :param cluster:
+        A boolean indicating if the sources behaves as a cluster similarly
+        to what used by the USGS for the New Madrid in the 2008 National
+        Hazard Model.
     """
     @classmethod
     def collect(cls, sources):
@@ -95,7 +99,8 @@ class SourceGroup(collections.Sequence):
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
                  min_mag={'default': 0}, max_mag=None, id=0, eff_ruptures=-1,
-                 tot_ruptures=0, temporal_occurrence_model=None):
+                 tot_ruptures=0, temporal_occurrence_model=None,
+                 cluster=False):
         # checks
         self.trt = trt
         self._check_init_variables(sources, name, src_interdep, rup_interdep)
@@ -114,6 +119,7 @@ class SourceGroup(collections.Sequence):
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later by get_rlzs_assoc
         self.temporal_occurrence_model = temporal_occurrence_model
+        self.cluster = cluster
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -817,13 +823,17 @@ class SourceConverter(RuptureConverter):
         srcs_weights = node.attrib.get('srcs_weights')
         grp_attrs = {k: v for k, v in node.attrib.items()
                      if k not in ('name', 'src_interdep', 'rup_interdep',
-                                  'srcs_weights')}
+                                  'srcs_weights', 'group_type')}
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.name = node.attrib.get('name')
         # set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
         sg.grp_probability = node.attrib.get('grp_probability')
+        # set the cluster attribute
+        sg.cluster = False
+        if node.attrib.get('cluster') == 'true':
+            sg.cluster = True
         #
         for src_node in node:
             if re.search('TOM', src_node.tag):
@@ -856,6 +866,12 @@ class SourceConverter(RuptureConverter):
                     % (len(srcs_weights), len(node), self.fname))
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
+        # check that, when the cluster option is set, the group has a temporal
+        # occurrence model properly defined
+        if sg.cluster and not hasattr(sg, 'temporal_occurrence_model'):
+            msg = 'The Source Group is a cluster but does not have a '
+            msg += 'temporal occurrence model'
+            raise ValueError(msg)
         return sg
 
 # ################### MultiPointSource conversion ######################## #
