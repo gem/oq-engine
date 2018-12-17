@@ -287,7 +287,8 @@ def extract_uhs(dstore, what):
         uhs = numpy.zeros(len(hmap), uhs_dt)
         for field in hmap.dtype.names:
             imt, poe = field.split('-')
-            uhs[poe][imt] = hmap[field]
+            if imt in imts_dt.names:
+                uhs[poe][imt] = hmap[field]
         dic[name] = uhs
     return hazard_items(dic, mesh, investigation_time=oq.investigation_time)
 
