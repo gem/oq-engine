@@ -58,22 +58,23 @@ def getdata(what, calc_ids, samplesites):
     return sids, imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
-def reduce(array, rtol):
+def get_diff_idxs(array, rtol, atol):
     """
     Given an array with (C, N, L) values, being the first the reference value,
-    compute the relative differences and discard the one below the rtol
+    compute the relative differences and discard the one below the tolerance.
+    :returns: indices where there are sensible differences.
     """
     C, N, L = array.shape
     diff_idxs = set()  # indices of the sites with differences
     for c in range(1, C):
         for n in range(N):
-            if not numpy.allclose(array[c, n], array[0, n], rtol, atol=1E-4):
+            if not numpy.allclose(array[c, n], array[0, n], rtol, atol):
                 diff_idxs.add(n)
     return numpy.fromiter(diff_idxs, int)
 
 
 @sap.Script
-def compare(what, imt, calc_ids, files, samplesites=100, percent=5):
+def compare(what, imt, calc_ids, files, samplesites=100, rtol=.1, atol=1E-4):
     """
     Compare the hazard curves or maps of two or more calculations
     """
@@ -95,9 +96,10 @@ def compare(what, imt, calc_ids, files, samplesites=100, percent=5):
         array_imt = arrays[:, :, slc]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
-    diff_idxs = reduce(array_imt, percent / 100.)
+    diff_idxs = get_diff_idxs(array_imt, rtol, atol)
     if len(diff_idxs) == 0:
-        print('There are no differences within the tolerance')
+        print('There are no differences within the tolerance of %d%%' %
+              (rtol * 100))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
@@ -121,4 +123,5 @@ compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
 compare.opt('samplesites', 'number of sites to sample', type=int)
-compare.opt('percent', 'acceptable percent difference', type=float)
+compare.opt('rtol', 'relative tolerance', type=float)
+compare.opt('atol', 'absolute tolerance', type=float)
