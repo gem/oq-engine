@@ -241,6 +241,7 @@ class ContextMaker(object):
         eff_ruptures = 0
         for rups, sites in self.get_ruptures_sites(src, s_sites):
             if len(rups) > src.num_ruptures:
+                import pdb; pdb.set_trace()
                 raise ValueError('Expected at max %d ruptures, got %d' % (
                     src.num_ruptures, len(rups)))
             weight = 1. / len(rups)
