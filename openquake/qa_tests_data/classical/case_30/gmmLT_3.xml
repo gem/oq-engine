@@ -9,14 +9,17 @@
                     <logicTreeBranch branchID="YoungsEtAl1997SInter">
                         <uncertaintyModel>YoungsEtAl1997SInter</uncertaintyModel>
                         <uncertaintyWeight>0.33</uncertaintyWeight>
+                        <uncertaintyWeight imt="SA(1.0)">0.3</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="AtkinsonBoore2003SInter">
                         <uncertaintyModel>AtkinsonBoore2003SInter</uncertaintyModel>
                         <uncertaintyWeight>0.33</uncertaintyWeight>
+                        <uncertaintyWeight imt="SA(1.0)">0.4</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="ZhaoEtAl2006SInter">
                         <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
                         <uncertaintyWeight>0.34</uncertaintyWeight>
+                        <uncertaintyWeight imt="SA(1.0)">0.3</uncertaintyWeight>
                     </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

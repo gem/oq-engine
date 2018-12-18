@@ -287,7 +287,8 @@ class CompositionInfo(object):
         """
         realizations = self.get_rlzs_assoc().realizations
         return numpy.array(
-            [(r.uid, gsim_names(r), r.weight) for r in realizations], rlz_dt)
+            [(r.uid, gsim_names(r), r.weight['default'])
+             for r in realizations], rlz_dt)
 
     def update_eff_ruptures(self, count_ruptures):
         """
@@ -449,11 +450,7 @@ class CompositeSourceModel(collections.Sequence):
         :param weight: source weight function
         :returns: total weight of the source model
         """
-        tot_weight = 0
-        for srcs in self.sources_by_trt.values():
-            tot_weight += sum(map(weight, srcs))
-        for grp in self.gen_mutex_groups():
-            tot_weight += sum(map(weight, grp))
+        tot_weight = sum(weight(src) for src in self.get_sources())
         self.info.tot_weight = tot_weight
         return tot_weight
 

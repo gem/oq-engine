@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ===================
 checksum32     3,002,809,595      
-date           2018-10-05T03:04:17
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:56:56
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 6, num_levels = 19
@@ -37,7 +37,6 @@ Name                     File
 exposure                 `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                  `job_haz.ini <job_haz.ini>`_                                
-source                   `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_        
 ======================== ============================================================
@@ -134,25 +133,24 @@ Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 2.72344 NaN     2.72344 2.72344 1      
-split_filter       0.22967 0.03561 0.20449 0.25485 2      
+read_source_models 2.13291 NaN     2.13291 2.13291 1      
+split_filter       0.23519 0.04437 0.20381 0.26656 2      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ============================================================================== ========
-task               sent                                                                           received
-read_source_models monitor=0 B fnames=0 B converter=0 B                                           32.89 KB
-split_filter       srcs=45.95 KB monitor=5.43 KB srcfilter=3.21 KB sample_factor=273 B seed=182 B 74.6 KB 
-================== ============================================================================== ========
+================== ========================================= ========
+task               sent                                      received
+read_source_models converter=388 B fnames=111 B              33.03 KB
+split_filter       srcs=46.1 KB srcfilter=3.21 KB seed=182 B 74.6 KB 
+================== ========================================= ========
 
 Slowest operations
 ------------------
 ======================== ========= ========= ======
 operation                time_sec  memory_mb counts
 ======================== ========= ========= ======
-total read_source_models 2.72344   0.51172   1     
-updating source_info     1.18405   1.15234   1     
-total split_filter       0.45934   1.66016   2     
-reading exposure         6.464E-04 0.0       1     
+total read_source_models 2.13291   1.04688   1     
+total split_filter       0.47037   2.81641   2     
+reading exposure         4.444E-04 0.0       1     
 ======================== ========= ========= ======

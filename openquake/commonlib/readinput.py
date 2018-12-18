@@ -1342,6 +1342,7 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     else:
         logging.warn('Sources %s not found', source_ids)
 
+
 # used in oq zip and oq checksum
 def get_input_files(oqparam, hazard=False):
     """
@@ -1416,7 +1417,7 @@ def get_checksum32(oqparam, hazard=False):
                        'width_of_mfd_bin', 'area_source_discretization',
                        'random_seed', 'ses_seed', 'truncation_level',
                        'maximum_distance', 'investigation_time',
-                       'number_of_logic_tree_samples',
+                       'number_of_logic_tree_samples', 'imtls',
                        'ses_per_logic_tree_path', 'minimum_magnitude',
                        'prefilter_sources', 'sites', 'fast_sampling',
                        'pointsource_distance', 'filter_distance'):
