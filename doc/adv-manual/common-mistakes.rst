@@ -72,40 +72,58 @@ well be that within the systematic error using only 20 levels per each intensity
 measure type produces good enough results, while reducing the computation
 time by a factor of 5, at least in theory.
 
+pointsource_distance
+----------------------------
 
-event_based/scenario parameters
---------------------------------
+PointSources (and MultiPointSources and AreaSources,
+which are split into PointSources and therefore are effectively
+the same thing) have an hypocenter distribution and
+a nodal plane distribution, which are used to model the uncertainties on
+the hypocenter location and ont the orientation of the underlying ruptures.
+Since PointSources produce rectangular surfaces, thery are really
+not pointwise for the engine, and are actually complicated things.
+Is the effect of the hypocenter/nodal planes distributions relevant?
+It depends on the calculation, but if you are interested in points that
+are far from the rupture the effect is minimal. So if you have a nodal
+plane distribution with 20 planes and a hypocenter distribution with 5
+hypocenters, the engine will consider 20 x 5 ruptures and perform 100
+times more calculations than needed, since at large distance the hazard
+will be more or less the same for each rupture.
 
-ground_motion_correlation_model:
-  Event based/scenario calculations with a ground motion correlation model
-  are severely limited by the size of the correlation matrix. If you have
-  thousands of hazard sites it will likely be impossible to run the
-  calculation, because you will run out of memory. Just reduce the number
-  of sites or remove the correlation model. If you remove the correlation,
-  the calculation of the GMFs will become orders of magnitude faster.
+To avoid this performance problem it is a good practice to set the
+`pointsource_distance` parameter. For instance, setting
 
-minimum_intensity:
-  Event based/scenario calculators honors a `minimum_intensity` parameter,
-  i.e. ground motion fields below the minimum intensity are  
-  discarded. For instance, if you add to your `job.ini` file a line
-  ``minimum_intensity={'PGA': 0.05, 'SA(0.1)': 0.05}`` all ground motion
-  fields below the value of 0.05 g will be discarded. This parameter has  
-  a huge effect on memory consumption and data transfer: a calculation
-  which is impossible without specifying it can become possible after specifying
-  a carefully chosen value for it.
+`pointsource_distance = 50`
 
-event_based_risk parameters
-------------------------------
+means: for the points that are distant more than 50 km from the ruptures
+ignore the hypocenter and nodal plane distributions and consider only the
+first rupture in the distribution. This will give you a substantial speedup
+if your model is dominated by PointSources and there are several
+nodal planes/hypocenters in the distribution. In same situation it also
+makes sense to set
 
-return_periods:
-  The ``return_periods`` are used to compute the loss curves. If not set,
-  the engine automatically define some reasonable return periods. Building
-  the loss curves is computationally heavy, especially if there are millions
-  of assets. If you are not interested in computing the loss curves but only
-  in the average losses you can set ``return_periods=0`` and the risk
-  calculation will be a lot faster.  
+`pointsource_distance = 0`
 
-  
+to completely remove the nodal plane/hypocenter distributions. For instance
+the Indonesia model has 20 nodal planes for each point sources; however such
+model uses the so-called `equivalent distance approximation`_ which considers
+the point sources to be really pointwise. In this case the contribution to
+the hazard is totally independent from the nodal plane and by using
+
+`pointsource_distance = 0`
+
+one can get *exactly* the same numbers and run the model in 1 hour instead
+of 20. Actually, starting from engine 3.3 the engine is smart enough to
+recognize the cases where the equivalent distance approximation is used and
+automatically set `pointsource_distance = 0`.
+
+Even if you not using the equivalent distance approximation, the effect
+of the nodal plane/hypocenter distribution: I have seen case when setting
+setting `pointsource_distance = 0` changed the result only by 0.1% and
+gained an order of magnitude of speedup. You have to check on a case by case
+basis.
+
+
 concurrent_tasks parameter
 ---------------------------
 
@@ -122,3 +140,5 @@ concurrent_tasks:
    you will produce smaller tasks. Another case when it may help is when
    computing hazard statistics with lots of sites and realizations, since
    by increasing this parameter the tasks will contain less sites.
+
+.. _equivalent distance approximation: equivalent_distance_approximation.rst
