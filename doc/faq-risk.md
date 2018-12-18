@@ -35,7 +35,7 @@ The answer is: as big as it takes to get statistically significant results.
 Statistically significant means that by changing the seed used in the
 Montecarlo simulation the results change little. If by changing the seed
 your total portfolio loss changes by one order of magnitude then your
-choice of `ses_per_logic_tree_path` was incorrect; if it changes by 10%
+choice of `ses_per_logic_tree_path` was very wrong; if it changes by 10%
 it is reasonable; if it changes by 1% it is very good.
 
 I did some experiments on Slovenia (a small country that can be run on a laptop)
