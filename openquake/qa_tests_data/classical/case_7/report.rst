@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 7
 
 ============== ===================
 checksum32     359,954,679        
-date           2018-10-05T03:05:08
-engine_version 3.3.0-git48e9a474fd
+date           2018-12-13T12:58:02
+engine_version 3.3.0-git68d7d11268
 ============== ===================
 
 num_sites = 1, num_levels = 3
@@ -36,8 +36,6 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model_1.xml <source_model_1.xml>`_                  
-source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
 
@@ -89,9 +87,9 @@ Slowest sources
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 grp_id source_id code gidx1 gidx2 num_ruptures calc_time split_time num_sites num_split weight
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
-0      1         S    0     2     91           0.0       2.575E-05  0.0       1         0.0   
-0      2         C    2     8     49           0.0       1.144E-05  0.0       1         0.0   
-1      1         S    0     2     91           0.0       1.049E-05  0.0       1         0.0   
+0      1         S    0     2     91           0.0       3.886E-05  0.0       1         0.0   
+0      2         C    2     8     49           0.0       1.407E-05  0.0       1         0.0   
+1      1         S    0     2     91           0.0       1.431E-05  0.0       1         0.0   
 ====== ========= ==== ===== ===== ============ ========= ========== ========= ========= ======
 
 Computation times by source typology
@@ -110,30 +108,29 @@ source_id calc_time num_dupl
 ========= ========= ========
 1         0.0       2       
 ========= ========= ========
-Total time in duplicated sources: 0/0 (76%)
+Total time in duplicated sources: 0/0 (79%)
 
 Information about the tasks
 ---------------------------
 ================== ======= ======= ======= ======= =======
 operation-duration mean    stddev  min     max     outputs
-read_source_models 0.08061 0.07184 0.02981 0.13141 2      
-split_filter       0.00474 NaN     0.00474 0.00474 1      
+read_source_models 0.08710 0.08777 0.02503 0.14916 2      
+split_filter       0.01048 NaN     0.01048 0.01048 1      
 ================== ======= ======= ======= ======= =======
 
 Data transfer
 -------------
-================== ====================================================================== ========
-task               sent                                                                   received
-read_source_models monitor=662 B converter=638 B fnames=366 B                             3.47 KB 
-split_filter       srcs=1.9 KB monitor=343 B srcfilter=253 B sample_factor=21 B seed=15 B 2.08 KB 
-================== ====================================================================== ========
+================== ====================================== ========
+task               sent                                   received
+read_source_models converter=776 B fnames=216 B           3.44 KB 
+split_filter       srcs=1.91 KB srcfilter=253 B seed=14 B 2.1 KB  
+================== ====================================== ========
 
 Slowest operations
 ------------------
 ======================== ======== ========= ======
 operation                time_sec memory_mb counts
 ======================== ======== ========= ======
-total read_source_models 0.16123  0.26172   2     
-updating source_info     0.00989  0.0       1     
-total split_filter       0.00474  0.0       1     
+total read_source_models 0.17419  0.21875   2     
+total split_filter       0.01048  0.0       1     
 ======================== ======== ========= ======

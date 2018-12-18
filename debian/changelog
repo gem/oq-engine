@@ -2,6 +2,11 @@
   * Adds GMPE suite for national PSHA for Germany
   
   [Michele Simionato]
+  * Made the export of uniform hazard spectra fast
+  * Made the `std` hazard output properly exportable
+  * Replaced the `~` in the header of the UHS csv files with a `-`
+  * Restored the `individual_curves` flag even for the hazard curves
+  * Implemented dGMPE weights per intensity measure type
   * Extended `--reuse-hazard` to all calculators
   * Fixed a bug in event_based_risk from GMFs with coefficients of variations
 

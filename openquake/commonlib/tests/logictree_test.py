@@ -2429,7 +2429,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         [(value, weight, branch_ids, _, _)] = logictree.sample(
             list(self.gmpe_lt), 1, self.seed)
         self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
-        self.assertEqual(weight, 0.5)
+        self.assertEqual(weight['default'], 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
 
