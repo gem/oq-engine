@@ -21,23 +21,13 @@ The probabilistic seismic hazard assessment of Germany - version 2016,
 considering the range or epistemic uncertainties and aleatory variability."
 Bulletin of Earthquake Engineering, 16(10), 4339-4395
 
-Module Exports :class: `AkkarEtAlRhyp2014LSD`,
-                       `AkkarEtAlRhyp2014MSD`,
-                       `AkkarEtAlRhyp2014HSD`,
-                       `BindiEtAl2014RhypLSD`,
-                       `BindiEtAl2014RhypMSD`,
-                       `BindiEtAl2014RhypHSD`,
+Module Exports :class: `AkkarEtAlRhyp2014Germany`,
+                       `BindiEtAl2014RhypGermany`,
                        `CauzziEtAl2014Rhypo`,
-                       `CauzziEtAl2014RhypoLSD`,
-                       `CauzziEtAl2014RhypoMSD`,
-                       `CauzziEtAl2014RhypoHSD`,
+                       `CauzziEtAl2014RhypoGermany`,
                        `DerrasEtAl2014Rhypo`,
-                       `DerrasEtAl2014RhypoLSD`,
-                       `DerrasEtAl2014RhypoMSD`,
-                       `DerrasEtAl2014RhypoHSD`,
-                       `BindiEtAl2017RhypoLSD,
-                       `BindiEtAl2017RhypoMSD,
-                       `BindiEtAl2017RhypoHSD
+                       `DerrasEtAl2014RhypoGermany`,
+                       `BindiEtAl2017RhypoGermany`
 """
 import numpy as np
 from scipy.constants import g
@@ -47,12 +37,6 @@ from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rhyp
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
 from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rhypo
-
-
-STRESS_DROP_ADJUST = {
-    "L": np.log(0.75),
-    "M": np.log(1.25),
-    "H": np.log(1.5)}
 
 
 class AkkarEtAlRhyp2014Germany(AkkarEtAlRhyp2014):
@@ -251,7 +235,7 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014Rhypo):
 # Bindi et al. (2017)
 class BindiEtAl2017RhypoGermany(BindiEtAl2017Rhypo):
     """
-    Bindi et al. 2017 with scalar stress drop adjustment factor
+    Bindi et al. 2017 with scalar stress drop adjustment factor for Germany
     """
     def __init__(self, adjustment_factor="1.0"):
         super().__init__()
