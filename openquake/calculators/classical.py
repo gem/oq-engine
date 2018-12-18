@@ -248,7 +248,7 @@ class ClassicalCalculator(base.HazardCalculator):
         I = len(oq.imtls)
         R = len(self.rlzs_assoc.realizations)
         names = [name for name, _ in hstats]
-        if R > 1 and oq.individual_curves:
+        if R > 1 and oq.individual_curves or not hstats:
             for r in range(R):
                 names.append('rlz-%03d' % r)
         for name in names:
@@ -307,30 +307,20 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             return {}
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
-    hmaps = []
-    if hstats:
-        names, funcs = zip(*hstats)
-        if pgetter.poes and 'std' in names:
-            hmaps = [calc.make_hmap(p, imtls, poes) for p in pmaps]
     for statname, stat in hstats:
         with monitor('compute ' + statname):
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
             pmap_by_kind['hcurves', statname] = pmap
             if pgetter.poes:
-                if statname == 'std':
-                    pdic = DictArray({imt: pgetter.poes for imt in imtls})
-                    pmap_by_kind['hmaps', statname] = (
-                        compute_pmap_stats(hmaps, [stat], weights, pdic))
-                else:
-                    pmap_by_kind['hmaps', statname] = calc.make_hmap(
-                        pmap, pgetter.imtls, pgetter.poes)
+                pmap_by_kind['hmaps', statname] = calc.make_hmap(
+                    pmap, pgetter.imtls, pgetter.poes)
 
-    if len(pmaps) > 1 and individual_curves:
-        for r, pmap in enumerate(pmaps):
-            key = 'rlz-%03d' % r
-            pmap_by_kind['hcurves', key] = pmap
-            if pgetter.poes and hmaps:
-                pmap_by_kind['hmaps', key] = hmaps[r]
-            elif pgetter.poes:
-                pmap_by_kind['hmaps', key] = calc.make_hmap(pmap, imtls, poes)
+    if len(pmaps) > 1 and individual_curves or not hstats:
+        with monitor('build individual hmaps'):
+            for r, pmap in enumerate(pmaps):
+                key = 'rlz-%03d' % r
+                pmap_by_kind['hcurves', key] = pmap
+                if pgetter.poes:
+                    pmap_by_kind['hmaps', key] = calc.make_hmap(
+                        pmap, imtls, poes)
     return pmap_by_kind
