@@ -32,15 +32,8 @@ an investigation time of 50 years, how big should be the parameter
 `ses_per_logic_tree_path`?
 
 The answer is: as big as it takes to get statistically significant results.
-statistically significant means that changing the seed used in the
+Statistically significant means that by changing the seed used in the
 Montecarlo simulation the results change little. If by changing the seed
 your total portfolio loss changes by one order of magnitude then your
 choice of `ses_per_logic_tree_path` was incorrect; if it changes by 10%
 it is probably good enough.
-
-For instance for Slovenia (a small country for which the calculation
-can be run without a cluster) by using the input files and parameters
-we used to compute the Global Risk Model the total portfolio loss
-is XXX million of dollars;
-
-changes by 1% by changing the seed.
