@@ -576,7 +576,7 @@ needed to support cases admitted by some GMPEs such as, for example,
 the Boore and Atkinson (2008). In the XML source model you can just
 write `<rake>undefined</rake>`.
 
-6 We added two versions of the Silva et al. (2002) GMPE as described in
+6. We added two versions of the Silva et al. (2002) GMPE as described in
 the report "Development of Regional Hard Rock Attenuation Relations
 For Central And Eastern North America", available
 at http://www.pacificengineering.org/.
