@@ -15,8 +15,8 @@ exposures.  The engine now can automatically unzip source models and
 exposures, if any.  The support is transparent in the sense that you
 do not need to change the job.ini file. If you have a configuration
 file with the line `source_model_logic_tree_file = ssmLT.xml` and you
-zip the file ssmLT.xml together with all the related source models
-into an archive ssmLT.zip the engine will automatically look for the
+zip the file `ssmLT.xml` together with all the related source models
+into an archive `ssmLT.zip` the engine will automatically look for the
 .zip file if the .xml file is missing. Same for zipped exposures.
 
 2. We now support site models in .csv format, like in this example:
@@ -30,26 +30,24 @@ lon,lat,vs30,z1pt0,z2pt5
 7.30266,45.75058,7.452224E+02,4.590022E+01,6.206095E-01
 ```
 The old .xml format is not deprecated and will keep working for the foreseeable
-future, but we suggest to switch to the .csv format anyway, since it is
+future, but we suggest you to switch to the .csv format anyway, since it is
 more convenient to use and faster to parse. You can use any number of
 fields: fields not used by the GMPEs will simply be ignored.
 As a side note, the site model is now imported in the datastore, as a
 structured array, to help debugging.
 
-3. The `oq engine --run` command has now an option `--reuse-hazard` that
+3. The command `oq engine --run` has now an option `--reuse-hazard` that
 can be used to run a risk calculation without having to regenerate the
 hazard, or to regenerate the hazard curves/maps/uniform hazard spectra
 without having to regenerate the probabilities of exceedence.
 
 4. The feature works because the engine stores a checksum for the hazard
-parameters in the database, so it is able to retrieve the right hazard
-calculation, if the hazard parameters have not changed.
+parameters in the database, so it is able to retrieve a pre-existing hazard
+calculation with the same checksum, if available.
 
 5. The engine can run multiple job.ini files at once, with the syntax
-
-  `oq engine --run job1.ini ... jobN.ini`
-
-The calculation ID of the first job will be used as input for the other jobs.
+`oq engine --run job1.ini ... jobN.ini`. The calculation ID of the
+first job will be used as input for the other jobs.
 
 6. We improved the `minimum_magnitude` feature that allows ruptures of
 magnitude below a given threshould to be discarded. The first improvement is
@@ -70,7 +68,8 @@ minimum_magnitude = {
   "Stable Shallow Crust": 5.0}
 ```
 
-7. We extended the equivalent epicenter distance feature (`reqv`) to multiple
+7. We extended the [equivalent epicenter distance feature](
+adv-manual/equivalent_distance_approximation.rs) (`reqv`) to multiple
 tectonic region types. While before there a single lookup table was
 supported, now you can specify a different lookup table for each
 tectonic region type in the job.ini file, as in this example:
@@ -79,7 +78,6 @@ tectonic region type in the job.ini file, as in this example:
 active shallow crust = lookup_asc.hdf5
 stable shallow crust = lookup_sta.hdf5
 ```
-The feature is documented here: https://github.com/gem/oq-engine/blob/engine-3.3/doc/adv-manual/equivalent_distance_approximation.rst
 
 9. Since engine 3.1 the input files of every calculation are zipped and
 saved in the datastore. This is very useful in order to reproduce a
@@ -89,8 +87,15 @@ top level dataset `input_zip` into the folder `input/zip`. Moreover
 now we zip the inputs only when there is no `hazard_calculation_id`,
 to avoid storing redundant information.
 
-8. The engine has been extended to be able to read multiple site models and/or
-multiple exposures at once, as in this example:
+8. The engine has been extended to be able to read multiple site
+models and/or multiple exposures at once. The multiple site
+models/exposures are automatically merged and stored in the datastore
+as a single site model/asset collection. This is very useful in
+conjunction with the new `aggregate_by` parameter of the
+event_based_risk calculator, since it is possible to automatically
+compute and export results aggregate by country and other tags
+(occupancy, taxonomy, etc). Here is an example of use:
+
 ```
 [site_params]
 site_model_file =
@@ -106,11 +111,6 @@ exposure_file =
   ../Exposure/Exposure_Paraguay.xml
   ../Exposure/Exposure_Venezuela.xml
 ```
-The multiple site models/exposures are automatically merged and stored
-in the datastore as a single site model/asset collection. This is very useful
-in conjunction with the new `aggregate_by` parameter of the event_based_risk
-calculator, since it is possible to automatically compute and export
-results aggregate by country and other tags (occupancy, taxonomy, etc).
 
 9. We parallelized the procedure splitting/filtering the sources.
 This make the preprocessing phase of the engine a lot faster in
@@ -321,7 +321,9 @@ weights for each GSIM, as in this example:
 
 ```xml
                 <logicTreeBranch branchID="b11">
-                    <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_01_AA13_sigma.vs450.hdf5">GMPETable</uncertaintyModel>
+                    <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_01_AA13_sigma.vs450.hdf5">
+                      GMPETable
+                    </uncertaintyModel>
                     <uncertaintyWeight>
                       0.6
                     </uncertaintyWeight>
@@ -331,7 +333,9 @@ weights for each GSIM, as in this example:
                 </logicTreeBranch>
                 
                 <logicTreeBranch branchID="b12">
-                    <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_02_AA13_sigma.vs450.hdf5">GMPETable</uncertaintyModel>
+                    <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_02_AA13_sigma.vs450.hdf5">
+                      GMPETable
+                    </uncertaintyModel>
                     <uncertaintyWeight
                       >0.4
                     </uncertaintyWeight>
@@ -360,7 +364,8 @@ parameters in the current job.ini or not.
 
 3. We replaced the `nodal_dist_collapsing_distance` and
 `hypo_dist_collapsing_distance` parameters with a `pointsource_distance`
-parameter, documented here: https://github.com/gem/oq-engine/blob/engine-3.3/doc/adv-manual/common-mistakes.rst#pointsource_distance
+parameter, documented [here](
+adv-manual/common-mistakes.rst#pointsource_distance)
 
 4. The combination `uniform_hazard_spectra=true` and `mean_hazard_curves=false`
 is allowed again, as requested by Laurentiu Danciu. It was made invalid a
@@ -572,20 +577,22 @@ the Boore and Atkinson (2008). In the XML source model you can just
 write `<rake>undefined</rake>`.
 
 6 We added two versions of the Silva et al. (2002) GMPE as described in
-the report "DEVELOPMENT OF REGIONAL HARD ROCK ATTENUATION RELATIONS
-FOR CENTRAL AND EASTERN NORTH AMERICA", available at
-http://www.pacificengineering.org/.
+the report "Development of Regional Hard Rock Attenuation Relations
+For Central And Eastern North America", available
+at http://www.pacificengineering.org/.
 
-7. Optimized the splitting of complex fault ruptures
+7. We optimized the splitting of complex fault ruptures and fixed a bug
+in the splitting of simple fault rupture with nodes
+<hypo_list> or <slip_list>.
 
 8. We added a line `DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}`
 to the `ChiouYoungs2008SWISS01` class, thus making it possible to use this
 GMPE in event based calculations.
 
-8. Graeme Weatherill contributed a fix in the HMTK plotting completeness
+9. Graeme Weatherill contributed a fix in the HMTK plotting completeness
 functionality.
 
-9. We fixed a few bugs in the GMPEs for Canada that affect the event based
+10. We fixed a few bugs in the GMPEs for Canada that affect the event based
 calculator.
 
 oq commands
@@ -628,7 +635,7 @@ Python  environment of the engine.
 
 5. The command `oq plot_assets` now also plots the discarded assets, if any.
 
-Internal/IT changes
+IT changes
 -------------------
 
 1. A cluster installation now officially requires to set up a shared
@@ -666,9 +673,8 @@ Other
 
 We have now in place a mechanism to run the global hazard mosaic
 calculations nightly so to avoid regressions in the models and the
-code. This is made possible by the OQ_SAMPLE_SOURCES feature which
-has been enhanced.
+code.
 
-We have improved the documentation as always.
-
-============================================================================
+We have started to work at a [Manual for Advanced Users](
+adv-manual/introduction.rst) and we have added two new FAQ pages,
+one for [hazard](faq-hazard.md) and one for [risk](faq-risk.md).
