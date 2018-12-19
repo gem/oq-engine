@@ -2,7 +2,7 @@
 FROM openquake/engine
 MAINTAINER Daniele Viganò <daniele@openquake.org>
 
-ADD ../openquake/engine/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
+ADD conf/openquake.cfg.cluster-sample /etc/openquake/openquake.cfg
 
 EXPOSE 8800:8800
 ENTRYPOINT ["/bin/bash"]
