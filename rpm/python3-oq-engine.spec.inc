@@ -201,6 +201,7 @@ fi
 ) >/dev/null || true
 
 %files master
+%doc openquake/engine/openquake.cfg.cluster-sample
 
 %post worker
 %systemd_post openquake-celery.service
@@ -212,6 +213,7 @@ fi
 %systemd_postun_with_restart openquake-celery.service
 
 %files worker
+%doc openquake/engine/openquake.cfg.cluster-sample
 %{_unitdir}/openquake-celery.service
 
 %changelog
