@@ -61,7 +61,6 @@ listen = 0.0.0.0
 # address of the dbserver; can be an hostname too
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
-# example: master.hpc
 host = w.x.y.z
 port = 1907
 receiver_ports = 1912-1920
