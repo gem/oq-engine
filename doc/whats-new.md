@@ -638,35 +638,32 @@ Python  environment of the engine.
 IT changes
 -------------------
 
-1. A cluster installation now officially requires to set up a shared
+1. As promised in the last release, the engine does not work with Python
+3.5 anymore. Python >= 3.6 is required. Python 3.7 is not officially
+supported but we know that the engine works with it.
+
+2. The support for the operating system Ubuntu 14.04 has ceased ad we do not
+release packages for it anymore. You can still run the engine on Ubuntu
+14.04 but you have to install from sources or with the self-installing
+file that we provide for generic Linux systems.
+
+3. We dropped supervisord and now we use only native System V inits.
+
+4. A cluster installation now officially requires to set up a shared
 filesystem and to configure the `shared_dir` parameter in the file
 `openquake.cfg`. Without that, classical calculations will fail during
 the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
 error. The documentation is [here](installing/cluster.md).
 
-2. Now we check if the engine is running out of memory also in the workers
+5. Now we check if the engine is running out of memory also in the workers
 nodes, and if this is the case a warning is logged in the main log, a
 feature that we desired for years.
 
-3. There were several changes in the parallelization library and now
+6. There were several changes in the parallelization library and now
 all the traffic back from the workers goes through ZeroMQ, not
 RabbitMQ.  As a consequence, it is easier to support backends
 different from celery and we did some experiments with dask.
-
-Removals/deprecations
----------------------
-
-As promised in the last release, the engine does not work with Python
-3.5 anymore. Python >= 3.6 is required. Python 3.7 is not officially
-supported but we know that the engine works with it.
-
-The support for the operating system Ubuntu 14.04 has ceased ad we do not
-release packages for it anymore. You can still run the engine on Ubuntu
-14.04 but you have to install from sources or with the self-installing
-file that we provide for generic Linux systems.
-
-We dropped supervisord and now we use only native System V inits.
 
 Other
 -----
