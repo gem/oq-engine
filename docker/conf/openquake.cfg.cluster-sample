@@ -74,7 +74,7 @@ remote_python =
 # if set, it should be on a shared filesystem; this is **mandatory** on a multi-node cluster
 # if not set, the oqdata directories go into $HOME/oqdata,
 # unless the user sets his own OQ_DATADIR variable
-shared_dir =
+shared_dir = /home
 # a custom path where to store temporary data; on Linux systems by default
 # temporary files are stored in /tmp, but on HPC and cloud systems the
 # drive containing the root fs is usually quite small
