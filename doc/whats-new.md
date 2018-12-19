@@ -383,10 +383,10 @@ General improvements on the risk calculators
 -----------------------------------------
 
 1. We now reduce the full risk model to the taxonomies present in
-the exposure before saving in the datastore. Risk models are often huge
-- valid for an entire continent - but usually we are interested in a single
-country, were only a small subset of the possible building taxonomies are
-present. This trick reduces quite a lot the data transfer and makes
+the exposure before saving in the datastore. Risk models are often
+huge - valid for an entire continent - but usually we are interested in a
+single country, were only a small subset of the possible building taxonomies
+are present. This trick reduces quite a lot the data transfer and makes
 the risk calculation faster.
 
 2. It is now possible to import hazard curves in CSV format as in the
