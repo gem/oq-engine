@@ -1,0 +1,82 @@
+# Copyright (C) 2010-2018 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+[distribution]
+# set multi_node = true if are on a cluster
+multi_node = true
+
+# enable celery only if you have a cluster
+oq_distribute = celery
+
+# make sure workers are terminated when tasks are revoked
+terminate_workers_on_revoke = true
+
+# change this on a cluster if using oq_distribute = dask
+dask_scheduler = 127.0.0.1:1921
+
+
+[memory]
+# above this quantity (in %) of memory used a warning will be printed
+soft_mem_limit = 90
+# above this quantity (in %) of memory used the job will be stopped
+# use a lower value to protect against loss of control when OOM occurs
+hard_mem_limit = 99
+
+[amqp]
+# RabbitMQ server address
+host = rabbitmq
+port = 5672
+user = openquake
+password = openquake
+vhost = openquake
+celery_queue = celery
+
+[dbserver]
+# enable multi_user if you have a multiple user installation
+multi_user = true
+file = /home/openquake/oqdata/db.sqlite3
+log = /home/openquake/oqdata/dbserver.log
+# daemon bind address; must be a valid IP address
+# example: 0.0.0.0
+listen = 0.0.0.0
+# address of the dbserver; can be an hostname too
+# example: master.hpc
+host = master
+# port 1908 has a good reputation:
+# https://isc.sans.edu/port.html?port=1908
+port = 1908
+# port range used by workers to send back results
+# to the master node
+receiver_ports = 1912-1920
+authkey = changeme
+
+[zworkers]
+host_cores = 127.0.0.1 -1
+ctrl_port = 1909
+task_in_port = 1910
+task_out_port = 1911
+remote_python =
+
+[directory]
+# the base directory containing the <user>/oqdata directories:
+# if set, it should be on a shared filesystem; this is **mandatory** on a multi-node cluster
+# if not set, the oqdata directories go into $HOME/oqdata,
+# unless the user sets his own OQ_DATADIR variable
+shared_dir =
+# a custom path where to store temporary data; on Linux systems by default
+# temporary files are stored in /tmp, but on HPC and cloud systems the
+# drive containing the root fs is usually quite small
+# path must exists otherwise default $TMPDIR will be used as fallback
+custom_tmp =
