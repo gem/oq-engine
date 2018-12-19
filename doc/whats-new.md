@@ -56,7 +56,7 @@ while in the past it was done after sampling the ruptures, so now it
 is more efficient. The second improvements is that the feature works for
 all calculators while before worked only for the event based calculators.
 The third improvement is that you can specify different `minimum_magnitudes`
-for different tectonicc region types, as in this example:
+for different tectonic region types, as in this example:
 ```
 minimum_magnitude = {
   "Subduction Interface": 6.5,
