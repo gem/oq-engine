@@ -65,6 +65,8 @@ receiver_ports = 1912-1920
 authkey = somethingstronger
 ```
 
+A full [sample configuration](../../openquake/engine/openquake.cfg.cluster-sample) is provided as reference.
+
 ### Configuring daemons
 
 The required daemons are:
