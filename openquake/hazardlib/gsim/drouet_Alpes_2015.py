@@ -1,43 +1,43 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2018, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`DrouetAlpes2015Rjb`
                :class:`DrouetAlpes2015Rrup`
                :class:`DrouetAlpes2015Repi`
                :class:`DrouetAlpes2015Rhyp`
                :class:`DrouetAlpes2015RjbHR`
-			   :class:`DrouetAlpes2015RrupHR`
-			   :class:`DrouetAlpes2015RepiHR`
-			   :class:`DrouetAlpes2015RhypHR`
-			   :class:`DrouetAlpes2015Rjb_50bars`
-			   :class:`DrouetAlpes2015Rrup_50bars`
-			   :class:`DrouetAlpes2015Repi_50bars`
-			   :class:`DrouetAlpes2015Rhypo_50bars`
-			   :class:`DrouetAlpes2015RjbHR_50bars`
-			   :class:`DrouetAlpes2015RrupHR_50bars`
+               :class:`DrouetAlpes2015RrupHR`
+               :class:`DrouetAlpes2015RepiHR`
+               :class:`DrouetAlpes2015RhypHR`
+               :class:`DrouetAlpes2015Rjb_50bars`
+               :class:`DrouetAlpes2015Rrup_50bars`
+               :class:`DrouetAlpes2015Repi_50bars`
+               :class:`DrouetAlpes2015Rhypo_50bars`
+               :class:`DrouetAlpes2015RjbHR_50bars`
+               :class:`DrouetAlpes2015RrupHR_50bars`
 """
-# 8 GMPEs for large magnitude stress parameter 100 bars (recommended by the authors)
+# 8 GMPEs for large magnitude stress parameter 100 bars (recommended
+# by the authors)
 # including 4 for standard rock conditions vs30=800 m/s, kappa=0.03 s
 # and 4 GMPEs for hard rock conditions vs30=2000 m/s, kappa=0.01 s
 # The coefficients are published in the original paper and erratum
 # Additional 6 GMPEs for large magnitude stress parameter 50 bars
 # The coefficients are not published
-#
-from __future__ import division
-
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -48,10 +48,13 @@ from scipy.constants import g
 
 class DrouetAlpes2015Rjb(GMPE):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 100 bars
+    (recommended by the authors)
     Valid for vs30=800 m/s
     """
+    non_verified = True
 
     #: Supported tectonic region type is stable continental crust given that
     #: the equations have been derived for Eastern North America.
@@ -67,8 +70,8 @@ class DrouetAlpes2015Rjb(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: two : horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see equation 35, page
@@ -78,6 +81,8 @@ class DrouetAlpes2015Rjb(GMPE):
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
     ])
+
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     #: No site parameters are needed
     REQUIRES_SITES_PARAMETERS = set()
@@ -101,10 +106,11 @@ class DrouetAlpes2015Rjb(GMPE):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rjb)
-        if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
-            mean=mean+np.log(100.0)
+        if isinstance(imt, SA) or isinstance(imt, PGA):
+            # Convert from m/s**2 to g
+            mean = mean - np.log(g)
+        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+            mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rjb.shape[0])
 
@@ -145,8 +151,8 @@ class DrouetAlpes2015Rjb(GMPE):
         """
         This computes the term f2 equation 8 Drouet & Cotton (2015)
         """
-        return (C['c4'] + C['c5'] * mag) * np.log(np.sqrt(r **2 + C['c6'] **2)) + C['c7'] * r
-
+        return (C['c4'] + C['c5'] * mag) * \
+            np.log(np.sqrt(r**2 + C['c6']**2)) + C['c7'] * r
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -176,14 +182,17 @@ class DrouetAlpes2015Rjb(GMPE):
 	3.000000 2.275590 0.247272 -0.326835 -1.646368 0.119810 6.194922 -0.001987 0.566383 0.384096
     """)
 
+
 class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
     Valid for vs30=800 m/s
     """
     #: Required distance measure is rupture distance, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rrup', ))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -195,10 +204,11 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rrup)
-        if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
-            mean=mean+np.log(100.0)
+        if isinstance(imt, SA) or isinstance(imt, PGA):
+            # Convert from m/s**2 to g
+            mean = mean - np.log(g)
+        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+            mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rrup.shape[0])
 
@@ -232,15 +242,17 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
 	3.000000 2.389195 0.176965 -0.322698 -1.855682 0.142701 3.939782 -0.001381 0.553748 0.356058
     """)
 
+
 class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
     Valid for vs30=800 m/s
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('repi', ))
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -252,10 +264,11 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.repi)
-        if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
-            mean=mean+np.log(100.0)
+        if isinstance(imt, (SA, PGA)):
+            # Convert from m/s**2 to g
+            mean = mean - np.log(g)
+        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+            mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.repi.shape[0])
 
@@ -289,16 +302,17 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
 	3.000000 2.774119 0.312958 -0.311810 -1.830330 0.140061 8.090585 -0.002018 0.583488 0.381611
     """)
 
+
 class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
+    Implements GMPE developed by Douet & Cotton (2015) BSSA
+    doi: 10.1785/0120140240.
     Valid for vs30=800 m/s
     """
-    
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rhyp', ))
-    
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -310,10 +324,10 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rhyp)
-        if isinstance(imt, SA) or isinstance(imt, PGA): # Convert from m/s**2 to g
-            mean=mean-np.log(g)
-        elif isinstance(imt, PGV): # Convert from m/s to cm/s
-            mean=mean+np.log(100.0)
+        if isinstance(imt, (SA, PGA)):  # Convert from m/s**2 to g
+            mean = mean - np.log(g)
+        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+            mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rhyp.shape[0])
 
@@ -347,13 +361,16 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
 	3.000000 2.766739 0.301056 -0.315235 -1.821128 0.139261 3.010114 -0.002109 0.571483 0.364027
     """)
 
+
 class DrouetAlpes2015RjbHR(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 100 bars
+    (recommended by the authors)
     Valid for vs30=2000 m/s
     """
-    	
+
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -381,17 +398,21 @@ class DrouetAlpes2015RjbHR(DrouetAlpes2015Rjb):
     2.000000 2.553832 -0.147150 -0.378930 -1.656279 0.109779 6.450533 -0.002089 0.560557 0.400305
     3.000000 2.148241 0.267200 -0.328069 -1.623369 0.116390 6.117724 -0.001925 0.562644 0.382704
     """)
-    
+
+
 class DrouetAlpes2015RrupHR(DrouetAlpes2015Rrup):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 100 bars
+    (recommended by the authors)
     Valid for vs30=2000 m/s
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rrup', ))
-    
+    DEFINED_FOR_REFERENCE_VELOCITY = 2000
+
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -420,16 +441,20 @@ class DrouetAlpes2015RrupHR(DrouetAlpes2015Rrup):
     3.000000 2.281596 0.195816 -0.323947 -1.840794 0.139554 3.944804 -0.001255 0.550117 0.354813
     """)
 
+
 class DrouetAlpes2015RepiHR(DrouetAlpes2015Repi):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 100 bars
+    (recommended by the authors)
     Valid for vs30=2000 m/s
     """
-    	#: Required distance measure is closest distance to rupture, see equation
+    #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('repi', ))
-    
+    DEFINED_FOR_REFERENCE_VELOCITY = 2000
+
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -458,16 +483,20 @@ class DrouetAlpes2015RepiHR(DrouetAlpes2015Repi):
 	3.000000 2.655991 0.336601 -0.312845 -1.803880 0.136056 8.023762 -0.001980 0.579737 0.380198
     """)
 
+
 class DrouetAlpes2015RhypHR(DrouetAlpes2015Rhyp):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 100 bars (recommended by the authors)
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 100 bars
+    (recommended by the authors)
     Valid for vs30=2000 m/s
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rhyp', ))	
-    
+    REQUIRES_DISTANCES = set(('rhyp', ))
+    DEFINED_FOR_REFERENCE_VELOCITY = 2000
+
     #: Coefficient tables are constructed from the electronic suplements of
     #: the erratum to the original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -496,13 +525,14 @@ class DrouetAlpes2015RhypHR(DrouetAlpes2015Rhyp):
 	3.000000 2.668543 0.321383 -0.316237 -1.807166 0.136069 3.132971 -0.002003 0.568302 0.363028
     """)
 
+
 class DrouetAlpes2015Rjb_50bars(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -529,17 +559,20 @@ class DrouetAlpes2015Rjb_50bars(DrouetAlpes2015Rjb):
     3.000000 1.732627  0.086233 -0.338529 -1.620115 0.116304 6.202268 -0.002002 0.564420 0.353377
     pgv      0.602344 -0.098125 -0.234545 -2.097286 0.179245 6.176835 -0.003171 0.591797 0.406816
     """)
-	
+
+
 class DrouetAlpes2015Rrup_50bars(DrouetAlpes2015Rrup):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	#: Required distance measure is closest distance to rupture, see equation
+    #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rrup', ))
-    
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
+
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -567,16 +600,19 @@ class DrouetAlpes2015Rrup_50bars(DrouetAlpes2015Rrup):
     pgv      0.673613 -0.185375 -0.229561 -2.334507 0.207077 3.649829 -0.002576 0.574791 0.381312
     """)
 
+
 class DrouetAlpes2015Repi_50bars(DrouetAlpes2015Repi):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	#: Required distance measure is closest distance to rupture, see equation
+    #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('repi', ))
-    
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
+
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -604,16 +640,18 @@ class DrouetAlpes2015Repi_50bars(DrouetAlpes2015Repi):
     pgv      1.099445 -0.060566 -0.220644 -2.331083 0.205828 7.987609 -0.003024 0.609195 0.405069
     """)
 
+
 class DrouetAlpes2015Rhyp_50bars(DrouetAlpes2015Rhyp):
     """
     Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
 	This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
-    	#: Required distance measure is closest distance to rupture, see equation
+    #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rhyp', ))
-    
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
+
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -640,14 +678,17 @@ class DrouetAlpes2015Rhyp_50bars(DrouetAlpes2015Rhyp):
     3.000000 2.224748  0.142939 -0.326737 -1.791008 0.135283 3.016459 -0.002137 0.569133 0.334070
     pgv      1.133549 -0.075262 -0.224574 -2.333758 0.204952 3.063629 -0.003011 0.594324 0.385201
     """)
-	
+
+
 class DrouetAlpes2015RjbHR_50bars(DrouetAlpes2015Rjb):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=2000 m/s
     """
-    	
+    DEFINED_FOR_REFERENCE_VELOCITy = 2000
+
     #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
@@ -674,18 +715,21 @@ class DrouetAlpes2015RjbHR_50bars(DrouetAlpes2015Rjb):
     3.000000 1.603747  0.102968 -0.340215 -1.598025 0.113000 6.123170 -0.001942 0.561043 0.356077
     pgv      0.471757 -0.087648 -0.227818 -2.169988 0.187617 6.229653 -0.002943 0.577001 0.408947
     """)
-	
+
+
 class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
+    10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=2000 m/s
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
     REQUIRES_DISTANCES = set(('rrup', ))
-    
-	#: Coefficient table is not published
+    DEFINED_FOR_REFERENCE_VELOCITY = 2000
+
+    #: Coefficient table is not published
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      c1       c2        c3        c4        c5       c6       c7        sigma    tau                                                                               
     pga      3.110039 -0.838037 -0.262987 -2.641943 0.206804 4.577744 -0.004279 0.616028 0.484784
