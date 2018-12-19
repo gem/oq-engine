@@ -675,6 +675,6 @@ We have now in place a mechanism to run the global hazard mosaic
 calculations nightly so to avoid regressions in the models and the
 code.
 
-We have started to work at a [Manual for Advanced Users](
+We have started to work on a [Manual for Advanced Users](
 adv-manual/introduction.rst) and we have added two new FAQ pages,
 one for [hazard](faq-hazard.md) and one for [risk](faq-risk.md).
