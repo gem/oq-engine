@@ -1,27 +1,23 @@
-Release notes for the OpenQuake Engine, version 3.2
+Release notes for the OpenQuake Engine, version 3.3
 ===================================================
 
 This is a major release featuring substantial improvements, especially
 to the event based calculators. Over 300 pull requests were merged,
 making this release twice as big as usual, as a result of the Global
 Risk Model effort.  For the complete list of changes, see the
-changelog: https://github.com/gem/oq-engine/blob/engine-3.2/debian/changelog
+changelog: https://github.com/gem/oq-engine/blob/engine-3.3/debian/changelog
 
 General improvements on all calculators
 ---------------------------------------
 
-1. We implemented transparent support for zipped source models and exposures.
-The engine can automatically unzip source models and exposures, if any.
-The support is transparent in the sense that you do not need to change
-the job.ini file. If you have a configuration file with the line
-
-```
-source_model_logic_tree_file = ssmLT.xml
-```
-
-and you zip the file ssmLT.xml together with all the related source models
-into an archive ssmLT.zip the engine will automatically look for the .zip file
-if the .xml file is missing. Same for zipped exposures.
+1. We implemented transparent support for zipped source models and
+exposures.  The engine now can automatically unzip source models and
+exposures, if any.  The support is transparent in the sense that you
+do not need to change the job.ini file. If you have a configuration
+file with the line `source_model_logic_tree_file = ssmLT.xml` and you
+zip the file ssmLT.xml together with all the related source models
+into an archive ssmLT.zip the engine will automatically look for the
+.zip file if the .xml file is missing. Same for zipped exposures.
 
 2. We now support site models in .csv format, like in this example:
 
