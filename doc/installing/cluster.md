@@ -148,9 +148,9 @@ Cluster utilization: 0.00%
 ```
 
 
-## Shared filesystem (optional)
+## Shared filesystem
 
-OpenQuake 2.4 introduces the concept of _shared directory_ (aka _shared_dir_). This _shared dir_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; this feature is optional: the old behaviour, transmitting data via `rabbitmq`, will be used when `shared_dir` isn't set.
+OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
 
 The _shared directory_ must be exported from the master node to the workers via a _POSIX_ compliant filesystem (like **NFS**). The export may be (and _should_ be) exported and/or mounted as **read-only** by the workers.
 
@@ -166,7 +166,6 @@ shared_dir = /home/openquake
 ```
 
 When `shared_dir` is set, the `oqdata` folders will be stored under `$shared_dir/<user>/oqdata` instead of `/home/<user>/oqdata`. See the comment in the `openquake.cfg` for further information.
-
 You need then to give `RWX` permission to the `shared_dir` on _master_ to the `openquake` group (which is usually created by packages) and add all the cluster users to the `openquake` group. For example:
 
 ```bash
@@ -178,6 +177,12 @@ $ chmod 2770 /home/openquake
 
 On the workers the _shared_dir_ should be mounted as the `openquake` user too, or access must be given to the user running `celeryd` (which is `openquake` by default in the official packages).
 
+Another possibility would be exporting the entire `/home` to the workers: in such case `oqdata` will have the default path `/home/<user>/oqdata` and setgid is not required. Please note that the `openquake` user on workers still needs to get access to the `oqdata` content, so make sure that permission are properly set (`traverse` on the user home and `read` access to oqdata).
+
+```
+[directory]
+shared_dir = /home
+```
 
 ## Network and security considerations
 

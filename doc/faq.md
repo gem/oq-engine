@@ -140,6 +140,37 @@ The default port for the DbServer (configured via the `openquake.cfg` configurat
 
 ******
 
+### error: OSError: Unable to open file (on a multi-node cluster)
+
+A more detailed stack trace:
+
+```python
+OSError:
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 312, in new
+    val = func(*args)
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
+    yield func(*args)
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
+    pgetter.init()  # if not already initialized
+  File "/opt/openquake/lib/python3.6/site-packages/openquake/calculators/getters.py", line 69, in init
+    self.dstore = hdf5.File(self.dstore, 'r')
+  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 312, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
+  File "/opt/openquake/lib64/python3.6/site-packages/h5py/_hl/files.py", line 142, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 78, in h5py.h5f.open
+OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
+```
+
+This happens when the [shared dir](installing/cluster.md#shared_filesystem) is not configured properly and workers cannot access data from the master node.
+Please note that starting with OpenQuake Engine 3.3 the shared directory **is required** on multi-node deployments.
+
+You can get more information about setting up the shared directory on the [cluster installation page](installing/cluster.md#shared_filesystem).
+
+******
+
 ### error: [Errno 111] Connection refused
 
 A more detailed stack trace:
