@@ -8,10 +8,11 @@ xmlns:gml="http://www.opengis.net/gml"
             name="group 1"
             tectonicRegion="Active Shallow Crust" 
             cluster="true">
+            
                     <poissonTOM occurrence_rate="0.01" />
                     <simpleFaultSource
-                    id="3"
-                    name="Simple Fault Source"
+                    id="1"
+                    name="Simple Fault Source B"
                     tectonicRegion="Active Shallow Crust" >
                         <simpleFaultGeometry>
                             <gml:LineString>
@@ -29,6 +30,27 @@ xmlns:gml="http://www.opengis.net/gml"
                                 maxMag="7.0" minMag="6.0" />
                         <rake>90</rake>
                     </simpleFaultSource>
+                    <simpleFaultSource
+                    id="2"
+                    name="Simple Fault Source B"
+                    tectonicRegion="Active Shallow Crust" >
+                        <simpleFaultGeometry>
+                            <gml:LineString>
+                                <gml:posList>
+                                    1.0 -0.2 1.4 0.0 1.7 0.0
+                                </gml:posList>
+                            </gml:LineString>
+                            <dip> 30 </dip>
+                            <upperSeismoDepth> 5.0 </upperSeismoDepth>
+                            <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                        </simpleFaultGeometry>
+                        <magScaleRel> WC1994 </magScaleRel>
+                        <ruptAspectRatio> 2.0 </ruptAspectRatio>
+                        <truncGutenbergRichterMFD aValue="4.00" bValue="0.9"
+                                maxMag="7.0" minMag="6.0" />
+                        <rake> 90 </rake>
+                    </simpleFaultSource>
+
             </sourceGroup>
     </sourceModel>
 </nrml>

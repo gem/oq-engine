@@ -94,36 +94,83 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
     pmap.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
+
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
-    # Looping over the sources included in a source group. The `poe_map`
-    # method of the :class:`ContextMaker` method returns probabilities of
-    # non-exceedance
-    for src, s_sites in src_filter(group):  # filter now
-        t0 = time.time()
-        try:
-            poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
-                                    not rup_mutex)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = '%s (source id=%s)' % (str(err), src.source_id)
-            raise etype(msg).with_traceback(tb)
-        if src_mutex:  # mutex sources, there is a single group
-            for sid in poemap:
-                pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                pcurve += ~poemap[sid] * src.mutex_weight
-        elif poemap:
-            for gid in src.src_group_ids:
-                pmap[gid] |= ~poemap
-        pmap.calc_times[src.id] += numpy.array(
-            [src.weight, len(s_sites), time.time() - t0])
-        # storing the number of contributing ruptures too
-        pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                              for gid in src.src_group_ids}
-    # updating the probability map in the case of mutually exclusive sources
-    if src_mutex and param.get('grp_probability'):
-        pmap[src.src_group_id] *= param['grp_probability']
-    # updating the probability map in the case of mutually exclusive sources
+    cluster = param.get('cluster')
+    print(cluster)
+
+    if cluster:
+
+        print('>>>> CLUSTER OPTION')
+
+        tom = param.get('temporal_occurrence_model')
+        # TODO delta description
+        delta = 1.
+        # Number of occurrences of the cluster
+        nocc = 1
+        while delta > 1e-8:
+
+            # prob_n_occ =
+
+            for src, s_sites in src_filter(group):  # filter now
+                t0 = time.time()
+                try:
+                    poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
+                                            not rup_mutex)
+                except Exception as err:
+                    etype, err, tb = sys.exc_info()
+                    msg = '%s (source id=%s)' % (str(err), src.source_id)
+                    raise etype(msg).with_traceback(tb)
+                # mutex sources, there is a single group
+                if src_mutex:
+                    for sid in poemap:
+                        pcurve = pmap[src.src_group_id].setdefault(sid, 0)
+                        pcurve += ~poemap[sid] * src.mutex_weight
+                elif poemap:
+                    for gid in src.src_group_ids:
+                        pmap[gid] |= ~poemap
+                pmap.calc_times[src.id] += numpy.array(
+                    [src.weight, len(s_sites), time.time() - t0])
+                # storing the number of contributing ruptures too
+                pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                                      for gid in src.src_group_ids}
+            # updating the probability map in the case of mutually exclusive
+            # sources
+            if src_mutex and param.get('grp_probability'):
+                pmap[src.src_group_id] *= param['grp_probability']
+                # TODO multiply by the cluster occurrence time and sum
+
+    else:
+        # Looping over the sources included in a source group. The `poe_map`
+        # method of the :class:`ContextMaker` method returns probabilities of
+        # non-exceedance
+        for src, s_sites in src_filter(group):  # filter now
+            t0 = time.time()
+            try:
+                poemap = cmaker.poe_map(src, s_sites, imtls, trunclevel,
+                                        not rup_mutex)
+            except Exception as err:
+                etype, err, tb = sys.exc_info()
+                msg = '%s (source id=%s)' % (str(err), src.source_id)
+                raise etype(msg).with_traceback(tb)
+            # mutex sources, there is a single group
+            if src_mutex:
+                for sid in poemap:
+                    pcurve = pmap[src.src_group_id].setdefault(sid, 0)
+                    pcurve += ~poemap[sid] * src.mutex_weight
+            elif poemap:
+                for gid in src.src_group_ids:
+                    pmap[gid] |= ~poemap
+            pmap.calc_times[src.id] += numpy.array(
+                [src.weight, len(s_sites), time.time() - t0])
+            # storing the number of contributing ruptures too
+            pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                                  for gid in src.src_group_ids}
+        # updating the probability map in the case of mutually exclusive
+        # sources
+        if src_mutex and param.get('grp_probability'):
+            pmap[src.src_group_id] *= param['grp_probability']
     return pmap
 
 
