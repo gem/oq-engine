@@ -665,8 +665,10 @@ the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
 error. The documentation is [here](installing/cluster.md).
 
-5. We now have a mechanism to emulate a cluster on a single machine
-by using docker containers.
+5. Docker support has been improved and now works properly on a
+multi-node, multi-host deployment. We now also have a mechanism to
+emulate a cluster on a single machine by using docker containers.
+The relevant documentation is [here](installing/docker.md).
 
 6. Now we check if the engine is running out of memory also in the workers
 nodes, and if this is the case a warning is logged in the main log, a
