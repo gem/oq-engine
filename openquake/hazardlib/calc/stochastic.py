@@ -28,7 +28,6 @@ from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.geo.mesh import surface_to_array, point3d
 
 TWO16 = 2 ** 16  # 65,536
@@ -161,7 +160,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     # Compute and save stochastic event sets
     num_ses = param['ses_per_logic_tree_path']
     eff_ruptures = 0
-    grp_id = sources[0].src_group_id
+    [grp_id] = set(src.src_group_id for src in sources)
     eb_ruptures = []
     ir_mon = monitor('iter_ruptures', measuremem=False)
     for src in sources:
