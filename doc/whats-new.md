@@ -238,7 +238,7 @@ to which realization.
 
 4. The building of the `events` table as well of the associations between
 events and realizations has been heavily optimized, so that the engine
-can manage tens of millions of events in minutes.
+can store tens of millions of events in minutes.
 
 5. In order to get the performance, we changed the association between events
 and stochastic event sets, which is visible in the XML exporter for the
@@ -266,14 +266,14 @@ out of memory in the workers nor in the controller node. However,
 there are limits on the size of the `gmf_data` table, so it is still
 possible to run into errors and also memory errors. In that case you
 must check carefully parameters like the `minimum_magnitude` and
-the `minimum_intensity` as well as the number of sites and the
+the `minimum_intensity`, as well as the number of sites and the
 effective investigation time.
 
 4. There was a lot of work on the `ucerf_event_based` calculator, to
 make it more similar to the regular one. We fixed some bug, changed the
 seed algorithm and removed the `ucerf_risk` calculator, which was a
-special case. The regular `ucerf_event_based` calculator is now so
-efficient that in can be used in conjunction with the regular
+special case. The regular `ucerf_event_based` calculator is so
+efficient now, that in can be used in conjunction with the regular
 `event_based_risk` calculation to do the job that was done by the
 `ucerf_risk` calculator.
 
@@ -290,17 +290,17 @@ There was also a lot of work on the risk calculator.
 1. We introduced a smart single file mode:
 while in the past the recommendation was to use two files, a `job_hazard.ini`
 for hazard and `job_risk.ini` for risk, now the engine can work with a single
-`job.ini` file containing all the required information and it will automatically
-start two computations, one for hazard and one for risk.
+`job.ini` file containing all the required information. It will automatically
+start two computations, one for hazard and one for risk. This is the
+recommended way to work now, because it plays well with the `--reuse-hazard`
+feature.
 
 2. We return from the workers only the statistical loss_curves unless
 the parameter `individual_curves` is set to `true` in the `job.ini`
 file.
 
 3. We reduced the memory consumption by considering only one site at
-the time and we avoided the 4GB limit by returning back only one output
-at the time (i.e. the loss curves of the assets in the same point with
-the same taxonomy for each point).
+the time.
 
 4. The saving of the average losses in the datastore has been optimized.
 
@@ -325,7 +325,19 @@ While most of the work in this release was on the event based calculators,
 various features were added to the classical hazard calculators too.
 
 1. We extended the GSIM logic tree XML syntax to allow for IMT-dependent
-weights for each GSIM, as in this example:
+weights for each GSIM, as requested by our Canadian users.
+Now there can be more than one `<uncertaintyWeight>` inside an
+`<uncertaintyModel>` node.  The first `<uncertaintyWeight>` must not have
+and "imt" attribute; it is the default weight that applies to all IMTs. The
+other `<uncertaintyWeights>` must have an "imt" attribute; they apply to
+specific IMTs by overriding the default weight.
+
+The weights are used in the computation of means and quantiles: a nice
+thing is that you can run a calculation, save the calculation ID, change
+the logic tree file and recompute the statistics without having to
+recompute everything from scratch by using the `--hc` flag:
+`$ oq engine --run job.ini --hc CALC_ID`. Here is an example of the
+new syntax:
 
 ```xml
 <logicTreeBranch branchID="b11">
@@ -351,20 +363,6 @@ weights for each GSIM, as in this example:
   </uncertaintyWeight>
 </logicTreeBranch>
 ```
-As you see now there can be more than one <uncertaintyWeight> inside an
-<uncertaintyModel> node.  The first <uncertaintyWeight> has no "imt"
-attribute; it is the default weight that applies to all IMTs. The
-other <uncertaintyWeights> must have an "imt" attribute; they apply to
-specific IMTs by overriding the default weight.
-
-The weights are used in the computation of means and quantiles: a nice
-thing is that you can run a calculation, save the calculation ID, change
-the logic tree file and recompute the statistics without having to
-recompute everything from scratch:
-```
-  $ oq engine --run job.ini --hc CALC_ID
-```
-
 2. We added the job checksum to the hazard CSV outputs: it means that an
 user can check if a given output was really produced with the input
 parameters in the current job.ini or not.
