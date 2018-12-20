@@ -128,6 +128,14 @@ as soon as possible and use this information to reduce the GMPE logic tree
 upfront. This is used to log a more reliable estimate about the number of
 potential logic tree paths in the model.
 
+11. The `individual_curves` flag is back. By default it is false, but if you
+set it to true in the job.ini file then the engine will store the individual
+curves for each realization: specifically, the hazard curves and maps for
+classical calculations and the loss curves and average losses for event based
+calculations. Clearly the data transfer will increase substantially in
+the case of thousands of realizations and the calculation may fail: this
+is why by default the flag is not set.
+
 Event based: rupture generation
 -------------------------------
 
@@ -137,7 +145,7 @@ improvements.
 
 1. There is a fast mode to manage the case of a large number of
 stochastic event sets and/or samples.  To use that, you must set
-`fast_sampling=true` in the `job.ini` file.  The rupture generation
+`fast_sampling=true` in the job.ini file.  The rupture generation
 phase can be more than one order of magnitude faster than before, as
 seen in the South America model.
 
@@ -377,7 +385,10 @@ contained the lon, lat of the location, now the contain the site index
 named `mean-PGA-sid-0_Mag_XXX.csv`.
 
 6. We fixed a bug in the disaggregation calculation due to wrong binning
-of magnitudes
+of magnitudes.
+
+7. The speed of the uniform hazard spectra exporter has increased
+by an order of magnitude.
 
 General improvements on the risk calculators
 -----------------------------------------
@@ -472,7 +483,7 @@ way between hazard and risk (i.e. `SA(1)` in the vulnerability functions and
 `SA(1.0)` in the job_hazard.ini file). Now they are normalized to a common
 format, thus avoiding rounding issues.
 
-3. The option `--config-file` of the `oq engine` command was broken
+3. The option `--config-file` of the `oq engine` command was ignored
 and has been so for many releases. Thanks to Nick Ackerley for
 noticing. It has been fixed now.
 
@@ -592,7 +603,10 @@ GMPE in event based calculations.
 9. Graeme Weatherill contributed a fix in the HMTK plotting completeness
 functionality.
 
-10. We fixed a few bugs in the GMPEs for Canada that affect the event based
+10. Stéphane Drouet contributed several Drouet & Cotton (2015) GMPEs,
+including the 2017 erratum.
+
+11. We fixed a few bugs in the GMPEs for Canada affecting the event based
 calculator.
 
 oq commands
@@ -647,7 +661,8 @@ release packages for it anymore. You can still run the engine on Ubuntu
 14.04 but you have to install from sources or with the self-installing
 file that we provide for generic Linux systems.
 
-3. We dropped supervisord and now we use only native systemd inits.
+3. In the Linux installation from packages.We dropped supervisord and now
+we use only native systemd inits.
 
 4. A cluster installation now officially requires to set up a shared
 filesystem and to configure the `shared_dir` parameter in the file
@@ -656,11 +671,14 @@ the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
 error. The documentation is [here](installing/cluster.md).
 
-5. Now we check if the engine is running out of memory also in the workers
+5. We now have a mechanism to emulate a cluster on a single machine
+by using docker containers.
+
+6. Now we check if the engine is running out of memory also in the workers
 nodes, and if this is the case a warning is logged in the main log, a
 feature that we desired for years.
 
-6. There were several changes in the parallelization library and now
+7. There were several changes in the parallelization library and now
 all the traffic back from the workers goes through ZeroMQ, not
 RabbitMQ.  As a consequence, it is easier to support backends
 different from celery and we did some experiments with dask.
