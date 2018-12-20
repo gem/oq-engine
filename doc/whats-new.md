@@ -312,14 +312,13 @@ a time.
 to be generated. This affected the South Africa model and it is now fixed.
 
 6. There is now a generic multi-tag aggregation facility, so it is
-possible to aggregate the loss curves and average losses by any combination
+possible to aggregate the average losses by any combination
 of tags. The aggregation is performed entirely at export time with the
 command `oq export aggregate_by`; here is an example of usage for the
 tags taxonomy and occupancy:
 
 ```
 $ oq export aggregate_by/taxonomy,occupancy/avg_losses <calc_id>
-$ oq export aggregate_by/taxonomy,occupancy/curves <calc_id>
 ```
 
 Classical/disaggregation calculators
