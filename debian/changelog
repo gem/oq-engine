@@ -1,3 +1,6 @@
+  [Stéphane Drouet]
+  * Added Drouet & Cotton (2015) GMPE including 2017 erratum
+
   [Michele Simionato]
   * Fixed a wrong counting of the ruptures in split fault sources with
     an hypo_list/slip_list causing the calculation to fail

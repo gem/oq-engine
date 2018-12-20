@@ -4,7 +4,7 @@ Release notes for the OpenQuake Engine, version 3.3
 This is a major release featuring substantial improvements, especially
 to the event based calculators. Over 300 pull requests were merged,
 making this release twice as big as usual, as a result of the Global
-Risk Model effort.  For the complete list of changes, see the
+Hazard and Risk Model effort.  For the complete list of changes, see the
 changelog: https://github.com/gem/oq-engine/blob/engine-3.3/debian/changelog
 
 General improvements on all calculators
@@ -69,8 +69,8 @@ minimum_magnitude = {
 ```
 
 7. We extended the [equivalent epicenter distance feature](
-adv-manual/equivalent_distance_approximation.rs) (`reqv`) to multiple
-tectonic region types. While before only a single lookup table was
+adv-manual/equivalent_distance_approximation.rst) (`reqv`) to multiple
+tectonic region types. While before a single lookup table was
 supported, now you can specify a different lookup table for each
 tectonic region type in the job.ini file, as in this example:
 ```
@@ -168,7 +168,7 @@ src_record = dstore['source_info'][rup_record['srcidx']]
 rupture serial number) at the end of the rupture generation
 phase. This makes it easier to compare different calculations.
 
-7. Since the ruptures are saved in the datastore always, and the
+7. Since the ruptures are saved in the datastore always, the
 parameter `save_ruptures` has been removed; in practice, it is always
 true now.
 
@@ -258,7 +258,7 @@ out of memory in the workers nor in the controller node. However,
 there are limits on the size of the `gmf_data` table, so it is still
 possible to run into errors and also memory errors. In that case you
 must check carefully parameters like the `minimum_magnitude` and
-`the minimum_intensity` as well as the number of sites and the
+the `minimum_intensity` as well as the number of sites and the
 effective investigation time.
 
 4. There was a lot of work on the `ucerf_event_based` calculator, to
@@ -364,7 +364,8 @@ parameters in the current job.ini or not.
 3. We replaced the `nodal_dist_collapsing_distance` and
 `hypo_dist_collapsing_distance` parameters with a `pointsource_distance`
 parameter, documented [here](
-adv-manual/common-mistakes.rst#pointsource_distance)
+adv-manual/common-mistakes.rst#pointsource_distance) and the algorithm used
+to collapse the ruptures been optimized.
 
 4. The combination `uniform_hazard_spectra=true` and `mean_hazard_curves=false`
 is allowed again, as requested by Laurentiu Danciu. It was made invalid a
@@ -476,11 +477,11 @@ and has been so for many releases. Thanks to Nick Ackerley for
 noticing. It has been fixed now.
 
 4. The generation of GMFs from ruptures was broken in the case of a filtered
-site collection. This has been.
+site collection. This has been fixed.
 
 5. There was a long standing bug in some `oq` commands, like `oq export` and
 `oq show` that made it impossible to export or view the results of a
-calculation ran by another user in a multi user setting. This has been solve:
+calculation ran by another user. This has been solved.
 The engine looks in the database first and from there it retrieves the path
 to the right datastore to use. This strategy also manages correctly the
 case when there is a custom $OQ_DATADIR.
@@ -630,7 +631,7 @@ optional arguments:
 also to zip exposures and source models.
 
 4. The command `oq shell` now can also be used to run scripts in the
-Python  environment of the engine.
+Python environment of the engine.
 
 5. The command `oq plot_assets` now also plots the discarded assets, if any.
 
@@ -646,7 +647,7 @@ release packages for it anymore. You can still run the engine on Ubuntu
 14.04 but you have to install from sources or with the self-installing
 file that we provide for generic Linux systems.
 
-3. We dropped supervisord and now we use only native System V inits.
+3. We dropped supervisord and now we use only native systemd inits.
 
 4. A cluster installation now officially requires to set up a shared
 filesystem and to configure the `shared_dir` parameter in the file
