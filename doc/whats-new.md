@@ -328,38 +328,29 @@ various features were added to the classical hazard calculators too.
 IMT-dependent weights for each GSIM, as requested by our Canadian
 users.  Now there can be more than one `<uncertaintyWeight>` inside an
 `<uncertaintyModel>` node.  The first `<uncertaintyWeight>` must not
-have and "imt" attribute; it is the default weight that applies to all
-IMTs. The other `<uncertaintyWeights>` must have an "imt" attribute;
+have and `imt` attribute; it is the default weight that applies to all
+IMTs. The other `<uncertaintyWeights>` must have an `imt` attribute;
 they apply to specific IMTs by overriding the default weight. The
 weights are used in the computation of means and quantiles: a nice
 thing is that you can run a calculation, save the calculation ID,
 change the logic tree file and recompute the statistics without having
-to recompute everything from scratch by using the `--hc` flag: `$ oq
-engine --run job.ini --hc CALC_ID`. Here is an example of the new
-syntax:
+to recompute everything from scratch by using the `--hc` flag.
+Here is an example of the new syntax:
 
 ```xml
 <logicTreeBranch branchID="b11">
   <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_01_AA13_sigma.vs450.hdf5">
     GMPETable
   </uncertaintyModel>
-  <uncertaintyWeight>
-    0.6
-  </uncertaintyWeight>
-  <uncertaintyWeight imt="SA(10.0)">
-    0.5
-  </uncertaintyWeight>
+  <uncertaintyWeight>0.6</uncertaintyWeight>
+  <uncertaintyWeight imt="SA(10.0)">0.5</uncertaintyWeight>
 </logicTreeBranch>
 <logicTreeBranch branchID="b12">
   <uncertaintyModel gmpe_table="ngae_usgs_hdf5_tables/NGA-East_Model_02_AA13_sigma.vs450.hdf5">
     GMPETable
   </uncertaintyModel>
-  <uncertaintyWeight>
-    0.4
-  </uncertaintyWeight>
-  <uncertaintyWeight imt="SA(10.0)">
-    0.5
-  </uncertaintyWeight>
+  <uncertaintyWeight>0.4</uncertaintyWeight>
+  <uncertaintyWeight imt="SA(10.0)">0.5</uncertaintyWeight>
 </logicTreeBranch>
 ```
 2. We added the job checksum to the hazard CSV outputs: it means that an
