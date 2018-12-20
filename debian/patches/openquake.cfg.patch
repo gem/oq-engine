@@ -2,7 +2,7 @@ Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
 --- a/openquake/engine/openquake.cfg
 +++ b/openquake/engine/openquake.cfg
-@@ -44,19 +44,22 @@ vhost = openquake
+@@ -44,10 +44,10 @@
  celery_queue = celery
  
  [dbserver]
@@ -17,9 +17,8 @@ Index: oq-engine/openquake/engine/openquake.cfg
  # daemon bind address; must be a valid IP address
  # example: 0.0.0.0
  listen = 127.0.0.1
- # address of the dbserver; can be an hostname too
-+# on multi-node cluster it must be the IP or hostname
-+# of the master node (on the master node cfg too)
+@@ -56,9 +56,10 @@
+ # of the master node (on the master node cfg too)
  # example: master.hpc
  host = localhost
 -# port 1908 has a good reputation:
