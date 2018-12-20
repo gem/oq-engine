@@ -2,3 +2,5 @@ theme: jekyll-theme-architect
 
 include:
   - README.md
+  - doc/*.md
+  - doc/*/*.md

@@ -72,6 +72,10 @@ class BindiEtAl2017Rjb(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    def __init__(self, adjustment_factor="1.0"):
+        super().__init__()
+        self.adjustment_factor = np.log(float(adjustment_factor))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -89,7 +93,7 @@ class BindiEtAl2017Rjb(GMPE):
         # Mean is returned in terms of m/s^2. Need to convert to g
         mean -= np.log(g)
         stddevs = self.get_stddevs(C, sites.vs30.shape, stddev_types)
-        return mean, stddevs
+        return mean + self.adjustment_factor, stddevs
 
     def _get_magnitude_scaling(self, C, mag):
         """

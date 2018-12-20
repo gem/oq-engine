@@ -153,7 +153,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
-        crv = classical(group, self.sites, gsim_by_trt, param)[0]
+        crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv[0].array[:, 0], decimal=4)
 
