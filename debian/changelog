@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds GMPE suite for national PSHA for Germany
+  
   [Daniele Viganò]
   * Added a warning box when an unsupported browser is used to view the WebUI
   * Updated Docker containers to support a multi-node deployment
