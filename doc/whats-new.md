@@ -598,7 +598,11 @@ functionality.
 10. Stéphane Drouet contributed several Drouet & Cotton (2015) GMPEs,
 including the 2017 erratum.
 
-11. We fixed a few bugs in the GMPEs for Canada affecting the event based
+11. We added a modified version of the Berge-Thierry et al. (2003) GMPE
+supporting Mw rather than Ms. The conversion equation used is the one
+proposed by Weatherill et al. (2016).
+
+12. We fixed a few bugs in the GMPEs for Canada affecting the event based
 calculator.
 
 oq commands
