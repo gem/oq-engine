@@ -43,7 +43,7 @@ $ docker pull docker.io/openquake/engine:2.9
 - [Single node deployment](../docker/single.md)
 - [Cluster deployment](../docker/cluster.md)
 - [Advanced options](../docker/advanced.md)
-- [Build from sources](https://github.com/gem/oq-builders/tree/master/oq-docker#build-openquake-docker-images)
+- [Build from sources](../../docker#build-openquake-docker-images)
 
 ***
 

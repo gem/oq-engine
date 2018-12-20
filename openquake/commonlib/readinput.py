@@ -1160,6 +1160,7 @@ def get_pmap_from_csv(oqparam, fnames):
     return mesh, ProbabilityMap.from_array(data, range(len(mesh)))
 
 
+@deprecated('Use the .csv format for the hazard curves instead')
 def get_pmap_from_nrml(oqparam, fname):
     """
     :param oqparam:

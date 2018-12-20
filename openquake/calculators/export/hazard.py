@@ -24,8 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import (
-    humansize, group_array, DictArray, deprecated)
+from openquake.baselib.general import humansize, group_array, deprecated
 from openquake.baselib.node import Node
 from openquake.hazardlib import nrml
 from openquake.hazardlib.imt import from_string
@@ -249,22 +248,17 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hmaps_csv(key, dest, sitemesh, array, pdic, comment):
+def export_hmaps_csv(key, dest, sitemesh, array, comment):
     """
     Export the hazard maps of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitemesh: site collection
-    :param array: an array of shape (N, P * I)
-    :param pdic: intensity measure types and levels
+    :param array: a composite array of dtype hmap_dt
     :param comment: comment to use as header of the exported CSV file
     """
-    imts = list(pdic)
-    poes = pdic[imts[0]]
-    dt = numpy.dtype([('%s-%s' % (imt, poe), F32)
-                      for imt in imts for poe in poes])
-    curves = util.compose_arrays(sitemesh, array.view(dt)[:, 0])
+    curves = util.compose_arrays(sitemesh, array)
     writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
@@ -382,29 +376,29 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = get_mesh(sitecol)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    if oq.poes:
-        pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     checksum = dstore.get_attr('/', 'checksum32')
+    hmap_dt = oq.hmap_dt()
     for kind, hcurves in PmapGetter(dstore, rlzs_assoc).items(kind):
         fname = hazard_curve_name(dstore, (key, fmt), kind, rlzs_assoc)
         comment = _comment(rlzs_assoc, kind, oq.investigation_time)
+        if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
+                oq.hazard_maps):
+            hmap = dstore['hmaps/' + kind].value.view(hmap_dt)[:, 0]
         if key == 'uhs' and oq.poes and oq.uniform_hazard_spectra:
-            uhs_curves = calc.make_uhs(
-                hcurves, oq.imtls, oq.poes, len(sitemesh))
+            uhs_curves = calc.make_uhs(hmap, oq)
             writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment + ', checksum=%d' % checksum)
             fnames.append(fname)
         elif key == 'hmaps' and oq.poes and oq.hazard_maps:
-            hmap = dstore['hmaps/' + kind].value
             fnames.extend(
-                export_hmaps_csv(ekey, fname, sitemesh, hmap, pdic,
+                export_hmaps_csv(ekey, fname, sitemesh, hmap,
                                  comment + ', checksum=%d' % checksum))
         elif key == 'hcurves':
             fnames.extend(
                 export_hcurves_by_imt_csv(
-                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves,
-                    oq, checksum))
+                    ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq,
+                    checksum))
     return sorted(fnames)
 
 
@@ -432,6 +426,8 @@ def get_metadata(realizations, kind):
         metadata['statistics'] = 'mean'
     elif kind == 'max':
         metadata['statistics'] = 'max'
+    elif kind == 'std':
+        metadata['statistics'] = 'std'
     return metadata
 
 
@@ -443,20 +439,23 @@ def export_uhs_xml(ekey, dstore):
     sitemesh = get_mesh(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
-    periods = [imt for imt in oq.imtls if hasattr(imt, 'period')]
+    periods = [imt.period for imt in oq.imt_periods()]
     for kind, hcurves in pgetter.items(kind):
         metadata = get_metadata(rlzs_assoc.realizations, kind)
-        _, periods = calc.get_imts_periods(oq.imtls)
-        uhs = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(sitemesh))
+        hmap = calc.make_hmap_array(hcurves, oq.imtls, oq.poes, len(sitemesh))
+        uhs = calc.make_uhs(hmap, oq)
         for poe in oq.poes:
+            poe_str = '%s-' % poe
             fname = hazard_curve_name(
                 dstore, (key, fmt), kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
             data = []
-            for site, curve in zip(sitemesh, uhs[str(poe)]):
-                data.append(UHS(curve, Location(site)))
+            for site, curve in zip(sitemesh, uhs):
+                levels = [curve[f] for f in curve.dtype.names
+                          if f.startswith(poe_str)]
+                data.append(UHS(levels, Location(site)))
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)

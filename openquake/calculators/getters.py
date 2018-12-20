@@ -165,7 +165,7 @@ class PmapGetter(object):
             if there is only one or the statistics otherwise.
         """
         num_rlzs = len(self.weights)
-        if not kind:  # use default
+        if not kind or kind == 'all':  # use default
             if 'hcurves' in self.dstore:
                 for k in sorted(self.dstore['hcurves']):
                     yield k, self.dstore['hcurves/' + k].value
@@ -178,9 +178,10 @@ class PmapGetter(object):
                 yield 'rlz-%03d' % rlzi, hcurves
         elif 'poes' in self.dstore and kind.startswith('rlz-'):
             yield kind, self.get(int(kind[4:]))
-        if 'hcurves' in self.dstore and kind in ('stats', 'all'):
+        if 'hcurves' in self.dstore and kind == 'stats':
             for k in sorted(self.dstore['hcurves']):
-                yield k, self.dstore['hcurves/' + k].value
+                if not k.startswith('rlz'):
+                    yield k, self.dstore['hcurves/' + k].value
 
     def get_mean(self, grp=None):
         """
