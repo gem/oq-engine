@@ -73,6 +73,10 @@ class AkkarEtAlRjb2014(GMPE):
     #: coefficients in table 4.a, pages 22-23, are used.
     REQUIRES_DISTANCES = set(('rjb', ))
 
+    def __init__(self, adjustment_factor=1.0):
+        super().__init__()
+        self.adjustment_factor = np.log(adjustment_factor)
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -95,7 +99,7 @@ class AkkarEtAlRjb2014(GMPE):
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=sites.vs30.size)
 
-        return mean, stddevs
+        return mean + self.adjustment_factor, stddevs
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
@@ -362,7 +366,7 @@ class AkkarEtAlRepi2014(AkkarEtAlRjb2014):
     3.400   -0.80566   0.0029   -0.23726   -0.72539   0.2529   7.5   -0.5096    0.0000   -0.0943   6.75   1000   750   2.5   3.2   -0.84449   -0.15337   0.6750   0.4029
     3.600   -0.94500   0.0029   -0.24437   -0.70115   0.2529   7.5   -0.5096    0.0000   -0.1278   6.75   1000   750   2.5   3.2   -0.83216   -0.10884   0.6571   0.4252
     3.800   -0.98457   0.0029   -0.24930   -0.69696   0.2529   7.5   -0.5096    0.0000   -0.1744   6.75   1000   750   2.5   3.2   -0.79216   -0.08884   0.6438   0.4243
-    4.000   -0.93329   0.0029   -0.25756   -0.71210   0.2529   7.5   -0.5096    0.0000   -0.2231   6.75   1000   750   2.5   3.2   -0.75645   -0.07749   0.6241   0.3659 
+    4.000   -0.93329   0.0029   -0.25756   -0.71210   0.2529   7.5   -0.5096    0.0000   -0.2231   6.75   1000   750   2.5   3.2   -0.75645   -0.07749   0.6241   0.3659
     """)
 
 
