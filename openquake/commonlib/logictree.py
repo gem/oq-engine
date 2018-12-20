@@ -639,10 +639,11 @@ class SourceModelLogicTree(object):
         """
         fnames = self.info.smpaths
         trts = set()
-        logging.info('Reading TRTs from %d model file(s)', len(fnames))
         for fname in fnames:
             if not fname.endswith('.hdf5'):
                 trts.update(TRT_REGEX.findall(open(fname).read()))
+        logging.info('Read %d TRTs from %d model file(s)',
+                     len(trts), len(fnames))
         return trts
 
     def parse_tree(self, tree_node, validate):
@@ -1287,12 +1288,20 @@ class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file
     """
-    def __init__(self, branch):
-        nodes = list(branch.getnodes('uncertaintyWeight'))
-        assert 'imt' not in nodes[0].attrib, nodes[0].attrib
-        self.dic = {'default': float(nodes[0].text)}
-        for n in nodes[1:]:
-            self.dic[n['imt']] = float(n.text)
+    def __init__(self, branch, fname):
+        with context(fname, branch.uncertaintyWeight):
+            nodes = list(branch.getnodes('uncertaintyWeight'))
+            if 'imt' in nodes[0].attrib:
+                raise InvalidLogicTree('The first uncertaintyWeight has an imt'
+                                       ' attribute')
+            self.dic = {'default': float(nodes[0].text)}
+            imts = []
+            for n in nodes[1:]:
+                self.dic[n['imt']] = float(n.text)
+                imts.append(n['imt'])
+            if len(set(imts)) < len(imts):
+                raise InvalidLogicTree(
+                    'There are duplicated IMTs in the weights')
 
     def __mul__(self, other):
         new = object.__new__(self.__class__)
@@ -1502,7 +1511,7 @@ class GsimLogicTree(object):
                 weights = []
                 branch_ids = []
                 for branch in branchset:
-                    weight = ImtWeight(branch)
+                    weight = ImtWeight(branch, self.fname)
                     weights.append(weight)
                     branch_id = branch['branchID']
                     branch_ids.append(branch_id)

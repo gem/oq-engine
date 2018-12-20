@@ -178,8 +178,8 @@ class ContextMaker(object):
             Tuple of two items: sites and distances context.
 
         :raises ValueError:
-            If any of declared required parameters (that includes site, rupture
-            and distance parameters) is unknown.
+            If any of declared required parameters (site, rupture and
+            distance parameters) is unknown.
         """
         sites, dctx = self.filter(sites, rupture)
         for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
@@ -200,31 +200,30 @@ class ContextMaker(object):
         sctx = SitesContext(self.REQUIRES_SITES_PARAMETERS, sites)
         return sctx, dctx
 
-    def get_ruptures_sites(self, src, sites):
+    def get_rupture_sites(self, src, sites):
         """
         :param src: a hazardlib source
         :param sites: the sites affected by it
-        :yields: pairs (ruptures, sites)
+        :yields: pairs (rupture, sites)
         """
-        out = []
         with self.ir_mon:
             pdist = self.pointsource_distance.get(src.tectonic_region_type)
             if hasattr(src, 'location') and pdist:
                 close_sites, far_sites = sites.split(src.location, pdist)
                 if close_sites is None:  # all is far
-                    out.append((list(src.iter_ruptures(False, False)),
-                                far_sites))
+                    for rup in src.iter_ruptures(False, False):
+                        yield rup, far_sites
                 elif far_sites is None:  # all is close
-                    out.append((list(src.iter_ruptures(True, True)),
-                                close_sites))
+                    for rup in src.iter_ruptures(True, True):
+                        yield rup, close_sites
                 else:
-                    out.append((list(src.iter_ruptures(True, True)),
-                                close_sites))
-                    out.append((list(src.iter_ruptures(False, False)),
-                                far_sites))
+                    for rup in src.iter_ruptures(True, True):
+                        yield rup, close_sites
+                    for rup in src.iter_ruptures(False, False):
+                        yield rup, far_sites
             else:
-                out.append((list(src.iter_ruptures()), sites))
-        return out
+                for rup in src.iter_ruptures():
+                    yield rup, sites
 
     def poe_map(self, src, s_sites, imtls, trunclevel, rup_indep=True):
         """
@@ -238,28 +237,24 @@ class ContextMaker(object):
         pmap = ProbabilityMap.build(
             len(imtls.array), len(self.gsims), s_sites.sids,
             initvalue=rup_indep)
+        weight = 1. / src.num_ruptures
         eff_ruptures = 0
-        for rups, sites in self.get_ruptures_sites(src, s_sites):
-            if len(rups) > src.num_ruptures:
-                raise ValueError('Expected at max %d ruptures, got %d' % (
-                    src.num_ruptures, len(rups)))
-            weight = 1. / len(rups)
-            for rup in rups:
-                rup.weight = weight
-                try:
-                    with self.ctx_mon:
-                        sctx, dctx = self.make_contexts(sites, rup)
-                except FarAwayRupture:
-                    continue
-                eff_ruptures += 1
-                with self.poe_mon:
-                    pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
-                    for sid, pne in zip(sctx.sids, pnes):
-                        if rup_indep:
-                            pmap[sid].array *= pne
-                        else:
-                            pmap[sid].array += pne * rup.weight
-        # pmap = ~pmap
+        for rup, sites in self.get_rupture_sites(src, s_sites):
+            rup.weight = weight
+            try:
+                with self.ctx_mon:
+                    sctx, dctx = self.make_contexts(sites, rup)
+            except FarAwayRupture:
+                continue
+            eff_ruptures += 1
+            with self.poe_mon:
+                pnes = self._make_pnes(rup, sctx, dctx, imtls, trunclevel)
+                for sid, pne in zip(sctx.sids, pnes):
+                    if rup_indep:
+                        pmap[sid].array *= pne
+                    else:
+                        pmap[sid].array += pne * rup.weight
+        #pmap = ~pmap
         pmap.eff_ruptures = eff_ruptures
         return pmap
 

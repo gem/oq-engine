@@ -30,7 +30,7 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
-    case_26, case_27, case_28, case_29, case_30, case_31, case_32)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -262,8 +262,11 @@ hazard_curve-max-PGA.csv,
 hazard_curve-max-SA(0.1).csv
 hazard_curve-mean-PGA.csv
 hazard_curve-mean-SA(0.1).csv
+hazard_curve-std-PGA.csv
+hazard_curve-std-SA(0.1).csv
 hazard_uhs-max.csv
 hazard_uhs-mean.csv
+hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
         # test UHS XML export
@@ -274,8 +277,12 @@ hazard_uhs-mean.csv
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
         # npz exports
-        export(('hmaps', 'npz'), self.calc.datastore)
-        export(('uhs', 'npz'), self.calc.datastore)
+        [fname] = export(('hmaps', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('PGA', 'SA(0.1)'))
+        [fname] = export(('uhs', 'npz'), self.calc.datastore)
+        arr = numpy.load(fname)['all']
+        self.assertEqual(arr['mean'].dtype.names, ('0.01', '0.1', '0.2'))
 
         # here is the size of assoc_by_grp for a complex logic tree
         # grp_id gsim_idx rlzis
@@ -345,15 +352,15 @@ hazard_uhs-mean.csv
              'hazard_curve-mean_SA(1.0).csv',
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
-            case_18.__file__, delta=1E-7)
+            case_18.__file__, kind='stats', delta=1E-7)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # check exporting a single realization in XML and CSV
-        [fname] = export(('uhs/rlz-1', 'xml'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
         if NOT_DARWIN:  # broken on macOS
             self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
-        [fname] = export(('uhs/rlz-1', 'csv'),  self.calc.datastore)
+        [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
 
         # extracting hmaps
@@ -488,3 +495,8 @@ hazard_uhs-mean.csv
     def test_case_32(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_32.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_33(self):
+        # directivity
+        self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_33.__file__)
