@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, DictArray
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -33,7 +33,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-
 grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
                              ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
@@ -79,21 +78,21 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
 
-    def agg_dicts(self, acc, pmap_by_grp):
+    def agg_dicts(self, acc, dic):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
+        :param dic: dictionary with keys pmap, calc_times, eff_ruptures
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += pmap_by_grp.eff_ruptures
-            for grp_id in pmap_by_grp:
-                if pmap_by_grp[grp_id]:
-                    acc[grp_id] |= pmap_by_grp[grp_id]
-                self.nsites.append(len(pmap_by_grp[grp_id]))
+            acc.eff_ruptures += dic['eff_ruptures']
+            for grp_id, pmap in dic['pmap'].items():
+                if pmap:
+                    acc[grp_id] |= pmap
+                self.nsites.append(len(pmap))
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp.calc_times)
+            self.store_source_info(dic['calc_times'])
         return acc
 
     def zerodict(self):
@@ -307,30 +306,20 @@ def build_hazard_stats(pgetter, hstats, individual_curves, monitor):
             return {}
     imtls, poes, weights = pgetter.imtls, pgetter.poes, pgetter.weights
     pmap_by_kind = {}
-    hmaps = []
-    if hstats:
-        names, funcs = zip(*hstats)
-        if pgetter.poes and 'std' in names:
-            hmaps = [calc.make_hmap(p, imtls, poes) for p in pmaps]
     for statname, stat in hstats:
         with monitor('compute ' + statname):
             pmap = compute_pmap_stats(pmaps, [stat], weights, imtls)
             pmap_by_kind['hcurves', statname] = pmap
             if pgetter.poes:
-                if statname == 'std':
-                    pdic = DictArray({imt: pgetter.poes for imt in imtls})
-                    pmap_by_kind['hmaps', statname] = (
-                        compute_pmap_stats(hmaps, [stat], weights, pdic))
-                else:
-                    pmap_by_kind['hmaps', statname] = calc.make_hmap(
-                        pmap, pgetter.imtls, pgetter.poes)
+                pmap_by_kind['hmaps', statname] = calc.make_hmap(
+                    pmap, pgetter.imtls, pgetter.poes)
 
     if len(pmaps) > 1 and individual_curves or not hstats:
-        for r, pmap in enumerate(pmaps):
-            key = 'rlz-%03d' % r
-            pmap_by_kind['hcurves', key] = pmap
-            if pgetter.poes and hmaps:
-                pmap_by_kind['hmaps', key] = hmaps[r]
-            elif pgetter.poes:
-                pmap_by_kind['hmaps', key] = calc.make_hmap(pmap, imtls, poes)
+        with monitor('build individual hmaps'):
+            for r, pmap in enumerate(pmaps):
+                key = 'rlz-%03d' % r
+                pmap_by_kind['hcurves', key] = pmap
+                if pgetter.poes:
+                    pmap_by_kind['hmaps', key] = calc.make_hmap(
+                        pmap, imtls, poes)
     return pmap_by_kind

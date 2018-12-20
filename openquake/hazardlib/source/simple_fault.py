@@ -203,6 +203,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
         self._nr = []
+        n_hypo = len(self.hypo_list) or 1
+        n_slip = len(self.slip_list) or 1
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             if mag_occ_rate == 0:
                 continue
@@ -210,11 +212,10 @@ class SimpleFaultSource(ParametricSeismicSource):
                 fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
-            self._nr.append(num_rup_along_length * num_rup_along_width)
+            self._nr.append(num_rup_along_length * num_rup_along_width *
+                            n_hypo * n_slip)
         counts = sum(self._nr)
-        n_hypo = len(self.hypo_list) or 1
-        n_slip = len(self.slip_list) or 1
-        return counts * n_hypo * n_slip
+        return counts
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
         """
