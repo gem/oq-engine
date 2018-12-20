@@ -10,46 +10,20 @@ changelog: https://github.com/gem/oq-engine/blob/engine-3.3/debian/changelog
 General improvements on all calculators
 ---------------------------------------
 
-1. We implemented transparent support for zipped source models and
-exposures.  The engine now can automatically unzip source models and
-exposures, if any.  The support is transparent in the sense that you
-do not need to change the job.ini file. If you have a configuration
-file with the line `source_model_logic_tree_file = ssmLT.xml` and you
-zip the file `ssmLT.xml` together with all the related source models
-into an archive `ssmLT.zip` the engine will automatically look for the
-.zip file if the .xml file is missing. Same for zipped exposures.
-
-2. We now support site models in .csv format, like in this example:
-
-```
-$ cat site_model.csv
-lon,lat,vs30,z1pt0,z2pt5
-6.94712,44.98426,7.452224E+02,4.590022E+01,6.206095E-01
-7.10778,45.53722,7.452224E+02,4.590022E+01,6.206095E-01
-7.19698,44.82533,2.291181E+02,4.997379E+02,2.392246E+00
-7.30266,45.75058,7.452224E+02,4.590022E+01,6.206095E-01
-```
-The old .xml format is not deprecated and will keep working for the foreseeable
-future, but we suggest you to switch to the .csv format anyway, since it is
-more convenient to use and faster to parse. You can use any number of
-fields: fields not used by the GMPEs will simply be ignored.
-As a side note, the site model is now imported in the datastore, as a
-structured array, to help debugging.
-
-3. The command `oq engine --run` has now an option `--reuse-hazard` that
+1. The command `oq engine --run` has now an option `--reuse-hazard` that
 can be used to run a risk calculation without having to regenerate the
 hazard, or to regenerate the hazard curves/maps/uniform hazard spectra
 without having to regenerate the probabilities of exceedence.
 
-4. The feature works because the engine stores a checksum for the hazard
+2. The feature works because the engine stores a checksum for the hazard
 parameters in the database, so it is able to retrieve a pre-existing hazard
 calculation with the same checksum, if available.
 
-5. The engine can run multiple job.ini files at once, with the syntax
+3. The engine can run multiple job.ini files at once, with the syntax
 `oq engine --run job1.ini ... jobN.ini`. The calculation ID of the
 first job will be used as input for the other jobs.
 
-6. We improved the `minimum_magnitude` feature that allows ruptures of
+4. We improved the `minimum_magnitude` feature that allows ruptures of
 magnitude below a given threshould to be discarded. The first improvement is
 that now the discarding is done *before* sampling the ruptures,
 while in the past it was done after sampling the ruptures, so now it
@@ -68,7 +42,7 @@ minimum_magnitude = {
   "Stable Shallow Crust": 5.0}
 ```
 
-7. We extended the [equivalent epicenter distance feature](
+5. We extended the [equivalent epicenter distance feature](
 adv-manual/equivalent_distance_approximation.rst) (`reqv`) to multiple
 tectonic region types. While before a single lookup table was
 supported, now you can specify a different lookup table for each
@@ -79,7 +53,7 @@ active shallow crust = lookup_asc.hdf5
 stable shallow crust = lookup_sta.hdf5
 ```
 
-9. Since engine 3.1 the input files of every calculation are zipped and
+6. Since engine 3.1 the input files of every calculation are zipped and
 saved in the datastore. This is very useful in order to reproduce a
 given calculation. In this release, due to a bug in `silx view` that
 make it impossible to view datastores with large inputs, we moved the
@@ -87,7 +61,32 @@ top level dataset `input_zip` into the folder `input/zip`. Moreover
 now we zip the inputs only when there is no `hazard_calculation_id`,
 to avoid storing redundant information.
 
-8. The engine has been extended to be able to read multiple site
+7. We implemented transparent support for zipped source models and
+exposures.  The engine now can automatically unzip source models and
+exposures, if any.  The support is transparent in the sense that you
+do not need to change the job.ini file. If you have a configuration
+file with the line `source_model_logic_tree_file = ssmLT.xml` and you
+zip the file `ssmLT.xml` together with all the related source models
+into an archive `ssmLT.zip` the engine will automatically look for the
+.zip file if the .xml file is missing. Same for zipped exposures.
+
+8. We support site models in .csv format. The old .xml format is not
+deprecated and will keep working for the foreseeable
+future, but we suggest you to switch to the .csv format anyway, since it is
+more convenient to use and faster to parse. You can use any number of
+fields: fields not used by the GMPEs will simply be ignored. Here is an
+example:
+
+```
+$ cat site_model.csv
+lon,lat,vs30,z1pt0,z2pt5
+6.94712,44.98426,7.452224E+02,4.590022E+01,6.206095E-01
+7.10778,45.53722,7.452224E+02,4.590022E+01,6.206095E-01
+7.19698,44.82533,2.291181E+02,4.997379E+02,2.392246E+00
+7.30266,45.75058,7.452224E+02,4.590022E+01,6.206095E-01
+```
+
+9. The engine has been extended to be able to read multiple site
 models and/or multiple exposures at once. The multiple site
 models/exposures are automatically merged and stored in the datastore
 as a single site model/asset collection. This is very useful in
@@ -112,7 +111,7 @@ exposure_file =
   ../Exposure/Exposure_Venezuela.xml
 ```
 
-9. We parallelized the procedure splitting/filtering the sources.
+10. We parallelized the splitting/filtering of the sources.
 This make the preprocessing phase of the engine a lot faster in
 large models (i.e. the Australia model, the EMME models and others).
 Also we avoided a needless deepcopy of the source models, thus increasing
@@ -123,12 +122,12 @@ removed since now the pickled sources are stored in the `cache_XXX.hdf5`
 file, which paves the way for future improvements. Finally, the source
 geometries are now saved in the datastore.
 
-10. Now the engine extracts the tectonic region types from the source model
+11. Now the engine extracts the tectonic region types from the source model
 as soon as possible and use this information to reduce the GMPE logic tree
 upfront. This is used to log a more reliable estimate about the number of
 potential logic tree paths in the model.
 
-11. The `individual_curves` flag is back. By default it is false, but if you
+12. The `individual_curves` flag is back. By default it is false, but if you
 set it to true in the job.ini file then the engine will store the individual
 curves for each realization: specifically, the hazard curves and maps for
 classical calculations and the loss curves and average losses for event based
@@ -648,6 +647,7 @@ also to zip exposures and source models.
 Python environment of the engine.
 
 5. The command `oq plot_assets` now also plots the discarded assets, if any.
+Moreover it plots the site model, if any.
 
 IT changes
 -------------------
