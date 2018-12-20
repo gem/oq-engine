@@ -669,11 +669,15 @@ multi-node, multi-host deployment. We now also have a mechanism to
 emulate a cluster on a single machine by using docker containers.
 The relevant documentation is [here](installing/docker.md).
 
-6. Now we check if the engine is running out of memory also in the workers
+6. We removed the tests from the Python package because users were trying
+to run them. The engine tests are not meant to be run from a production
+installation: they must be run from a development installation.
+
+7. Now we check if the engine is running out of memory also in the workers
 nodes, and if this is the case a warning is logged in the main log, a
 feature that we desired for years.
 
-7. There were several changes in the parallelization library and now
+8. There were several changes in the parallelization library and now
 all the traffic back from the workers goes through ZeroMQ, not
 RabbitMQ.  As a consequence, it is easier to support backends
 different from celery and we did some experiments with dask.
