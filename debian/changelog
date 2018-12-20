@@ -38,6 +38,7 @@
   [Marco Pagani]
   * Added two modified versions of the Bindi et al. (2011) to be used in a
     backbone approach to compute hazard in Italy
+  * Added a modified version of Berge-Thierry et al. 2003 supporting Mw
 
   [Michele Simionato]
   * Changed the way loss curves and loss maps are stored in order to unify
