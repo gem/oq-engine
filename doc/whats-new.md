@@ -324,20 +324,19 @@ Classical/disaggregation calculators
 While most of the work in this release was on the event based calculators,
 various features were added to the classical hazard calculators too.
 
-1. We extended the GSIM logic tree XML syntax to allow for IMT-dependent
-weights for each GSIM, as requested by our Canadian users.
-Now there can be more than one `<uncertaintyWeight>` inside an
-`<uncertaintyModel>` node.  The first `<uncertaintyWeight>` must not have
-and "imt" attribute; it is the default weight that applies to all IMTs. The
-other `<uncertaintyWeights>` must have an "imt" attribute; they apply to
-specific IMTs by overriding the default weight.
-
-The weights are used in the computation of means and quantiles: a nice
-thing is that you can run a calculation, save the calculation ID, change
-the logic tree file and recompute the statistics without having to
-recompute everything from scratch by using the `--hc` flag:
-`$ oq engine --run job.ini --hc CALC_ID`. Here is an example of the
-new syntax:
+1. We extended the GSIM logic tree XML syntax to allow for
+IMT-dependent weights for each GSIM, as requested by our Canadian
+users.  Now there can be more than one `<uncertaintyWeight>` inside an
+`<uncertaintyModel>` node.  The first `<uncertaintyWeight>` must not
+have and "imt" attribute; it is the default weight that applies to all
+IMTs. The other `<uncertaintyWeights>` must have an "imt" attribute;
+they apply to specific IMTs by overriding the default weight. The
+weights are used in the computation of means and quantiles: a nice
+thing is that you can run a calculation, save the calculation ID,
+change the logic tree file and recompute the statistics without having
+to recompute everything from scratch by using the `--hc` flag: `$ oq
+engine --run job.ini --hc CALC_ID`. Here is an example of the new
+syntax:
 
 ```xml
 <logicTreeBranch branchID="b11">
