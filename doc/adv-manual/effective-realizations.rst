@@ -55,7 +55,6 @@ can be simple, complex, or even trivial if the tectonic region type
 with multiple branches is not present in the underlying source
 model. This is the key to the logic tree reduction concept.
 
-
 Reduction of the logic tree
 -----------------------------------------------
 
@@ -150,9 +149,8 @@ it will export only two files with names like::
   hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
   hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
 
-
 How to analyze the logic tree of a calculation without running the calculation
-==============================================================================
+------------------------------------------------------------------------------
 
 The engine provide some facilities to explore the logic tree of a
 computation without running it. The command you need is the *info* command::
@@ -224,7 +222,6 @@ or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
 stronger. Such a situation is covered by our tests
 and will be discussed later on.
-
 
 The realization-association object
 ----------------------------------
