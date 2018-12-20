@@ -19,6 +19,7 @@
 import os.path
 import logging
 import collections
+import operator
 import numpy
 
 from openquake.baselib import hdf5, datastore
@@ -45,6 +46,7 @@ F64 = numpy.float64
 TWO32 = U64(2 ** 32)
 rlzs_by_grp_dt = numpy.dtype(
     [('grp_id', U16), ('gsim_id', U16), ('rlzs', hdf5.vuint16)])
+by_grp = operator.attrgetter('src_group_id')
 
 
 def store_rlzs_by_grp(dstore):
@@ -158,7 +160,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     continue
                 par['gsims'] = gsims_by_trt[sg.trt]
                 for block in self.block_splitter(
-                        sg.sources, weight_src, 'src_group_id'):
+                        sg.sources, weight_src, by_grp):
                     if 'ucerf' in oq.calculation_mode:
                         for i in range(oq.ses_per_logic_tree_path):
                             par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]

@@ -33,7 +33,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-by_grp = operator.attrgetter('src_group_id')
 grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
                              ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
@@ -172,7 +171,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: csm.get_sources_by_trt discards the mutex sources
         for trt, sources in self.csm.sources_by_trt.items():
             gsims = self.csm.info.gsim_lt.get_gsims(trt)
-            for block in self.block_splitter(sources, key=by_grp):
+            for block in self.block_splitter(sources):
                 yield block, self.src_filter, gsims, param
                 num_tasks += 1
                 num_sources += len(block)
