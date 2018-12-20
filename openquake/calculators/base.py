@@ -335,10 +335,11 @@ class HazardCalculator(BaseCalculator):
     """
     precalc = None
 
-    def block_splitter(self, sources, weight=get_weight):
+    def block_splitter(self, sources, weight=get_weight, key=lambda src: 1):
         """
-        :params sources: a list of sources
+        :param sources: a list of sources
         :param weight: a weight function (default .weight)
+        :param key: None or 'src_group_id'
         :returns: an iterator over blocks of sources
         """
         ct = self.oqparam.concurrent_tasks or 1
@@ -349,8 +350,7 @@ class HazardCalculator(BaseCalculator):
             else:
                 logging.info('Using maxweight=%d', maxweight)
             self.logged = True
-        return general.block_splitter(sources, maxweight, weight,
-                                      operator.attrgetter('src_group_id'))
+        return general.block_splitter(sources, maxweight, weight, key)
 
     @general.cached_property
     def src_filter(self):

@@ -1,0 +1,72 @@
+version: '2'
+services:
+  rabbitmq:
+    image: rabbitmq:3
+    environment:
+      - RABBITMQ_DEFAULT_VHOST=openquake 
+      - RABBITMQ_DEFAULT_USER=openquake
+      - RABBITMQ_DEFAULT_PASS=openquake
+    networks:
+      - cluster
+  # Engine is not actually executed and is
+  # exposed only to make sure it is built via
+  # docker-compose build
+  # engine:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.engine
+  #   image: openquake/engine
+  #   command: '-c true'
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile.master
+    image: openquake/engine-master
+    # Uncomment to enable auth in WebUI/API
+    # environment:
+    #   - LOCKDOWN=true
+    volumes:
+      - oqdata:/home/openquake/oqdata
+    # Uncomment to use a local copy of the oq-engine
+    #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    # Uncomment to use a custom openquake.cfg
+    #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
+    networks:
+      - cluster
+    ports:
+      - 8800:8800
+    depends_on:
+      - rabbitmq
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: openquake/engine-worker
+    volumes:
+      - oqdata:/home/openquake/oqdata:ro
+    # Uncomment to use a local copy of the oq-engine
+    #   - ./path/to/oq-engine/openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    # Uncomment to use a custom openquake.cfg
+    #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
+    environment:
+      - OQ_RABBITMQ_HOST=rabbitmq
+    entrypoint: ["./celery-wait.sh"]
+    networks:
+      - cluster
+    depends_on:
+      - rabbitmq
+      - master
+
+# When running on multiple host the volume must be shared between every node
+# see the 'oqdata-nfs' example below
+volumes:
+  oqdata:
+  # oqdata-nfs:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: nfsvers=4,addr=nfs-server,rw
+  #     device: ":/oqdata"
+
+networks:
+  cluster:
