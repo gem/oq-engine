@@ -51,7 +51,7 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
                     aval = asset.value('structural')
                     result[asset.ordinal][outputs.rlzi] = numpy.array([
                         eal_orig * aval, eal_retro * aval, bcr])
-    return result
+    return {'bcr_data': result}
 
 
 @base.calculators.add('classical_bcr')
@@ -64,7 +64,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     def post_execute(self, result):
         # NB: defined only for loss_type = 'structural'
         bcr_data = numpy.zeros((self.A, self.R), bcr_dt)
-        for aid, data in result.items():
+        for aid, data in result['bcr_data'].items():
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
