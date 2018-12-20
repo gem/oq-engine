@@ -157,7 +157,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 if not sg.sources:
                     continue
                 par['gsims'] = gsims_by_trt[sg.trt]
-                for block in self.block_splitter(sg.sources, weight_src):
+                for block in self.block_splitter(
+                        sg.sources, weight_src, 'src_group_id'):
                     if 'ucerf' in oq.calculation_mode:
                         for i in range(oq.ses_per_logic_tree_path):
                             par['ses_seeds'] = [(ses_idx, oq.ses_seed + i + 1)]
