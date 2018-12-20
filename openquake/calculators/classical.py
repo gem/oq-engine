@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, DictArray
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -33,7 +33,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-
 grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
                              ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
