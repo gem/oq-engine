@@ -313,7 +313,8 @@ class ParametricProbabilisticRupture(BaseRupture):
         """
         tom = self.temporal_occurrence_model
         rate = self.occurrence_rate
-        return tom.get_probability_no_exceedance(rate, poes)
+        p = tom.get_probability_one_or_more_occurrences(rate)
+        return (1 - p) ** poes
 
     def get_dppvalue(self, site):
         """
