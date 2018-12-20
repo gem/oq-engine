@@ -118,31 +118,31 @@ class GermanyStressParameterAdjustmentTestCase(unittest.TestCase):
                         1.5 * np.ones_like(high_mean))
 
     def test_akkar_germany_adjustments(self):
-        adj_gmpes = [AkkarEtAlRhyp2014(adjustment_factor="0.75"),
-                     AkkarEtAlRhyp2014(adjustment_factor="1.25"),
-                     AkkarEtAlRhyp2014(adjustment_factor="1.5")]
+        adj_gmpes = [AkkarEtAlRhyp2014(adjustment_factor=0.75),
+                     AkkarEtAlRhyp2014(adjustment_factor=1.25),
+                     AkkarEtAlRhyp2014(adjustment_factor=1.50)]
         self.check_gmpe_adjustments(adj_gmpes, AkkarEtAlRhyp2014())
 
     def test_bindi_2014_germany_adjustments(self):
-        adj_gmpes = [BindiEtAl2014Rhyp(adjustment_factor="0.75"),
-                     BindiEtAl2014Rhyp(adjustment_factor="1.25"),
-                     BindiEtAl2014Rhyp(adjustment_factor="1.5")]
+        adj_gmpes = [BindiEtAl2014Rhyp(adjustment_factor=0.75),
+                     BindiEtAl2014Rhyp(adjustment_factor=1.25),
+                     BindiEtAl2014Rhyp(adjustment_factor=1.50)]
         self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2014Rhyp())
 
     def test_cauzzi_germany_adjustments(self):
-        adj_gmpes = [CauzziEtAl2014RhypoGermany(adjustment_factor="0.75"),
-                     CauzziEtAl2014RhypoGermany(adjustment_factor="1.25"),
-                     CauzziEtAl2014RhypoGermany(adjustment_factor="1.5")]
+        adj_gmpes = [CauzziEtAl2014RhypoGermany(adjustment_factor=0.75),
+                     CauzziEtAl2014RhypoGermany(adjustment_factor=1.25),
+                     CauzziEtAl2014RhypoGermany(adjustment_factor=1.50)]
         self.check_gmpe_adjustments(adj_gmpes, CauzziEtAl2014RhypoGermany())
 
     def test_derras_germany_adjustments(self):
-        adj_gmpes = [DerrasEtAl2014RhypoGermany(adjustment_factor="0.75"),
-                     DerrasEtAl2014RhypoGermany(adjustment_factor="1.25"),
-                     DerrasEtAl2014RhypoGermany(adjustment_factor="1.5")]
+        adj_gmpes = [DerrasEtAl2014RhypoGermany(adjustment_factor=0.75),
+                     DerrasEtAl2014RhypoGermany(adjustment_factor=1.25),
+                     DerrasEtAl2014RhypoGermany(adjustment_factor=1.50)]
         self.check_gmpe_adjustments(adj_gmpes, DerrasEtAl2014RhypoGermany())
 
     def test_bindi_2017_germany_adjustments(self):
-        adj_gmpes = [BindiEtAl2017Rhypo(adjustment_factor="0.75"),
-                     BindiEtAl2017Rhypo(adjustment_factor="1.25"),
-                     BindiEtAl2017Rhypo(adjustment_factor="1.5")]
+        adj_gmpes = [BindiEtAl2017Rhypo(adjustment_factor=0.75),
+                     BindiEtAl2017Rhypo(adjustment_factor=1.25),
+                     BindiEtAl2017Rhypo(adjustment_factor=1.50)]
         self.check_gmpe_adjustments(adj_gmpes, BindiEtAl2017Rhypo())
