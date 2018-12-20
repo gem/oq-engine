@@ -45,6 +45,7 @@ Anirudh Rao             November 2017
 Kendra Johnson          April 2018
 Pablo Heresi            August 2018
 Chris Van Houtte        October 2018
+Stéphane Drouet         December 2018
 
 Project management
 ------------------
