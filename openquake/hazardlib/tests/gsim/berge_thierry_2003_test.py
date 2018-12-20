@@ -17,14 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.berge_thierry_2003 import \
-    BergeThierryEtAl2003SIGMA
+    BergeThierryEtAl2003SIGMA, BergeThierryEtAl2003SIGMAMwW
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # test data generated from hazardlib implementation. Test data from
 # original authors are needed for more robust testing
 
-
 class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
+    """ Test the original Berge-Thierry et al. """
     GSIM_CLASS = BergeThierryEtAl2003SIGMA
 
     def test_mean(self):
@@ -34,3 +34,12 @@ class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('B03/BergeThierryEtAl2003SIGMA_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
+class BergeThierryEtAl2003SIGMAMwWTestCase(BaseGSIMTestCase):
+    """ Test the Berge-Thierry et al. for Mw - Weatherill et al., 2016
+    conversion equation """
+    GSIM_CLASS = BergeThierryEtAl2003SIGMAMwW
+
+    def test_mean(self):
+        self.check('B03/BergeThierryEtAl2003SIGMAMwW_MEAN.csv',
+                   max_discrep_percentage=0.2)
