@@ -21,7 +21,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5, datastore
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, DictArray
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.hazard_curve import classical, ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.commonlib import calc
@@ -33,7 +33,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 weight = operator.attrgetter('weight')
-
 grp_source_dt = numpy.dtype([('grp_id', U16), ('source_id', hdf5.vstr),
                              ('source_name', hdf5.vstr)])
 source_data_dt = numpy.dtype(
@@ -79,21 +78,21 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
 
-    def agg_dicts(self, acc, pmap_by_grp):
+    def agg_dicts(self, acc, dic):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param pmap_by_grp: dictionary grp_id -> ProbabilityMap
+        :param dic: dictionary with keys pmap, calc_times, eff_ruptures
         """
         with self.monitor('aggregate curves', autoflush=True):
-            acc.eff_ruptures += pmap_by_grp.eff_ruptures
-            for grp_id in pmap_by_grp:
-                if pmap_by_grp[grp_id]:
-                    acc[grp_id] |= pmap_by_grp[grp_id]
-                self.nsites.append(len(pmap_by_grp[grp_id]))
+            acc.eff_ruptures += dic['eff_ruptures']
+            for grp_id, pmap in dic['pmap'].items():
+                if pmap:
+                    acc[grp_id] |= pmap
+                self.nsites.append(len(pmap))
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp.calc_times)
+            self.store_source_info(dic['calc_times'])
         return acc
 
     def zerodict(self):
