@@ -4,7 +4,7 @@ Release notes for the OpenQuake Engine, version 3.3
 This is a major release featuring substantial improvements, especially
 to the event based calculators. Over 300 pull requests were merged,
 making this release twice as big as usual, as a result of the Global
-Hazard and Risk Model effort.  For the complete list of changes, see the
+Hazard/Risk Model effort. For the complete list of changes, see the
 changelog: https://github.com/gem/oq-engine/blob/engine-3.3/debian/changelog
 
 General improvements on all calculators
@@ -12,21 +12,21 @@ General improvements on all calculators
 
 1. The command `oq engine --run` has now an option `--reuse-hazard` that
 can be used to run a risk calculation without having to regenerate the
-hazard, or to regenerate the hazard curves/maps/uniform hazard spectra
-without having to regenerate the probabilities of exceedence.
+hazard, or to regenerate the hazard curves/hazard maps/uniform hazard spectra
+without having to regenerate the underlying probabilities of exceedence.
 
-2. The feature works because the engine stores a checksum for the hazard
-parameters in the database, so it is able to retrieve a pre-existing hazard
-calculation with the same checksum, if available.
+2. The feature works because now the engine stores in the database a
+checksum for the hazard parameters, so it is able to retrieve a
+pre-existing hazard calculation with the same checksum, if available.
 
-3. The engine can run multiple job.ini files at once, with the syntax
+3. The engine can now run multiple job.ini files at once, with the syntax
 `oq engine --run job1.ini ... jobN.ini`. The calculation ID of the
 first job will be used as input for the other jobs.
 
 4. We improved the `minimum_magnitude` feature that allows ruptures of
 magnitude below a given threshould to be discarded. The first improvement is
 that now the discarding is done *before* sampling the ruptures,
-while in the past it was done after sampling the ruptures, so now it
+while in the past it was done after sampling the ruptures, so it
 is more efficient. The second improvements is that the feature works for
 all calculators while before worked only for the event based calculators.
 The third improvement is that you can specify different `minimum_magnitudes`
@@ -43,10 +43,12 @@ minimum_magnitude = {
 ```
 
 5. We extended the [equivalent epicenter distance feature](
-adv-manual/equivalent_distance_approximation.rst) (`reqv`) to multiple
+adv-manual/equivalent_distance_approximation.rst) to multiple
 tectonic region types. While before a single lookup table was
 supported, now you can specify a different lookup table for each
-tectonic region type in the job.ini file, as in this example:
+tectonic region type in the job.ini file, as in this example
+(notice that the name of the section *must* be [reqv]):
+
 ```
 [reqv]
 active shallow crust = lookup_asc.hdf5
@@ -58,7 +60,7 @@ saved in the datastore. This is very useful in order to reproduce a
 given calculation. In this release, due to a bug in `silx view` that
 make it impossible to view datastores with large inputs, we moved the
 top level dataset `input_zip` into the folder `input/zip`. Moreover
-now we zip the inputs only when there is no `hazard_calculation_id`,
+we zip the inputs only when there is no `hazard_calculation_id`,
 to avoid storing redundant information.
 
 7. We implemented transparent support for zipped source models and
@@ -143,10 +145,10 @@ what concerns the generation of ruptures, there have been several
 improvements.
 
 1. There is a fast mode to manage the case of a large number of
-stochastic event sets and/or samples.  To use that, you must set
-`fast_sampling=true` in the job.ini file.  The rupture generation
-phase can be more than one order of magnitude faster than before, as
-seen in the South America model.
+stochastic event sets and/or a large number of samples.  To use that,
+you must set `fast_sampling=true` in the job.ini file.  The rupture
+generation phase can be more than one order of magnitude faster than
+before, as seen in the South America model.
 
 2. We changed the calculator so that the ruptures are returned back in
 blocks of at most 1000 elements: this avoids running into the 4 GB
@@ -182,25 +184,28 @@ true now.
 8. It is possible to compute the ruptures without specifying the
 sites, thus avoiding the limit on the number of sites. Alternatively,
 it is possible to raise the limit by setting the parameter
-`max_num_sites` in the job.ini
+`max_num_sites` in the job.ini.
 
 9. We restored the phase separation between the computation of the ruptures
-and the computation of the ground motion fields (in engine 3.2 they were
-intermingled). This has the advantage that the logic tree reduction can be
+and the computation of the ground motion fields - in engine 3.2 they were
+intermingled. This has the advantage that the logic tree reduction can be
 performed at the end of the rupture generation phase, while before it had
 to be performed before, so a slow prefiltering of the sources was necessary.
 
 10. You can disable the prefiltering of the sources by setting
 `prefilter_sources=no` in the job.ini. This is recommended for
 continental scale computations in which all the sources in the hazard
-model are contributing.
+model are contributing anyway.
 
 11. There was a lot of work also to improve the task distribution and to
 avoid slow tasks, which however can be still an issue, unless you use
 `fast_sampling=true` or `prefilter_sources=no`.
 
 12. Among the other changes, we changed also the seed algorithm, so you
-should not expect to get exactly the same numbers as before.
+should not expect to get exactly the same numbers as before. Also, the
+`fast_sampling=true` and `prefilter_sources=no` options use a different
+algorithm to generate the seeds than the default approach, so you will
+stochastically equivalent but not identical results.
 
 Event based: events generation
 ----------------------------------------
@@ -218,12 +223,8 @@ in the case of full enumeration.
 
 2. There is a now a clear relation between event IDs (which are 64 bit
 unsigned integers) and rupture IDs (which are 32 bit unsigned
-integers):
-```
-  rupture_ID = event_ID // 2 ** 32
-```
-
-where `//` denotes the integer division. We are committed to keep this
+integers): `rupture_ID = event_ID // 2 ** 32` where `//` denotes the
+integer division. We are committed to keep this
 relation valid forever in the future. This answers the requests of several
 users who wanted to know which rupture generated a given event.
 
