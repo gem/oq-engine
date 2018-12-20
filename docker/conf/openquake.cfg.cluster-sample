@@ -15,10 +15,10 @@
 
 [distribution]
 # set multi_node = true if are on a cluster
-multi_node = false
+multi_node = true
 
 # enable celery only if you have a cluster
-oq_distribute = processpool
+oq_distribute = celery
 
 # make sure workers are terminated when tasks are revoked
 terminate_workers_on_revoke = true
@@ -36,7 +36,7 @@ hard_mem_limit = 99
 
 [amqp]
 # RabbitMQ server address
-host = localhost
+host = rabbitmq
 port = 5672
 user = openquake
 password = openquake
@@ -45,17 +45,17 @@ celery_queue = celery
 
 [dbserver]
 # enable multi_user if you have a multiple user installation
-multi_user = false
-file = ~/oqdata/db.sqlite3
-log = ~/oqdata/dbserver.log
+multi_user = true
+file = /home/openquake/oqdata/db.sqlite3
+log = /home/openquake/oqdata/dbserver.log
 # daemon bind address; must be a valid IP address
 # example: 0.0.0.0
-listen = 127.0.0.1
+listen = 0.0.0.0
 # address of the dbserver; can be an hostname too
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
 # example: master.hpc
-host = localhost
+host = master
 # port 1908 has a good reputation:
 # https://isc.sans.edu/port.html?port=1908
 port = 1908
@@ -76,7 +76,7 @@ remote_python =
 # if set, it should be on a shared filesystem; this is **mandatory** on a multi-node cluster
 # if not set, the oqdata directories go into $HOME/oqdata,
 # unless the user sets his own OQ_DATADIR variable
-shared_dir =
+shared_dir = /home
 # a custom path where to store temporary data; on Linux systems by default
 # temporary files are stored in /tmp, but on HPC and cloud systems the
 # drive containing the root fs is usually quite small
