@@ -277,7 +277,7 @@ class BergeThierryEtAl2003SIGMAMwW(BergeThierryEtAl2003SIGMA):
     """
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        newrup = copy.deepcopy(rup)
+        newrup = copy.copy(rup)
         if rup.mag <= 6.064:
             newrup.mag = (rup.mag - 2.369) / 0.616
         else:
