@@ -70,6 +70,20 @@ class PoissonTOM(object):
         """
         return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
 
+    def get_probability_n_occurrences(self, occurrence_rate, num):
+        """
+        Calculate the probability of occurrence  of ``num`` events in the
+        constructor's ``time_span``.
+
+        :param occurrence_rate:
+            Annual rate of occurrence
+        :param num:
+            Number of events
+        :return:
+            Probability of occurrence
+        """
+        return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
+
     def sample_number_of_occurrences(self, occurrence_rate, seeds=None):
         """
         Draw a random sample from the distribution and return a number
