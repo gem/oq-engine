@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import warnings
-import operator
 import numpy
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import calc, probability_map
 
 TWO16 = 2 ** 16
@@ -183,24 +181,6 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 # ################## utilities for classical calculators ################ #
 
-def get_imts_periods(imtls):
-    """
-    Returns a list of IMT strings and a list of periods. There is an element
-    for each IMT of type Spectral Acceleration, including PGA which is
-    considered an alias for SA(0.0). The lists are sorted by period.
-
-    :param imtls: a set of intensity measure type strings
-    :returns: a list of IMT strings and a list of periods
-    """
-    imts = []
-    for im in imtls:
-        imt = from_string(im)
-        if hasattr(imt, 'period'):
-            imts.append(imt)
-    imts.sort(key=operator.attrgetter('period'))
-    return imts, [imt.period for imt in imts]
-
-
 def make_hmap(pmap, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability map.
@@ -239,8 +219,7 @@ def make_hmap_array(pmap, imtls, poes, nsites):
         hcurves = pmap.value
     except AttributeError:
         hcurves = pmap
-    dtlist = [('%s-%s' % (imt, poe), F32)
-              for imt in imtls for poe in poes]
+    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
     array = numpy.zeros(len(pmap), dtlist)
     for imt, imls in imtls.items():
         curves = hcurves[:, imtls(imt)]
@@ -250,31 +229,26 @@ def make_hmap_array(pmap, imtls, poes, nsites):
     return array  # array of shape N
 
 
-def make_uhs(hcurves, imtls, poes, nsites):
+def make_uhs(hmap, oq):
     """
     Make Uniform Hazard Spectra curves for each location.
 
     It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
-    :param pmap:
-        a composite array of hazard curves
-    :param imtls:
-        a dictionary of intensity measure types and levels
-    :param poes:
-        a sequence of PoEs for the underlying hazard maps
+    :param hmap:
+        a composite array of hazard maps
+    :param oq:
+        an OqParam instance
     :returns:
-        an composite array containing nsites uniform hazard maps
+        a composite array containing uniform hazard spectra
     """
-    imts, _ = get_imts_periods(imtls)
-    array = make_hmap_array(hcurves, imtls, poes, len(hcurves))
-    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    uhs = numpy.zeros(nsites, uhs_dt)
-    for field in array.dtype.names:
+    uhs = numpy.zeros(len(hmap), oq.uhs_dt())
+    for field in hmap.dtype.names:
         imt, poe = field.split('-')
-        if any(imt == str(i) for i in imts):
-            uhs[poe][imt] = array[field]
+        poe_imt = '%s-%s' % (poe, imt)
+        if poe_imt in uhs.dtype.names:
+            uhs[poe_imt] = hmap[field]
     return uhs
 
 

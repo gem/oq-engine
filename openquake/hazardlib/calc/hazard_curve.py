@@ -92,9 +92,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     pmap = AccumDict({grp_id: ProbabilityMap(len(imtls.array), len(gsims))
                       for grp_id in grp_ids})
     # AccumDict of arrays with 3 elements weight, nsites, calc_time
-    pmap.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-    pmap.eff_ruptures = AccumDict()  # grp_id -> num_ruptures
-
+    calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
+    eff_ruptures = AccumDict(accum=0)  # grp_id -> num_ruptures
     src_mutex = param.get('src_interdep') == 'mutex'
     rup_mutex = param.get('rup_interdep') == 'mutex'
     cluster = param.get('cluster')
@@ -154,24 +153,23 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
                 etype, err, tb = sys.exc_info()
                 msg = '%s (source id=%s)' % (str(err), src.source_id)
                 raise etype(msg).with_traceback(tb)
-            # mutex sources, there is a single group
-            if src_mutex:
+            if src_mutex:  # mutex sources, there is a single group
                 for sid in poemap:
                     pcurve = pmap[src.src_group_id].setdefault(sid, 0)
-                    pcurve += ~poemap[sid] * src.mutex_weight
+                    pcurve += poemap[sid] * src.mutex_weight
             elif poemap:
                 for gid in src.src_group_ids:
-                    pmap[gid] |= ~poemap
-            pmap.calc_times[src.id] += numpy.array(
+                    pmap[gid] |= poemap
+            calc_times[src.id] += numpy.array(
                 [src.weight, len(s_sites), time.time() - t0])
             # storing the number of contributing ruptures too
-            pmap.eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
-                                  for gid in src.src_group_ids}
+            eff_ruptures += {gid: getattr(poemap, 'eff_ruptures', 0)
+                             for gid in src.src_group_ids}
         # updating the probability map in the case of mutually exclusive
         # sources
         if src_mutex and param.get('grp_probability'):
             pmap[src.src_group_id] *= param['grp_probability']
-    return pmap
+    return dict(pmap=pmap, calc_times=calc_times, eff_ruptures=eff_ruptures)
 
 
 def calc_hazard_curves(
@@ -246,7 +244,7 @@ def calc_hazard_curves(
             it = apply(
                 classical, (group.sources, ss_filter, [gsim], param, mon),
                 weight=operator.attrgetter('weight'))
-        for res in it:
-            for grp_id in res:
-                pmap |= res[grp_id]
+        for dic in it:
+            for grp_id, pval in dic['pmap'].items():
+                pmap |= pval
     return pmap.convert(imtls, len(sitecol.complete))
