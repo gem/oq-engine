@@ -24,12 +24,12 @@ pre-existing hazard calculation with the same checksum, if available.
 first job will be used as input for the other jobs.
 
 4. We improved the `minimum_magnitude` feature that allows ruptures of
-magnitude below a given threshould to be discarded. The first improvement is
+magnitude below a given threshold to be discarded. The first improvement is
 that now the discarding is done *before* sampling the ruptures,
-while in the past it was done after sampling the ruptures, so it
-is more efficient. The second improvements is that the feature works for
-all calculators while before worked only for the event based calculators.
-The third improvement is that you can specify different `minimum_magnitudes`
+whereas in the past it was done after sampling the ruptures, so it
+is more efficient now. The second improvement is that the feature works for
+all calculators, whereas previously, it worked only for the event based calculators.
+The third improvement is that you can now specify different `minimum_magnitudes`
 for different tectonic region types, as in this example:
 ```
 minimum_magnitude = {
@@ -47,7 +47,7 @@ adv-manual/equivalent_distance_approximation.rst) to multiple
 tectonic region types. While before a single lookup table was
 supported, now you can specify a different lookup table for each
 tectonic region type in the job.ini file, as in this example
-(notice that the name of the section *must* be [reqv]):
+(note that the name of the section *must* be [reqv]):
 
 ```
 [reqv]
@@ -55,7 +55,7 @@ active shallow crust = lookup_asc.hdf5
 stable shallow crust = lookup_sta.hdf5
 ```
 
-6. Since engine 3.1 the input files of every calculation are zipped and
+6. Since engine 3.1, the input files of every calculation are zipped and
 saved in the datastore. This is very useful in order to reproduce a
 given calculation. In this release, due to a bug in `silx view` that
 make it impossible to view datastores with large inputs, we moved the
@@ -64,17 +64,17 @@ we zip the inputs only when there is no `hazard_calculation_id`,
 to avoid storing redundant information.
 
 7. We implemented transparent support for zipped source models and
-exposures.  The engine now can automatically unzip source models and
-exposures, if any.  The support is transparent in the sense that you
+exposures. The engine now can automatically unzip source models and
+exposures, if any. The support is transparent in the sense that you
 do not need to change the job.ini file. If you have a configuration
 file with the line `source_model_logic_tree_file = ssmLT.xml` and you
 zip the file `ssmLT.xml` together with all the related source models
 into an archive `ssmLT.zip` the engine will automatically look for the
 .zip file if the .xml file is missing. Same for zipped exposures.
 
-8. We support site models in .csv format. The old .xml format is not
+8. We now support site models in .csv format. The old .xml format is not
 deprecated and will keep working for the foreseeable
-future, but we suggest you to switch to the .csv format anyway, since it is
+future, but we recommend users to switch to the .csv format anyway, since it is
 more convenient to use and faster to parse. You can use any number of
 fields: fields not used by the GMPEs will simply be ignored. Here is an
 example:
@@ -125,19 +125,19 @@ file, which paves the way for future improvements. Finally, the source
 geometries are now saved in the datastore.
 
 11. Now the engine extracts the tectonic region types from the source model
-as soon as possible and use this information to reduce the GMPE logic tree
+as soon as possible and uses this information to reduce the GMPE logic tree
 upfront. This is used to log a more reliable estimate about the number of
 potential logic tree paths in the model.
 
-12. The `individual_curves` flag is back. By default it is false, but if you
-set it to true in the job.ini file then the engine will store the individual
+12. The `individual_curves` flag is back. By default it is `false`, but if you
+set it to `true` in the job.ini file then the engine will store the individual
 curves for each realization: specifically, the hazard curves and maps for
 classical calculations and the loss curves and average losses for event based
 calculations. Clearly the data transfer will increase substantially in
 the case of thousands of realizations and the calculation may fail: this
-is why by default the flag is not set.
+is why by default the flag is not set to `true`.
 
-Event based: rupture generation
+Event based: Ruptures generation
 -------------------------------
 
 There was a huge amount of work on the event based calculators. For
@@ -146,12 +146,12 @@ improvements.
 
 1. There is a fast mode to manage the case of a large number of
 stochastic event sets and/or a large number of samples.  To use that,
-you must set `fast_sampling=true` in the job.ini file.  The rupture
+you must set `fast_sampling = true` in the job.ini file.  The rupture
 generation phase can be more than one order of magnitude faster than
 before, as seen in the South America model.
 
 2. We changed the calculator so that the ruptures are returned back in
-blocks of at most 1000 elements: this avoids running into the 4 GB
+blocks of at most 1,000 elements: this avoids running into the 4 GB
 limit for Python pickled objects.
 
 3. We changed approach and converted the ruptures into numpy arrays
@@ -177,79 +177,83 @@ src_record = dstore['source_info'][rup_record['srcidx']]
 rupture serial number) at the end of the rupture generation
 phase. This makes it easier to compare different calculations.
 
-7. Since the ruptures are saved in the datastore always, the
+7. Since the ruptures are always saved in the datastore, the
 parameter `save_ruptures` has been removed; in practice, it is always
 true now.
 
 8. It is possible to compute the ruptures without specifying the
-sites, thus avoiding the limit on the number of sites. Alternatively,
-it is possible to raise the limit by setting the parameter
+sites, thus avoiding the limit on the number of sites if the user
+is interested only in generating the rupture set. Alternatively,
+it is now also possible to raise the limit on the maximum number 
+of sites for a calculation by setting the parameter
 `max_num_sites` in the job.ini.
 
 9. We restored the phase separation between the computation of the ruptures
 and the computation of the ground motion fields - in engine 3.2 they were
 intermingled. This has the advantage that the logic tree reduction can be
-performed at the end of the rupture generation phase, while before it had
-to be performed before, so a slow prefiltering of the sources was necessary.
+performed at the end of the rupture generation phase, whereas previously it had
+to be performed before the rupture generation phase, so a slow prefiltering 
+of the sources was necessary in previous versions of the engine.
 
 10. You can disable the prefiltering of the sources by setting
-`prefilter_sources=no` in the job.ini. This is recommended for
+`prefilter_sources = no` in the job.ini. This is recommended for
 continental scale computations in which all the sources in the hazard
 model are contributing anyway.
 
 11. There was a lot of work also to improve the task distribution and to
 avoid slow tasks, which however can be still an issue, unless you use
-`fast_sampling=true` or `prefilter_sources=no`.
+`fast_sampling = true` or `prefilter_sources = no`.
 
 12. Among the other changes, we changed also the seed algorithm, so you
 should not expect to get exactly the same numbers as before. Also, the
-`fast_sampling=true` and `prefilter_sources=no` options use a different
-algorithm to generate the seeds than the default approach, so you will
-stochastically equivalent but not identical results.
+`fast_sampling = true` and `prefilter_sources = no` options use a different
+algorithm to generate the seeds compared to the default approach, so you will get
+statistically equivalent, but not identical results.
 
-Event based: events generation
+Event based: Events generation
 ----------------------------------------
 
 There was also a lot of work on the relation between ruptures and events.
 
-1. For the first time since the beginning of GEM the event ID is an
-unique key (finally!). Before it was an unique key only for event based
-calculations with sampling, while in the case of full enumeration the
-same event could affect different realizations, so the unique key
+1. For the first time since the beginning of the OpenQuake-engine,
+the event ID is a unique key (finally!). In previous versions of the engine,
+it was a unique key only for event based calculations with sampling, 
+whereas in the case of calculations going through a full enumeration of 
+the logic-tree, the same event ID could occur in different realizations,
+so the unique key to identify a specific event on a specific branch 
 was the pair (event ID, realization ID). This was very inconvenient
-for Cat Risk purposes and has been finally fixed. Now an event belongs
-to a realization and cannot affect more than one realization, even
-in the case of full enumeration.
+for users interested in advanced post-processing of the event loss tables,
+and has finally been fixed. Now an event belongs to a unique realization 
+and cannot affect more than one realization, even in the case of full enumeration.
 
-2. There is a now a clear relation between event IDs (which are 64 bit
-unsigned integers) and rupture IDs (which are 32 bit unsigned
-integers): `rupture_ID = event_ID // 2 ** 32` where `//` denotes the
-integer division. We are committed to keep this
+2. There is a now a clear relation between event IDs (which are 64-bit
+unsigned integers) and rupture IDs (which are 32-bit unsigned
+integers): `rupture_ID = event_ID // 2 ** 32` where `//` denotes floor division
+(or integer division). We are committed to keep this 
 relation valid forever in the future. This answers the requests of several
 users who wanted to know which rupture generated a given event.
 
 2. Now the `events` table in the datastore is generated at the end of the
 rupture generation phase and it is ordered by event ID.
 
-3. The `events` table in the datastore is completely different than in
+3. The `events` table in the datastore is different from
 previous versions of the engine and now contains the relation between
-events and realizations: by looking there one can see which event belongs
-to which realization.
+events and realizations: now, looking at the `events` table, a user
+can see which event belongs to which realization.
 
 4. The building of the `events` table as well of the associations between
 events and realizations has been heavily optimized, so that the engine
 can store tens of millions of events in minutes.
 
-5. In order to get the performance, we changed the association between events
+5. In order to improve the performance, we changed the association between events
 and stochastic event sets, which is visible in the XML exporter for the
-ruptures. Now the performance is so good that such association is dynamically
-computed at export time and not stored anymore in the `events` table, which
-is simpler than in the past.
+ruptures. Now, this association is dynamically computed at export time 
+and not stored anymore in the `events` table.
 
 Event based: GMFs generation
----------------------------------
+------------------------------
 
-For what concerns the generation of ground motion fields.
+For what concerns the generation of ground motion fields:
 
 1. We changed the calculator to read the rupture geometries in the
 workers directly from the datastore, thus avoiding a lot of data
@@ -262,7 +266,7 @@ regions, having the non-interesting ruptures filtered out efficiently.
 
 3. There was a big memory optimization effort, so that now the engine
 can generate hundreds of GBs of ground motion fields without running
-out of memory in the workers nor in the controller node. However,
+out of memory in the workers or in the controller node. However,
 there are limits on the size of the `gmf_data` table, so it is still
 possible to run into errors and also memory errors. In that case you
 must check carefully parameters like the `minimum_magnitude` and
@@ -270,7 +274,7 @@ the `minimum_intensity`, as well as the number of sites and the
 effective investigation time.
 
 4. There was a lot of work on the `ucerf_event_based` calculator, to
-make it more similar to the regular one. We fixed some bug, changed the
+make it more similar to the regular one. We fixed some bugs, changed the
 seed algorithm and removed the `ucerf_risk` calculator, which was a
 special case. The regular `ucerf_event_based` calculator is so
 efficient now, that in can be used in conjunction with the regular
@@ -279,19 +283,19 @@ efficient now, that in can be used in conjunction with the regular
 
 5. We finally removed the GMF XML exporter, which has been deprecated
 for years and was too slow to be usable. You should use the CSV exporter
-instead. Notice that the GMF XML exporter for scenario calculations
+instead. Note that the GMF XML exporter for scenario calculations
 is still there, unchanged, but deprecated.
 
-Event based: risk
+Event based: Risk
 ---------------------------------
 
-There was also a lot of work on the risk calculator.
+There was also a lot of work on the event based risk calculator.
 
 1. We introduced a smart single file mode:
 while in the past the recommendation was to use two files, a `job_hazard.ini`
 for hazard and `job_risk.ini` for risk, now the engine can work with a single
 `job.ini` file containing all the required information. It will automatically
-start two computations, one for hazard and one for risk. This is the
+start two computations, one for the hazard and one for the risk. This is the
 recommended way to work now, because it plays well with the `--reuse-hazard`
 feature.
 
@@ -300,14 +304,14 @@ the parameter `individual_curves` is set to `true` in the `job.ini`
 file.
 
 3. We reduced the memory consumption by considering only one site at
-the time.
+a time.
 
 4. The saving of the average losses in the datastore has been optimized.
 
 5. There was a bug in event based with sampling causing incorrect GMFs
 to be generated. This affected the South Africa model and it is now fixed.
 
-6. There is now a generic a multi-tag aggregation facility, so it is
+6. There is now a generic multi-tag aggregation facility, so it is
 possible to aggregate the loss curves and average losses by any combination
 of tags. The aggregation is performed entirely at export time with the
 command `oq export aggregate_by`; here is an example of usage for the
@@ -404,16 +408,17 @@ from the site model, if any, and not from the exposure sites.
 a rupture, assets outside the `maximum_distance` are automatically
 discarded, since the hazard and risk would be zero there.
 
-5. In event based and classical calculations assets are never
-discarded unless `discard_assets=true` is set in the `job.ini`. In that
+5. In event based and classical calculations, assets are never
+discarded unless `discard_assets = true` is set in the `job.ini`. In that
 case discarding far away assets is allowed. The feature is risky but
 has its use cases: for instance, in the exposure for France there may
-be assets in French Polynesia and you will probably want to discard those.
+be assets in French Polynesia and a user may want to discard those for 
+a calculation focussed on Metropolitan France.
 
 6. There was a bug in the gridding of the exposure feature (new in
-engine 3.2) causing an incorrect site collection to be produced in some
-cases. As a consequence sources that should have been filtered were
-not filtered, thus causing the numbers produced by the engine to be
+engine 3.2), causing an incorrect site collection to be produced in some
+cases. As a consequence, sources that should have been filtered were
+not filtered, causing the numbers produced by the engine to be
 incorrect.
 
 Scenario from ShakeMap
@@ -478,7 +483,7 @@ site collection. This has been fixed.
 
 5. There was a long standing bug in some `oq` commands, like `oq export` and
 `oq show` that made it impossible to export or view the results of a
-calculation ran by another user. This has been solved.
+calculation run by another user. This has been solved.
 The engine looks in the database first and from there it retrieves the path
 to the right datastore to use. This strategy also manages correctly the
 case when there is a custom $OQ_DATADIR.
@@ -528,15 +533,15 @@ raised, suggesting to switch to logic tree sampling, which is a good
 suggestion. It is still
 possible to use full enumeration by raising the parameter `max_potential_paths`.
 Notice that due to logic tree reduction the actual number of realizations
-can be a lot less than the number of potential paths.
+can turn out to be a lot less than the number of potential paths.
 
 8. We added a check in the source model parser to make sure that the tectonic
 region type declared in the <SourceGroup> node is consistent with the
 tectonic region type declared in the underlying source nodes.
 
 9. There is now a better error message when there are too many tags in
-an exposure.  This usually happens when the user makes a mistake and
-uses an unique field as a tag.
+an exposure. This usually happens when the user makes a mistake and
+uses a unique field as a tag.
 
 10. We removed the PlanarSurface check when unneeded.
 
@@ -641,11 +646,11 @@ Moreover it plots the site model, if any.
 IT changes
 -------------------
 
-1. As promised in the last release, the engine does not work with Python
+1. As mentioned in the last release, the engine does not work with Python
 3.5 anymore. Python >= 3.6 is required. Python 3.7 is not officially
-supported but we know that the engine works with it.
+supported yet, but we know that the engine works with it.
 
-2. The support for the operating system Ubuntu 14.04 has ceased ad we do not
+2. Support for the operating system Ubuntu 14.04 has ceased and we do not
 release packages for it anymore. You can still run the engine on Ubuntu
 14.04 but you have to install from sources or with the self-installing
 file that we provide for generic Linux systems.
