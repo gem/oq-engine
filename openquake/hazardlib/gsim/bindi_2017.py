@@ -72,7 +72,7 @@ class BindiEtAl2017Rjb(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = set(('rjb', ))
 
-    def __init__(self, adjustment_factor="1.0"):
+    def __init__(self, adjustment_factor=1.0):
         super().__init__()
         self.adjustment_factor = np.log(float(adjustment_factor))
 

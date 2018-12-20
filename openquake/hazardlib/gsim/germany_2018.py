@@ -63,9 +63,9 @@ class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
     """
     REQUIRES_DISTANCES = set(("rhypo", ))
 
-    def __init__(self, adjustment_factor="1.0"):
+    def __init__(self, adjustment_factor=1.0):
         super().__init__()
-        self.adjustment_factor = np.log(float(adjustment_factor))
+        self.adjustment_factor = np.log(adjustment_factor)
 
     def _compute_mean(self, C, rup, dists, sites, imt):
         """
@@ -100,9 +100,9 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     #: The required distance parameter is hypocentral distance
     REQUIRES_DISTANCES = set(('rhypo', ))
 
-    def __init__(self, adjustment_factor="1.0"):
+    def __init__(self, adjustment_factor=1.0):
         super().__init__()
-        self.adjustment_factor = np.log(float(adjustment_factor))
+        self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
