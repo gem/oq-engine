@@ -1,3 +1,11 @@
+  [Daniele Viganò]
+  * Added a warning box when an unsupported browser is used to view the WebUI
+  * Updated Docker containers to support a multi-node deployment
+    with a shared directory
+  * Moved the Docker containers source code from oq-builders
+  * Updated the documentation related to the shared directory
+    which is now mandatory for multi-node deployments
+
   [Matteo Nastasi]
   * Removed tests folders
 
