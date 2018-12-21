@@ -187,8 +187,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or 'processpool'
     """
     dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
-    read_access = getattr(task, 'read_access', True)
-    if dist.startswith('celery') and not read_access:
+    if dist.startswith('celery'):
         raise ValueError('You must configure the shared_dir in openquake.cfg '
                          'in order to be able to run %s with celery' %
                          task.__name__)
