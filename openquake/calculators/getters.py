@@ -47,6 +47,7 @@ class PmapGetter(object):
         self.dstore = dstore
         self.sids = dstore['sitecol'].sids if sids is None else sids
         self.rlzs_assoc = rlzs_assoc or dstore['csm_info'].get_rlzs_assoc()
+        self.num_rlzs = len(self.rlzs_assoc.realizations)
         self.eids = None
         self.nbytes = 0
         self.sids = sids
