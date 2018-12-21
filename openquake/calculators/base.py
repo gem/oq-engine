@@ -364,33 +364,6 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
-    def get_getter(self, kind, sid):
-        """
-        :param kind: 'poe' or 'gmf'
-        :param sid: a site ID
-        :returns: a PmapGetter or GmfDataGetter
-        """
-        hdf5cache = getattr(self, 'hdf5cache', None)
-        if hdf5cache:
-            dstore = hdf5cache
-        elif (self.oqparam.hazard_calculation_id and
-                'gmf_data' not in self.datastore.hdf5):
-            self.datastore.parent.close()  # make sure it is closed
-            dstore = self.datastore.parent
-        else:
-            dstore = self.datastore
-        if kind == 'poe':  # hcurves, shape (R, N)
-            getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
-        else:  # gmf
-            getter = getters.GmfDataGetter(dstore, [sid], self.R)
-
-        # read the hazard data in the controller node
-        logging.warn('With a parent calculation reading the hazard '
-                     'would be faster')
-        if dstore is self.datastore:
-            getter.init()
-        return getter
-
     def check_overflow(self):
         """Overridden in event based"""
 
@@ -810,6 +783,33 @@ class RiskCalculator(HazardCalculator):
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
         return riskinputs
+
+    def get_getter(self, kind, sid):
+        """
+        :param kind: 'poe' or 'gmf'
+        :param sid: a site ID
+        :returns: a PmapGetter or GmfDataGetter
+        """
+        hdf5cache = getattr(self, 'hdf5cache', None)
+        if hdf5cache:
+            dstore = hdf5cache
+        elif (self.oqparam.hazard_calculation_id and
+                'gmf_data' not in self.datastore.hdf5):
+            self.datastore.parent.close()  # make sure it is closed
+            dstore = self.datastore.parent
+        else:
+            dstore = self.datastore
+        if kind == 'poe':  # hcurves, shape (R, N)
+            getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
+        else:  # gmf
+            getter = getters.GmfDataGetter(dstore, [sid], self.R)
+
+        # read the hazard data in the controller node
+        logging.warn('With a parent calculation reading the hazard '
+                     'would be faster')
+        if dstore is self.datastore:
+            getter.init()
+        return getter
 
     def _gen_riskinputs(self, kind, eps, num_events):
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
