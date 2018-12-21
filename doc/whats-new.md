@@ -593,7 +593,7 @@ to the `ChiouYoungs2008SWISS01` class, thus making it possible to use this
 GMPE in event based calculations.
 
 9. Graeme Weatherill contributed a fix in the HMTK plotting completeness
-functionality.
+tool and a suite of GMPEs for the Germany National Seismic Hazard Model.
 
 10. Stéphane Drouet contributed several Drouet & Cotton (2015) GMPEs,
 including the 2017 erratum.
