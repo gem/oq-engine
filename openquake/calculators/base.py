@@ -793,8 +793,7 @@ class RiskCalculator(HazardCalculator):
         hdf5cache = getattr(self, 'hdf5cache', None)
         if hdf5cache:
             dstore = hdf5cache
-        elif (self.oqparam.hazard_calculation_id and
-                'gmf_data' not in self.datastore.hdf5):
+        elif self.oqparam.hazard_calculation_id:
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
         else:
@@ -803,11 +802,11 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
-
-        # read the hazard data in the controller node
-        logging.warn('With a parent calculation reading the hazard '
-                     'would be faster')
         if dstore is self.datastore:
+            # there is a single datastore; read all and transfer everything
+            # to avoid writing while reading which gives undefined results
+            logging.warn('With a parent calculation reading the hazard '
+                         'would be faster')
             getter.init()
         return getter
 
