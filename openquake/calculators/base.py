@@ -793,7 +793,9 @@ class RiskCalculator(HazardCalculator):
         hdf5cache = getattr(self, 'hdf5cache', None)
         if hdf5cache:
             dstore = hdf5cache
-        elif self.oqparam.hazard_calculation_id:
+        elif (self.oqparam.hazard_calculation_id and
+              'gmf_data' not in self.datastore):
+            # 'gmf_data' in self.datastore happens for ShakeMap calculations
             self.datastore.parent.close()  # make sure it is closed
             dstore = self.datastore.parent
         else:
@@ -803,10 +805,6 @@ class RiskCalculator(HazardCalculator):
         else:  # gmf
             getter = getters.GmfDataGetter(dstore, [sid], self.R)
         if dstore is self.datastore:
-            # there is a single datastore; read all and transfer everything
-            # to avoid writing while reading which gives undefined results
-            logging.warn('With a parent calculation reading the hazard '
-                         'would be faster')
             getter.init()
         return getter
 
