@@ -643,8 +643,9 @@ class DrouetAlpes2015Repi_50bars(DrouetAlpes2015Repi):
 
 class DrouetAlpes2015Rhyp_50bars(DrouetAlpes2015Rhyp):
     """
-    Implements GMPE developed by Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-	This version is for a large magnitude stress parameters of 50 bars
+    Implements GMPE developed by Douet & Cotton (2015) BSSA
+    doi: 10.1785/0120140240.
+    This version is for a large magnitude stress parameters of 50 bars
     Valid for vs30=800 m/s
     """
     #: Required distance measure is closest distance to rupture, see equation
