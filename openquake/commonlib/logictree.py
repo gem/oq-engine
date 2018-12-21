@@ -137,24 +137,6 @@ def get_effective_rlzs(rlzs):
 
 class LogicTreeError(Exception):
     """
-    Base class for errors of loading, parsing and validation of logic trees.
-
-    :param filename:
-        The name of the file which contains an error.
-    :param message:
-        The error message.
-    """
-    def __init__(self, filename, message):
-        super().__init__(message)
-        self.filename = filename
-        self.message = message
-
-    def __str__(self):
-        return "filename '%s': %s" % (self.filename, self.message)
-
-
-class ValidationError(LogicTreeError):
-    """
     Logic tree file contains a logic error.
 
     :param node:
@@ -164,8 +146,9 @@ class ValidationError(LogicTreeError):
     All other constructor parameters are passed to :class:`superclass'
     <LogicTreeError>` constructor.
     """
-    def __init__(self, node, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, node, filename, message):
+        self.filename = filename
+        self.message = message
         self.lineno = getattr(node, 'lineno', '?')
 
     def __str__(self):
@@ -573,7 +556,7 @@ class SourceModelLogicTree(object):
         while parsed. This should be set to ``True`` on initial load
         of the logic tree (before importing it to the database) and
         to ``False`` on workers side (when loaded from the database).
-    :raises ValidationError:
+    :raises LogicTreeError:
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
@@ -600,7 +583,7 @@ class SourceModelLogicTree(object):
         try:
             tree = root.logicTree
         except AttributeError:
-            raise ValidationError(
+            raise LogicTreeError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
 
@@ -759,13 +742,13 @@ class SourceModelLogicTree(object):
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
-                raise ValidationError(
+                raise LogicTreeError(
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
-            raise ValidationError(
+            raise LogicTreeError(
                 branchset_node, self.filename,
                 "branchset weights don't sum up to 1.0")
         if len(set(values)) < len(values):
@@ -782,7 +765,7 @@ class SourceModelLogicTree(object):
             #     <uncertaintyModel> 7.7 </uncertaintyModel>
             #     <uncertaintyWeight>0.334</uncertaintyWeight>
             # </logicTreeBranch>
-            raise ValidationError(
+            raise LogicTreeError(
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
@@ -944,7 +927,7 @@ class SourceModelLogicTree(object):
             try:
                 self.collect_source_model_data(smfname)
             except Exception as exc:
-                raise ValidationError(node, self.filename, str(exc))
+                raise LogicTreeError(node, self.filename, str(exc))
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -952,7 +935,7 @@ class SourceModelLogicTree(object):
                 a, b = ab
                 if _float_re.match(a) and _float_re.match(b):
                     return
-            raise ValidationError(
+            raise LogicTreeError(
                 node, self.filename,
                 'expected a pair of floats separated by space')
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
@@ -964,7 +947,7 @@ class SourceModelLogicTree(object):
                 rates = valid.positivefloats(rates)
             if _float_re.match(min_mag) and _float_re.match(bin_width):
                 return
-            raise ValidationError(
+            raise LogicTreeError(
                 node, self.filename,
                 "expected valid 'incrementalMFD' node")
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
@@ -983,12 +966,12 @@ class SourceModelLogicTree(object):
                 elif "planarSurface" in geom_node.tag:
                     self._validate_planar_fault_geometry(geom_node, _float_re)
                 else:
-                    raise ValidationError(
+                    raise LogicTreeError(
                         geom_node, self.filename,
                         "Surface geometry type not recognised")
         else:
             if not _float_re.match(node.text.strip()):
-                raise ValidationError(
+                raise LogicTreeError(
                     node, self.filename,
                     'expected single float value')
 
@@ -1001,14 +984,14 @@ class SourceModelLogicTree(object):
             coords = split_coords_2d(~node.LineString.posList)
             trace = geo.Line([geo.Point(*p) for p in coords])
         except ValueError:
-            # If the geometry cannot be created then use the ValidationError
+            # If the geometry cannot be created then use the LogicTreeError
             # to point the user to the incorrect node. Hence, if trace is
             # compiled successfully then len(trace) is True, otherwise it is
             # False
             trace = []
         if len(trace):
             return
-        raise ValidationError(
+        raise LogicTreeError(
             node, self.filename,
             "'simpleFaultGeometry' node is not valid")
 
@@ -1036,7 +1019,7 @@ class SourceModelLogicTree(object):
                 valid_edges.append(False)
         if _float_re.match(node["spacing"]) and all(valid_edges):
             return
-        raise ValidationError(
+        raise LogicTreeError(
             node, self.filename,
             "'complexFaultGeometry' node is not valid")
 
@@ -1058,7 +1041,7 @@ class SourceModelLogicTree(object):
                 valid_depth = (depth >= 0.0)
                 is_valid = valid_lon and valid_lat and valid_depth
             if not is_valid or not valid_spacing:
-                raise ValidationError(
+                raise LogicTreeError(
                     node, self.filename,
                     "'planarFaultGeometry' node is not valid")
 
@@ -1090,19 +1073,19 @@ class SourceModelLogicTree(object):
           that exist in source models.
         """
         if uncertainty_type == 'sourceModel' and filters:
-            raise ValidationError(
+            raise LogicTreeError(
                 branchset_node, self.filename,
                 'filters are not allowed on source model uncertainty')
 
         if len(filters) > 1:
-            raise ValidationError(
+            raise LogicTreeError(
                 branchset_node, self.filename,
                 "only one filter is allowed per branchset")
 
         if 'applyToTectonicRegionType' in filters:
             if not filters['applyToTectonicRegionType'] \
                     in self.tectonic_region_types:
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "
                     "type '%s'" % filters['applyToTectonicRegionType'])
@@ -1112,7 +1095,7 @@ class SourceModelLogicTree(object):
                                 'complexFaultGeometryAbsolute'):
             if not filters or not list(filters) == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define 'applyToSources' "
                     "with only one source id" % uncertainty_type)
@@ -1120,7 +1103,7 @@ class SourceModelLogicTree(object):
                                 'simpleFaultDipAbsolute'):
             if not filters or (not ('applyToSources' in filters.keys()) and not
                                ('applyToSourceType' in filters.keys())):
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     "uncertainty of type '%s' must define either"
                     "'applyToSources' or 'applyToSourceType'"
@@ -1128,7 +1111,7 @@ class SourceModelLogicTree(object):
 
         if 'applyToSourceType' in filters:
             if not filters['applyToSourceType'] in self.source_types:
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of type '%s'" %
                     filters['applyToSourceType'])
@@ -1136,7 +1119,7 @@ class SourceModelLogicTree(object):
         if 'applyToSources' in filters:
             for source_id in filters['applyToSources'].split():
                 if source_id not in self.source_ids:
-                    raise ValidationError(
+                    raise LogicTreeError(
                         branchset_node, self.filename,
                         "source with id '%s' is not defined in source models"
                         % source_id)
@@ -1154,23 +1137,23 @@ class SourceModelLogicTree(object):
         """
         if depth == 0:
             if number > 0:
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     'there must be only one branch set '
                     'on first branching level')
             elif branchset.uncertainty_type != 'sourceModel':
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     'first branchset must define an uncertainty '
                     'of type "sourceModel"')
         else:
             if branchset.uncertainty_type == 'sourceModel':
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     'uncertainty of type "sourceModel" can be defined '
                     'on first branchset only')
             elif branchset.uncertainty_type == 'gmpeModel':
-                raise ValidationError(
+                raise LogicTreeError(
                     branchset_node, self.filename,
                     'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree')
@@ -1192,16 +1175,16 @@ class SourceModelLogicTree(object):
             apply_to_branches = apply_to_branches.split()
             for branch_id in apply_to_branches:
                 if branch_id not in self.branches:
-                    raise ValidationError(
+                    raise LogicTreeError(
                         branchset_node, self.filename,
                         "branch '%s' is not yet defined" % branch_id)
                 branch = self.branches[branch_id]
                 if branch.child_branchset is not None:
-                    raise ValidationError(
+                    raise LogicTreeError(
                         branchset_node, self.filename,
                         "branch '%s' already has child branchset" % branch_id)
                 if branch not in self.open_ends:
-                    raise ValidationError(
+                    raise LogicTreeError(
                         branchset_node, self.filename,
                         'applyToBranches must reference only branches '
                         'from previous branching level')
