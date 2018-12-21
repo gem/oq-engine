@@ -28,7 +28,7 @@ from shapely import wkt
 import numpy
 
 from openquake.baselib import (
-    config, general, hdf5, datastore, __version__ as engine_version)
+    general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib.performance import perf_dt, Monitor
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import InvalidFile
@@ -364,21 +364,32 @@ class HazardCalculator(BaseCalculator):
             return UcerfFilter(sitecol, oq.maximum_distance, self.hdf5cache)
         return SourceFilter(sitecol, oq.maximum_distance, self.hdf5cache)
 
-    def can_read_parent(self):
+    def get_getter(self, kind, sid):
         """
-        :returns:
-            the parent datastore if it is present and can be read from the
-            workers, None otherwise
+        :param kind: 'poe' or 'gmf'
+        :param sid: a site ID
+        :returns: a PmapGetter or GmfDataGetter
         """
         hdf5cache = getattr(self, 'hdf5cache', None)
         if hdf5cache:
-            return hdf5cache
+            dstore = hdf5cache
         elif (self.oqparam.hazard_calculation_id and
                 'gmf_data' not in self.datastore.hdf5):
             self.datastore.parent.close()  # make sure it is closed
-            return self.datastore.parent
+            dstore = self.datastore.parent
+        else:
+            dstore = self.datastore
+        if kind == 'poe':  # hcurves, shape (R, N)
+            getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
+        else:  # gmf
+            getter = getters.GmfDataGetter(dstore, [sid], self.R)
+
+        # read the hazard data in the controller node
         logging.warn('With a parent calculation reading the hazard '
                      'would be faster')
+        if dstore is self.datastore:
+            getter.init()
+        return getter
 
     def check_overflow(self):
         """Overridden in event based"""
@@ -804,22 +815,10 @@ class RiskCalculator(HazardCalculator):
         rinfo_dt = numpy.dtype([('sid', U16), ('num_assets', U16)])
         rinfo = []
         assets_by_site = self.assetcol.assets_by_site()
-        dstore = self.can_read_parent() or self.datastore
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
                 continue
-            # build the riskinputs
-            if kind == 'poe':  # hcurves, shape (R, N)
-                getter = getters.PmapGetter(dstore, self.rlzs_assoc, [sid])
-                getter.num_rlzs = self.R
-            else:  # gmf
-                getter = getters.GmfDataGetter(dstore, [sid], self.R)
-            if dstore is self.datastore:
-                # read the hazard data in the controller node
-                getter.init()
-            else:
-                # the datastore must be closed to avoid the HDF5 fork bug
-                assert dstore.hdf5 == (), '%s is not closed!' % dstore
+            getter = self.get_getter(kind, sid)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
                 # dictionary of epsilons for the reduced assets
