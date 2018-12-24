@@ -2,7 +2,7 @@
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/buildStatus/icon?job=builders/docker-builder)](https://ci.openquake.org/job/builders/docker-builder)
 
-End user documentation: ../doc/installing/docker.md
+- [end user documentation](../doc/installing/docker.md)
 
 
 ## Python3 base image (required by all images)
