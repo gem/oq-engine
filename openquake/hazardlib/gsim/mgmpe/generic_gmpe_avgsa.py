@@ -21,9 +21,11 @@ Module :mod:`openquake.hazardlib.mgmp.generic_gmpe_avgsa` implements
 
 import copy
 import numpy as np
+import pandas as pd
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA
+from openquake.hazardlib.gsim.mgmpe import akkar_coeff_table as act
 
 class GenericGmpeAvgSA(GMPE):
     """
@@ -44,12 +46,20 @@ class GenericGmpeAvgSA(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, avg_periods):
+    def __init__(self, gmpe_name, avg_periods, corr_func='None'):
         super().__init__(gmpe_name=gmpe_name)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         self.avg_periods = [float(t) for t in avg_periods.split(',')]
         self.tnum = len(self.avg_periods)
+
+        correlation_function_handles = {
+            'baker_jayaram': baker_jayaram_correlation,
+            'akkar': akkar_correlation,
+            'None': dummy_correlation
+        }
+
+        self.corr_func = correlation_function_handles[corr_func]
 
         # Check if this GMPE has the necessary requirements
         # TO DO
@@ -80,8 +90,8 @@ class GenericGmpeAvgSA(GMPE):
         for i1 in range(self.tnum):
             mean_avgsa += mean_list[i1]
             for i2 in range(self.tnum):
-                rho = baker_jayaram_correlation(self.avg_periods[i1],
-                                                self.avg_periods[i2])
+                rho = self.corr_func(self.avg_periods[i1],
+                                     self.avg_periods[i2])
                 stddvs_avgsa += rho * stddvs_list[i1] * stddvs_list[i2]
 
         mean_avgsa *= (1./self.tnum)
@@ -136,3 +146,19 @@ def baker_jayaram_correlation(t1, t2):
         rho = c4
 
     return rho
+
+
+def akkar_correlation(t1, t2):
+    """
+    """
+
+    ct = pd.DataFrame(act.coeff_table, index=act.periods, columns=act.periods)
+    return ct[t1][t2]
+
+
+def dummy_correlation(t1, t2):
+    """
+    Dummy function returning just 1
+    """
+
+    return 1.
